@@ -1,6 +1,6 @@
 
 import logging
-from core.data_fetcher import DataFetcher
+from core.data_fetch.data_fetcher_1 import data_fetcher
 
 
 
@@ -36,6 +36,9 @@ def setUpLogger() -> logging.Logger:
 if __name__ == '__main__':
      logger = setUpLogger()
      logger.info("app start")
+     print(data_fetcher.list_api())
+     print(data_fetcher.query('stock_zh_a_hist'))
+     print(data_fetcher.query('stock_sse_summary'))
      #data_fetcher = DataFetcher()
      #data_fetcher.fetch_historical_data('300033','20250830','20250904')
      #data_fetcher._fetch_historical_tick('sz301259')
