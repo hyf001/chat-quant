@@ -1,43 +1,93 @@
+#!/usr/bin/env python3
+"""
+金融数据策略开发工作流
+主入口文件 - 演示如何使用工作流
+"""
 
-import logging
-from core.data_fetcher import DataFetcher
+import asyncio
+from json import load, tool
+import sys
+import os
+
+from httpx import stream
+from src.graph.state import State
+from src.graph import workflow
+from IPython.display import display ,Image
+from langchain_core.messages import HumanMessage
+import time
+from langgraph.types import Command, interrupt
+from src.utils import logger
+from src.jupyter import JupyterExecutor
+import uvicorn
+from src.akshare.akshare_interface import AKShareInterfaceLoader,AKShareInvoker
+from src.tools import stock_tools
+
+
+log = logger.get_logger(__name__)
+os.environ['OPENAI_API_KEY'] = "e03f2bef-bdea-4d59-9a4d-ca74c04d034a"
+os.environ['OPENAI_BASE_URL'] = "https://ark.cn-beijing.volces.com/api/v3/"
+# os.environ['MODEL_NAME'] = "doubao-seed-1-6-vision-250815"
+# os.environ['MODEL_NAME'] = "doubao-1-5-pro-32k-250115"
+os.environ['MODEL_NAME'] = "kimi-k2-250905"
+
+# os.environ['OPENAI_API_KEY'] = "sk-OKMLRX7tbxw8g37538fARlCDNu5MPcAZhcEJWZmMUVEKqf5U"
+# os.environ['OPENAI_BASE_URL'] = "https://api.moonshot.cn/v1"
+# os.environ['MODEL_NAME'] = "kimi-k2-0905-preview"
+
+
+def show_graph():
+    graph = workflow.create_financial_workflow()
+    png = graph.get_graph().draw_mermaid_png()
+    with open("simple_test.png", "wb") as f:
+        f.write(png)
+
+def chat(input: str):
+    log.info("开始聊天")
+    graph = workflow.create_financial_workflow()
+    state = State(messages=[HumanMessage(content=input)])
+    config = {"thread_id":"1"}
+    for chunk in graph.stream(state,config):
+        if isinstance(chunk,dict):
+            for node_name, state_update in chunk.items():
+                if node_name == "__interrrupt_":
+                    break
+                log.info(f"{node_name}==>{state_update}")
+
+    for chunk in graph.stream(Command(resume="edit:第一步 生成文件 第二步 读取文件数据"),config):
+        if isinstance(chunk,dict):
+            for node_name, state_update in chunk.items():
+                log.info(f"{node_name}==>{state_update}")
+
+    asyncio.run(asyncio.sleep(1000))
+
+
+def execute_code():
+    jupyter_exec = JupyterExecutor()
+    result = asyncio.run(jupyter_exec.execute_code("a = 10 "))
+    print(result)
+    result = asyncio.run(jupyter_exec.execute_code("""
+print("hello world")
+name="caocao0" 
+name                                              
+"""))
+    print(result)
+
+def ak_invoke():
+    result = stock_tools.search_akshare_interfaces("300033表现如何")
+    if result["status"] == "success":
+        for interface in result["interfaces"]:
+            print(interface['name'])
+    
+        
 
 
 
 
-def setUpLogger() -> logging.Logger:
-  # 创建logger
-  logger = logging.getLogger(__name__)
-  logger.setLevel(logging.INFO)
-  
-  # 防止重复添加handler
-  if logger.handlers:
-    logger.handlers.clear()
-
-
-  # 创建log目录（如果不存在）
-  import os
-  os.makedirs('log', exist_ok=True)
-  
-  # 创建文件handler - 修改路径到log/app.log
-  file_handler = logging.FileHandler('log/app.log', mode='w')
-  file_handler.setLevel(logging.INFO)
-
-  # 创建formatter - 添加时间
-  formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-  # 将formatter添加到handler
-  file_handler.setFormatter(formatter)
-
-  # 将handler添加到logger
-  logger.addHandler(file_handler)
-  return logger
-
-if __name__ == '__main__':
-     logger = setUpLogger()
-     logger.info("app start")
-     #data_fetcher = DataFetcher()
-     #data_fetcher.fetch_historical_data('300033','20250830','20250904')
-     #data_fetcher._fetch_historical_tick('sz301259')
-     #data_fetcher.sync_historical_data('300033','20250801','20250905')
-     
+# show_graph()
+chat('300033近10天表现怎么样')
+# chat('最近一个月走势比较好的股票有哪些')
+# chat('601138怎么样')
+# execute_code()
+# ak_invoke()
+#if __name__ == "__main__":
+#    uvicorn.run("src.server.app:app", host="0.0.0.0", port=8000, reload=True)
