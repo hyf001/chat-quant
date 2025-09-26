@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import AsyncGenerator
 
-from src.graph import workflow
+from src.graph import builder
 from src.server.chat_request import ChatRequest, FeedbackRequest
 from langchain_core.messages import HumanMessage
 from langgraph.types import Command
@@ -23,7 +23,7 @@ app.add_middleware(
 )
 
 log = logger.get_logger("__name__")
-financial_workflow = workflow.create_financial_workflow()
+financial_workflow = builder.create_financial_workflow()
 
 
 

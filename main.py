@@ -11,7 +11,7 @@ import os
 
 from httpx import stream
 from src.graph.state import State
-from src.graph import workflow
+from src.graph import builder
 from IPython.display import display ,Image
 from langchain_core.messages import HumanMessage
 import time
@@ -24,11 +24,12 @@ from src.tools import stock_tools
 
 
 log = logger.get_logger(__name__)
+os.environ['TAVILY_API_KEY'] = "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"
 os.environ['OPENAI_API_KEY'] = "e03f2bef-bdea-4d59-9a4d-ca74c04d034a"
 os.environ['OPENAI_BASE_URL'] = "https://ark.cn-beijing.volces.com/api/v3/"
-# os.environ['MODEL_NAME'] = "doubao-seed-1-6-vision-250815"
+os.environ['MODEL_NAME'] = "doubao-seed-1-6-vision-250815"
 # os.environ['MODEL_NAME'] = "doubao-1-5-pro-32k-250115"
-os.environ['MODEL_NAME'] = "kimi-k2-250905"
+# os.environ['MODEL_NAME'] = "kimi-k2-250905"
 
 # os.environ['OPENAI_API_KEY'] = "sk-OKMLRX7tbxw8g37538fARlCDNu5MPcAZhcEJWZmMUVEKqf5U"
 # os.environ['OPENAI_BASE_URL'] = "https://api.moonshot.cn/v1"
@@ -36,14 +37,14 @@ os.environ['MODEL_NAME'] = "kimi-k2-250905"
 
 
 def show_graph():
-    graph = workflow.create_financial_workflow()
+    graph = builder.create_financial_workflow()
     png = graph.get_graph().draw_mermaid_png()
     with open("simple_test.png", "wb") as f:
         f.write(png)
 
 def chat(input: str):
     log.info("开始聊天")
-    graph = workflow.create_financial_workflow()
+    graph = builder.create_financial_workflow()
     state = State(messages=[HumanMessage(content=input)])
     config = {"thread_id":"1"}
     for chunk in graph.stream(state,config):
@@ -84,9 +85,10 @@ def ak_invoke():
 
 
 # show_graph()
-chat('300033近10天表现怎么样')
+# chat('300033近10天表现怎么样')
 # chat('最近一个月走势比较好的股票有哪些')
 # chat('601138怎么样')
+chat('今天杭州天气怎么样')
 # execute_code()
 # ak_invoke()
 #if __name__ == "__main__":

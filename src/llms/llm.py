@@ -26,6 +26,6 @@ def get_llm_by_type(
         llm = ChatOpenAI(model= MODEL_NAME if MODEL_NAME else "kimi-k2-250905",max_tokens=32768)
         _llm_cache[llm_type] = llm
     else:
-        llm = ChatOpenAI(model= MODEL_NAME if MODEL_NAME else "kimi-k2-250905",max_tokens=102400)
+        llm = ChatOpenAI(model= MODEL_NAME if MODEL_NAME else "kimi-k2-250905",max_tokens=65536)
         _llm_cache[llm_type] = llm
     return llm

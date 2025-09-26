@@ -5,7 +5,16 @@ from typing import Dict, Any, Optional
 from src.jupyter import JupyterExecutor
 import subprocess
 
+import os
+from typing import Optional
+
+
+from src.utils import logger
+
+log = logger.get_logger("__name__")
+
 executor_by_thread_id : Dict[str,JupyterExecutor] = {}
+
 
 @tool
 def execute_python_code(thread_id:str,code:str) -> Dict[str,Any]:

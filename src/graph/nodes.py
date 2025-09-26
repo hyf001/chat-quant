@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from email import message
-from math import log
+import os
 from pyexpat import model
 from tabnanny import verbose
 from tkinter import END
@@ -9,46 +9,59 @@ from typing import Dict, Any
 from venv import logger
 from langchain_core.messages import HumanMessage, AIMessage,SystemMessage,BaseMessage
 from langgraph.types import Command, interrupt
-from pydantic import InstanceOf
-from src import llms
+from pydantic import InstanceOf, SecretStr
+from src.llms import get_llm_by_type
 from src.config.agents import LLMType
 from src.graph.state import State
 from src.llms import llm
 from src.prompt import prompt_util
 from src.tools import stock_tools, system_tools
 from langgraph.prebuilt import create_react_agent
+from langchain_core.runnables import RunnableConfig
+from langchain_tavily import TavilySearch
 
-def coordination_node(state: State) -> Command:
+from src.utils import logger
+import json
+
+from src.utils.json_utils import repair_json_output
+from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_community.utilities.tavily_search import TavilySearchAPIWrapper
+from langgraph.prebuilt import ToolNode
+
+
+log = logger.get_logger("__name__")
+llm_type = "open-ai"
+def intention_node(state: State) -> dict[str,Any]:
     """协调节点 - 判断接下来定哪个节点"""
-    intension = "unsupported"
+    intention = "unsupported"
     # 获取最新消息内容
-    modle = llm.get_llm_by_type("moonshot")
+    modle = llm.get_llm_by_type("open-ai")
     response  = modle.invoke([
         SystemMessage(content=
-                      prompt_util.getPromptTemplate("src/prompt/coordination.md")),
+                      prompt_util.getPrompt("coordination",today=datetime.now().strftime("%Y-%m-%d"))),
                     state["messages"][-1],
         ])
     
     if  isinstance (response,AIMessage):
         if isinstance(response.content,str):
-            intension = response.content
+            intention = response.content
         elif isinstance(response.content,list):
-            intension = response.content[-1]
-
-    return Command(update={"intention":intension,"messages":[response]})
+            intention = response.content[-1]
+    log.info(f"识别到意图是{intention}")
+    return {"intention":intention,"messages":[response]}
 
 
 def data_query_node1(state: State,config) -> Command[str]:
     """数据查询节点"""
-    model = llm.get_llm_by_type("moonshot")
+    model = get_llm_by_type("open-ai")
     tools = [stock_tools.stock_individual_info_em,
              stock_tools.stock_zh_a_hist,
              stock_tools.stock_zh_a_spot_em]
     model_with_tool = model.bind_tools(tools)
     inputs : list[BaseMessage] = [SystemMessage(
-        content=prompt_util.getPromptTemplate("src/prompt/data_query.md").format(
-                          today=datetime.now().strftime("%Y-%m-%d"),
-                          work_dir="/Users/huyufei/Documents/hyf/code/github/chat-quant/workspace"))]
+        content=prompt_util.getPrompt("data_query"
+                                      ,today=datetime.now().strftime("%Y-%m-%d")
+                                      ,work_dir="/Users/huyufei/Documents/hyf/code/github/chat-quant/workspace"))]
     inputs.extend(state["messages"])
     ai_message : AIMessage = model_with_tool.invoke(inputs)
     # 检查是否有工具调用
@@ -62,16 +75,16 @@ def data_query_node1(state: State,config) -> Command[str]:
        return Command(goto=END, update={"messages": [ai_message]})
 
 
-def data_query_node(state: State) -> Command[str]:
-    """数据查询节点"""
-    model = llm.get_llm_by_type("moonshot")
+def generate_analytic_web_node(state: State) -> Command[str]:
+    """生成数据分析web页面"""
+    model = get_llm_by_type("open-ai")
     tools = [stock_tools.search_akshare_interfaces,
              stock_tools.invoke_akshare_interface,
              system_tools.execute_linux_command]
     agent = create_react_agent (model,tools,
-                     prompt=prompt_util.getPromptTemplate("src/prompt/data_query.md").format(
-                          today=datetime.now().strftime("%Y-%m-%d"),
-                          work_dir="/Users/huyufei/Documents/hyf/code/github/chat-quant/workspace")
+                     prompt=prompt_util.getPrompt("data_query",
+                                                  today=datetime.now().strftime("%Y-%m-%d"),
+                                                  work_dir="/Users/huyufei/Documents/hyf/code/github/chat-quant/workspace")
     )
     messages = {"messages":state["messages"]}
     for step in agent.stream(messages,stream_mode="values"):
@@ -80,11 +93,26 @@ def data_query_node(state: State) -> Command[str]:
 
 
 
-def plan_node(state: State):
+def plan_node(state: State,config: RunnableConfig):
     """计划节点 - 生成执行计划"""
-
-    user_request = (state["messages"][-1].content if state["messages"] else "")
-    pass
+    log.info("开始生成执行计划")
+    system_prompt=prompt_util.getPrompt("plan",
+                                                  today=datetime.now().strftime("%Y-%m-%d"),
+                                                  work_dir="/Users/huyufei/Documents/hyf/code/github/chat-quant/workspace",
+                                                  intension=state["intention"],
+                                                  max_step_num = 5)
+    
+    messages = [SystemMessage(content=system_prompt)] + state["messages"]
+    model = get_llm_by_type("open-ai")
+    response = model.invoke(messages)
+    full_response = response.model_dump_json(indent=4,exclude_none=True)
+    try:
+        curr_plan = json.loads(repair_json_output(full_response))
+    except json.JSONDecodeError:
+        log.warning("计划不是一个合法的json格式")
+        return Command(goto=END)
+    log.info(f"生成的plan:{full_response}")
+    return Command(goto="human_feedback",update={"messages":[AIMessage(content=full_response,name="planner")]})
 
 
 def human_feedback_node(state: State) -> Command[str]:
@@ -100,24 +128,17 @@ def human_feedback_node(state: State) -> Command[str]:
         return Command(goto="strategy_generation",update={"current_plan":str(feedback)[6:]})
     return Command(goto="strategy_generation")
 
-def strategy_generation_node(state: State) :
+def generate_strategy_node(state: State) :
     """生成策略节点"""
     print("生成策略")
     pass
 
-def strategy_generation_handoff_node(state: State) :
-    """生成策略节点过度节点"""
-    pass
 
-
-def unsupported_node(state: State) -> Dict[str, Any]:
-    """不支持的请求节点"""
-
-    error_message = AIMessage(
-        content="抱歉，我暂时无法处理这个请求。请尝试以下类型的请求:\n1. 金融数据查询\n2. 交易策略生成\n3. 策略回测分析"
-    )
-
-    return {
-        "messages": [error_message],
-        "workflow_step": "error"
-    }
+def open_answer_node(state: State) -> Dict[str, Any]:
+    """开放式回答问题"""
+    tavily_tool = TavilySearch( max_results=5)
+    model = get_llm_by_type("open-ai")
+    agent = create_react_agent (model,[tavily_tool])
+    response = agent.invoke({"messages": [{"role": "user", "content": state["messages"][0].content}]},        
+                            {"recursion_limit": 7},)
+    return {"messages": response["messages"]}
