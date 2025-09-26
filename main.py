@@ -8,6 +8,9 @@ import asyncio
 from json import load, tool
 import sys
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
 
 from httpx import stream
 from src.graph.state import State
@@ -22,18 +25,12 @@ import uvicorn
 from src.akshare.akshare_interface import AKShareInterfaceLoader,AKShareInvoker
 from src.tools import stock_tools
 
+load_dotenv()
 
 log = logger.get_logger(__name__)
-os.environ['TAVILY_API_KEY'] = "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"
-os.environ['OPENAI_API_KEY'] = "e03f2bef-bdea-4d59-9a4d-ca74c04d034a"
-os.environ['OPENAI_BASE_URL'] = "https://ark.cn-beijing.volces.com/api/v3/"
-os.environ['MODEL_NAME'] = "doubao-seed-1-6-vision-250815"
-# os.environ['MODEL_NAME'] = "doubao-1-5-pro-32k-250115"
-# os.environ['MODEL_NAME'] = "kimi-k2-250905"
 
-# os.environ['OPENAI_API_KEY'] = "sk-OKMLRX7tbxw8g37538fARlCDNu5MPcAZhcEJWZmMUVEKqf5U"
-# os.environ['OPENAI_BASE_URL'] = "https://api.moonshot.cn/v1"
-# os.environ['MODEL_NAME'] = "kimi-k2-0905-preview"
+# Environment variables are now loaded from .env file via load_dotenv()
+# No need to set them manually here anymore
 
 
 def show_graph():
