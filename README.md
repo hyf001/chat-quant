@@ -1,196 +1,234 @@
-# 金融数据策略开发工作流
+# Claudable
 
-基于LangGraph框架实现的金融策略开发工作流引擎，集成金融数据查询、策略开发和策略回测功能。
+<img src="./assets/Claudable.png" alt="Claudable" style="width: 100%;" />
+<div align="center">
+<h3>Connect CLI Agent • Build what you want • Deploy instantly</h3>
 
-## 🚀 功能特性
+<p>Powered by <a href="https://opactor.ai">OPACTOR</a></p>
+</div>
+<p align="center">
+<a href="https://discord.gg/NJNbafHNQC">
+<img src="https://img.shields.io/badge/Discord-Join%20Community-7289da?style=flat&logo=discord&logoColor=white" alt="Join Discord Community">
+</a>
+<a href="https://opactor.ai">
+<img src="https://img.shields.io/badge/OPACTOR-Website-000000?style=flat&logo=web&logoColor=white" alt="OPACTOR Website">
+</a>
+<a href="https://twitter.com/aaron_xong">
+<img src="https://img.shields.io/badge/Follow-@aaron__xong-000000?style=flat&logo=x&logoColor=white" alt="Follow Aaron">
+</a>
+</p>
 
-- **📊 金融数据查询**: 支持股票、加密货币、外汇等多种金融数据获取
-- **🤖 智能策略生成**: 基于自然语言描述生成量化交易策略
-- **📈 策略回测分析**: 全面的策略性能评估和风险分析
-- **💬 自然语言处理**: 智能理解用户需求，无需编程知识
-- **🔄 智能工作流**: 基于LangGraph的状态管理和流程控制
-- **🎯 API接口**: 提供简洁的工作流执行接口
+## What is Claudable?
 
-## 📁 项目结构
+Claudable is a powerful Next.js-based web app builder that combines **Claude Code's** advanced AI agent capabilities with **Lovable**'s simple and intuitive app building experience. Just describe your app idea - "I want a task management app with dark mode" - and watch as Claudable instantly generates the code and shows you a live preview of your working app. You can deploy your app to Vercel and integrate database with Supabase for free.
 
-```
-chat-quant/
-├── src/
-│   ├── agents/              # AI Agent实现
-│   │   ├── data_query_agent.py    # 数据查询Agent
-│   │   ├── strategy_agent.py      # 策略生成Agent
-│   │   └── backtest_agent.py      # 回测分析Agent
-│   ├── graph/               # LangGraph核心组件
-│   │   ├── state.py              # 状态定义
-│   │   ├── nodes.py              # 节点实现
-│   │   └── tools.py              # 工具函数
-│   ├── workflow/            # 工作流实现
-│   │   └── financial_workflow.py # 金融工作流
-│   ├── utils/               # 工具模块
-│   │   └── error_handler.py      # 错误处理
-│   ├── config/              # 配置管理
-│   └── cli.py               # 命令行界面
-├── main.py                  # 主入口文件
-├── requirements.txt         # 依赖包列表
-└── README.md               # 项目说明
-```
+This open-source project empowers you to build and deploy professional web applications easily for **free**.
 
-## 🛠️ 安装与配置
+How to start? Simply login to Claude Code, start Claudable, and describe what you want to build. That's it. There is no additional subscription cost for app builder. 
 
-### 1. 环境要求
+## Features
+<img src="./assets/gif/Claudable_v2_cc_4_1080p.gif" alt="Claudable Demo" style="width: 100%; max-width: 800px;">
 
-- Python 3.8+
-- 支持LangChain和LangGraph的环境
+- **Powerful Agent Performance**: Leverage the full power of Claude Code's AI agent capabilities with native MCP support
+- **Natural Language to Code**: Simply describe what you want to build, and Claudable generates production-ready Next.js code
+- **Instant Preview**: See your changes immediately with hot-reload as AI builds your app
+- **Zero Setup, Instant Launch**: No complex sandboxes, no API key, no database headaches - just start building immediately
+- **Beautiful UI**: Generate beautiful UI with Tailwind CSS and shadcn/ui
+- **Deploy to Vercel**: Push your app live with a single click, no configuration needed
+- **GitHub Integration**: Automatic version control and continuous deployment setup
+- **Supabase Database**: Connect production PostgreSQL with authentication ready to use
+- **Automated Error Detection**: Detect errors in your app and fix them automatically
 
-### 2. 安装依赖
+## AI Coding Agent
+
+### Claude Code
+**[Claude Code](https://docs.anthropic.com/en/docs/claude-code/setup)** - Anthropic's advanced AI coding agent with Claude Opus 4.1
+- **Features**: Deep codebase awareness, MCP support, Unix philosophy, direct terminal integration
+- **Context**: Native 256K tokens
+- **Pricing**: Included with Claude Pro/Team/Enterprise plans
+- **Installation**:
+  ```bash
+  npm install -g @anthropic-ai/claude-code
+  claude  # then > /login
+  ```
+
+## Technology Stack
+
+**Database & Deployment:**
+- **[Supabase](https://supabase.com/)**: Connect production-ready PostgreSQL database directly to your project.
+- **[Vercel](https://vercel.com/)**: Publish your work immediately with one-click deployment
+
+**There is no additional subscription cost and built just for YOU.**
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+- Node.js 18+
+- Python 3.10+
+- Claude Code (already logged in)
+- Git
+
+## Quick Start
+
+Get Claudable running on your local machine in minutes:
 
 ```bash
+# Clone the repository
+git clone https://github.com/opactorai/Claudable.git
+cd Claudable
+
+# Install all dependencies (Node.js and Python)
+npm install
+
+# Start development servers
+npm run dev
+```
+
+Your application will be available at:
+- Frontend: http://localhost:3000
+- API Server: http://localhost:8080
+- API Documentation: http://localhost:8080/docs
+
+**Note**: Ports are automatically detected. If the default ports are in use, the next available ports will be assigned.
+
+## Setup
+
+### Manual Setup
+You can also manually setup the project.
+```bash
+# Frontend setup
+cd apps/web
+npm install
+
+# Backend setup
+cd ../api
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. 环境配置
+The `npm install` command automatically handles the complete setup:
 
-项目默认使用豆包模型，你也可以配置其他LLM服务：
+1. **Port Configuration**: Detects available ports and creates `.env` files
+2. **Node.js Dependencies**: Installs packages including workspace dependencies
+3. **Python Environment**: Creates virtual environment in `apps/api/.venv`
+4. **Python Dependencies**: Installs packages using `uv` (if available) or `pip`
+5. **Database Setup**: SQLite database auto-creates at `data/cc.db` on first run
 
-```python
-# 在 src/cli.py 中修改API配置
-os.environ['OPENAI_API_KEY'] = "your-api-key"
-os.environ['OPENAI_BASE_URL'] = "your-api-base-url"
+### Additional Commands
+```bash
+npm run db:backup   # Create a backup of your SQLite database
+                    # Use when: Before major changes or deployments
+                    # Creates: data/backups/cc_backup_[timestamp].db
+
+npm run db:reset    # Reset database to initial state
+                    # Use when: Need fresh start or corrupted data
+                    # Warning: This will delete all your data!
+
+npm run clean       # Remove all dependencies and virtual environments
+                    # Use when: Dependencies conflict or need fresh install
+                    # Removes: node_modules/, apps/api/.venv/, package-lock.json
+                    # After running: npm install to reinstall everything
 ```
 
-## 🚀 使用方法
+## Usage
 
-### 基本用法
+### Getting Started with Development
 
-```python
-from src.cli import create_workflow
+1. **Connect Claude Code**: Link your Claude Code CLI to enable AI assistance
+2. **Describe Your Project**: Use natural language to describe what you want to build
+3. **AI Generation**: Watch as the AI generates your project structure and code
+4. **Live Preview**: See changes instantly with hot reload functionality
+5. **Deploy**: Push to production with Vercel integration
 
-# 创建工作流实例
-workflow = create_workflow()
+### API Development
 
-# 执行查询
-result = workflow.execute_workflow("查询苹果公司2023年的股价数据")
+Access the interactive API documentation at http://localhost:8080/docs to explore available endpoints and test API functionality.
 
-# 处理中断（如需要用户确认）
-if result.get("needs_human_input"):
-    result = workflow.continue_workflow("用户反馈")
+### Database Operations
 
-# 获取工作流状态
-state = workflow.get_workflow_state()
+Claudable uses SQLite for local development and can be configured for PostgreSQL in production. The database automatically initializes on first run.
 
-# 重置会话
-workflow.reset_session()
-```
+## Troubleshooting
 
-### 使用示例
+### Port Already in Use
 
-#### 数据查询
-```python
-result = workflow.execute_workflow("查询苹果公司2023年的股价数据")
-```
+The application automatically finds available ports. Check the `.env` file to see which ports were assigned.
 
-#### 策略开发
-```python
-result = workflow.execute_workflow("基于移动平均线开发一个交易策略")
-```
-
-#### 综合任务
-```python
-result = workflow.execute_workflow("我想开发一个基于MACD的股票交易策略，请帮我完成数据获取、策略编写和回测分析")
-```
-
-### 运行示例
+### Installation Failures
 
 ```bash
-python example_usage.py
+# Clean all dependencies and retry
+npm run clean
+npm install
 ```
 
-## 🏗️ 架构设计
+### Permission Errors (macOS/Linux)
 
-### 工作流图
-
-系统基于以下流程图实现：
-
-```
-start → 协调节点 → plan → human调整plan → Agent查数 → Agent生成策略 → human回测参数 → Agent回测 → end
-```
-
-### 核心组件
-
-1. **协调节点**: 判断用户需求，决定下一步操作
-2. **计划节点**: 生成执行计划，供用户确认
-3. **数据查询Agent**: 处理金融数据获取请求
-4. **策略生成Agent**: 基于数据和需求生成交易策略
-5. **回测分析Agent**: 执行策略回测和性能分析
-
-### 状态管理
-
-使用LangGraph的状态管理机制，维护以下关键状态：
-
-- `financial_data`: 金融数据
-- `strategy`: 交易策略
-- `backtest_result`: 回测结果
-- `workflow_step`: 当前工作流步骤
-- `needs_human_input`: 是否需要人工输入
-
-## 🔧 扩展开发
-
-### 添加新的数据源
-
-在 `src/graph/tools.py` 中扩展 `get_financial_api_details` 函数：
-
-```python
-api_details = {
-    "new_data_source": {
-        "description": "新数据源描述",
-        "parameters": {...},
-        "example": "...",
-        "returns": "..."
-    }
-}
+If you encounter permission errors:
+```bash
+cd apps/api
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### 添加新的Agent
+### Claude Code Permission Issues (Windows/WSL)
 
-1. 在 `src/agents/` 目录下创建新的Agent文件
-2. 继承基础Agent类并实现核心逻辑
-3. 在工作流中添加对应的节点和路由
+If you encounter the error: `Error output dangerously skip permissions cannot be used which is root sudo privileges for security reasons`
 
-### 自定义策略模板
+**Solution:**
+1. Do not run Claude Code with `sudo` or as root user
+2. Ensure proper file ownership in WSL:
+   ```bash
+   # Check current user
+   whoami
+   
+   # Change ownership of project directory to current user
+   sudo chown -R $(whoami):$(whoami) ~/Claudable
+   ```
+3. If using WSL, make sure you're running Claude Code from your user account, not root
+4. Verify Claude Code installation permissions:
+   ```bash
+   # Reinstall Claude Code without sudo
+   npm install -g @anthropic-ai/claude-code --unsafe-perm=false
+   ```
 
-在策略生成Agent中添加预定义的策略模板，提高生成质量。
+## Integration Guide
 
-## 🐛 错误处理
+### GitHub
+**Get Token:** [GitHub Personal Access Tokens](https://github.com/settings/tokens) → Generate new token (classic) → Select `repo` scope
 
-系统包含完善的错误处理机制：
+**Connect:** Settings → Service Integrations → GitHub → Enter token → Create or connect repository
 
-- **节点级错误处理**: 捕获节点执行异常
-- **Agent级错误处理**: 处理AI Agent执行失败
-- **工具级错误处理**: 处理工具调用异常
-- **工作流恢复**: 自动错误恢复和状态修复
+### Vercel  
+**Get Token:** [Vercel Account Settings](https://vercel.com/account/tokens) → Create Token
 
-## 📊 性能优化
+**Connect:** Settings → Service Integrations → Vercel → Enter token → Create new project for deployment
 
-- **异步处理**: 支持异步工具调用
-- **状态缓存**: 避免重复计算
-- **错误重试**: 自动重试机制
-- **内存管理**: 对话历史管理
+### Supabase
+**Get Credentials:** [Supabase Dashboard](https://supabase.com/dashboard) → Your Project → Settings → API
+- Project URL: `https://xxxxx.supabase.co`  
+- Anon Key: Public key for client-side
+- Service Role Key: Secret key for server-side
 
-## 🤝 贡献指南
 
-1. Fork 项目
-2. 创建功能分支
-3. 提交代码变更
-4. 创建 Pull Request
+## License
 
-## 📄 许可证
+MIT License.
 
-本项目采用 MIT 许可证。
+## Upcoming Features
+These features are in development and will be opened soon.
+- **New CLI Agents** - Trust us, you're going to LOVE this!
+- **Checkpoints for Chat** - Save and restore conversation/codebase states
+- **Advanced MCP Integration** - Native integration with MCP
+- **Enhanced Agent System** - Subagents, AGENTS.md integration
+- **Website Cloning** - You can start a project from a reference URL.
+- Various bug fixes and community PR merges
 
-## 🆘 技术支持
+We're working hard to deliver the features you've been asking for. Stay tuned!
 
-如有问题或建议，请提交 Issue 或联系开发团队。
+## Star History
 
----
+[![Star History Chart](https://api.star-history.com/svg?repos=opactorai/Claudable&type=Date)](https://www.star-history.com/#opactorai/Claudable&Date)
 
-**注意**: 这是一个演示项目，生产环境使用需要连接真实的金融数据API和回测引擎。
