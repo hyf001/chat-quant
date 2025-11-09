@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: main",
+            "name": "Python Debugger: start_main",
             "type": "debugpy",
             "request": "launch",
-            "program": "main.py",
+            "program": "apps/api/start_main.py",
             "console": "integratedTerminal"
         }
     ]

@@ -1,8 +1,0 @@
-mysql:
-    host: "47.95.205.124"
-    port: 60330
-    user: "cbas"
-    password: "w-7E~O*cOJ"
-    database: "chat_quant"
-    charset: "utf8mb4"
-    autocommit: true
