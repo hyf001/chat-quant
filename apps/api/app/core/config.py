@@ -84,6 +84,8 @@ class Settings(BaseModel):
 
     claudable_project_root: str = str(PROJECT_ROOT)
 
+    python_home: str = os.getenv("PYTHON_HOME","")
+
 
 
 settings = Settings()
