@@ -1,181 +1,158 @@
 # CLAUDE.md
 
-这个文件为在此存储库中工作的 Claude Code (claude.ai/code) 提供指导。
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 项目概述
+## Project Overview
 
-Claudable 是一个基于 Next.js 的 Web 应用构建器，它将 Claude Code 的高级 AI 代理能力与 Lovable 的简单直观应用构建体验相结合。用户只需描述应用想法，Claudable 就能即时生成代码并显示工作应用的实时预览。
+This is a full-stack quantitative trading platform called "chat-quant" that combines a Next.js frontend with a FastAPI backend. The platform enables users to create, backtest, and analyze quantitative trading strategies through an AI-powered chat interface.
 
-## 架构概述
+## Architecture
 
-Claudable 是一个 monorepo 结构的项目，包含：
+### Monorepo Structure
+- `apps/web/` - Next.js 14 frontend (TypeScript, React, Tailwind CSS)
+- `apps/api/` - FastAPI backend (Python 3.10+)
+- `project_template/` - Template for new quantitative strategy projects
+- `scripts/` - Development and setup automation scripts
+- `docker/` - Docker deployment configuration
 
-### 前端 (`apps/web/`)
-- **技术栈**: Next.js 14, React 18, TypeScript, Tailwind CSS
-- **主要特性**: 
-  - 实时聊天界面与多个 AI 代理交互
-  - 项目管理和设置界面
-  - 与 GitHub/Vercel/Supabase 的服务集成
-  - 深色模式支持和响应式设计
+### Backend (FastAPI)
+- **Entry Point**: `apps/api/start_main.py` runs uvicorn on port 8080
+- **Main App**: `apps/api/app/main.py` defines FastAPI app with all routers
+- **Database**: SQLite (default: `data/cc.db`) with SQLAlchemy ORM
+- **Key Routes**:
+  - `/api/projects` - Project management
+  - `/api/chat/{project_id}` - WebSocket chat interface
+  - `/api/eval` - Agent trace & evaluation
+  - `/api/github`, `/api/vercel` - External integrations
+  - `/api/auth` - User authorization
+- **Core Services**:
+  - `app/core/config.py` - Configuration management with environment variables
+  - `app/core/websocket/manager.py` - WebSocket connection management
+  - `app/db/session.py` - Database session management
+  - `app/models/` - SQLAlchemy models for projects, messages, sessions, etc.
 
-### 后端 (`apps/api/`)
-- **技术栈**: FastAPI, SQLAlchemy, Python 3.10+
-- **核心功能**:
-  - WebSocket 实时通信
-  - 多 CLI 代理适配器 (Claude Code, Cursor CLI, Codex CLI, Gemini CLI, Qwen Code)
-  - 项目生命周期管理
-  - GitHub、Vercel、Supabase 服务集成
-  - SQLite (开发) / PostgreSQL (生产) 数据库
+### Frontend (Next.js)
+- **Entry Point**: `apps/web/app/page.tsx` - Project list/home page
+- **Chat Interface**: `apps/web/app/[project_id]/chat/page.tsx`
+- **Key Components**:
+  - `components/chat/` - Chat UI components
+  - `components/settings/` - Settings modals
+  - `contexts/` - React contexts for global state
+- **API Communication**: WebSocket for real-time chat, REST for project operations
 
-### 脚本和工具 (`scripts/`)
-- 自动环境设置和端口检测
-- Python 虚拟环境管理
-- 数据库备份和重置工具
+### Quantitative Strategy System
+- **Base Class**: `project_template/strategy/base_strategy.py` - All strategies inherit from `BaseStrategy`
+- **Strategy Runner**: `project_template/strategy/strategy_runner.py` - Backtrader integration
+- **Backtest Execution**: `project_template/strategy/run_backtest.py` - CLI for running backtests
+- **Data Source**: akshare library for Chinese stock market data
+- **Technical Indicators**: TA-Lib for indicator calculations
+- **Backtest Framework**: backtrader for strategy testing
 
-## 开发命令
+## Development Commands
 
-### 主要命令
+### Initial Setup
 ```bash
-# 启动完整开发环境 (前端 + 后端)
-npm run dev
-
-# 分别启动服务
-npm run dev:web    # 仅前端 (默认 http://localhost:3000)
-npm run dev:api    # 仅后端 (默认 http://localhost:8080)
-
-# 项目设置
-npm install        # 完整安装，包括 Python 依赖和环境配置
-npm run setup      # 等同于 npm install
-npm run clean      # 清理所有依赖和虚拟环境
+npm run setup              # Install all dependencies
+npm run ensure:env         # Create .env from .env.example if missing
+npm run ensure:venv        # Setup Python virtual environment
 ```
 
-### 数据库管理
+### Development
 ```bash
-npm run db:backup  # 创建 SQLite 数据库备份
-npm run db:reset   # 重置数据库到初始状态 (危险操作!)
+npm run dev                # Start both frontend and backend concurrently
+npm run dev:web            # Start Next.js frontend only (port 3000)
+npm run dev:api            # Start FastAPI backend only (port 8080)
 ```
 
-### 前端开发
+### Database
 ```bash
-cd apps/web
-npm run build      # 构建生产版本
-npm run start      # 启动生产服务器
+npm run db:reset           # Reset database (drops all tables)
+npm run db:backup          # Backup current database
 ```
 
-### 类型检查
-项目包含 TypeScript 类型检查脚本：
+### Cleanup
 ```bash
-# 手动运行类型检查 (位于 scripts/type_check.sh)
-npx tsc --noEmit
+npm run clean              # Clean build artifacts and caches
 ```
 
-## 关键架构模式
-
-### CLI 适配器模式
-- 统一接口支持多个 AI 代理 (Claude Code, Cursor CLI, Codex CLI, Gemini CLI, Qwen Code)
-- 每个适配器位于 `apps/api/app/services/cli/adapters/`
-- 通过 `CLIManager` 和 `UnifiedManager` 统一管理
-
-### WebSocket 通信
-- 实时双向通信支持聊天和项目更新
-- WebSocket 管理器位于 `apps/api/app/core/websocket/manager.py`
-- 前端通过 React hooks 管理 WebSocket 连接
-
-### 服务导向架构
-后端按功能模块组织：
-- `api/projects/` - 项目 CRUD 操作
-- `api/chat/` - 聊天和 AI 交互
-- `api/github.py` - GitHub 集成
-- `api/vercel.py` - Vercel 部署
-- `services/` - 核心业务逻辑
-
-## 环境配置
-
-### 自动配置
-- 端口自动检测：如果默认端口被占用，自动分配下一个可用端口
-- 环境文件自动生成 (`.env`)
-- Python 虚拟环境自动创建和激活
-
-### 手动配置 (如需要)
+### Python Backend (Direct)
 ```bash
-# 前端环境设置
-cd apps/web
-npm install
-
-# 后端环境设置
 cd apps/api
-python3 -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+source .venv/bin/activate  # Activate virtual environment
+python start_main.py       # Start backend on port 8080
 ```
 
-## 数据库
-
-### 开发环境
-- SQLite 数据库位于 `data/cc.db`
-- 首次运行时自动创建
-- 支持自动迁移
-
-### 生产环境
-- 支持 PostgreSQL
-- 可通过 Supabase 集成配置
-
-## 集成服务
-
-### GitHub
-- 自动仓库创建和管理
-- 代码提交和推送
-- 需要 Personal Access Token
-
-### Vercel
-- 一键部署到 Vercel
-- 自动 CI/CD 设置
-- 需要 Vercel API Token
-
-### Supabase
-- PostgreSQL 数据库
-- 认证系统
-- 需要项目 URL 和 API Keys
-
-## 开发最佳实践
-
-### 代码组织
-- 前端组件位于 `apps/web/components/`
-- 后端模型位于 `apps/api/app/models/`
-- 共享类型定义使用 TypeScript interfaces
-
-### 样式系统
-- 使用 Tailwind CSS 进行样式管理
-- 支持深色模式 (`darkMode: 'class'`)
-- 自定义主题颜色和 bolt 品牌色彩
-
-### 错误处理
-- 后端使用 FastAPI 异常处理
-- 前端使用 React Error Boundaries
-- WebSocket 连接自动重连机制
-
-## 故障排除
-
-### 端口占用
-应用会自动检测并使用可用端口，检查 `.env` 文件查看分配的端口。
-
-### 权限错误
-不要使用 `sudo` 运行 Claude Code。如果在 WSL 中遇到权限问题：
+### Strategy Backtesting
 ```bash
-sudo chown -R $(whoami):$(whoami) ~/Claudable
+cd project_template/strategy
+python run_backtest.py <strategy_file> \
+  --symbols "300031,000001" \
+  --start-date 20240101 \
+  --end-date 20241231 \
+  --output data_file/final/result.json \
+  --cash 100000 \
+  --commission 0.001 \
+  --params '{"ma_short":10,"ma_long":30}'
 ```
 
-### 依赖冲突
+## Environment Configuration
+
+Required environment variables (see `.env.example`):
+- `ANTHROPIC_API_KEY` - **Required** for Claude Code SDK
+- `API_PORT` - Backend port (default: 8080)
+- `DATABASE_URL` - SQLite database path
+- `PROJECTS_ROOT` - Project storage directory
+- `CLAUDE_CODE_MODEL` - Claude model to use (default: claude-sonnet-4-5-20250929)
+
+## Key Technical Details
+
+### Database
+- SQLite with SQLAlchemy ORM
+- Auto-creates tables on startup via `app/main.py:on_startup()`
+- Migrations handled by `app/db/migrations.py`
+- Foreign key constraints enabled
+
+### WebSocket Communication
+- Chat interface uses WebSocket at `/api/chat/{project_id}`
+- Manager handles multiple concurrent connections
+- Real-time message streaming from Claude
+
+### Strategy Development
+1. Create strategy class inheriting from `BaseStrategy` in `project_template/strategy/impls/`
+2. Implement `__init__()` and `next()` methods
+3. Use `self.buy_signal()` and `self.sell_signal()` for trades
+4. Run backtest using `run_backtest.py` script
+5. Results saved as JSON in `data_file/final/`
+
+### Python Dependencies
+Key packages (see `apps/api/requirements.txt`):
+- fastapi, uvicorn - Web framework
+- SQLAlchemy - ORM
+- claude-agent-sdk - Claude integration
+- backtrader - Backtesting framework
+- akshare - Financial data
+- TA-Lib - Technical indicators
+- pandas, numpy - Data processing
+
+### Frontend Stack
+- Next.js 14 with App Router
+- TypeScript
+- Tailwind CSS
+- Framer Motion for animations
+- React Markdown for message rendering
+
+## Docker Deployment
+
+Build and run:
 ```bash
-npm run clean  # 清理所有依赖
-npm install    # 重新安装
+docker build -f docker/Dockerfile -t chat-quant:latest .
+docker run -d -p 3000:3000 -p 8000:8000 \
+  -v /path/to/data:/app/data \
+  chat-quant:latest
 ```
 
-## 重要文件路径
+See `docker/README.md` for K8s deployment details.
 
-- `package.json` - 主要脚本和工作区配置
-- `apps/web/package.json` - 前端依赖和脚本
-- `apps/api/requirements.txt` - Python 依赖
-- `apps/api/app/main.py` - FastAPI 应用入口
-- `apps/web/app/layout.tsx` - Next.js 根布局
-- `scripts/` - 各种自动化脚本
+## Project Root Detection
+
+The backend automatically detects project root by looking for `apps/` directory and `Makefile`. Configuration paths are relative to detected project root.

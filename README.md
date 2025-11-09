@@ -1,234 +1,213 @@
-# Claudable
+# Chat-Quant 量化交易平台
 
-<img src="./assets/Claudable.png" alt="Claudable" style="width: 100%;" />
-<div align="center">
-<h3>Connect CLI Agent • Build what you want • Deploy instantly</h3>
+基于 AI 对话的量化交易策略开发与回测平台。
 
-<p>Powered by <a href="https://opactor.ai">OPACTOR</a></p>
-</div>
-<p align="center">
-<a href="https://discord.gg/NJNbafHNQC">
-<img src="https://img.shields.io/badge/Discord-Join%20Community-7289da?style=flat&logo=discord&logoColor=white" alt="Join Discord Community">
-</a>
-<a href="https://opactor.ai">
-<img src="https://img.shields.io/badge/OPACTOR-Website-000000?style=flat&logo=web&logoColor=white" alt="OPACTOR Website">
-</a>
-<a href="https://twitter.com/aaron_xong">
-<img src="https://img.shields.io/badge/Follow-@aaron__xong-000000?style=flat&logo=x&logoColor=white" alt="Follow Aaron">
-</a>
-</p>
+## 项目简介
 
-## What is Claudable?
+Chat-Quant 是一个全栈量化交易平台，通过 AI 对话界面帮助用户创建、回测和分析量化交易策略。
 
-Claudable is a powerful Next.js-based web app builder that combines **Claude Code's** advanced AI agent capabilities with **Lovable**'s simple and intuitive app building experience. Just describe your app idea - "I want a task management app with dark mode" - and watch as Claudable instantly generates the code and shows you a live preview of your working app. You can deploy your app to Vercel and integrate database with Supabase for free.
+### 核心功能
 
-This open-source project empowers you to build and deploy professional web applications easily for **free**.
+- 🤖 **AI 对话界面** - 通过自然语言与 Claude 交互，创建交易策略
+- 📊 **策略回测** - 基于 backtrader 框架的完整回测系统
+- 📈 **数据获取** - 集成 akshare，支持 A 股市场数据
+- 🔧 **技术指标** - 内置 TA-Lib 技术指标库
+- 💾 **项目管理** - 多项目管理，策略版本控制
 
-How to start? Simply login to Claude Code, start Claudable, and describe what you want to build. That's it. There is no additional subscription cost for app builder. 
+### 技术栈
 
-## Features
-<img src="./assets/gif/Claudable_v2_cc_4_1080p.gif" alt="Claudable Demo" style="width: 100%; max-width: 800px;">
+**前端**
+- Next.js 14 (App Router)
+- TypeScript
+- Tailwind CSS
+- WebSocket 实时通信
 
-- **Powerful Agent Performance**: Leverage the full power of Claude Code's AI agent capabilities with native MCP support
-- **Natural Language to Code**: Simply describe what you want to build, and Claudable generates production-ready Next.js code
-- **Instant Preview**: See your changes immediately with hot-reload as AI builds your app
-- **Zero Setup, Instant Launch**: No complex sandboxes, no API key, no database headaches - just start building immediately
-- **Beautiful UI**: Generate beautiful UI with Tailwind CSS and shadcn/ui
-- **Deploy to Vercel**: Push your app live with a single click, no configuration needed
-- **GitHub Integration**: Automatic version control and continuous deployment setup
-- **Supabase Database**: Connect production PostgreSQL with authentication ready to use
-- **Automated Error Detection**: Detect errors in your app and fix them automatically
+**后端**
+- FastAPI
+- SQLAlchemy (SQLite)
+- Claude Agent SDK
+- uvicorn
 
-## AI Coding Agent
+**量化交易**
+- backtrader - 回测框架
+- akshare - 金融数据
+- TA-Lib - 技术指标
+- pandas/numpy - 数据处理
 
-### Claude Code
-**[Claude Code](https://docs.anthropic.com/en/docs/claude-code/setup)** - Anthropic's advanced AI coding agent with Claude Opus 4.1
-- **Features**: Deep codebase awareness, MCP support, Unix philosophy, direct terminal integration
-- **Context**: Native 256K tokens
-- **Pricing**: Included with Claude Pro/Team/Enterprise plans
-- **Installation**:
-  ```bash
-  npm install -g @anthropic-ai/claude-code
-  claude  # then > /login
-  ```
+## 快速开始
 
-## Technology Stack
+### 环境要求
 
-**Database & Deployment:**
-- **[Supabase](https://supabase.com/)**: Connect production-ready PostgreSQL database directly to your project.
-- **[Vercel](https://vercel.com/)**: Publish your work immediately with one-click deployment
+- Node.js >= 18.0.0
+- Python >= 3.10
+- npm >= 9.0.0
 
-**There is no additional subscription cost and built just for YOU.**
+### 安装步骤
 
-## Prerequisites
-
-Before you begin, ensure you have the following installed:
-- Node.js 18+
-- Python 3.10+
-- Claude Code (already logged in)
-- Git
-
-## Quick Start
-
-Get Claudable running on your local machine in minutes:
-
+1. **克隆项目**
 ```bash
-# Clone the repository
-git clone https://github.com/opactorai/Claudable.git
-cd Claudable
+git clone <repository-url>
+cd chat-quant
+```
 
-# Install all dependencies (Node.js and Python)
-npm install
+2. **安装依赖**
+```bash
+npm run setup
+```
 
-# Start development servers
+3. **配置环境变量**
+```bash
+cp .env.example .env
+# 编辑 .env 文件，填入必需的配置项
+```
+
+必需配置：
+- `ANTHROPIC_API_KEY` - Claude API 密钥（从 https://console.anthropic.com/ 获取）
+
+4. **启动开发服务器**
+```bash
 npm run dev
 ```
 
-Your application will be available at:
-- Frontend: http://localhost:3000
-- API Server: http://localhost:8080
-- API Documentation: http://localhost:8080/docs
+服务将在以下地址启动：
+- 前端：http://localhost:3000
+- 后端：http://localhost:8080
+- API 文档：http://localhost:8080/docs
 
-**Note**: Ports are automatically detected. If the default ports are in use, the next available ports will be assigned.
+## 使用指南
 
-## Setup
+### 创建交易策略
 
-### Manual Setup
-You can also manually setup the project.
-```bash
-# Frontend setup
-cd apps/web
-npm install
+1. 在 `project_template/strategy/impls/` 目录下创建策略文件
+2. 继承 `BaseStrategy` 类
+3. 实现 `__init__()` 和 `next()` 方法
 
-# Backend setup
-cd ../api
-python3 -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+示例策略：
+```python
+from base_strategy import BaseStrategy
+import talib
+
+class MACrossStrategy(BaseStrategy):
+    params = (
+        ('ma_short', 10),
+        ('ma_long', 30),
+    )
+
+    def __init__(self):
+        super().__init__()
+        self.ma_short = None
+        self.ma_long = None
+
+    def next(self):
+        close = self.datas[0].close
+
+        if len(close) >= self.p.ma_long:
+            close_array = close.get(size=self.p.ma_long)
+            self.ma_short = talib.SMA(close_array, timeperiod=self.p.ma_short)[-1]
+            self.ma_long = talib.SMA(close_array, timeperiod=self.p.ma_long)[-1]
+
+        if self.ma_short and self.ma_long:
+            if not self.position:
+                if self.ma_short > self.ma_long:
+                    self.buy_signal()
+            else:
+                if self.ma_short < self.ma_long:
+                    self.sell_signal()
 ```
 
-The `npm install` command automatically handles the complete setup:
-
-1. **Port Configuration**: Detects available ports and creates `.env` files
-2. **Node.js Dependencies**: Installs packages including workspace dependencies
-3. **Python Environment**: Creates virtual environment in `apps/api/.venv`
-4. **Python Dependencies**: Installs packages using `uv` (if available) or `pip`
-5. **Database Setup**: SQLite database auto-creates at `data/cc.db` on first run
-
-### Additional Commands
-```bash
-npm run db:backup   # Create a backup of your SQLite database
-                    # Use when: Before major changes or deployments
-                    # Creates: data/backups/cc_backup_[timestamp].db
-
-npm run db:reset    # Reset database to initial state
-                    # Use when: Need fresh start or corrupted data
-                    # Warning: This will delete all your data!
-
-npm run clean       # Remove all dependencies and virtual environments
-                    # Use when: Dependencies conflict or need fresh install
-                    # Removes: node_modules/, apps/api/.venv/, package-lock.json
-                    # After running: npm install to reinstall everything
-```
-
-## Usage
-
-### Getting Started with Development
-
-1. **Connect Claude Code**: Link your Claude Code CLI to enable AI assistance
-2. **Describe Your Project**: Use natural language to describe what you want to build
-3. **AI Generation**: Watch as the AI generates your project structure and code
-4. **Live Preview**: See changes instantly with hot reload functionality
-5. **Deploy**: Push to production with Vercel integration
-
-### API Development
-
-Access the interactive API documentation at http://localhost:8080/docs to explore available endpoints and test API functionality.
-
-### Database Operations
-
-Claudable uses SQLite for local development and can be configured for PostgreSQL in production. The database automatically initializes on first run.
-
-## Troubleshooting
-
-### Port Already in Use
-
-The application automatically finds available ports. Check the `.env` file to see which ports were assigned.
-
-### Installation Failures
+### 运行回测
 
 ```bash
-# Clean all dependencies and retry
-npm run clean
-npm install
+cd project_template/strategy
+python run_backtest.py ma_cross_strategy.py \
+  --symbols "300031" \
+  --start-date 20240101 \
+  --end-date 20241231 \
+  --output data_file/final/result.json \
+  --cash 100000 \
+  --commission 0.001
 ```
 
-### Permission Errors (macOS/Linux)
+参数说明：
+- `--symbols` - 股票代码（多个用逗号分隔）
+- `--start-date` - 回测开始日期（YYYYMMDD）
+- `--end-date` - 回测结束日期（YYYYMMDD）
+- `--output` - 结果输出路径
+- `--cash` - 初始资金（可选，默认 100000）
+- `--commission` - 手续费率（可选，默认 0.001）
+- `--params` - 策略参数（可选，JSON 格式）
 
-If you encounter permission errors:
+## 开发命令
+
 ```bash
-cd apps/api
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+# 开发
+npm run dev              # 启动前后端
+npm run dev:web          # 仅启动前端
+npm run dev:api          # 仅启动后端
+
+# 数据库
+npm run db:reset         # 重置数据库
+npm run db:backup        # 备份数据库
+
+# 清理
+npm run clean            # 清理构建产物
 ```
 
-### Claude Code Permission Issues (Windows/WSL)
+## Docker 部署
 
-If you encounter the error: `Error output dangerously skip permissions cannot be used which is root sudo privileges for security reasons`
+```bash
+# 构建镜像
+docker build -f docker/Dockerfile -t chat-quant:latest .
 
-**Solution:**
-1. Do not run Claude Code with `sudo` or as root user
-2. Ensure proper file ownership in WSL:
-   ```bash
-   # Check current user
-   whoami
-   
-   # Change ownership of project directory to current user
-   sudo chown -R $(whoami):$(whoami) ~/Claudable
-   ```
-3. If using WSL, make sure you're running Claude Code from your user account, not root
-4. Verify Claude Code installation permissions:
-   ```bash
-   # Reinstall Claude Code without sudo
-   npm install -g @anthropic-ai/claude-code --unsafe-perm=false
-   ```
+# 运行容器
+docker run -d \
+  --name chat-quant \
+  -p 3000:3000 \
+  -p 8000:8000 \
+  -v /path/to/data:/app/data \
+  chat-quant:latest
+```
 
-## Integration Guide
+详细部署文档见 `docker/README.md`
 
-### GitHub
-**Get Token:** [GitHub Personal Access Tokens](https://github.com/settings/tokens) → Generate new token (classic) → Select `repo` scope
+## 项目结构
 
-**Connect:** Settings → Service Integrations → GitHub → Enter token → Create or connect repository
+```
+chat-quant/
+├── apps/
+│   ├── web/              # Next.js 前端
+│   └── api/              # FastAPI 后端
+├── project_template/     # 策略项目模板
+│   └── strategy/         # 策略代码
+│       ├── base_strategy.py      # 策略基类
+│       ├── strategy_runner.py    # 回测执行器
+│       ├── run_backtest.py       # 回测脚本
+│       └── impls/                # 策略实现
+├── components/           # React 组件
+├── contexts/            # React 上下文
+├── scripts/             # 开发脚本
+├── docker/              # Docker 配置
+└── data/                # 数据目录
+    ├── cc.db            # SQLite 数据库
+    └── projects/        # 项目文件
+```
 
-### Vercel  
-**Get Token:** [Vercel Account Settings](https://vercel.com/account/tokens) → Create Token
+## 环境变量
 
-**Connect:** Settings → Service Integrations → Vercel → Enter token → Create new project for deployment
+| 变量名 | 必需 | 默认值 | 说明 |
+|--------|------|--------|------|
+| ANTHROPIC_API_KEY | ✅ | - | Claude API 密钥 |
+| API_PORT | ❌ | 8080 | 后端服务端口 |
+| DATABASE_URL | ❌ | sqlite:///data/cc.db | 数据库连接 |
+| PROJECTS_ROOT | ❌ | ./data/projects | 项目存储目录 |
+| CLAUDE_CODE_MODEL | ❌ | claude-sonnet-4-5-20250929 | Claude 模型 |
 
-### Supabase
-**Get Credentials:** [Supabase Dashboard](https://supabase.com/dashboard) → Your Project → Settings → API
-- Project URL: `https://xxxxx.supabase.co`  
-- Anon Key: Public key for client-side
-- Service Role Key: Secret key for server-side
+完整配置见 `.env.example`
 
+## 许可证
 
-## License
+[添加许可证信息]
 
-MIT License.
+## 贡献
 
-## Upcoming Features
-These features are in development and will be opened soon.
-- **New CLI Agents** - Trust us, you're going to LOVE this!
-- **Checkpoints for Chat** - Save and restore conversation/codebase states
-- **Advanced MCP Integration** - Native integration with MCP
-- **Enhanced Agent System** - Subagents, AGENTS.md integration
-- **Website Cloning** - You can start a project from a reference URL.
-- Various bug fixes and community PR merges
-
-We're working hard to deliver the features you've been asking for. Stay tuned!
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=opactorai/Claudable&type=Date)](https://www.star-history.com/#opactorai/Claudable&Date)
-
+欢迎提交 Issue 和 Pull Request！
