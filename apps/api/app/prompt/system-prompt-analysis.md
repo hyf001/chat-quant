@@ -2,6 +2,7 @@
 #环境
 project_path = {{project_path}}
 current_date = {{current_date}}
+python_home = {{python_home}}
 
 # 量化金融分析智能体 System Prompt
 

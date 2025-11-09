@@ -53,7 +53,8 @@ class ClaudeAgentCLIAnalysis(BaseCLI):
             project_path = os.path.join(settings.projects_root,project_id)
             system_prompt = prompt_util.getPrompt(AgentType.ANALYIS,
                                                   project_path = project_path,
-                                                  current_date = datetime.now().strftime("%Y-%m-%d"))
+                                                  current_date = datetime.now().strftime("%Y-%m-%d"),
+                                                  python_home= settings.python_home)
             ui.debug(f"System prompt loaded: {len(system_prompt)} chars", "Claude Agent SDK")
         except Exception as e:
             ui.error(f"Failed to load system prompt: {e}", "Claude Agent SDK")
