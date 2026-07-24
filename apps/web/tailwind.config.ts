@@ -1,27 +1,26 @@
-import type { Config } from 'tailwindcss'
+import type { Config } from "tailwindcss";
 
-const config: Config = {
-  content: [
-    './app/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
-  ],
-  darkMode: 'class',
+export default {
+  content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: '#f2f7ff', 100: '#e6efff', 200: '#cce0ff', 300: '#99c2ff', 400: '#66a3ff', 500: '#3385ff', 600: '#1a73e8', 700: '#1557b0', 800: '#0f3b78', 900: '#0a2550',
-        },
-        'bolt-bg-primary': '#0c0a14',
-        'bolt-bg-secondary': '#15111e',
-        'bolt-bg-tertiary': '#1e1a2a',
-        'bolt-border-color': 'rgba(139, 92, 246, 0.2)',
-        'bolt-text-primary': '#e5e2ff',
-        'bolt-text-secondary': '#a8a4ce',
-        'bolt-text-tertiary': '#6b6685',
+        app: "#f5f7fb",
+        ink: "#17201b",
+        muted: "#667085",
+        panel: "#ffffff",
+        soft: "#f8fafc",
+        line: "#d9ded4",
+        strong: "#c5d0df",
+        brand: "#1f7a6d",
+        brandBlue: "#2451a6",
+        signal: "#e3b341",
+        risk: "#b9574f",
+      },
+      boxShadow: {
+        panel: "0 18px 48px rgba(23, 32, 27, 0.08)",
       },
     },
   },
   plugins: [],
-}
-export default config
+} satisfies Config;
