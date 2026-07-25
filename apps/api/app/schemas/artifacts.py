@@ -50,7 +50,6 @@ class SaveGeneratedFilesRequest(BaseModel):
     source_sdk_session_id: str | None = None
     source_sdk_message_uuid: str | None = None
     source_sdk_tool_use_id: str | None = None
-    execution_result_id: str | None = None
     backtest_run_id: str | None = None
     title: str | None = None
     metadata: JsonObject = Field(default_factory=dict)

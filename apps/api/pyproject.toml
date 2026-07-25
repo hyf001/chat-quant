@@ -4,8 +4,10 @@ version = "0.1.0"
 description = "FastAPI backend for Chat-Quant"
 requires-python = ">=3.12"
 dependencies = [
+  "backtrader>=1.9.78.123",
   "claude-agent-sdk>=0.2.127",
   "fastapi>=0.116.1",
+  "pandas>=2.3.0",
   "pydantic-settings>=2.10.1",
   "uvicorn[standard]>=0.35.0",
 ]
@@ -24,6 +26,3 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
-
-[project.scripts]
-chatq = "app.cli.main:main"

@@ -18,8 +18,9 @@ def test_sqlite_repository_persists_strategy_across_instances(tmp_path: Path) ->
 
     restored_service = StrategyService(StrategyRepository(str(db_path)))
     detail = restored_service.get_strategy(created.strategy_id)
+    versions = restored_service.repository.list_versions(created.strategy_id)
 
     assert detail.strategy.chat_session_id == "conv_persisted"
-    assert detail.strategy.current_version_id == created.strategy_version_id
-    assert detail.versions[0].default_params["fast_period"] == 20
-    assert detail.versions[0].code_checksum
+    assert detail.strategy.current_version_id == versions[0].id
+    assert versions[0].default_params["fast_period"] == 20
+    assert versions[0].code_checksum

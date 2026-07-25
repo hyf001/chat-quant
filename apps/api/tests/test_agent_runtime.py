@@ -23,7 +23,7 @@ from claude_agent_sdk import (
 )
 
 
-def test_policy_allows_whitelisted_chatq_command_with_matching_context() -> None:
+def test_policy_rejects_strategy_backtest_cli_commands() -> None:
     policy = load_default_policy()
     allowed = resolve_allowed_commands(policy, AgentScenario.BACKTEST)
 
@@ -34,8 +34,8 @@ def test_policy_allows_whitelisted_chatq_command_with_matching_context() -> None
         CommandContext(chat_session_id="chat_1", sdk_session_id="sdk_1", project_id="project_1"),
     )
 
-    assert decision.allowed
-    assert decision.matched_command == "chatq backtest get"
+    assert not decision.allowed
+    assert decision.code == RuntimeErrorCode.COMMAND_NOT_ALLOWED
 
 
 def test_policy_blocks_shell_control_operator() -> None:
@@ -43,7 +43,7 @@ def test_policy_blocks_shell_control_operator() -> None:
     allowed = resolve_allowed_commands(policy, AgentScenario.CHAT_ANALYSIS)
 
     decision = validate_bash_command(
-        "chatq runtime execute --json; rm -rf /tmp/anything",
+        "chatq artifact save-code --json; rm -rf /tmp/anything",
         allowed,
         CommandContext(chat_session_id="chat_1", sdk_session_id="sdk_1", project_id="project_1"),
     )
