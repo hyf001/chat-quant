@@ -1,12 +1,14 @@
 import { Download, Eye, FileCode2 } from "lucide-react";
 
-import { API_BASE_URL, type CodeArtifact } from "../../shared/api";
+import { API_BASE_URL, type CodeArtifact, type ExecutionResult, type RuntimeHealth } from "../../shared/api";
 import type { AssetLink, ChatSession, JsonValue } from "../../shared/api/types";
 
 type InsightPanelProps = {
   session: ChatSession | null;
   assets: AssetLink[];
   artifact: CodeArtifact | null;
+  health: RuntimeHealth | null;
+  result: ExecutionResult | null;
 };
 
 const formatter = new Intl.DateTimeFormat("zh-CN", {
@@ -24,14 +26,20 @@ function snapshotTitle(snapshot: JsonValue | null): string | null {
   return null;
 }
 
-export function InsightPanel({ session, assets, artifact }: InsightPanelProps) {
+export function InsightPanel({ session, assets, artifact, health, result }: InsightPanelProps) {
   return (
     <aside
       className="hidden border-l border-line bg-panel/70 px-4 py-5 xl:block"
       aria-label="对象详情"
     >
       <div className="mb-3 text-sm font-semibold">对象详情</div>
-      {artifact ? <ArtifactDetail artifact={artifact} /> : <SessionDetail assets={assets} session={session} />}
+      {artifact ? (
+        <ArtifactDetail artifact={artifact} />
+      ) : result ? (
+        <RuntimeDetail health={health} result={result} />
+      ) : (
+        <SessionDetail assets={assets} session={session} />
+      )}
     </aside>
   );
 }
@@ -103,6 +111,30 @@ function ArtifactDetail({ artifact }: { artifact: CodeArtifact }) {
   );
 }
 
+function RuntimeDetail({ health, result }: { health: RuntimeHealth | null; result: ExecutionResult }) {
+  return (
+    <div className="grid gap-3">
+      <DetailCard label="运行 ID" value={result.run_id} />
+      <DetailCard label="Python" value={health?.python_version ?? result.python_version} />
+      <DetailCard label="exit code" value={result.exit_code === null ? "-" : String(result.exit_code)} />
+      <DetailCard label="输出目录" value={result.output_dir} />
+      <div className="rounded-lg border border-line bg-soft p-3">
+        <div className="mb-2 text-xs font-semibold text-muted">核心包</div>
+        <div className="grid gap-2 text-xs">
+          {Object.entries(health?.packages ?? {}).map(([name, status]) => (
+            <div key={name} className="flex items-center justify-between gap-2">
+              <span>{name}</span>
+              <span className={status === "installed" ? "text-emerald-700" : "text-muted"}>
+                {status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SessionDetail({ session, assets }: { session: ChatSession | null; assets: AssetLink[] }) {
   return (
     <div className="grid gap-3">
@@ -144,6 +176,15 @@ function DetailRow({ label, value }: { label: string; value: string }) {
     <div className="grid gap-1">
       <dt className="text-muted">{label}</dt>
       <dd className="break-all font-medium text-ink">{value}</dd>
+    </div>
+  );
+}
+
+function DetailCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-line bg-soft p-3">
+      <div className="text-xs text-muted">{label}</div>
+      <div className="mt-1 truncate text-xs font-semibold">{value}</div>
     </div>
   );
 }

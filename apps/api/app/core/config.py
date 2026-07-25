@@ -15,8 +15,21 @@ class Settings(BaseSettings):
         default=Path("data/artifacts.sqlite3"),
         alias="CHATQ_ARTIFACT_INDEX_PATH",
     )
+    runtime_root: Path = Field(
+        default=Path("storage/runtime"),
+        validation_alias=AliasChoices("CHATQ_RUNTIME_ROOT", "RUNTIME_ROOT"),
+    )
+    runtime_stdout_limit_bytes: int = 200 * 1024
+    runtime_max_output_files: int = 200
+    runtime_max_artifact_bytes: int = 20 * 1024 * 1024
+    runtime_timeout_grace_seconds: float = 5
     cors_origins: list[str] = Field(
-        default=["http://localhost:5173", "http://127.0.0.1:5173"],
+        default=[
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5174",
+            "http://127.0.0.1:5174",
+        ],
         validation_alias=AliasChoices("CHATQ_API_CORS_ORIGINS", "CORS_ORIGINS"),
     )
 

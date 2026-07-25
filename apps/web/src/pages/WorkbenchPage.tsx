@@ -4,18 +4,53 @@ import { Composer } from "../modules/composer";
 import { ConversationShell } from "../modules/conversation";
 import { HistoryPanel } from "../modules/history";
 import { InsightPanel } from "../modules/insight";
-import { ArtifactList } from "../modules/result";
+import { ArtifactList, RuntimeResultPanel } from "../modules/result";
 import { WorkspaceHeader, WorkspaceLayout } from "../modules/workspace";
 import {
   createChatSession,
+  executePythonArtifact,
   getChatSessionDetail,
+  getRuntimeHealth,
   listArtifacts,
   listChatSessions,
   sendChatMessage,
   type ChatSession,
   type ChatSessionDetail,
   type CodeArtifact,
+  type ExecutionResult,
+  type RuntimeHealth,
 } from "../shared/api";
+
+const sampleCode = `
+import csv
+import json
+import os
+from pathlib import Path
+
+payload = json.loads(Path(os.environ["CHATQ_STDIN_JSON"]).read_text(encoding="utf-8"))
+output_dir = Path(os.environ["CHATQ_OUTPUT_DIR"])
+tables_dir = output_dir / "tables"
+tables_dir.mkdir(parents=True, exist_ok=True)
+
+rows = [
+    {"symbol": symbol, "score": 88 - index * 3, "signal": "watch"}
+    for index, symbol in enumerate(payload["symbols"])
+]
+
+with (tables_dir / "screening.csv").open("w", newline="", encoding="utf-8") as file_obj:
+    writer = csv.DictWriter(file_obj, fieldnames=["symbol", "score", "signal"])
+    writer.writeheader()
+    writer.writerows(rows)
+
+result = {
+    "status": "succeeded",
+    "summary": "sample screening completed",
+    "rows": rows,
+    "warnings": [],
+}
+(output_dir / "result.json").write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
+print(f"screened {len(rows)} symbols")
+`.trim();
 
 export function WorkbenchPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -30,6 +65,10 @@ export function WorkbenchPage() {
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null);
   const [isLoadingArtifacts, setIsLoadingArtifacts] = useState(true);
   const [artifactError, setArtifactError] = useState<string | null>(null);
+  const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(null);
+  const [runtimeResult, setRuntimeResult] = useState<ExecutionResult | null>(null);
+  const [isRuntimeRunning, setIsRuntimeRunning] = useState(false);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
 
   const activeSession = useMemo(
     () => detail?.session ?? sessions.find((session) => session.id === activeSessionId) ?? null,
@@ -99,6 +138,14 @@ export function WorkbenchPage() {
   }, [refreshSessions]);
 
   useEffect(() => {
+    getRuntimeHealth()
+      .then(setRuntimeHealth)
+      .catch((caught: unknown) => {
+        setRuntimeError(caught instanceof Error ? caught.message : "Runtime health failed");
+      });
+  }, []);
+
+  useEffect(() => {
     if (activeSessionId) {
       void loadDetail(activeSessionId);
       loadArtifacts(activeSessionId);
@@ -149,6 +196,32 @@ export function WorkbenchPage() {
     }
   };
 
+  const handleRunSample = async () => {
+    setIsRuntimeRunning(true);
+    setRuntimeError(null);
+    try {
+      const executionResult = await executePythonArtifact({
+        chat_session_id: activeSessionId ?? "conv_demo_m4",
+        code_artifact_id: selectedArtifactId ?? "code_demo_inline",
+        entrypoint: "analysis.py",
+        stdin_json: {
+          symbols: ["沪深300", "中证500", "创业板指"],
+          start_date: "2026-04-24",
+          end_date: "2026-07-24",
+        },
+        timeout_seconds: 30,
+        expected_outputs: ["result.json", "tables/screening.csv"],
+        purpose: "stock_screening",
+        code_files: [{ path: "analysis.py", content: sampleCode }],
+      });
+      setRuntimeResult(executionResult);
+    } catch (caught: unknown) {
+      setRuntimeError(caught instanceof Error ? caught.message : "Runtime execute failed");
+    } finally {
+      setIsRuntimeRunning(false);
+    }
+  };
+
   return (
     <WorkspaceLayout
       history={
@@ -162,7 +235,13 @@ export function WorkbenchPage() {
           onSelectSession={setActiveSessionId}
         />
       }
-      header={<WorkspaceHeader session={activeSession} isConnected={!error} />}
+      header={
+        <WorkspaceHeader
+          session={activeSession}
+          isConnected={!error}
+          health={runtimeHealth}
+        />
+      }
       conversation={
         <ConversationShell
           session={activeSession}
@@ -182,12 +261,23 @@ export function WorkbenchPage() {
           }
         />
       }
+      result={
+        <RuntimeResultPanel
+          health={runtimeHealth}
+          result={runtimeResult}
+          isRunning={isRuntimeRunning}
+          error={runtimeError}
+          onRunSample={handleRunSample}
+        />
+      }
       composer={<Composer disabled={isSending} onSendMessage={handleSendMessage} />}
       insight={
         <InsightPanel
           session={activeSession}
           assets={detail?.assets ?? []}
           artifact={selectedArtifact}
+          health={runtimeHealth}
+          result={runtimeResult}
         />
       }
     />

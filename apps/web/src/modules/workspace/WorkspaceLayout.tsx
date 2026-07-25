@@ -4,6 +4,7 @@ type WorkspaceLayoutProps = {
   history: ReactNode;
   header: ReactNode;
   conversation: ReactNode;
+  result: ReactNode;
   composer: ReactNode;
   insight: ReactNode;
 };
@@ -12,6 +13,7 @@ export function WorkspaceLayout({
   history,
   header,
   conversation,
+  result,
   composer,
   insight,
 }: WorkspaceLayoutProps) {
@@ -21,7 +23,12 @@ export function WorkspaceLayout({
         {history}
         <section className="flex min-h-screen min-w-0 flex-col">
           {header}
-          {conversation}
+          <div className="min-h-0 flex-1 overflow-auto">
+            {conversation}
+            <div className="px-5 pb-6">
+              <div className="mx-auto w-full max-w-4xl">{result}</div>
+            </div>
+          </div>
           {composer}
         </section>
         {insight}

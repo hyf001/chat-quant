@@ -42,7 +42,7 @@ export function ConversationShell({
   artifactList,
 }: ConversationShellProps) {
   return (
-    <section className="min-h-0 flex-1 overflow-auto px-5 py-6" aria-label="对话线程">
+    <section className="px-5 py-6" aria-label="对话线程">
       <div className="mx-auto grid w-full max-w-4xl gap-4">
         {error ? (
           <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
