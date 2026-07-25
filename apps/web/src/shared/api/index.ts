@@ -1,1 +1,1 @@
-export { getHealth } from "./client";
+export { getHealth, readChatStream, sendChatMessage } from "./client";
