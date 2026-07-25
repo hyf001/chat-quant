@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from app.api.dependencies import M1Services
+from app.api.dependencies import get_m1_services, make_in_memory_m1_services
 from app.domain.chat_sessions import services as chat_session_services
 from app.main import app
 from claude_agent_sdk.types import AssistantMessage, TextBlock, UserMessage
@@ -35,7 +35,8 @@ def reset_m1_state(monkeypatch):
     monkeypatch.setattr(
         chat_session_services, "sdk_get_session_messages", fake_get_session_messages
     )
-    app.state.m1_services = M1Services()
+    app.state.m1_services = make_in_memory_m1_services()
+    app.dependency_overrides[get_m1_services] = lambda: app.state.m1_services
 
 
 def test_create_session_with_initial_prompt_only_creates_chat_session():

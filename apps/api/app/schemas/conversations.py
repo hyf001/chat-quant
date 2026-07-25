@@ -158,6 +158,8 @@ class LinkAssetRequest(BaseModel):
 
 
 def sdk_message_to_response(message: object) -> SDKMessageResponse | None:
+    if session_response := _session_message_to_response(message):
+        return session_response
     if isinstance(message, UserMessage):
         return SDKMessageResponse(
             uuid=message.uuid or _new_message_id(),
@@ -234,6 +236,132 @@ def _content_blocks(content: object) -> list[SDKContentBlockResponse]:
                 )
             )
     return blocks
+
+
+def _session_message_to_response(message: object) -> SDKMessageResponse | None:
+    record = _object_record(message)
+    message_type = _string_value(record.get("type"))
+    if message_type not in {
+        "user",
+        "assistant",
+        "system",
+        "result",
+        "user_message",
+        "assistant_message",
+        "system_message",
+        "result_message",
+    }:
+        return None
+
+    payload = record.get("message")
+    payload_record = payload if isinstance(payload, dict) else {}
+    role = _session_message_role(message_type, payload_record)
+    if role is None:
+        return None
+
+    content = _session_message_content(message_type, payload)
+    content_blocks = _json_content_blocks(content)
+    if not content_blocks:
+        return None
+    return SDKMessageResponse(
+        uuid=_string_value(record.get("uuid")) or _new_message_id(),
+        role=role,
+        content=content_blocks,
+        created_at=_now(),
+    )
+
+
+def _session_message_role(
+    message_type: str,
+    payload: dict[object, object],
+) -> SDKMessageRole | None:
+    payload_role = _string_value(payload.get("role"))
+    if payload_role == "user" or message_type == "user" or message_type == "user_message":
+        return SDKMessageRole.USER
+    if (
+        payload_role == "assistant"
+        or message_type == "assistant"
+        or message_type == "assistant_message"
+        or message_type == "result"
+        or message_type == "result_message"
+    ):
+        return SDKMessageRole.ASSISTANT
+    if payload_role == "system" or message_type == "system" or message_type == "system_message":
+        return SDKMessageRole.SYSTEM
+    if payload_role == "tool":
+        return SDKMessageRole.TOOL
+    return None
+
+
+def _session_message_content(message_type: str, payload: object) -> object:
+    if not isinstance(payload, dict):
+        return payload
+    if "content" in payload:
+        return payload["content"]
+    if message_type in {"result", "result_message"} and "result" in payload:
+        return payload["result"]
+    return payload
+
+
+def _json_content_blocks(content: object) -> list[SDKContentBlockResponse]:
+    if isinstance(content, str):
+        return [SDKContentBlockResponse(type=SDKContentBlockType.TEXT, text=content)]
+    if not isinstance(content, list):
+        return [
+            SDKContentBlockResponse(
+                type=SDKContentBlockType.TEXT,
+                text=_tool_result_text(content),
+            )
+        ]
+
+    blocks: list[SDKContentBlockResponse] = []
+    for block in content:
+        if not isinstance(block, dict):
+            blocks.append(
+                SDKContentBlockResponse(type=SDKContentBlockType.TEXT, text=str(block))
+            )
+            continue
+        block_type = _string_value(block.get("type"))
+        if block_type == "text":
+            blocks.append(
+                SDKContentBlockResponse(
+                    type=SDKContentBlockType.TEXT,
+                    text=_string_value(block.get("text")),
+                )
+            )
+        elif block_type == "tool_use":
+            blocks.append(
+                SDKContentBlockResponse(
+                    type=SDKContentBlockType.TOOL_USE,
+                    tool_use_id=_string_value(block.get("id")),
+                    name=_string_value(block.get("name")),
+                )
+            )
+        elif block_type == "tool_result":
+            blocks.append(
+                SDKContentBlockResponse(
+                    type=SDKContentBlockType.TOOL_RESULT,
+                    text=_tool_result_text(block.get("content")),
+                    tool_use_id=_string_value(block.get("tool_use_id")),
+                )
+            )
+    return blocks
+
+
+def _object_record(value: object) -> dict[str, object]:
+    if isinstance(value, dict):
+        return {str(key): item for key, item in value.items()}
+    if not hasattr(value, "__dict__"):
+        return {}
+    return {
+        key: item
+        for key, item in vars(value).items()
+        if not key.startswith("_")
+    }
+
+
+def _string_value(value: object) -> str | None:
+    return value if isinstance(value, str) and value else None
 
 
 def _tool_result_text(content: object) -> str | None:

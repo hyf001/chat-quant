@@ -136,7 +136,6 @@ from app.agent_runtime.bash_command_policy import (
 )
 from app.agent_runtime.hooks import AgentRuntimeHooks
 from app.agent_runtime.prompts import build_system_prompt
-from app.agent_runtime.sdk_session_store import AgentSession, InMemoryAgentSessionStore
 from app.agent_runtime.sdk_skill_workspace import SDKSkillWorkspace
 from app.agent_runtime.sdk_skills import select_available_sdk_skills
 from app.agent_runtime.sdk_stream_relay import InMemoryStreamRelay
@@ -176,12 +175,10 @@ class ClaudeAgentRuntime:
         *,
         settings: Settings,
         stream_relay: InMemoryStreamRelay,
-        session_store: InMemoryAgentSessionStore,
         sdk_query: SDKQuery = query,
     ) -> None:
         self.settings = settings
         self.stream_relay = stream_relay
-        self.session_store = session_store
         self.sdk_query = sdk_query
         self.policy = load_default_policy()
         self.hooks = AgentRuntimeHooks()
@@ -209,7 +206,7 @@ class ClaudeAgentRuntime:
 
         project_skill_dir = self.skill_workspace.prepare(command.working_dir)
         available_skills = self.skill_workspace.list_skill_names(project_skill_dir)
-        session = self.resume_session(command.chat_session_id, command.sdk_session_id)
+        current_sdk_session_id = command.sdk_session_id
         allowed_commands = resolve_allowed_commands(self.policy, command.scenario)
         skill_selection = select_available_sdk_skills(
             command.scenario,
@@ -225,7 +222,6 @@ class ClaudeAgentRuntime:
         terminal_event: dict[str, object] | None = None
         result_message_id: str | None = None
         result_subtype: str | None = None
-        persisted_assistant_message = False
 
         sdk_stderr_lines: list[str] = []
         saw_effective_event = False
@@ -275,13 +271,13 @@ class ClaudeAgentRuntime:
 
                     event_session_id = _extract_sdk_session_id(event)
                     if event_session_id:
-                        session.sdk_session_id = event_session_id
+                        current_sdk_session_id = event_session_id
 
                     streamed_assistant_parts.extend(_extract_stream_text_deltas(event))
 
                     event_tool_context = CommandContext(
                         chat_session_id=command.chat_session_id,
-                        sdk_session_id=event_session_id or command.sdk_session_id,
+                        sdk_session_id=event_session_id or current_sdk_session_id,
                         project_id=command.project_id,
                     )
 
@@ -297,7 +293,7 @@ class ClaudeAgentRuntime:
                                 "agent tool use blocked",
                                 extra={
                                     "chat_session_id": command.chat_session_id,
-                                    "sdk_session_id": session.sdk_session_id,
+                                    "sdk_session_id": current_sdk_session_id,
                                     "tool_name": str(tool_event.get("name") or ""),
                                     "error_code": decision.code.value if decision.code else None,
                                 },
@@ -312,7 +308,7 @@ class ClaudeAgentRuntime:
                             envelopes.append(
                                 sink.publish(
                                     command.chat_session_id,
-                                    session.sdk_session_id,
+                                    current_sdk_session_id,
                                     blocked_event,
                                 )
                             )
@@ -321,7 +317,7 @@ class ClaudeAgentRuntime:
                         tool_ref = self.tool_logger.from_tool_use(
                             event=tool_event,
                             chat_session_id=command.chat_session_id,
-                            sdk_session_id=session.sdk_session_id,
+                            sdk_session_id=current_sdk_session_id,
                         )
                         if tool_ref is not None:
                             tool_uses[tool_ref.sdk_tool_use_id] = tool_ref
@@ -340,21 +336,12 @@ class ClaudeAgentRuntime:
                         )
                         text_parts = _extract_text_blocks(event)
                         assistant_parts.extend(text_parts)
-                        assistant_text = "\n\n".join(part for part in text_parts if part).strip()
-                        if assistant_text:
-                            self.session_store.append_sdk_message(
-                                chat_session_id=command.chat_session_id,
-                                message_id=message_id,
-                                role="assistant",
-                                content=assistant_text,
-                            )
-                            persisted_assistant_message = True
-                        if session.sdk_session_id is not None:
+                        if current_sdk_session_id is not None:
                             message_refs.append(
                                 SDKMessageRef(
                                     sdk_message_uuid=message_id,
                                     chat_session_id=command.chat_session_id,
-                                    sdk_session_id=session.sdk_session_id,
+                                    sdk_session_id=current_sdk_session_id,
                                     message_type="assistant_message",
                                     role="assistant",
                                 )
@@ -368,18 +355,10 @@ class ClaudeAgentRuntime:
                         should_publish_original_event = False
                         if result_text:
                             assistant_parts.append(result_text)
-                            if not persisted_assistant_message:
-                                self.session_store.append_sdk_message(
-                                    chat_session_id=command.chat_session_id,
-                                    message_id=result_message_id or f"sdk_result_{uuid4().hex}",
-                                    role="assistant",
-                                    content=result_text,
-                                )
-                                persisted_assistant_message = True
 
                     if should_publish_original_event:
                         envelopes.append(
-                            sink.publish(command.chat_session_id, session.sdk_session_id, event)
+                            sink.publish(command.chat_session_id, current_sdk_session_id, event)
                         )
         except TimeoutError:
             timeout_code = (
@@ -398,6 +377,7 @@ class ClaudeAgentRuntime:
                 ),
                 retryable=True,
                 sink=sink,
+                sdk_session_id=current_sdk_session_id,
             )
         except Exception as exc:
             error_message = _sdk_failure_message(str(exc), sdk_stderr_lines)
@@ -414,18 +394,12 @@ class ClaudeAgentRuntime:
                 error_message,
                 retryable=True,
                 sink=sink,
+                sdk_session_id=current_sdk_session_id,
             )
 
         assistant_message = "\n\n".join(part for part in assistant_parts if part).strip()
         if not assistant_message:
             assistant_message = _join_stream_text_parts(streamed_assistant_parts)
-        if assistant_message and not persisted_assistant_message:
-            self.session_store.append_sdk_message(
-                chat_session_id=command.chat_session_id,
-                message_id=result_message_id or f"sdk_result_{uuid4().hex}",
-                role="assistant",
-                content=assistant_message,
-            )
         if terminal_event is None and not assistant_message:
             terminal_event = {
                 "type": "runtime_error",
@@ -435,18 +409,13 @@ class ClaudeAgentRuntime:
             }
         if terminal_event is not None:
             envelopes.append(
-                sink.publish(command.chat_session_id, session.sdk_session_id, terminal_event)
+                sink.publish(command.chat_session_id, current_sdk_session_id, terminal_event)
             )
-        self.session_store.update_summary(
-            command.chat_session_id,
-            _build_summary(command.user_prompt),
-        )
-        self.session_store.add_envelope_assets(command.chat_session_id, envelopes)
 
         return AgentTurnResult(
             chat_session_id=command.chat_session_id,
             user_message_id=command.user_message_id,
-            sdk_session_id=session.sdk_session_id,
+            sdk_session_id=current_sdk_session_id,
             sdk_result_message_id=result_message_id,
             sdk_result_subtype=result_subtype,
             assistant_message=assistant_message,
@@ -455,23 +424,20 @@ class ClaudeAgentRuntime:
             sdk_tool_uses=list(tool_uses.values()),
         )
 
-    def resume_session(self, chat_session_id: str, sdk_session_id: str | None) -> AgentSession:
-        return self.session_store.ensure_session(
-            chat_session_id=chat_session_id,
-            sdk_session_id=sdk_session_id,
-            title="Chat-Quant 分析会话",
-        )
-
-    async def cancel_session_turn(self, chat_session_id: str, reason: str) -> None:
-        cancelled = self.session_store.cancel(chat_session_id)
+    async def cancel_session_turn(
+        self,
+        chat_session_id: str,
+        reason: str,
+        sdk_session_id: str | None = None,
+    ) -> None:
         self.stream_relay.publish(
             chat_session_id,
-            self.session_store.get_session(chat_session_id).sdk_session_id if cancelled else None,
+            sdk_session_id,
             {"type": "cancelled", "reason": reason},
         )
         logger.info(
             "agent session cancel event published",
-            extra={"chat_session_id": chat_session_id, "cancelled": cancelled},
+            extra={"chat_session_id": chat_session_id},
         )
 
     def build_agent_options(
@@ -562,26 +528,21 @@ class ClaudeAgentRuntime:
         *,
         retryable: bool,
         sink: InMemoryStreamRelay,
+        sdk_session_id: str | None = None,
     ) -> AgentTurnResult:
-        session = self.session_store.get_session(command.chat_session_id)
+        effective_sdk_session_id = sdk_session_id or command.sdk_session_id
         logger.warning(
             "agent turn failed",
             extra={
                 "chat_session_id": command.chat_session_id,
-                "sdk_session_id": session.sdk_session_id if session else command.sdk_session_id,
+                "sdk_session_id": effective_sdk_session_id,
                 "error_code": code.value,
                 "retryable": retryable,
             },
         )
-        self.session_store.append_sdk_message(
-            chat_session_id=command.chat_session_id,
-            message_id=f"sdk_error_{uuid4().hex}",
-            role="assistant",
-            content=f"运行失败：{message}",
-        )
         sink.publish(
             command.chat_session_id,
-            session.sdk_session_id if session else command.sdk_session_id,
+            effective_sdk_session_id,
             {
                 "type": "runtime_error",
                 "code": code.value,
@@ -589,7 +550,13 @@ class ClaudeAgentRuntime:
                 "retryable": retryable,
             },
         )
-        return _failed_result(command, code, message, retryable=retryable)
+        return _failed_result(
+            command,
+            code,
+            message,
+            retryable=retryable,
+            sdk_session_id=effective_sdk_session_id,
+        )
 
 
 def _extract_text_blocks(event: dict[str, object]) -> list[str]:
@@ -918,22 +885,17 @@ def _generated_artifacts(envelopes: list[SDKStreamEnvelope]) -> list[GeneratedAr
     return artifacts
 
 
-def _build_summary(user_prompt: str) -> str:
-    prompt = user_prompt.strip()
-    if len(prompt) <= 72:
-        return prompt
-    return f"{prompt[:72]}..."
-
-
 def _failed_result(
     command: AgentTurnCommand,
     code: RuntimeErrorCode | None,
     message: str | None,
     retryable: bool = False,
+    sdk_session_id: str | None = None,
 ) -> AgentTurnResult:
     return AgentTurnResult(
         chat_session_id=command.chat_session_id,
         user_message_id=command.user_message_id,
+        sdk_session_id=sdk_session_id or command.sdk_session_id,
         error_code=code,
         error_message=message,
         retryable=retryable,

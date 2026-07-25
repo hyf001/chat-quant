@@ -81,10 +81,15 @@ const markdownComponents: Components = {
 
 function blockText(message: SdkMessage): string {
   const text = message.content
+    .filter((block) => block.type === "text")
     .map((block) => block.text)
     .filter((value): value is string => Boolean(value))
     .join("\n");
   return text || "工具调用结果已记录";
+}
+
+function hasTextContent(message: SdkMessage): boolean {
+  return message.content.some((block) => block.type === "text" && Boolean(block.text));
 }
 
 export function ConversationShell({
@@ -97,37 +102,38 @@ export function ConversationShell({
   error,
 }: ConversationShellProps) {
   const [now, setNow] = useState(() => Date.now());
+  const textMessages = useMemo(() => messages.filter(hasTextContent), [messages]);
   const toolCalls = useMemo(() => buildToolCalls(envelopes), [envelopes]);
   const toolGroups = useMemo(() => buildToolGroups(toolCalls), [toolCalls]);
   const thinkingProcesses = useMemo(() => buildThinkingProcesses(envelopes), [envelopes]);
   const timelineItems = useMemo(
-    () => buildTimelineItems(messages, thinkingProcesses, toolGroups),
-    [messages, thinkingProcesses, toolGroups],
+    () => buildTimelineItems(textMessages, thinkingProcesses, toolGroups),
+    [textMessages, thinkingProcesses, toolGroups],
   );
   const activityLabel = useMemo(
     () => currentActivityLabel(isStreaming, timelineItems),
     [isStreaming, timelineItems],
   );
   const elapsedLabel = useMemo(
-    () => formatElapsed(getRunStartedAt(messages, envelopes), isStreaming ? new Date(now).toISOString() : getRunEndedAt(envelopes)),
-    [envelopes, isStreaming, messages, now],
+    () => formatElapsed(getRunStartedAt(textMessages, envelopes), isStreaming ? new Date(now).toISOString() : getRunEndedAt(envelopes)),
+    [envelopes, isStreaming, textMessages, now],
   );
   const latestAssistantId = useMemo(() => {
-    for (let index = messages.length - 1; index >= 0; index -= 1) {
-      if (messages[index].role === "assistant") {
-        return messages[index].uuid;
+    for (let index = textMessages.length - 1; index >= 0; index -= 1) {
+      if (textMessages[index].role === "assistant") {
+        return textMessages[index].uuid;
       }
     }
     return null;
-  }, [messages]);
+  }, [textMessages]);
   const latestUserId = useMemo(() => {
-    for (let index = messages.length - 1; index >= 0; index -= 1) {
-      if (messages[index].role === "user") {
-        return messages[index].uuid;
+    for (let index = textMessages.length - 1; index >= 0; index -= 1) {
+      if (textMessages[index].role === "user") {
+        return textMessages[index].uuid;
       }
     }
     return null;
-  }, [messages]);
+  }, [textMessages]);
 
   useEffect(() => {
     if (!isStreaming) {
@@ -160,7 +166,7 @@ export function ConversationShell({
           </div>
         ) : null}
 
-        {session && messages.length === 0 ? (
+        {session && textMessages.length === 0 ? (
           <div className="rounded-lg border border-dashed border-line bg-panel p-5 text-sm leading-6 text-muted">
             当前会话还没有消息。
           </div>

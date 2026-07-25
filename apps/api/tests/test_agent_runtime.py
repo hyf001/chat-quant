@@ -9,7 +9,6 @@ from app.agent_runtime.bash_command_policy import (
     validate_bash_command,
 )
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime, serialize_sdk_message
-from app.agent_runtime.sdk_session_store import InMemoryAgentSessionStore
 from app.agent_runtime.sdk_stream_relay import InMemoryStreamRelay
 from app.core.config import Settings
 from app.schemas.contracts.agent_runtime import AgentScenario, AgentTurnCommand, RuntimeErrorCode
@@ -69,7 +68,6 @@ def test_sdk_options_omit_thinking_by_default_for_compatible_agent_api() -> None
     runtime = ClaudeAgentRuntime(
         settings=Settings(),
         stream_relay=InMemoryStreamRelay(),
-        session_store=InMemoryAgentSessionStore(),
         sdk_query=fake_sdk_query,
     )
     command = AgentTurnCommand(
@@ -101,7 +99,6 @@ def test_sdk_env_maps_configured_token_to_claude_code_api_key() -> None:
             ANTHROPIC_AUTH_TOKEN="secret_token",
         ),
         stream_relay=InMemoryStreamRelay(),
-        session_store=InMemoryAgentSessionStore(),
         sdk_query=fake_sdk_query,
     )
     command = AgentTurnCommand(
@@ -135,11 +132,9 @@ def test_runtime_includes_sdk_stderr_in_runtime_error() -> None:
 
 async def _run_runtime_turn_assertions() -> None:
     stream_relay = InMemoryStreamRelay()
-    session_store = InMemoryAgentSessionStore()
     runtime = ClaudeAgentRuntime(
         settings=Settings(),
         stream_relay=stream_relay,
-        session_store=session_store,
         sdk_query=fake_sdk_query,
     )
 
@@ -167,11 +162,9 @@ async def _run_runtime_turn_assertions() -> None:
 
 async def _run_stream_event_type_assertions() -> None:
     stream_relay = InMemoryStreamRelay()
-    session_store = InMemoryAgentSessionStore()
     runtime = ClaudeAgentRuntime(
         settings=Settings(),
         stream_relay=stream_relay,
-        session_store=session_store,
         sdk_query=fake_stream_event_sdk_query,
     )
 
@@ -192,7 +185,6 @@ async def _run_stream_event_type_assertions() -> None:
     envelopes = stream_relay.list_envelopes("chat_stream_1")
     assert result.error_code is None
     assert result.assistant_message == "你好"
-    assert [message.content for message in session_store.list_messages("chat_stream_1")] == ["你好"]
     assert [envelope.sdk_event["type"] for envelope in envelopes] == [
         "content_block_delta",
         "content_block_delta",
@@ -207,11 +199,9 @@ async def _run_stream_event_type_assertions() -> None:
 
 async def _run_system_event_session_id_assertions() -> None:
     stream_relay = InMemoryStreamRelay()
-    session_store = InMemoryAgentSessionStore()
     runtime = ClaudeAgentRuntime(
         settings=Settings(),
         stream_relay=stream_relay,
-        session_store=session_store,
         sdk_query=fake_system_only_sdk_query,
     )
 
@@ -231,7 +221,6 @@ async def _run_system_event_session_id_assertions() -> None:
 
     envelopes = stream_relay.list_envelopes("chat_system_1")
     assert result.sdk_session_id == "e7939275-7f1a-4958-823b-eafb4e2b3434"
-    assert session_store.get_session("chat_system_1").sdk_session_id == result.sdk_session_id
     assert envelopes[0].sdk_session_id == result.sdk_session_id
     assert envelopes[-1].sdk_event["type"] == "runtime_error"
     assert envelopes[-1].sdk_event["message"] == "agent sdk stream ended without assistant output"
@@ -239,13 +228,11 @@ async def _run_system_event_session_id_assertions() -> None:
 
 async def _run_first_token_timeout_assertions() -> None:
     stream_relay = InMemoryStreamRelay()
-    session_store = InMemoryAgentSessionStore()
     settings = Settings(_env_file=None)
     settings.agent_first_token_timeout_seconds = 0.01  # type: ignore[assignment]
     runtime = ClaudeAgentRuntime(
         settings=settings,
         stream_relay=stream_relay,
-        session_store=session_store,
         sdk_query=fake_hanging_after_system_sdk_query,
     )
 
@@ -266,18 +253,16 @@ async def _run_first_token_timeout_assertions() -> None:
 
     envelopes = stream_relay.list_envelopes("chat_timeout_1")
     assert result.error_code == RuntimeErrorCode.FIRST_TOKEN_TIMEOUT
-    assert session_store.get_session("chat_timeout_1").sdk_session_id == "sdk_real_1"
+    assert result.sdk_session_id == "sdk_real_1"
     assert envelopes[-1].sdk_event["type"] == "runtime_error"
     assert envelopes[-1].sdk_event["code"] == RuntimeErrorCode.FIRST_TOKEN_TIMEOUT
 
 
 async def _run_sdk_stderr_error_assertions() -> None:
     stream_relay = InMemoryStreamRelay()
-    session_store = InMemoryAgentSessionStore()
     runtime = ClaudeAgentRuntime(
         settings=Settings(_env_file=None, ANTHROPIC_AUTH_TOKEN="secret_token"),
         stream_relay=stream_relay,
-        session_store=session_store,
         sdk_query=fake_stderr_error_sdk_query,
     )
 

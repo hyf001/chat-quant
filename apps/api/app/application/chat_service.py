@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
 from uuid import uuid4
 
-from app.agent_runtime.claude_runtime import ClaudeAgentRuntime
-from app.agent_runtime.sdk_session_store import InMemoryAgentSessionStore
+from claude_agent_sdk import get_session_messages as sdk_get_session_messages
+
+from app.agent_runtime.claude_runtime import ClaudeAgentRuntime, serialize_sdk_message
 from app.agent_runtime.sdk_stream_relay import InMemoryStreamRelay
-from app.agent_runtime.sdk_transcript_store import ClaudeSDKTranscriptReader
 from app.core.config import get_settings
 from app.core.logging import get_logger
+from app.domain.chat_sessions.models import AssetLink
+from app.domain.chat_sessions.services import ChatSessionService
 from app.schemas.contracts.agent_runtime import (
     AgentScenario,
     AgentTurnCommand,
-    ChatHistoryMessage,
+    AgentTurnResult,
+    AssetReference,
     ChatMessageAccepted,
     ChatMessageRequest,
     ChatSessionContext,
@@ -27,39 +29,41 @@ class ChatApplicationService:
     def __init__(
         self,
         runtime: ClaudeAgentRuntime,
-        session_store: InMemoryAgentSessionStore,
         stream_relay: InMemoryStreamRelay,
-        transcript_reader: ClaudeSDKTranscriptReader | None = None,
     ) -> None:
         self.runtime = runtime
-        self.session_store = session_store
         self.stream_relay = stream_relay
-        self.transcript_reader = transcript_reader or ClaudeSDKTranscriptReader()
         self._running_tasks: dict[str, asyncio.Task[None]] = {}
 
-    async def handle_user_message(self, request: ChatMessageRequest) -> ChatMessageAccepted:
+    async def handle_user_message(
+        self,
+        request: ChatMessageRequest,
+        chat_sessions: ChatSessionService | None = None,
+    ) -> ChatMessageAccepted:
         chat_session_id = request.chat_session_id or f"chat_{uuid4().hex}"
         user_message_id = f"msg_user_{uuid4().hex}"
-        existing = self.session_store.get_session(chat_session_id)
         title = _title_from_prompt(request.message)
-        session = self.session_store.ensure_session(
-            chat_session_id=chat_session_id,
-            sdk_session_id=existing.sdk_session_id if existing is not None else None,
-            title=existing.title if existing is not None else title,
+        indexed_session = (
+            await chat_sessions.ensure_chat_session(
+                chat_session_id=chat_session_id,
+                user_id=request.user_id,
+                project_id=request.project_id,
+                title=title,
+                initial_prompt=request.message,
+            )
+            if chat_sessions is not None
+            else None
         )
-        self.session_store.append_message(
-            chat_session_id,
-            ChatHistoryMessage(
-                message_id=user_message_id,
-                role="user",
-                content=request.message,
-                created_at=datetime.now(UTC),
-            ),
-        )
+        sdk_session_id = indexed_session.sdk_session_id if indexed_session is not None else None
+        asset_links: list[AssetLink] = []
+        if chat_sessions is not None and indexed_session is not None:
+            _, asset_links = await chat_sessions.get_context(
+                indexed_session.id,
+                user_id=request.user_id,
+            )
         context = ChatSessionContext(
-            recent_messages=self.session_store.list_messages(chat_session_id)[-8:],
-            summary=session.summary,
-            related_assets=list(session.assets),
+            summary=indexed_session.summary if indexed_session is not None else None,
+            related_assets=[_asset_reference_from_link(link) for link in asset_links],
         )
         command = AgentTurnCommand(
             user_id=request.user_id,
@@ -67,16 +71,21 @@ class ChatApplicationService:
             chat_session_id=chat_session_id,
             user_message_id=user_message_id,
             scenario=request.scenario
-            or infer_scenario(request.message, has_history=existing is not None),
+            or infer_scenario(
+                request.message,
+                has_history=sdk_session_id is not None,
+            ),
             context=context,
             working_dir=f"{get_settings().agent_workdir_root}/{chat_session_id}",
-            sdk_session_id=existing.sdk_session_id if existing is not None else None,
+            sdk_session_id=sdk_session_id,
             request_id=f"req_{uuid4().hex}",
             deadline_seconds=get_settings().agent_turn_timeout_seconds,
             user_prompt=request.message,
         )
         stream_after = self.stream_relay.latest_sequence(chat_session_id)
-        self._running_tasks[chat_session_id] = asyncio.create_task(self._run_agent_turn(command))
+        self._running_tasks[chat_session_id] = asyncio.create_task(
+            self._run_agent_turn(command, chat_sessions)
+        )
         return ChatMessageAccepted(
             chat_session_id=chat_session_id,
             user_message_id=user_message_id,
@@ -85,24 +94,28 @@ class ChatApplicationService:
         )
 
     def get_session_detail(self, chat_session_id: str) -> ChatSessionDetail | None:
-        session = self.session_store.get_session(chat_session_id)
-        if session is None:
+        envelopes = self.stream_relay.list_envelopes(chat_session_id)
+        if not envelopes and not self.is_turn_running(chat_session_id):
             return None
-        sdk_messages = self._read_sdk_messages(session.sdk_session_id)
+        sdk_session_id = _latest_sdk_session_id(envelopes)
+        sdk_messages = self._read_sdk_messages(chat_session_id, sdk_session_id)
         return ChatSessionDetail(
-            chat_session_id=session.chat_session_id,
-            sdk_session_id=session.sdk_session_id,
-            title=session.title,
-            summary=session.summary,
-            messages=list(session.messages),
+            chat_session_id=chat_session_id,
+            sdk_session_id=sdk_session_id,
+            title="Chat-Quant 分析会话",
             sdk_messages=sdk_messages,
-            envelopes=self.stream_relay.list_envelopes(chat_session_id),
-            assets=list(session.assets),
+            envelopes=envelopes,
         )
 
     async def cancel_session_turn(self, chat_session_id: str, reason: str) -> bool:
-        exists = self.session_store.get_session(chat_session_id) is not None
-        await self.runtime.cancel_session_turn(chat_session_id, reason)
+        envelopes = self.stream_relay.list_envelopes(chat_session_id)
+        exists = self.is_turn_running(chat_session_id) or bool(envelopes)
+        if exists:
+            await self.runtime.cancel_session_turn(
+                chat_session_id,
+                reason,
+                sdk_session_id=_latest_sdk_session_id(envelopes),
+            )
         task = self._running_tasks.get(chat_session_id)
         if task is not None and not task.done():
             task.cancel()
@@ -116,23 +129,37 @@ class ChatApplicationService:
         task = self._running_tasks.get(chat_session_id)
         return task is not None and not task.done()
 
-    def _read_sdk_messages(self, sdk_session_id: str | None) -> list[dict[str, object]]:
+    def _read_sdk_messages(
+        self,
+        chat_session_id: str,
+        sdk_session_id: str | None,
+    ) -> list[dict[str, object]]:
         if sdk_session_id is None:
             return []
         try:
-            return self.transcript_reader.get_messages(sdk_session_id)
+            messages = sdk_get_session_messages(
+                sdk_session_id,
+                directory=f"{get_settings().agent_workdir_root}/{chat_session_id}",
+            )
+            return [serialize_sdk_message(message) for message in messages]
         except FileNotFoundError:
             return []
         except (RuntimeError, ValueError) as exc:
             logger.warning(
-                "failed to read sdk transcript",
+                "failed to read sdk messages",
                 extra={"sdk_session_id": sdk_session_id, "error": str(exc)},
             )
             return []
 
-    async def _run_agent_turn(self, command: AgentTurnCommand) -> None:
+    async def _run_agent_turn(
+        self,
+        command: AgentTurnCommand,
+        chat_sessions: ChatSessionService | None = None,
+    ) -> None:
         try:
-            await self.runtime.run_turn(command)
+            result = await self.runtime.run_turn(command)
+            if chat_sessions is not None:
+                await _sync_chat_session_index(chat_sessions, command, result)
         except asyncio.CancelledError:
             logger.info(
                 "agent turn task cancelled",
@@ -169,15 +196,53 @@ def _title_from_prompt(prompt: str) -> str:
     return stripped[:24]
 
 
+async def _sync_chat_session_index(
+    chat_sessions: ChatSessionService,
+    command: AgentTurnCommand,
+    result: AgentTurnResult,
+) -> None:
+    try:
+        await chat_sessions.update_chat_session(
+            command.chat_session_id,
+            user_id=command.user_id,
+            snippet=command.user_prompt[:160],
+            summary=_summary_from_prompt(command.user_prompt),
+            sdk_session_id=result.sdk_session_id,
+        )
+    except Exception:
+        logger.exception(
+            "failed to sync chat session index",
+            extra={"chat_session_id": command.chat_session_id},
+        )
+
+
+def _summary_from_prompt(prompt: str) -> str:
+    return f"最近请求：{prompt.strip()[:80]}"
+
+
+def _asset_reference_from_link(link: AssetLink) -> AssetReference:
+    return AssetReference(
+        asset_type=str(link.asset_type),
+        asset_id=link.asset_id,
+        sdk_message_uuid=link.sdk_message_uuid,
+        sdk_tool_use_id=link.sdk_tool_use_id,
+    )
+
+
 stream_relay = InMemoryStreamRelay()
-session_store = InMemoryAgentSessionStore()
 runtime = ClaudeAgentRuntime(
     settings=get_settings(),
     stream_relay=stream_relay,
-    session_store=session_store,
 )
 chat_application_service = ChatApplicationService(
     runtime,
-    session_store,
     stream_relay,
 )
+
+
+def _latest_sdk_session_id(envelopes: list[object]) -> str | None:
+    for envelope in reversed(envelopes):
+        sdk_session_id = getattr(envelope, "sdk_session_id", None)
+        if isinstance(sdk_session_id, str) and sdk_session_id:
+            return sdk_session_id
+    return None

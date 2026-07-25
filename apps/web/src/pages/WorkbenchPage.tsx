@@ -38,6 +38,8 @@ export function WorkbenchPage() {
     () => detail?.session ?? sessions.find((session) => session.id === activeSessionId) ?? null,
     [activeSessionId, detail?.session, sessions],
   );
+  const conversationMessages = agentMessages.length > 0 ? agentMessages : detail?.messages ?? [];
+  const conversationRuntimeEnvelopes = agentMessages.length > 0 ? conversationEnvelopes : [];
 
   const refreshSessions = useCallback(
     async (query = historyQuery) => {
@@ -187,8 +189,8 @@ export function WorkbenchPage() {
       conversation={
         <ConversationShell
           session={activeSession}
-          messages={agentMessages.length > 0 ? agentMessages : detail?.messages ?? []}
-          envelopes={conversationEnvelopes}
+          messages={conversationMessages}
+          envelopes={conversationRuntimeEnvelopes}
           assets={detail?.assets ?? []}
           isLoading={isDetailLoading}
           isStreaming={isSending}

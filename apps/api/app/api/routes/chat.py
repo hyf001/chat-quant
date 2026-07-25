@@ -8,7 +8,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
+from app.api.dependencies import ServicesDep
 from app.application.chat_service import ChatApplicationService, chat_application_service
+from app.domain.chat_sessions.services import ChatSessionAccessError
 from app.schemas.contracts.agent_runtime import (
     CancelSessionRequest,
     CancelSessionResponse,
@@ -32,8 +34,12 @@ StreamAfterQuery = Annotated[int, Query(ge=0)]
 async def post_chat_message(
     request: ChatMessageRequest,
     service: ChatServiceDep,
+    services: ServicesDep,
 ) -> ChatMessageAccepted:
-    return await service.handle_user_message(request)
+    try:
+        return await service.handle_user_message(request, services.chat_sessions)
+    except ChatSessionAccessError:
+        raise HTTPException(status_code=403, detail="chat session access denied") from None
 
 
 @router.get("/{chat_session_id}/stream")

@@ -49,16 +49,19 @@ class ChatSessionService:
         asset_repository: AssetLinkRepository,
         *,
         claude_agent_cwd: str | None = None,
+        agent_workdir_root: str | None = None,
     ) -> None:
         self._sessions = session_repository
         self._assets = asset_repository
         self._claude_agent_cwd = claude_agent_cwd
+        self._agent_workdir_root = agent_workdir_root
 
     async def create_chat_session(
         self,
         *,
         user_id: str,
         project_id: str,
+        chat_session_id: str | None = None,
         title: str | None = None,
         initial_prompt: str | None = None,
         kind: ChatSessionKind = ChatSessionKind.NORMAL,
@@ -71,7 +74,7 @@ class ChatSessionService:
     ) -> ChatSession:
         now = utc_now()
         session = ChatSession(
-            id=_new_id("conv"),
+            id=chat_session_id or _new_id("conv"),
             user_id=user_id,
             project_id=project_id,
             title=title or _default_title(initial_prompt),
@@ -172,6 +175,28 @@ class ChatSessionService:
             offset=offset,
         )
 
+    async def ensure_chat_session(
+        self,
+        *,
+        chat_session_id: str,
+        user_id: str,
+        project_id: str,
+        title: str | None = None,
+        initial_prompt: str | None = None,
+    ) -> ChatSession:
+        session = await self._sessions.get(chat_session_id)
+        if session is None or session.deleted_at is not None:
+            return await self.create_chat_session(
+                user_id=user_id,
+                project_id=project_id,
+                chat_session_id=chat_session_id,
+                title=title,
+                initial_prompt=initial_prompt,
+            )
+        if session.user_id != user_id:
+            raise ChatSessionAccessError(chat_session_id)
+        return session
+
     async def get_chat_session_detail(
         self, chat_session_id: str, *, user_id: str, message_limit: int | None = None
     ) -> tuple[ChatSession, list[object], list[AssetLink]]:
@@ -181,7 +206,7 @@ class ChatSessionService:
             try:
                 messages = sdk_get_session_messages(
                     session.sdk_session_id,
-                    directory=self._claude_agent_cwd,
+                    directory=self._sdk_message_directory(session.id),
                     limit=message_limit,
                 )
             except Exception as exc:  # pragma: no cover - exact SDK exceptions vary by version.
@@ -208,6 +233,13 @@ class ChatSessionService:
         if session.user_id != user_id:
             raise ChatSessionAccessError(chat_session_id)
         return session
+
+    def _sdk_message_directory(self, chat_session_id: str) -> str | None:
+        if self._claude_agent_cwd:
+            return self._claude_agent_cwd
+        if self._agent_workdir_root:
+            return f"{self._agent_workdir_root.rstrip('/')}/{chat_session_id}"
+        return None
 
 
 class AssetLinkService:

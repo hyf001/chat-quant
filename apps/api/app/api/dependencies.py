@@ -6,21 +6,42 @@ from fastapi import Depends, Header, Request
 
 from app.core.config import get_settings
 from app.domain.chat_sessions.repositories import (
+    AssetLinkRepository,
+    ChatSessionRepository,
     InMemoryAssetLinkRepository,
     InMemoryChatSessionRepository,
 )
 from app.domain.chat_sessions.services import AssetLinkService, ChatSessionService
+from app.infrastructure.db import SQLAlchemyAssetLinkRepository, SQLAlchemyChatSessionRepository
+from app.infrastructure.db.migrations import run_chat_session_migrations
+from app.infrastructure.db.session import make_chat_session_engine, make_session_factory
 
 
 class M1Services:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        session_repository: ChatSessionRepository | None = None,
+        asset_repository: AssetLinkRepository | None = None,
+    ) -> None:
         settings = get_settings()
-        self.session_repository = InMemoryChatSessionRepository()
-        self.asset_repository = InMemoryAssetLinkRepository()
+        uses_default_repositories = session_repository is None or asset_repository is None
+        if session_repository is None or asset_repository is None:
+            if settings.chat_session_auto_migrate:
+                run_chat_session_migrations(settings)
+            engine = make_chat_session_engine(settings)
+            session_factory = make_session_factory(engine)
+            session_repository = session_repository or SQLAlchemyChatSessionRepository(
+                session_factory
+            )
+            asset_repository = asset_repository or SQLAlchemyAssetLinkRepository(session_factory)
+
+        self.session_repository = session_repository
+        self.asset_repository = asset_repository
         self.chat_sessions = ChatSessionService(
             self.session_repository,
             self.asset_repository,
             claude_agent_cwd=settings.claude_agent_cwd,
+            agent_workdir_root=settings.agent_workdir_root if uses_default_repositories else None,
         )
         self.asset_links = AssetLinkService(self.session_repository, self.asset_repository)
 
@@ -35,6 +56,10 @@ def get_m1_services(request: Request) -> M1Services:
 
 def reset_m1_services(request: Request) -> None:
     request.app.state.m1_services = M1Services()
+
+
+def make_in_memory_m1_services() -> M1Services:
+    return M1Services(InMemoryChatSessionRepository(), InMemoryAssetLinkRepository())
 
 
 def get_user_id(x_user_id: Annotated[str | None, Header(alias="X-User-Id")] = None) -> str:

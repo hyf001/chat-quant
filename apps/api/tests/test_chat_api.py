@@ -3,8 +3,8 @@ from collections.abc import AsyncIterator
 from urllib.parse import parse_qs, urlparse
 
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime
-from app.agent_runtime.sdk_session_store import InMemoryAgentSessionStore
 from app.agent_runtime.sdk_stream_relay import InMemoryStreamRelay
+from app.api.dependencies import get_m1_services, make_in_memory_m1_services
 from app.api.routes.chat import get_chat_application_service
 from app.application.chat_service import ChatApplicationService
 from app.core.config import Settings
@@ -36,15 +36,14 @@ async def fake_sdk_query(*, prompt: str, options: object | None = None) -> Async
 
 
 stream_relay = InMemoryStreamRelay()
-session_store = InMemoryAgentSessionStore()
 runtime = ClaudeAgentRuntime(
     settings=Settings(),
     stream_relay=stream_relay,
-    session_store=session_store,
     sdk_query=fake_sdk_query,
 )
-test_service = ChatApplicationService(runtime, session_store, stream_relay)
+test_service = ChatApplicationService(runtime, stream_relay)
 app.dependency_overrides[get_chat_application_service] = lambda: test_service
+app.dependency_overrides[get_m1_services] = lambda: make_in_memory_m1_services()
 client = TestClient(app)
 
 
@@ -67,7 +66,7 @@ def test_chat_message_returns_stream_url_and_sse_events() -> None:
     assert "result_message" in stream_response.text
 
 
-def test_conversation_detail_contains_messages_and_envelopes() -> None:
+def test_conversation_detail_contains_live_envelopes() -> None:
     response = client.post(
         "/api/chat/messages",
         json={"message": "筛选最近成交活跃的股票", "project_id": "project_1"},
@@ -79,7 +78,7 @@ def test_conversation_detail_contains_messages_and_envelopes() -> None:
     assert detail_response.status_code == 200
     detail = detail_response.json()
     assert detail["chat_session_id"] == chat_session_id
-    assert len(detail["messages"]) == 2
+    assert detail["messages"] == []
     assert len(detail["envelopes"]) >= 2
 
 
@@ -110,6 +109,42 @@ def test_follow_up_message_does_not_resume_generated_sdk_placeholder() -> None:
     asyncio.run(_run_no_placeholder_resume_assertions())
 
 
+def test_chat_message_syncs_sdk_session_id_to_m1_index() -> None:
+    asyncio.run(_run_m1_index_sync_assertions())
+
+
+async def _run_m1_index_sync_assertions() -> None:
+    isolated_stream_relay = InMemoryStreamRelay()
+    isolated_runtime = ClaudeAgentRuntime(
+        settings=Settings(),
+        stream_relay=isolated_stream_relay,
+        sdk_query=fake_sdk_query,
+    )
+    isolated_service = ChatApplicationService(
+        isolated_runtime,
+        isolated_stream_relay,
+    )
+    m1_services = make_in_memory_m1_services()
+
+    accepted = await isolated_service.handle_user_message(
+        ChatMessageRequest(
+            chat_session_id="conv_index_sync",
+            message="同步 SDK session",
+            project_id="project_1",
+        ),
+        m1_services.chat_sessions,
+    )
+    await isolated_service._running_tasks[accepted.chat_session_id]
+
+    session, _ = await m1_services.chat_sessions.get_context(
+        "conv_index_sync",
+        user_id="local_user",
+    )
+
+    assert session.sdk_session_id == "sdk_api_1"
+    assert session.snippet == "同步 SDK session"
+
+
 async def _run_no_placeholder_resume_assertions() -> None:
     captured_resume_values: list[str | None] = []
 
@@ -123,16 +158,13 @@ async def _run_no_placeholder_resume_assertions() -> None:
         yield {"type": "result_message", "result": "完成。", "uuid": "sdk_result_no_session"}
 
     isolated_stream_relay = InMemoryStreamRelay()
-    isolated_session_store = InMemoryAgentSessionStore()
     isolated_runtime = ClaudeAgentRuntime(
         settings=Settings(),
         stream_relay=isolated_stream_relay,
-        session_store=isolated_session_store,
         sdk_query=sdk_query_without_session_id,
     )
     isolated_service = ChatApplicationService(
         isolated_runtime,
-        isolated_session_store,
         isolated_stream_relay,
     )
 
@@ -146,4 +178,3 @@ async def _run_no_placeholder_resume_assertions() -> None:
     await isolated_service._running_tasks[second.chat_session_id]
 
     assert captured_resume_values == [None, None]
-    assert isolated_session_store.get_session(first.chat_session_id).sdk_session_id is None
