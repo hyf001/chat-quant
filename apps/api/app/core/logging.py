@@ -47,8 +47,18 @@ def configure_logging(settings: Settings) -> None:
     root_logger.addHandler(handler)
     root_logger.setLevel(level)
 
-    for logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access", "fastapi"):
-        logging.getLogger(logger_name).setLevel(level)
+    for logger_name in (
+        "app",
+        "app.request",
+        "uvicorn",
+        "uvicorn.error",
+        "uvicorn.access",
+        "fastapi",
+    ):
+        logger = logging.getLogger(logger_name)
+        logger.disabled = False
+        logger.propagate = True
+        logger.setLevel(level)
 
 
 class RequestIdFilter(logging.Filter):

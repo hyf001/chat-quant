@@ -45,38 +45,23 @@ class CommandPolicyDecision:
 SCENARIO_COMMANDS: dict[AgentScenario, tuple[str, ...]] = {
     AgentScenario.CHAT_ANALYSIS: (
         "chatq artifact save-code",
-        "chatq runtime execute",
         "chatq chart kline",
         "chatq conversation link-asset",
     ),
     AgentScenario.SCREENING: (
         "chatq artifact save-code",
-        "chatq runtime execute",
         "chatq conversation link-asset",
     ),
     AgentScenario.STRATEGY_BUILD: (
         "chatq artifact save-code",
-        "chatq strategy create",
-        "chatq strategy validate",
         "chatq conversation link-asset",
     ),
     AgentScenario.BACKTEST: (
-        "chatq strategy get",
-        "chatq backtest create",
-        "chatq backtest run",
-        "chatq backtest get",
         "chatq conversation link-asset",
     ),
     AgentScenario.FOLLOW_UP: (
         "chatq artifact save-code",
-        "chatq runtime execute",
         "chatq chart kline",
-        "chatq strategy get",
-        "chatq strategy create",
-        "chatq strategy validate",
-        "chatq backtest create",
-        "chatq backtest run",
-        "chatq backtest get",
         "chatq conversation link-asset",
     ),
 }
@@ -117,52 +102,10 @@ def load_default_policy() -> BashCommandPolicy:
             description="保存 Agent 生成的 Python 代码产物",
         ),
         BashCommand(
-            name="chatq runtime execute",
-            enabled=True,
-            modules=("M4",),
-            description="执行已保存代码产物",
-        ),
-        BashCommand(
             name="chatq chart kline",
             enabled=True,
             modules=("M3", "M4"),
             description="生成 K 线图表产物",
-        ),
-        BashCommand(
-            name="chatq strategy create",
-            enabled=True,
-            modules=("M5",),
-            description="根据 StrategyPackage 创建策略和版本",
-        ),
-        BashCommand(
-            name="chatq strategy get",
-            enabled=True,
-            modules=("M5",),
-            description="查询策略版本、入口和参数 schema",
-        ),
-        BashCommand(
-            name="chatq strategy validate",
-            enabled=True,
-            modules=("M5", "M4"),
-            description="校验策略版本",
-        ),
-        BashCommand(
-            name="chatq backtest create",
-            enabled=True,
-            modules=("M6",),
-            description="创建 BacktestRun",
-        ),
-        BashCommand(
-            name="chatq backtest run",
-            enabled=True,
-            modules=("M6", "M4"),
-            description="执行 BacktestRun",
-        ),
-        BashCommand(
-            name="chatq backtest get",
-            enabled=True,
-            modules=("M6",),
-            description="查询回测结果",
         ),
         BashCommand(
             name="chatq conversation link-asset",

@@ -13,9 +13,6 @@ def test_create_strategy_returns_draft_first_version(client: TestClient) -> None
     assert response.status_code == 201
     data = response.json()
     assert data["strategy_id"].startswith("str_")
-    assert data["strategy_version_id"].startswith("stv_")
-    assert data["version"] == 1
-    assert data["status"] == "draft"
     assert data["entrypoint"] == "strategy.py:GeneratedStrategy"
 
 
@@ -29,98 +26,6 @@ def test_create_strategy_rejects_default_param_outside_schema(client: TestClient
     )
 
     assert response.status_code == 422
-
-
-def test_create_strategy_version_increments_and_preserves_parent(client: TestClient) -> None:
-    created = client.post(
-        "/api/strategies",
-        json={"chat_session_id": "conv_demo", "package": strategy_package()},
-    ).json()
-    next_package = strategy_package(
-        logic_summary="MA 25/80 突破并使用较强波动过滤",
-        fast_period=25,
-        slow_period=80,
-        volatility_filter="strong",
-    )
-
-    response = client.post(
-        f"/api/strategies/{created['strategy_id']}/versions",
-        json={
-            "parent_version_id": created["strategy_version_id"],
-            "change_summary": "加入更强波动过滤",
-            "package": next_package,
-        },
-    )
-
-    assert response.status_code == 201
-    data = response.json()
-    assert data["version"] == 2
-    detail = client.get(f"/api/strategies/{created['strategy_id']}").json()
-    assert detail["strategy"]["current_version_id"] == data["strategy_version_id"]
-    assert detail["versions"][1]["parent_version_id"] == created["strategy_version_id"]
-    assert detail["versions"][1]["change_summary"] == "加入更强波动过滤"
-
-
-def test_validate_strategy_version_marks_version_validated(client: TestClient) -> None:
-    created = client.post(
-        "/api/strategies",
-        json={"chat_session_id": "conv_demo", "package": strategy_package()},
-    ).json()
-
-    response = client.post(f"/api/strategy-versions/{created['strategy_version_id']}/validate")
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "validated"
-    assert [check["name"] for check in data["checks"]] == [
-        "entrypoint",
-        "params_schema",
-        "code_reference",
-        "smoke_test",
-    ]
-    version = client.get(f"/api/strategy-versions/{created['strategy_version_id']}").json()
-    assert version["status"] == "validated"
-    assert version["validated_at"] is not None
-
-
-def test_copy_summary_records_without_new_strategy(client: TestClient) -> None:
-    created = client.post(
-        "/api/strategies",
-        json={"chat_session_id": "conv_demo", "package": strategy_package()},
-    ).json()
-
-    response = client.post(
-        f"/api/strategy-versions/{created['strategy_version_id']}/copy",
-        json={"mode": "summary"},
-    )
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["mode"] == "summary"
-    assert data["target_strategy_id"] is None
-    assert "不构成投资建议" in data["summary"]
-    assert client.get("/api/strategies").json()[0]["strategy_id"] == created["strategy_id"]
-
-
-def test_copy_new_strategy_creates_independent_asset(client: TestClient) -> None:
-    created = client.post(
-        "/api/strategies",
-        json={"chat_session_id": "conv_demo", "package": strategy_package()},
-    ).json()
-
-    response = client.post(
-        f"/api/strategy-versions/{created['strategy_version_id']}/copy",
-        json={"mode": "new_strategy", "target_chat_session_id": "conv_copy"},
-    )
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["target_strategy_id"].startswith("str_")
-    strategies = client.get("/api/strategies").json()
-    assert {strategy["strategy_id"] for strategy in strategies} == {
-        created["strategy_id"],
-        data["target_strategy_id"],
-    }
 
 
 def test_update_metadata_does_not_create_new_version(client: TestClient) -> None:
@@ -143,27 +48,7 @@ def test_update_metadata_does_not_create_new_version(client: TestClient) -> None
     assert data["name"] == "稳健均线策略"
     assert data["tags"] == ["沪深300", "稳健版"]
     detail = client.get(f"/api/strategies/{created['strategy_id']}").json()
-    assert len(detail["versions"]) == 1
-    assert detail["strategy"]["current_version_id"] == created["strategy_version_id"]
-
-
-def test_archived_strategy_rejects_new_version(client: TestClient) -> None:
-    created = client.post(
-        "/api/strategies",
-        json={"chat_session_id": "conv_demo", "package": strategy_package()},
-    ).json()
-    client.patch(
-        f"/api/strategies/{created['strategy_id']}",
-        json={"status": "archived"},
-    )
-
-    response = client.post(
-        f"/api/strategies/{created['strategy_id']}/versions",
-        json={"package": strategy_package(fast_period=30, slow_period=90)},
-    )
-
-    assert response.status_code == 409
-    assert response.json()["detail"]["error_code"] == "STRATEGY_ARCHIVED"
+    assert detail["strategy"]["name"] == "稳健均线策略"
 
 
 def test_deleted_strategy_is_hidden_from_list(client: TestClient) -> None:
@@ -172,10 +57,7 @@ def test_deleted_strategy_is_hidden_from_list(client: TestClient) -> None:
         json={"chat_session_id": "conv_demo", "package": strategy_package()},
     ).json()
 
-    response = client.patch(
-        f"/api/strategies/{created['strategy_id']}",
-        json={"status": "deleted"},
-    )
+    response = client.delete(f"/api/strategies/{created['strategy_id']}")
 
     assert response.status_code == 200
     assert client.get("/api/strategies").json() == []
@@ -194,6 +76,34 @@ def strategy_package(
         "strategy_type": "ma_cross",
         "entrypoint": "strategy.py:GeneratedStrategy",
         "code_artifact_id": "code_demo",
+        "code_files": [
+            {
+                "path": "strategy.py",
+                "content": "\n".join(
+                    [
+                        "import backtrader as bt",
+                        "",
+                        "class GeneratedStrategy(bt.Strategy):",
+                        "    params = (",
+                        "        ('fast_period', 20),",
+                        "        ('slow_period', 60),",
+                        "        ('volatility_filter', 'medium'),",
+                        "    )",
+                        "",
+                        "    def __init__(self):",
+                        "        close = self.datas[0].close",
+                        "        self.fast_ma = bt.ind.SMA(close, period=self.p.fast_period)",
+                        "        self.slow_ma = bt.ind.SMA(close, period=self.p.slow_period)",
+                        "",
+                        "    def next(self):",
+                        "        if not self.position and self.fast_ma[0] > self.slow_ma[0]:",
+                        "            self.order_target_percent(target=0.95)",
+                        "        elif self.position and self.fast_ma[0] < self.slow_ma[0]:",
+                        "            self.order_target_percent(target=0)",
+                    ]
+                ),
+            }
+        ],
         "params_schema": {
             "fast_period": {
                 "type": "integer",

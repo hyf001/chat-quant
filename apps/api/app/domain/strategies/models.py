@@ -7,6 +7,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 StrategyParamValue = int | float | str | bool
+type JsonScalar = str | int | float | bool | None
+type JsonValue = JsonScalar | list[JsonValue] | dict[str, JsonValue]
 
 
 def utc_now() -> datetime:
@@ -21,20 +23,19 @@ class StrategyStatus(StrEnum):
 
 class StrategyVersionStatus(StrEnum):
     DRAFT = "draft"
-    VALIDATING = "validating"
-    VALIDATED = "validated"
-    INVALID = "invalid"
     ARCHIVED = "archived"
 
 
-class StrategyCopyMode(StrEnum):
-    SUMMARY = "summary"
-    NEW_STRATEGY = "new_strategy"
+class StrategyCodeFile(BaseModel):
+    path: str = Field(min_length=1, max_length=256)
+    content: str = Field(min_length=1)
 
+    model_config = ConfigDict(extra="forbid")
 
-class ValidationCheckStatus(StrEnum):
-    PASSED = "passed"
-    FAILED = "failed"
+    @model_validator(mode="after")
+    def validate_code_path(self) -> StrategyCodeFile:
+        validate_relative_python_path(self.path)
+        return self
 
 
 class StrategyParameterUi(BaseModel):
@@ -69,6 +70,7 @@ class StrategyPackage(BaseModel):
     strategy_type: str = Field(min_length=1, max_length=64)
     entrypoint: str = Field(min_length=3, max_length=256)
     code_artifact_id: str = Field(min_length=1, max_length=128)
+    code_files: list[StrategyCodeFile] = Field(default_factory=list)
     params_schema: dict[str, StrategyParameterSchema]
     default_params: dict[str, StrategyParamValue]
     logic_summary: str | None = None
@@ -99,18 +101,16 @@ class StrategyPackage(BaseModel):
             raise ValueError("entrypoint must use '<file.py>:<ClassName>' format")
 
         module_path, class_name = self.entrypoint.split(":", 1)
-        if not module_path.endswith(".py") or "/" in module_path or "\\" in module_path:
-            raise ValueError("entrypoint module must be a Python file name")
+        validate_relative_python_path(module_path)
         if not class_name.isidentifier():
             raise ValueError("entrypoint class must be a Python identifier")
 
+        if self.code_files:
+            code_paths = {code_file.path for code_file in self.code_files}
+            if module_path not in code_paths:
+                raise ValueError("entrypoint module must exist in code_files")
+
         return self
-
-
-class StrategyValidationCheck(BaseModel):
-    name: str
-    status: ValidationCheckStatus
-    message: str | None = None
 
 
 class StrategyRecord(BaseModel):
@@ -137,6 +137,7 @@ class StrategyVersionRecord(BaseModel):
     parent_version_id: str | None = None
     code_artifact_id: str
     entrypoint: str
+    code_files: list[StrategyCodeFile] = Field(default_factory=list)
     params_schema: dict[str, StrategyParameterSchema]
     default_params: dict[str, StrategyParamValue]
     logic_summary: str | None = None
@@ -146,29 +147,7 @@ class StrategyVersionRecord(BaseModel):
     source_sdk_tool_use_id: str | None = None
     code_checksum: str
     status: StrategyVersionStatus = StrategyVersionStatus.DRAFT
-    validation_error: str | None = None
-    validation_details: list[StrategyValidationCheck] = Field(default_factory=list)
-    validated_at: datetime | None = None
     created_at: datetime = Field(default_factory=utc_now)
-
-
-class StrategyCopyRecord(BaseModel):
-    id: str
-    source_strategy_version_id: str
-    target_strategy_id: str | None = None
-    target_chat_session_id: str | None = None
-    mode: StrategyCopyMode
-    created_by: str
-    created_at: datetime = Field(default_factory=utc_now)
-
-
-class StrategyValidationResult(BaseModel):
-    strategy_version_id: str
-    status: StrategyVersionStatus
-    checks: list[StrategyValidationCheck]
-    execution_result_id: str | None = None
-    error: str | None = None
-    validated_at: datetime | None = None
 
 
 class StrategySummary(BaseModel):
@@ -187,23 +166,12 @@ class StrategySummary(BaseModel):
 
 class StrategyDetail(BaseModel):
     strategy: StrategyRecord
-    versions: list[StrategyVersionRecord]
 
 
 class StrategyCreateResult(BaseModel):
     strategy_id: str
-    strategy_version_id: str
-    version: int
-    status: StrategyVersionStatus
     entrypoint: str
 
-
-class StrategyCopySummary(BaseModel):
-    mode: StrategyCopyMode
-    source_strategy_version_id: str
-    summary: str
-    target_strategy_id: str | None = None
-    copy_record_id: str
 
 def validate_param_value(
     name: str,
@@ -227,3 +195,13 @@ def validate_param_value(
             raise ValueError(f"{name} must be >= {spec.minimum}")
         if spec.maximum is not None and value > spec.maximum:
             raise ValueError(f"{name} must be <= {spec.maximum}")
+
+
+def validate_relative_python_path(path_text: str) -> None:
+    if not path_text.endswith(".py"):
+        raise ValueError("entrypoint module must be a Python file")
+    if path_text.startswith("/") or "\\" in path_text:
+        raise ValueError("entrypoint module must be a relative POSIX path")
+    parts = path_text.split("/")
+    if any(part in {"", ".", ".."} for part in parts):
+        raise ValueError("entrypoint module must stay inside the strategy package")

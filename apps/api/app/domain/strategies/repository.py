@@ -5,8 +5,11 @@ import sqlite3
 from pathlib import Path
 from threading import RLock
 
+from app.domain.backtests.models import (
+    StrategyBacktestRecord,
+    StrategyBacktestResultRecord,
+)
 from app.domain.strategies.models import (
-    StrategyCopyRecord,
     StrategyRecord,
     StrategyStatus,
     StrategyVersionRecord,
@@ -22,7 +25,8 @@ class StrategyRepository:
 
     def clear(self) -> None:
         with self._lock, self._connect() as connection:
-            connection.execute("delete from strategy_copy_records")
+            connection.execute("delete from strategy_backtest_results")
+            connection.execute("delete from strategy_backtests")
             connection.execute("delete from strategy_versions")
             connection.execute("delete from strategies")
 
@@ -106,16 +110,12 @@ class StrategyRepository:
                     code_artifact_id, entrypoint, params_schema_json, default_params_json,
                     logic_summary, change_summary, source_sdk_session_id,
                     source_sdk_message_uuid, source_sdk_tool_use_id, code_checksum,
-                    status, validation_error, validation_details_json, validated_at,
-                    created_at, payload_json
+                    status, created_at, payload_json
                 )
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict(id) do update set
                     version_name=excluded.version_name,
                     status=excluded.status,
-                    validation_error=excluded.validation_error,
-                    validation_details_json=excluded.validation_details_json,
-                    validated_at=excluded.validated_at,
                     payload_json=excluded.payload_json
                 """,
                 (
@@ -141,12 +141,6 @@ class StrategyRepository:
                     version.source_sdk_tool_use_id,
                     version.code_checksum,
                     version.status.value,
-                    version.validation_error,
-                    json.dumps(
-                        [check.model_dump(mode="json") for check in version.validation_details],
-                        ensure_ascii=False,
-                    ),
-                    version.validated_at.isoformat() if version.validated_at else None,
                     version.created_at.isoformat(),
                     payload,
                 ),
@@ -186,27 +180,109 @@ class StrategyRepository:
             ).fetchone()
         return int(row["max_version"]) + 1
 
-    def add_copy_record(self, record: StrategyCopyRecord) -> None:
+    def add_backtest(self, backtest: StrategyBacktestRecord) -> None:
+        self.save_backtest(backtest)
+
+    def save_backtest(self, backtest: StrategyBacktestRecord) -> None:
         with self._lock, self._connect() as connection:
             connection.execute(
                 """
-                insert into strategy_copy_records (
-                    id, source_strategy_version_id, target_strategy_id,
-                    target_chat_session_id, mode, created_by, created_at, payload_json
+                insert into strategy_backtests (
+                    id, user_id, project_id, chat_session_id, strategy_id,
+                    strategy_version_id, run_type, status, config_hash,
+                    result_id, started_at, completed_at, created_at, updated_at,
+                    payload_json
                 )
-                values (?, ?, ?, ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                on conflict(id) do update set
+                    status=excluded.status,
+                    result_id=excluded.result_id,
+                    started_at=excluded.started_at,
+                    completed_at=excluded.completed_at,
+                    updated_at=excluded.updated_at,
+                    payload_json=excluded.payload_json
                 """,
                 (
-                    record.id,
-                    record.source_strategy_version_id,
-                    record.target_strategy_id,
-                    record.target_chat_session_id,
-                    record.mode.value,
-                    record.created_by,
-                    record.created_at.isoformat(),
-                    _json_dump(record),
+                    backtest.id,
+                    backtest.user_id,
+                    backtest.project_id,
+                    backtest.chat_session_id,
+                    backtest.strategy_id,
+                    backtest.strategy_version_id,
+                    "backtest",
+                    backtest.status.value,
+                    backtest.config_hash,
+                    backtest.result_id,
+                    backtest.started_at.isoformat() if backtest.started_at else None,
+                    backtest.completed_at.isoformat() if backtest.completed_at else None,
+                    backtest.created_at.isoformat(),
+                    backtest.updated_at.isoformat(),
+                    _json_dump(backtest),
                 ),
             )
+
+    def get_backtest(self, backtest_id: str) -> StrategyBacktestRecord | None:
+        row = self._fetch_one(
+            "select payload_json from strategy_backtests where id = ?",
+            (backtest_id,),
+        )
+        if row is None:
+            return None
+        return StrategyBacktestRecord.model_validate_json(row["payload_json"])
+
+    def list_backtests(
+        self,
+        *,
+        strategy_version_id: str | None,
+        limit: int,
+    ) -> list[StrategyBacktestRecord]:
+        with self._lock, self._connect() as connection:
+            params: tuple[object, ...]
+            where_clause = ""
+            if strategy_version_id is not None:
+                where_clause = "where strategy_version_id = ?"
+                params = (strategy_version_id, limit)
+            else:
+                params = (limit,)
+            rows = connection.execute(
+                f"""
+                select payload_json
+                from strategy_backtests
+                {where_clause}
+                order by created_at desc
+                limit ?
+                """,
+                params,
+            ).fetchall()
+        return [StrategyBacktestRecord.model_validate_json(row["payload_json"]) for row in rows]
+
+    def save_backtest_result(self, result: StrategyBacktestResultRecord) -> None:
+        with self._lock, self._connect() as connection:
+            connection.execute(
+                """
+                insert into strategy_backtest_results (
+                    id, strategy_backtest_id, created_at, payload_json
+                )
+                values (?, ?, ?, ?)
+                on conflict(id) do update set
+                    payload_json=excluded.payload_json
+                """,
+                (
+                    result.id,
+                    result.strategy_backtest_id,
+                    result.created_at.isoformat(),
+                    _json_dump(result),
+                ),
+            )
+
+    def get_backtest_result(self, backtest_id: str) -> StrategyBacktestResultRecord | None:
+        row = self._fetch_one(
+            "select payload_json from strategy_backtest_results where strategy_backtest_id = ?",
+            (backtest_id,),
+        )
+        if row is None:
+            return None
+        return StrategyBacktestResultRecord.model_validate_json(row["payload_json"])
 
     def _connect(self) -> sqlite3.Connection:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -264,9 +340,6 @@ class StrategyRepository:
                     source_sdk_tool_use_id text,
                     code_checksum text not null,
                     status text not null,
-                    validation_error text,
-                    validation_details_json text,
-                    validated_at text,
                     created_at text not null,
                     payload_json text not null,
                     unique(strategy_id, version)
@@ -281,26 +354,50 @@ class StrategyRepository:
                 create index if not exists idx_strategy_versions_status
                     on strategy_versions(status);
 
-                create table if not exists strategy_copy_records (
+                create table if not exists strategy_backtests (
                     id text primary key,
-                    source_strategy_version_id text not null references strategy_versions(id),
-                    target_strategy_id text references strategies(id),
-                    target_chat_session_id text,
-                    mode text not null,
-                    created_by text not null,
+                    user_id text not null,
+                    project_id text not null,
+                    chat_session_id text not null,
+                    strategy_id text not null references strategies(id),
+                    strategy_version_id text not null references strategy_versions(id),
+                    run_type text not null,
+                    status text not null,
+                    config_hash text not null,
+                    result_id text,
+                    started_at text,
+                    completed_at text,
+                    created_at text not null,
+                    updated_at text not null,
+                    payload_json text not null
+                );
+
+                create index if not exists idx_strategy_backtests_version_created
+                    on strategy_backtests(strategy_version_id, created_at);
+                create index if not exists idx_strategy_backtests_status
+                    on strategy_backtests(status);
+
+                create table if not exists strategy_backtest_results (
+                    id text primary key,
+                    strategy_backtest_id text not null references strategy_backtests(id),
                     created_at text not null,
                     payload_json text not null
                 );
 
-                create index if not exists idx_strategy_copy_records_source
-                    on strategy_copy_records(source_strategy_version_id);
-                create index if not exists idx_strategy_copy_records_target
-                    on strategy_copy_records(target_strategy_id);
+                create unique index if not exists uq_strategy_backtest_results_run
+                    on strategy_backtest_results(strategy_backtest_id);
                 """
             )
 
 
-def _json_dump(record: StrategyRecord | StrategyVersionRecord | StrategyCopyRecord) -> str:
+def _json_dump(
+    record: (
+        StrategyRecord
+        | StrategyVersionRecord
+        | StrategyBacktestRecord
+        | StrategyBacktestResultRecord
+    ),
+) -> str:
     return record.model_dump_json()
 
 
