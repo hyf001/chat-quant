@@ -1,3 +1,4 @@
+import type { BacktestDetail, BacktestRun, CreateBacktestRunPayload } from "../types/backtests";
 import type {
   ChatSession,
   ChatSessionDetail,
@@ -144,4 +145,24 @@ export async function executePythonArtifact(
     body: payload,
   });
   return data.execution_result;
+}
+
+export async function createBacktestRun(payload: CreateBacktestRunPayload): Promise<BacktestRun> {
+  return requestJson<BacktestRun>("/api/backtests", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function runBacktest(backtestRunId: string): Promise<BacktestDetail> {
+  return requestJson<BacktestDetail>(`/api/backtests/${backtestRunId}/run`, {
+    method: "POST",
+    body: { mode: "sync" },
+  });
+}
+
+export async function getBacktest(backtestRunId: string): Promise<BacktestDetail> {
+  return requestJson<BacktestDetail>(
+    `/api/backtests/${backtestRunId}?include_trades=true&include_curves=true`,
+  );
 }

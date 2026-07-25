@@ -18,6 +18,7 @@ import {
   getStrategyVersion,
   listStrategies,
   validateStrategyVersion,
+  type BacktestDetail,
   type CodeArtifact,
   type ExecutionResult,
   type RuntimeHealth,
@@ -33,6 +34,7 @@ type InsightPanelProps = {
   artifact: CodeArtifact | null;
   health: RuntimeHealth | null;
   result: ExecutionResult | null;
+  backtestDetail: BacktestDetail | null;
 };
 
 type LoadState = "loading" | "ready" | "empty" | "error";
@@ -60,7 +62,14 @@ function snapshotTitle(snapshot: JsonValue | null): string | null {
   return null;
 }
 
-export function InsightPanel({ session, assets, artifact, health, result }: InsightPanelProps) {
+export function InsightPanel({
+  session,
+  assets,
+  artifact,
+  health,
+  result,
+  backtestDetail,
+}: InsightPanelProps) {
   return (
     <aside
       className="hidden min-h-0 overflow-auto border-l border-line bg-panel/70 px-4 py-5 xl:block"
@@ -72,6 +81,8 @@ export function InsightPanel({ session, assets, artifact, health, result }: Insi
           <ArtifactDetail artifact={artifact} />
         ) : result ? (
           <RuntimeDetail health={health} result={result} />
+        ) : backtestDetail ? (
+          <BacktestDetailCard detail={backtestDetail} />
         ) : (
           <SessionDetail assets={assets} session={session} />
         )}
@@ -155,6 +166,18 @@ function RuntimeDetail({ health, result }: { health: RuntimeHealth | null; resul
       <DetailCard label="Python" value={health?.python_version ?? result.python_version} />
       <DetailCard label="exit code" value={result.exit_code === null ? "-" : String(result.exit_code)} />
       <DetailCard label="输出目录" value={result.output_dir} />
+    </div>
+  );
+}
+
+function BacktestDetailCard({ detail }: { detail: BacktestDetail }) {
+  const metrics = detail.result?.metrics;
+  return (
+    <div className="grid gap-3">
+      <DetailCard label="回测 ID" value={detail.run.id} />
+      <DetailCard label="状态" value={detail.run.status} />
+      <DetailCard label="年化收益" value={metrics?.annual_return_pct ? `${metrics.annual_return_pct}%` : "-"} />
+      <DetailCard label="最大回撤" value={metrics?.max_drawdown_pct ? `${metrics.max_drawdown_pct}%` : "-"} />
     </div>
   );
 }

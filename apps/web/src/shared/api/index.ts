@@ -1,14 +1,18 @@
+export * from "../types/backtests";
 export * from "./artifacts";
 export * from "./strategies";
 export {
   API_BASE_URL,
   apiGet,
+  createBacktestRun,
   createChatSession,
   executePythonArtifact,
+  getBacktest,
   getChatSessionDetail,
   getHealth,
   getRuntimeHealth,
   listChatSessions,
+  runBacktest,
   sendChatMessage,
 } from "./client";
 export type {

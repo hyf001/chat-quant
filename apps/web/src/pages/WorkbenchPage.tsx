@@ -4,16 +4,25 @@ import { Composer } from "../modules/composer";
 import { ConversationShell } from "../modules/conversation";
 import { HistoryPanel } from "../modules/history";
 import { InsightPanel } from "../modules/insight";
-import { ArtifactList, RuntimeResultPanel } from "../modules/result";
+import {
+  ArtifactList,
+  BacktestResultPanel,
+  RuntimeResultPanel,
+  demoBacktestDetail,
+  demoBacktestPayload,
+} from "../modules/result";
 import { WorkspaceHeader, WorkspaceLayout } from "../modules/workspace";
 import {
+  createBacktestRun,
   createChatSession,
   executePythonArtifact,
   getChatSessionDetail,
   getRuntimeHealth,
   listArtifacts,
   listChatSessions,
+  runBacktest,
   sendChatMessage,
+  type BacktestDetail,
   type ChatSession,
   type ChatSessionDetail,
   type CodeArtifact,
@@ -69,6 +78,9 @@ export function WorkbenchPage() {
   const [runtimeResult, setRuntimeResult] = useState<ExecutionResult | null>(null);
   const [isRuntimeRunning, setIsRuntimeRunning] = useState(false);
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const [backtestDetail, setBacktestDetail] = useState<BacktestDetail>(demoBacktestDetail);
+  const [isRunningBacktest, setIsRunningBacktest] = useState(false);
+  const [backtestError, setBacktestError] = useState<string | null>(null);
 
   const activeSession = useMemo(
     () => detail?.session ?? sessions.find((session) => session.id === activeSessionId) ?? null,
@@ -222,6 +234,20 @@ export function WorkbenchPage() {
     }
   };
 
+  const handleRunDemoBacktest = async () => {
+    setIsRunningBacktest(true);
+    setBacktestError(null);
+    try {
+      const run = await createBacktestRun(demoBacktestPayload);
+      const nextDetail = await runBacktest(run.id);
+      setBacktestDetail(nextDetail);
+    } catch (caught) {
+      setBacktestError(caught instanceof Error ? caught.message : "回测请求失败");
+    } finally {
+      setIsRunningBacktest(false);
+    }
+  };
+
   return (
     <WorkspaceLayout
       history={
@@ -240,6 +266,7 @@ export function WorkbenchPage() {
           session={activeSession}
           isConnected={!error}
           health={runtimeHealth}
+          backtestStatus={backtestDetail.run.status}
         />
       }
       conversation={
@@ -262,13 +289,21 @@ export function WorkbenchPage() {
         />
       }
       result={
-        <RuntimeResultPanel
-          health={runtimeHealth}
-          result={runtimeResult}
-          isRunning={isRuntimeRunning}
-          error={runtimeError}
-          onRunSample={handleRunSample}
-        />
+        <div className="grid gap-4">
+          <RuntimeResultPanel
+            health={runtimeHealth}
+            result={runtimeResult}
+            isRunning={isRuntimeRunning}
+            error={runtimeError}
+            onRunSample={handleRunSample}
+          />
+          <BacktestResultPanel
+            detail={backtestDetail}
+            isRunning={isRunningBacktest}
+            error={backtestError}
+            onRunDemo={handleRunDemoBacktest}
+          />
+        </div>
       }
       composer={<Composer disabled={isSending} onSendMessage={handleSendMessage} />}
       insight={
@@ -278,6 +313,7 @@ export function WorkbenchPage() {
           artifact={selectedArtifact}
           health={runtimeHealth}
           result={runtimeResult}
+          backtestDetail={backtestDetail}
         />
       }
     />
