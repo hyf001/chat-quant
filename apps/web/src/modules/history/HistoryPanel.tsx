@@ -1,7 +1,9 @@
-import { Plus, Search } from "lucide-react";
+import { Plus, RefreshCw, Search } from "lucide-react";
+import { useEffect, useState } from "react";
 
-import { IconButton } from "../../shared/components";
+import { listStrategies, type StrategySummary } from "../../shared/api";
 import type { ChatSession } from "../../shared/api";
+import { IconButton } from "../../shared/components";
 
 type HistoryPanelProps = {
   sessions: ChatSession[];
@@ -11,6 +13,14 @@ type HistoryPanelProps = {
   onCreateSession: () => void;
   onQueryChange: (query: string) => void;
   onSelectSession: (chatSessionId: string) => void;
+};
+
+const statusLabel: Record<StrategySummary["version_status"], string> = {
+  draft: "草稿",
+  validating: "校验中",
+  validated: "已校验",
+  invalid: "未通过",
+  archived: "已归档",
 };
 
 function formatTime(value: string): string {
@@ -31,6 +41,27 @@ export function HistoryPanel({
   onQueryChange,
   onSelectSession,
 }: HistoryPanelProps) {
+  const [strategies, setStrategies] = useState<StrategySummary[]>([]);
+  const [isLoadingStrategies, setIsLoadingStrategies] = useState(true);
+  const [strategyError, setStrategyError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void refreshStrategies();
+  }, []);
+
+  async function refreshStrategies() {
+    try {
+      setIsLoadingStrategies(true);
+      setStrategyError(null);
+      const items = await listStrategies();
+      setStrategies(items);
+    } catch (loadError) {
+      setStrategyError(loadError instanceof Error ? loadError.message : "历史策略加载失败");
+    } finally {
+      setIsLoadingStrategies(false);
+    }
+  }
+
   return (
     <aside className="hidden border-r border-line bg-panel/85 px-4 py-5 lg:block" aria-label="历史会话">
       <div className="mb-5 flex items-center gap-3">
@@ -94,20 +125,10 @@ export function HistoryPanel({
               </div>
               <div className="mt-2 flex flex-wrap gap-1">
                 {session.symbols.slice(0, 3).map((symbol) => (
-                  <span
-                    className="rounded border border-line bg-panel px-1.5 py-0.5 text-[11px] text-muted"
-                    key={symbol}
-                  >
-                    {symbol}
-                  </span>
+                  <Tag key={symbol} text={symbol} />
                 ))}
                 {session.tags.slice(0, 2).map((tag) => (
-                  <span
-                    className="rounded border border-line bg-panel px-1.5 py-0.5 text-[11px] text-muted"
-                    key={tag}
-                  >
-                    {tag}
-                  </span>
+                  <Tag key={tag} text={tag} />
                 ))}
               </div>
             </button>
@@ -115,9 +136,72 @@ export function HistoryPanel({
         })}
       </div>
 
+      <div className="mb-3 mt-5 flex items-center justify-between gap-2">
+        <div className="text-xs font-semibold text-muted">策略资产</div>
+        <button
+          className="grid size-8 place-items-center rounded-lg border border-line bg-soft text-ink transition hover:border-strong hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+          type="button"
+          aria-label="刷新策略资产"
+          onClick={refreshStrategies}
+          disabled={isLoadingStrategies}
+        >
+          <RefreshCw size={14} />
+        </button>
+      </div>
+
+      {isLoadingStrategies ? <HistoryNotice text="正在读取策略资产" /> : null}
+      {!isLoadingStrategies && strategyError ? <HistoryNotice text={strategyError} tone="risk" /> : null}
+      {!isLoadingStrategies && !strategyError && strategies.length === 0 ? (
+        <HistoryNotice text="暂无策略资产" />
+      ) : null}
+
+      {!isLoadingStrategies && !strategyError && strategies.length > 0 ? (
+        <div className="grid gap-2">
+          {strategies.slice(0, 4).map((strategy) => (
+            <div className="rounded-lg border border-line bg-soft p-3" key={strategy.strategy_id}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 truncate text-sm font-semibold">{strategy.name}</div>
+                <span className="shrink-0 rounded-full border border-line bg-panel px-2 py-0.5 text-xs text-muted">
+                  V{strategy.version}
+                </span>
+              </div>
+              <div className="mt-2 line-clamp-2 text-xs leading-5 text-muted">
+                {strategy.logic_summary ?? "策略逻辑摘要待补充"}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <Tag text={statusLabel[strategy.version_status]} />
+                <Tag text={strategy.strategy_type} />
+                <Tag text={summarizeParams(strategy.default_params)} />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className="mt-4 lg:hidden">
         <IconButton label="关闭历史" icon={<Plus size={16} />} />
       </div>
     </aside>
   );
+}
+
+function Tag({ text }: { text: string }) {
+  return (
+    <span className="max-w-full truncate rounded-full border border-line bg-panel px-2 py-0.5 text-xs text-muted">
+      {text}
+    </span>
+  );
+}
+
+function HistoryNotice({ text, tone = "muted" }: { text: string; tone?: "muted" | "risk" }) {
+  const toneClass = tone === "risk" ? "border-risk/40 text-risk" : "border-dashed text-muted";
+  return <div className={`rounded-lg border bg-soft p-4 text-sm ${toneClass}`}>{text}</div>;
+}
+
+function summarizeParams(params: Record<string, number | string | boolean>): string {
+  const entries = Object.entries(params).slice(0, 2);
+  if (entries.length === 0) {
+    return "无默认参数";
+  }
+  return entries.map(([key, value]) => `${key}=${String(value)}`).join(" / ");
 }

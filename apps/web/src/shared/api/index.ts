@@ -1,4 +1,5 @@
 export * from "./artifacts";
+export * from "./strategies";
 export {
   API_BASE_URL,
   apiGet,
