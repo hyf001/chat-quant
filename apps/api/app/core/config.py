@@ -8,8 +8,9 @@ class Settings(BaseSettings):
     app_name: str = "Chat-Quant API"
     api_prefix: str = "/api"
     environment: str = Field(default="development", alias="CHATQ_ENV")
+    claude_agent_cwd: str | None = Field(default=None, alias="CHATQ_CLAUDE_AGENT_CWD")
     cors_origins: list[str] = Field(
-        default=["http://localhost:5173"],
+        default=["http://localhost:5173", "http://127.0.0.1:5173"],
         validation_alias=AliasChoices("CHATQ_API_CORS_ORIGINS", "CORS_ORIGINS"),
     )
 
