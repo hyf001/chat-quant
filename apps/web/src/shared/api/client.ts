@@ -7,6 +7,8 @@ import type {
 } from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+export { API_BASE_URL };
+
 const DEFAULT_USER_ID = "demo_user";
 const DEFAULT_PROJECT_ID = "default_project";
 
@@ -32,6 +34,10 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
   }
 
   return response.json() as Promise<T>;
+}
+
+export function apiGet<T>(path: string): Promise<T> {
+  return requestJson<T>(path);
 }
 
 export async function getHealth(): Promise<{ status: string }> {
