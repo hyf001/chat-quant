@@ -74,7 +74,7 @@ class ChatSessionService:
     ) -> ChatSession:
         now = utc_now()
         session = ChatSession(
-            id=chat_session_id or _new_id("conv"),
+            id=chat_session_id or _new_id("chat"),
             user_id=user_id,
             project_id=project_id,
             title=title or _default_title(initial_prompt),

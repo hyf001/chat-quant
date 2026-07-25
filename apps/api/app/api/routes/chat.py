@@ -42,7 +42,7 @@ async def post_chat_message(
         raise HTTPException(status_code=403, detail="chat session access denied") from None
 
 
-@router.get("/{chat_session_id}/stream")
+@router.get("/sessions/{chat_session_id}/stream")
 async def stream_chat_session(
     chat_session_id: str,
     service: ChatServiceDep,
@@ -70,8 +70,8 @@ async def cancel_chat_session(
     return CancelSessionResponse(chat_session_id=chat_session_id, cancelled=True)
 
 
-@router.get("/conversations/{chat_session_id}", response_model=ChatSessionDetail)
-async def get_conversation(
+@router.get("/sessions/{chat_session_id}", response_model=ChatSessionDetail)
+async def get_chat_session(
     chat_session_id: str,
     service: ChatServiceDep,
 ) -> ChatSessionDetail:

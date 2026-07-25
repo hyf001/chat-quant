@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 from app.api.dependencies import ProjectId, ServicesDep, UserId
 from app.domain.chat_sessions.repositories import ChatSessionNotFoundError
 from app.domain.chat_sessions.services import ChatSessionAccessError, SDKSessionReadError
-from app.schemas.conversations import (
+from app.schemas.chat_sessions import (
     AssetLinkResponse,
     ChatSessionContextResponse,
     ChatSessionCreateRequest,
@@ -21,7 +21,7 @@ from app.schemas.conversations import (
     sdk_messages_to_response,
 )
 
-router = APIRouter(prefix="/conversations", tags=["conversations"])
+router = APIRouter(prefix="/chat-sessions", tags=["chat-sessions"])
 
 
 def _raise_not_found() -> None:

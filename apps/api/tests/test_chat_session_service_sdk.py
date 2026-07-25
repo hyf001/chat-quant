@@ -7,7 +7,7 @@ from app.domain.chat_sessions.repositories import (
     InMemoryChatSessionRepository,
 )
 from app.domain.chat_sessions.services import ChatSessionService
-from app.schemas.conversations import sdk_messages_to_response
+from app.schemas.chat_sessions import sdk_messages_to_response
 from claude_agent_sdk.types import AssistantMessage, TextBlock, UserMessage
 
 

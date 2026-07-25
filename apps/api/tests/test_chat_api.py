@@ -57,7 +57,9 @@ def test_chat_message_returns_stream_url_and_sse_events() -> None:
     data = response.json()
     assert data["chat_session_id"].startswith("chat_")
     assert data["sdk_session_id"] is None
-    assert data["stream_url"].startswith(f"/api/chat/{data['chat_session_id']}/stream")
+    assert data["stream_url"].startswith(
+        f"/api/chat/sessions/{data['chat_session_id']}/stream"
+    )
 
     stream_response = client.get(data["stream_url"])
 
@@ -66,14 +68,14 @@ def test_chat_message_returns_stream_url_and_sse_events() -> None:
     assert "result_message" in stream_response.text
 
 
-def test_conversation_detail_contains_live_envelopes() -> None:
+def test_chat_session_detail_contains_live_envelopes() -> None:
     response = client.post(
         "/api/chat/messages",
         json={"message": "筛选最近成交活跃的股票", "project_id": "project_1"},
     )
     chat_session_id = response.json()["chat_session_id"]
 
-    detail_response = client.get(f"/api/chat/conversations/{chat_session_id}")
+    detail_response = client.get(f"/api/chat/sessions/{chat_session_id}")
 
     assert detail_response.status_code == 200
     detail = detail_response.json()

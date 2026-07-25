@@ -120,27 +120,27 @@ export async function listChatSessions(query?: string): Promise<ChatSessionListR
     params.set("query", query);
   }
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  return requestJson<ChatSessionListResponse>(`/api/conversations${suffix}`);
+  return requestJson<ChatSessionListResponse>(`/api/chat-sessions${suffix}`);
 }
 
 export async function createChatSession(
   payload: CreateChatSessionPayload = {},
 ): Promise<ChatSession> {
-  return requestJson<ChatSession>("/api/conversations", {
+  return requestJson<ChatSession>("/api/chat-sessions", {
     method: "POST",
     body: payload,
   });
 }
 
 export async function getChatSessionDetail(chatSessionId: string): Promise<ChatSessionDetail> {
-  return requestJson<ChatSessionDetail>(`/api/conversations/${chatSessionId}`);
+  return requestJson<ChatSessionDetail>(`/api/chat-sessions/${chatSessionId}`);
 }
 
 export async function sendChatMessage(
   chatSessionId: string,
   content: string,
 ): Promise<SendMessageResponse> {
-  return requestJson<SendMessageResponse>(`/api/conversations/${chatSessionId}/messages`, {
+  return requestJson<SendMessageResponse>(`/api/chat-sessions/${chatSessionId}/messages`, {
     method: "POST",
     body: { content },
   });
@@ -164,7 +164,7 @@ export async function sendAgentChatMessage(
 export async function getAgentChatSessionDetail(
   chatSessionId: string,
 ): Promise<AgentChatSessionDetail> {
-  return requestJson<AgentChatSessionDetail>(`/api/chat/conversations/${chatSessionId}`);
+  return requestJson<AgentChatSessionDetail>(`/api/chat/sessions/${chatSessionId}`);
 }
 
 export async function readChatStream(

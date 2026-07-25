@@ -90,7 +90,7 @@ class ChatApplicationService:
             chat_session_id=chat_session_id,
             user_message_id=user_message_id,
             sdk_session_id=command.sdk_session_id,
-            stream_url=f"/api/chat/{chat_session_id}/stream?after={stream_after}",
+            stream_url=f"/api/chat/sessions/{chat_session_id}/stream?after={stream_after}",
         )
 
     def get_session_detail(self, chat_session_id: str) -> ChatSessionDetail | None:
