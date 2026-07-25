@@ -85,6 +85,11 @@ async def _sse_events(
     while idle_ticks < 600:
         envelopes = service.stream_relay.list_envelopes(chat_session_id, after=last_sequence)
         if not envelopes:
+            if service.is_turn_running(chat_session_id):
+                idle_ticks = 0
+                yield ": keepalive\n\n"
+                await asyncio.sleep(0.5)
+                continue
             idle_ticks += 1
             await asyncio.sleep(0.05)
             continue

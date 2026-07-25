@@ -34,5 +34,9 @@ class InMemoryStreamRelay:
             if envelope.sequence > after
         ]
 
+    def latest_sequence(self, chat_session_id: str) -> int:
+        envelopes = self._streams.get(chat_session_id, [])
+        return envelopes[-1].sequence if envelopes else 0
+
     def clear(self) -> None:
         self._streams.clear()

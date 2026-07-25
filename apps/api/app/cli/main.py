@@ -38,7 +38,9 @@ def main(argv: list[str] | None = None) -> int:
     return 2
 
 
-def _add_artifact_commands(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _add_artifact_commands(
+    subcommands: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     artifact_parser = subcommands.add_parser("artifact")
     artifact_subcommands = artifact_parser.add_subparsers(dest="command", required=True)
 
@@ -72,7 +74,9 @@ def _add_artifact_commands(subcommands: argparse._SubParsersAction[argparse.Argu
     get_artifact.add_argument("--artifact-id", required=True)
 
 
-def _add_strategy_commands(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _add_strategy_commands(
+    subcommands: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     strategy_parser = subcommands.add_parser("strategy")
     strategy_subcommands = strategy_parser.add_subparsers(dest="action", required=True)
 
@@ -102,7 +106,11 @@ def _add_strategy_commands(subcommands: argparse._SubParsersAction[argparse.Argu
 
     copy_parser = strategy_subcommands.add_parser("copy")
     copy_parser.add_argument("--strategy-version-id", required=True)
-    copy_parser.add_argument("--mode", choices=[mode.value for mode in StrategyCopyMode], required=True)
+    copy_parser.add_argument(
+        "--mode",
+        choices=[mode.value for mode in StrategyCopyMode],
+        required=True,
+    )
     copy_parser.add_argument("--conversation-id")
     copy_parser.add_argument("--user-id", default=_default_user_id())
     copy_parser.add_argument("--project-id", default=_default_project_id())
@@ -137,11 +145,21 @@ def _dispatch_artifact(args: argparse.Namespace) -> int:
 
     if args.command == "save-files":
         payload = _save_files_payload(args)
-        print(json.dumps(_post_json(f"{api_base_url}/api/artifacts/files", payload), ensure_ascii=False))
+        print(
+            json.dumps(
+                _post_json(f"{api_base_url}/api/artifacts/files", payload),
+                ensure_ascii=False,
+            )
+        )
         return 0
 
     if args.command == "get":
-        print(json.dumps(_get_json(f"{api_base_url}/api/artifacts/{args.artifact_id}"), ensure_ascii=False))
+        print(
+            json.dumps(
+                _get_json(f"{api_base_url}/api/artifacts/{args.artifact_id}"),
+                ensure_ascii=False,
+            )
+        )
         return 0
 
     raise SystemExit("unsupported artifact command")
@@ -217,7 +235,9 @@ def _save_files_payload(args: argparse.Namespace) -> dict[str, object]:
     parsed_files = [_parse_file_arg(item) for item in args.file]
     source_base_dir = args.source_base_dir
     if source_base_dir is None:
-        source_base_dir = os.path.commonpath([str(source.parent.resolve()) for _, source in parsed_files])
+        source_base_dir = os.path.commonpath(
+            [str(source.parent.resolve()) for _, source in parsed_files]
+        )
     return {
         "chat_session_id": args.conversation_id,
         "user_id": args.user_id,

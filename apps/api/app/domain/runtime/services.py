@@ -9,6 +9,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from app.core.config import Settings
+from app.core.logging import get_logger
 from app.infrastructure.runtime.artifact_collector import ArtifactCollector
 from app.infrastructure.runtime.process_runner import ProcessRunner, ProcessRunOutput
 from app.infrastructure.runtime.sandbox import RuntimeSandbox, RuntimeSandboxError, RuntimeWorkspace
@@ -16,6 +17,8 @@ from app.infrastructure.runtime.schema_validator import RuntimeSchemaValidator
 from app.schemas.contracts.execution_result import ExecutionResult, RuntimeErrorInfo
 from app.schemas.contracts.runtime_health import RuntimeHealthResponse
 from app.schemas.contracts.runtime_specs import BacktestRunSpec, PythonExecutionSpec
+
+logger = get_logger(__name__)
 
 
 class PythonRuntimeService:
@@ -76,6 +79,13 @@ class PythonRuntimeService:
                 },
             )
         except Exception as exc:
+            logger.exception(
+                "python artifact execution failed before completion",
+                extra={
+                    "run_id": workspace.run_id if workspace else "rt_prepare_failed",
+                    "error": str(exc),
+                },
+            )
             result = self._build_prepare_failure(
                 run_id=workspace.run_id if workspace else "rt_prepare_failed",
                 started_at=started_at,
@@ -83,6 +93,7 @@ class PythonRuntimeService:
                 exc=exc,
             )
         self._results[result.run_id] = result
+        self._log_non_success_result(result, purpose=spec.purpose)
         return result
 
     async def execute_backtest_spec(self, spec: BacktestRunSpec) -> ExecutionResult:
@@ -123,6 +134,13 @@ class PythonRuntimeService:
                 },
             )
         except Exception as exc:
+            logger.exception(
+                "backtest execution failed before completion",
+                extra={
+                    "run_id": workspace.run_id if workspace else "rt_prepare_failed",
+                    "error": str(exc),
+                },
+            )
             result = self._build_prepare_failure(
                 run_id=workspace.run_id if workspace else "rt_prepare_failed",
                 started_at=started_at,
@@ -130,10 +148,15 @@ class PythonRuntimeService:
                 exc=exc,
             )
         self._results[result.run_id] = result
+        self._log_non_success_result(result, purpose="backtest")
         return result
 
     async def cancel_runtime_run(self, run_id: str) -> dict[str, str]:
         canceled = await self.runner.cancel(run_id)
+        logger.info(
+            "runtime run cancellation requested",
+            extra={"run_id": run_id, "canceled": canceled},
+        )
         return {"run_id": run_id, "status": "canceled" if canceled else "not_running"}
 
     def get_runtime_health(self) -> RuntimeHealthResponse:
@@ -151,6 +174,21 @@ class PythonRuntimeService:
 
     def get_result(self, run_id: str) -> ExecutionResult | None:
         return self._results.get(run_id)
+
+    def _log_non_success_result(self, result: ExecutionResult, *, purpose: str) -> None:
+        if result.status == "succeeded":
+            return
+        logger.warning(
+            "runtime execution finished with non-success status",
+            extra={
+                "run_id": result.run_id,
+                "purpose": purpose,
+                "status": result.status,
+                "exit_code": result.exit_code,
+                "duration_ms": result.duration_ms,
+                "error_code": result.error.code if result.error else None,
+            },
+        )
 
     def _build_result(
         self,

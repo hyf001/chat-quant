@@ -4,6 +4,7 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
+from app.core.logging import get_logger
 from app.domain.artifacts.checksums import normalize_text_content, package_checksum, sha256_digest
 from app.domain.artifacts.errors import (
     ArtifactChecksumMismatchError,
@@ -39,6 +40,8 @@ from app.schemas.artifacts import (
     SaveGeneratedFilesRequest,
 )
 
+logger = get_logger(__name__)
+
 
 class CodeArtifactService:
     def __init__(
@@ -68,6 +71,14 @@ class CodeArtifactService:
                 command.entrypoint,
             )
             if existing is not None:
+                logger.info(
+                    "code artifact idempotent hit",
+                    extra={
+                        "artifact_id": existing.id,
+                        "chat_session_id": command.chat_session_id,
+                        "source_sdk_tool_use_id": command.source_sdk_tool_use_id,
+                    },
+                )
                 return existing
 
         now = datetime.now(UTC)
@@ -144,6 +155,17 @@ class CodeArtifactService:
             created_by_sdk_tool_use_id=command.source_sdk_tool_use_id,
         )
         self.repository.save_artifact(artifact, version_record)
+        logger.info(
+            "code artifact saved",
+            extra={
+                "artifact_id": artifact.id,
+                "chat_session_id": artifact.chat_session_id,
+                "artifact_type": artifact.artifact_type.value,
+                "version": artifact.version,
+                "file_count": len(artifact.files),
+                "status": artifact.status.value,
+            },
+        )
         return artifact
 
     def save_generated_files(self, command: SaveGeneratedFilesRequest) -> list[ArtifactFile]:
@@ -180,6 +202,14 @@ class CodeArtifactService:
             for item, stored in zip(normalized_files, stored_files, strict=True)
         ]
         self.repository.add_files(parent.id, artifact_files)
+        logger.info(
+            "generated artifact files saved",
+            extra={
+                "artifact_id": parent.id,
+                "chat_session_id": command.chat_session_id,
+                "file_count": len(artifact_files),
+            },
+        )
         return artifact_files
 
     def get_artifact(self, artifact_id: str) -> CodeArtifact:

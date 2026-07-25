@@ -16,9 +16,11 @@ class ToolCallLogger:
         *,
         event: dict[str, object],
         chat_session_id: str,
-        sdk_session_id: str,
+        sdk_session_id: str | None,
     ) -> SDKToolUseRef | None:
         if event.get("type") != "tool_use" or event.get("name") != "Bash":
+            return None
+        if sdk_session_id is None:
             return None
         sdk_tool_use_id = str(event.get("id") or "")
         bash_command = str(event.get("command") or "")

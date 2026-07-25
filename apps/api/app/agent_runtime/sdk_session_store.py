@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from uuid import uuid4
 
 from app.schemas.contracts.agent_runtime import (
     AssetReference,
@@ -14,7 +13,7 @@ from app.schemas.contracts.agent_runtime import (
 @dataclass
 class AgentSession:
     chat_session_id: str
-    sdk_session_id: str
+    sdk_session_id: str | None
     title: str
     summary: str | None = None
     messages: list[ChatHistoryMessage] = field(default_factory=list)
@@ -41,7 +40,7 @@ class InMemoryAgentSessionStore:
 
         session = AgentSession(
             chat_session_id=chat_session_id,
-            sdk_session_id=sdk_session_id or f"sdk_{uuid4().hex}",
+            sdk_session_id=sdk_session_id,
             title=title,
         )
         self._sessions[chat_session_id] = session

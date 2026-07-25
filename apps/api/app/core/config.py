@@ -10,6 +10,13 @@ class Settings(BaseSettings):
     app_name: str = "Chat-Quant API"
     api_prefix: str = "/api"
     environment: str = Field(default="development", alias="CHATQ_ENV")
+    log_level: str = Field(default="INFO", alias="CHATQ_LOG_LEVEL")
+    log_format: Literal["text", "json"] = Field(default="text", alias="CHATQ_LOG_FORMAT")
+    access_log_enabled: bool = Field(default=True, alias="CHATQ_ACCESS_LOG_ENABLED")
+    access_log_slow_threshold_ms: int = Field(
+        default=1000,
+        alias="CHATQ_ACCESS_LOG_SLOW_THRESHOLD_MS",
+    )
     default_user_id: str = Field(
         default="local_user",
         validation_alias=AliasChoices("CHATQ_DEFAULT_USER_ID", "DEFAULT_USER_ID"),
@@ -48,7 +55,7 @@ class Settings(BaseSettings):
     agent_base_url: str | None = Field(default=None, alias="ANTHROPIC_BASE_URL")
     agent_api_token: str | None = Field(
         default=None,
-        alias="ANTHROPIC_AUTH_TOKEN",
+        validation_alias=AliasChoices("ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"),
     )
     agent_max_turns: int = Field(default=8, alias="AGENT_MAX_TURNS")
     agent_turn_timeout_seconds: int = Field(default=300, alias="AGENT_TURN_TIMEOUT_SECONDS")

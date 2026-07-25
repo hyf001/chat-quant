@@ -4,11 +4,12 @@ import asyncio
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from app.core.config import get_settings
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime
 from app.agent_runtime.sdk_session_store import InMemoryAgentSessionStore
 from app.agent_runtime.sdk_stream_relay import InMemoryStreamRelay
 from app.agent_runtime.sdk_transcript_store import ClaudeSDKTranscriptReader
+from app.core.config import get_settings
+from app.core.logging import get_logger
 from app.schemas.contracts.agent_runtime import (
     AgentScenario,
     AgentTurnCommand,
@@ -18,6 +19,8 @@ from app.schemas.contracts.agent_runtime import (
     ChatSessionContext,
     ChatSessionDetail,
 )
+
+logger = get_logger(__name__)
 
 
 class ChatApplicationService:
@@ -72,12 +75,13 @@ class ChatApplicationService:
             deadline_seconds=get_settings().agent_turn_timeout_seconds,
             user_prompt=request.message,
         )
+        stream_after = self.stream_relay.latest_sequence(chat_session_id)
         self._running_tasks[chat_session_id] = asyncio.create_task(self._run_agent_turn(command))
         return ChatMessageAccepted(
             chat_session_id=chat_session_id,
             user_message_id=user_message_id,
             sdk_session_id=command.sdk_session_id,
-            stream_url=f"/api/chat/{chat_session_id}/stream?after=0",
+            stream_url=f"/api/chat/{chat_session_id}/stream?after={stream_after}",
         )
 
     def get_session_detail(self, chat_session_id: str) -> ChatSessionDetail | None:
@@ -102,17 +106,45 @@ class ChatApplicationService:
         task = self._running_tasks.get(chat_session_id)
         if task is not None and not task.done():
             task.cancel()
+        logger.info(
+            "chat session cancellation requested",
+            extra={"chat_session_id": chat_session_id, "found": exists},
+        )
         return exists
 
-    def _read_sdk_messages(self, sdk_session_id: str) -> list[dict[str, object]]:
+    def is_turn_running(self, chat_session_id: str) -> bool:
+        task = self._running_tasks.get(chat_session_id)
+        return task is not None and not task.done()
+
+    def _read_sdk_messages(self, sdk_session_id: str | None) -> list[dict[str, object]]:
+        if sdk_session_id is None:
+            return []
         try:
             return self.transcript_reader.get_messages(sdk_session_id)
-        except (FileNotFoundError, RuntimeError, ValueError):
+        except FileNotFoundError:
+            return []
+        except (RuntimeError, ValueError) as exc:
+            logger.warning(
+                "failed to read sdk transcript",
+                extra={"sdk_session_id": sdk_session_id, "error": str(exc)},
+            )
             return []
 
     async def _run_agent_turn(self, command: AgentTurnCommand) -> None:
         try:
             await self.runtime.run_turn(command)
+        except asyncio.CancelledError:
+            logger.info(
+                "agent turn task cancelled",
+                extra={"chat_session_id": command.chat_session_id},
+            )
+            raise
+        except Exception:
+            logger.exception(
+                "agent turn task failed unexpectedly",
+                extra={"chat_session_id": command.chat_session_id},
+            )
+            raise
         finally:
             self._running_tasks.pop(command.chat_session_id, None)
 

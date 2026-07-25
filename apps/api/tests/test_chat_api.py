@@ -1,12 +1,15 @@
+import asyncio
 from collections.abc import AsyncIterator
+from urllib.parse import parse_qs, urlparse
 
-from app.api.routes.chat import get_chat_application_service
-from app.application.chat_service import ChatApplicationService
-from app.core.config import Settings
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime
 from app.agent_runtime.sdk_session_store import InMemoryAgentSessionStore
 from app.agent_runtime.sdk_stream_relay import InMemoryStreamRelay
+from app.api.routes.chat import get_chat_application_service
+from app.application.chat_service import ChatApplicationService
+from app.core.config import Settings
 from app.main import app
+from app.schemas.contracts.agent_runtime import ChatMessageRequest
 from claude_agent_sdk import AssistantMessage, ResultMessage, TextBlock
 from fastapi.testclient import TestClient
 
@@ -78,3 +81,69 @@ def test_conversation_detail_contains_messages_and_envelopes() -> None:
     assert detail["chat_session_id"] == chat_session_id
     assert len(detail["messages"]) == 2
     assert len(detail["envelopes"]) >= 2
+
+
+def test_follow_up_message_stream_url_starts_after_existing_envelopes() -> None:
+    first_response = client.post(
+        "/api/chat/messages",
+        json={"message": "先分析一下", "project_id": "project_1"},
+    )
+    chat_session_id = first_response.json()["chat_session_id"]
+    first_stream_response = client.get(first_response.json()["stream_url"])
+    assert first_stream_response.status_code == 200
+
+    second_response = client.post(
+        "/api/chat/messages",
+        json={
+            "chat_session_id": chat_session_id,
+            "message": "继续",
+            "project_id": "project_1",
+        },
+    )
+
+    assert second_response.status_code == 200
+    query = parse_qs(urlparse(second_response.json()["stream_url"]).query)
+    assert query["after"] == ["2"]
+
+
+def test_follow_up_message_does_not_resume_generated_sdk_placeholder() -> None:
+    asyncio.run(_run_no_placeholder_resume_assertions())
+
+
+async def _run_no_placeholder_resume_assertions() -> None:
+    captured_resume_values: list[str | None] = []
+
+    async def sdk_query_without_session_id(
+        *,
+        prompt: str,
+        options: object | None = None,
+    ) -> AsyncIterator[object]:
+        del prompt
+        captured_resume_values.append(getattr(options, "resume", None))
+        yield {"type": "result_message", "result": "完成。", "uuid": "sdk_result_no_session"}
+
+    isolated_stream_relay = InMemoryStreamRelay()
+    isolated_session_store = InMemoryAgentSessionStore()
+    isolated_runtime = ClaudeAgentRuntime(
+        settings=Settings(),
+        stream_relay=isolated_stream_relay,
+        session_store=isolated_session_store,
+        sdk_query=sdk_query_without_session_id,
+    )
+    isolated_service = ChatApplicationService(
+        isolated_runtime,
+        isolated_session_store,
+        isolated_stream_relay,
+    )
+
+    first = await isolated_service.handle_user_message(
+        ChatMessageRequest(message="第一轮", chat_session_id="conv_without_sdk_session")
+    )
+    await isolated_service._running_tasks[first.chat_session_id]
+    second = await isolated_service.handle_user_message(
+        ChatMessageRequest(message="第二轮", chat_session_id=first.chat_session_id)
+    )
+    await isolated_service._running_tasks[second.chat_session_id]
+
+    assert captured_resume_values == [None, None]
+    assert isolated_session_store.get_session(first.chat_session_id).sdk_session_id is None

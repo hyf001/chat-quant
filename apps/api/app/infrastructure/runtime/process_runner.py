@@ -6,6 +6,10 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 @dataclass(frozen=True)
 class ProcessRunOutput:
@@ -53,9 +57,11 @@ class ProcessRunner:
                 )
             except TimeoutError:
                 timed_out = True
+                logger.warning("process run timed out", extra={"run_id": run_id})
                 stdout_bytes, stderr_bytes = await self._terminate(process)
         except asyncio.CancelledError:
             canceled = True
+            logger.info("process run cancelled", extra={"run_id": run_id})
             stdout_bytes, stderr_bytes = await self._terminate(process)
         finally:
             self._active.pop(run_id, None)
@@ -77,6 +83,7 @@ class ProcessRunner:
         if process is None or process.returncode is not None:
             return False
         await self._terminate(process)
+        logger.info("process cancel sent", extra={"run_id": run_id, "found": True})
         return True
 
     async def _terminate(self, process: asyncio.subprocess.Process) -> tuple[bytes, bytes]:
@@ -85,6 +92,7 @@ class ProcessRunner:
             try:
                 return await asyncio.wait_for(process.communicate(), timeout=self.grace_seconds)
             except TimeoutError:
+                logger.warning("process terminate grace elapsed; killing process")
                 process.kill()
         return await process.communicate()
 

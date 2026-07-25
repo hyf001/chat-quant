@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import sys
 import types
 from collections.abc import AsyncIterator, Callable
@@ -36,6 +37,7 @@ except ModuleNotFoundError:
         skills: list[str]
         env: dict[str, str]
         thinking: dict[str, object] | None = None
+        stderr: Callable[[str], None] | None = None
 
     @dataclass
     class PermissionResultAllow:
@@ -140,6 +142,7 @@ from app.agent_runtime.sdk_skills import select_available_sdk_skills
 from app.agent_runtime.sdk_stream_relay import InMemoryStreamRelay
 from app.agent_runtime.tool_call_logger import ToolCallLogger
 from app.core.config import Settings
+from app.core.logging import get_logger
 from app.schemas.contracts.agent_runtime import (
     AgentTurnCommand,
     AgentTurnResult,
@@ -151,6 +154,7 @@ from app.schemas.contracts.agent_runtime import (
 )
 
 SDKQuery = Callable[..., AsyncIterator[object]]
+logger = get_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -192,6 +196,15 @@ class ClaudeAgentRuntime:
         sink = stream_sink or self.stream_relay
         pre_run_decision = self.hooks.pre_run(command)
         if not pre_run_decision.allowed:
+            logger.warning(
+                "agent turn blocked before run",
+                extra={
+                    "chat_session_id": command.chat_session_id,
+                    "error_code": pre_run_decision.code.value
+                    if pre_run_decision.code
+                    else None,
+                },
+            )
             return _failed_result(command, pre_run_decision.code, pre_run_decision.reason)
 
         project_skill_dir = self.skill_workspace.prepare(command.working_dir)
@@ -205,152 +218,224 @@ class ClaudeAgentRuntime:
         )
         options = self.build_agent_options(command, skill_selection.names, allowed_commands)
         assistant_parts: list[str] = []
+        streamed_assistant_parts: list[str] = []
         message_refs: list[SDKMessageRef] = []
         tool_uses: dict[str, SDKToolUseRef] = {}
         envelopes: list[SDKStreamEnvelope] = []
+        terminal_event: dict[str, object] | None = None
         result_message_id: str | None = None
         result_subtype: str | None = None
         persisted_assistant_message = False
 
+        sdk_stderr_lines: list[str] = []
+        saw_effective_event = False
+
         try:
-            sdk_options = self.build_sdk_options(command, options, allowed_commands)
-            async for sdk_message in self.sdk_query(
+            def collect_sdk_stderr(line: str) -> None:
+                sdk_stderr_lines.append(_redact_text(line, self.settings.agent_api_token))
+                if len(sdk_stderr_lines) > 20:
+                    del sdk_stderr_lines[:-20]
+
+            sdk_options = self.build_sdk_options(
+                command,
+                options,
+                allowed_commands,
+                stderr=collect_sdk_stderr,
+            )
+            loop = asyncio.get_running_loop()
+            first_effective_deadline = loop.time() + self.settings.agent_first_token_timeout_seconds
+            turn_deadline = (
+                loop.time() + command.deadline_seconds
+                if command.deadline_seconds
+                else None
+            )
+            sdk_messages = self.sdk_query(
                 prompt=_streaming_user_prompt(command),
                 options=sdk_options,
-            ):
-                event = serialize_sdk_message(sdk_message)
-                if event.get("type") == "stream_event":
-                    inner_event = event.get("event")
-                    if isinstance(inner_event, dict):
-                        event = {
-                            **inner_event,
-                            "type": "stream_event",
-                            "uuid": event.get("uuid"),
-                            "session_id": event.get("session_id"),
-                            "parent_tool_use_id": event.get("parent_tool_use_id"),
-                        }
-                event = self.enrich_sdk_event_with_artifacts(event)
+            )
 
-                event_session_id = event.get("session_id")
-                if isinstance(event_session_id, str) and event_session_id:
-                    session.sdk_session_id = event_session_id
+            initial_deadline = _min_deadline(first_effective_deadline, turn_deadline)
+            async with asyncio.timeout_at(initial_deadline) as timeout:
+                async for sdk_message in sdk_messages:
+                    event = serialize_sdk_message(sdk_message)
+                    if event.get("type") == "stream_event":
+                        inner_event = event.get("event")
+                        if isinstance(inner_event, dict):
+                            event = {
+                                **inner_event,
+                                "uuid": event.get("uuid"),
+                                "session_id": event.get("session_id"),
+                                "parent_tool_use_id": event.get("parent_tool_use_id"),
+                            }
+                            event.setdefault("type", "stream_event")
+                    event = self.enrich_sdk_event_with_artifacts(event)
+                    if _is_effective_agent_event(event) and not saw_effective_event:
+                        saw_effective_event = True
+                        timeout.reschedule(turn_deadline)
 
-                event_tool_context = CommandContext(
-                    chat_session_id=command.chat_session_id,
-                    sdk_session_id=event_session_id
-                    if isinstance(event_session_id, str)
-                    else command.sdk_session_id,
-                    project_id=command.project_id,
-                )
+                    event_session_id = _extract_sdk_session_id(event)
+                    if event_session_id:
+                        session.sdk_session_id = event_session_id
 
-                should_publish_original_event = True
-                for tool_event in _extract_tool_use_events(event):
-                    decision = self.hooks.pre_tool_use(
-                        tool_event,
-                        allowed_commands,
-                        event_tool_context,
-                    )
-                    if not decision.allowed:
-                        blocked_event = {
-                            "type": "tool_result",
-                            "tool_use_id": str(tool_event.get("id") or ""),
-                            "content": decision.reason or "tool use blocked",
-                            "is_error": True,
-                            "error_code": str(decision.code.value if decision.code else ""),
-                        }
-                        envelopes.append(
-                            sink.publish(
-                                command.chat_session_id,
-                                session.sdk_session_id,
-                                blocked_event,
-                            )
-                        )
-                        should_publish_original_event = False
-                        continue
-                    tool_ref = self.tool_logger.from_tool_use(
-                        event=tool_event,
+                    streamed_assistant_parts.extend(_extract_stream_text_deltas(event))
+
+                    event_tool_context = CommandContext(
                         chat_session_id=command.chat_session_id,
-                        sdk_session_id=session.sdk_session_id,
+                        sdk_session_id=event_session_id or command.sdk_session_id,
+                        project_id=command.project_id,
                     )
-                    if tool_ref is not None:
-                        tool_uses[tool_ref.sdk_tool_use_id] = tool_ref
 
-                for tool_result_event in _extract_tool_result_events(event):
-                    tool_use_id = str(tool_result_event.get("tool_use_id") or "")
-                    if tool_use_id in tool_uses:
-                        tool_uses[tool_use_id] = self.tool_logger.merge_tool_result(
-                            tool_uses[tool_use_id],
-                            tool_result_event,
+                    should_publish_original_event = True
+                    for tool_event in _extract_tool_use_events(event):
+                        decision = self.hooks.pre_tool_use(
+                            tool_event,
+                            allowed_commands,
+                            event_tool_context,
                         )
-
-                if event.get("type") == "assistant_message":
-                    message_id = str(
-                        event.get("id") or event.get("uuid") or f"sdk_msg_{uuid4().hex}"
-                    )
-                    text_parts = _extract_text_blocks(event)
-                    assistant_parts.extend(text_parts)
-                    assistant_text = "\n\n".join(part for part in text_parts if part).strip()
-                    if assistant_text:
-                        self.session_store.append_sdk_message(
-                            chat_session_id=command.chat_session_id,
-                            message_id=message_id,
-                            role="assistant",
-                            content=assistant_text,
-                        )
-                        persisted_assistant_message = True
-                    message_refs.append(
-                        SDKMessageRef(
-                            sdk_message_uuid=message_id,
+                        if not decision.allowed:
+                            logger.warning(
+                                "agent tool use blocked",
+                                extra={
+                                    "chat_session_id": command.chat_session_id,
+                                    "sdk_session_id": session.sdk_session_id,
+                                    "tool_name": str(tool_event.get("name") or ""),
+                                    "error_code": decision.code.value if decision.code else None,
+                                },
+                            )
+                            blocked_event = {
+                                "type": "tool_result",
+                                "tool_use_id": str(tool_event.get("id") or ""),
+                                "content": decision.reason or "tool use blocked",
+                                "is_error": True,
+                                "error_code": str(decision.code.value if decision.code else ""),
+                            }
+                            envelopes.append(
+                                sink.publish(
+                                    command.chat_session_id,
+                                    session.sdk_session_id,
+                                    blocked_event,
+                                )
+                            )
+                            should_publish_original_event = False
+                            continue
+                        tool_ref = self.tool_logger.from_tool_use(
+                            event=tool_event,
                             chat_session_id=command.chat_session_id,
                             sdk_session_id=session.sdk_session_id,
-                            message_type="assistant_message",
-                            role="assistant",
                         )
-                    )
+                        if tool_ref is not None:
+                            tool_uses[tool_ref.sdk_tool_use_id] = tool_ref
 
-                if event.get("type") == "result_message":
-                    result_message_id = str(event.get("id") or event.get("uuid") or "")
-                    result_subtype = str(event.get("subtype") or "")
-                    result_text = str(event.get("result") or "")
-                    if result_text:
-                        assistant_parts.append(result_text)
-                        if not persisted_assistant_message:
+                    for tool_result_event in _extract_tool_result_events(event):
+                        tool_use_id = str(tool_result_event.get("tool_use_id") or "")
+                        if tool_use_id in tool_uses:
+                            tool_uses[tool_use_id] = self.tool_logger.merge_tool_result(
+                                tool_uses[tool_use_id],
+                                tool_result_event,
+                            )
+
+                    if event.get("type") == "assistant_message":
+                        message_id = str(
+                            event.get("id") or event.get("uuid") or f"sdk_msg_{uuid4().hex}"
+                        )
+                        text_parts = _extract_text_blocks(event)
+                        assistant_parts.extend(text_parts)
+                        assistant_text = "\n\n".join(part for part in text_parts if part).strip()
+                        if assistant_text:
                             self.session_store.append_sdk_message(
                                 chat_session_id=command.chat_session_id,
-                                message_id=result_message_id or f"sdk_result_{uuid4().hex}",
+                                message_id=message_id,
                                 role="assistant",
-                                content=result_text,
+                                content=assistant_text,
                             )
                             persisted_assistant_message = True
+                        if session.sdk_session_id is not None:
+                            message_refs.append(
+                                SDKMessageRef(
+                                    sdk_message_uuid=message_id,
+                                    chat_session_id=command.chat_session_id,
+                                    sdk_session_id=session.sdk_session_id,
+                                    message_type="assistant_message",
+                                    role="assistant",
+                                )
+                            )
 
-                if should_publish_original_event:
-                    envelopes.append(
-                        sink.publish(command.chat_session_id, session.sdk_session_id, event)
-                    )
+                    if event.get("type") == "result_message":
+                        result_message_id = str(event.get("id") or event.get("uuid") or "")
+                        result_subtype = str(event.get("subtype") or "")
+                        result_text = str(event.get("result") or "")
+                        terminal_event = event
+                        should_publish_original_event = False
+                        if result_text:
+                            assistant_parts.append(result_text)
+                            if not persisted_assistant_message:
+                                self.session_store.append_sdk_message(
+                                    chat_session_id=command.chat_session_id,
+                                    message_id=result_message_id or f"sdk_result_{uuid4().hex}",
+                                    role="assistant",
+                                    content=result_text,
+                                )
+                                persisted_assistant_message = True
+
+                    if should_publish_original_event:
+                        envelopes.append(
+                            sink.publish(command.chat_session_id, session.sdk_session_id, event)
+                        )
         except TimeoutError:
+            timeout_code = (
+                RuntimeErrorCode.RUN_TIMEOUT
+                if saw_effective_event
+                else RuntimeErrorCode.FIRST_TOKEN_TIMEOUT
+            )
             return self._publish_failed_turn(
                 command,
-                RuntimeErrorCode.RUN_TIMEOUT,
-                "agent turn timed out",
+                timeout_code,
+                _sdk_failure_message(
+                    "agent turn timed out"
+                    if timeout_code == RuntimeErrorCode.RUN_TIMEOUT
+                    else "agent sdk stream timed out before assistant output",
+                    sdk_stderr_lines,
+                ),
                 retryable=True,
                 sink=sink,
             )
         except Exception as exc:
+            error_message = _sdk_failure_message(str(exc), sdk_stderr_lines)
+            logger.exception(
+                "agent sdk call failed",
+                extra={
+                    "chat_session_id": command.chat_session_id,
+                    "error": error_message,
+                },
+            )
             return self._publish_failed_turn(
                 command,
                 RuntimeErrorCode.SDK_UNAVAILABLE,
-                str(exc),
+                error_message,
                 retryable=True,
                 sink=sink,
             )
 
         assistant_message = "\n\n".join(part for part in assistant_parts if part).strip()
+        if not assistant_message:
+            assistant_message = _join_stream_text_parts(streamed_assistant_parts)
         if assistant_message and not persisted_assistant_message:
             self.session_store.append_sdk_message(
                 chat_session_id=command.chat_session_id,
                 message_id=result_message_id or f"sdk_result_{uuid4().hex}",
                 role="assistant",
                 content=assistant_message,
+            )
+        if terminal_event is None and not assistant_message:
+            terminal_event = {
+                "type": "runtime_error",
+                "code": RuntimeErrorCode.SDK_UNAVAILABLE.value,
+                "message": "agent sdk stream ended without assistant output",
+                "retryable": True,
+            }
+        if terminal_event is not None:
+            envelopes.append(
+                sink.publish(command.chat_session_id, session.sdk_session_id, terminal_event)
             )
         self.session_store.update_summary(
             command.chat_session_id,
@@ -384,6 +469,10 @@ class ClaudeAgentRuntime:
             self.session_store.get_session(chat_session_id).sdk_session_id if cancelled else None,
             {"type": "cancelled", "reason": reason},
         )
+        logger.info(
+            "agent session cancel event published",
+            extra={"chat_session_id": chat_session_id, "cancelled": cancelled},
+        )
 
     def build_agent_options(
         self,
@@ -414,6 +503,7 @@ class ClaudeAgentRuntime:
         command: AgentTurnCommand,
         options: ClaudeAgentOptionsSnapshot,
         allowed_commands: tuple[BashCommand, ...],
+        stderr: Callable[[str], None] | None = None,
     ) -> ClaudeAgentOptions:
         permission_context = CommandContext(
             chat_session_id=command.chat_session_id,
@@ -455,6 +545,7 @@ class ClaudeAgentRuntime:
             skills=list(options.skills),
             env=dict(options.env),
             thinking=_sdk_thinking_config(self.settings),
+            stderr=stderr,
         )
 
     def enrich_sdk_event_with_artifacts(self, event: dict[str, object]) -> dict[str, object]:
@@ -473,6 +564,15 @@ class ClaudeAgentRuntime:
         sink: InMemoryStreamRelay,
     ) -> AgentTurnResult:
         session = self.session_store.get_session(command.chat_session_id)
+        logger.warning(
+            "agent turn failed",
+            extra={
+                "chat_session_id": command.chat_session_id,
+                "sdk_session_id": session.sdk_session_id if session else command.sdk_session_id,
+                "error_code": code.value,
+                "retryable": retryable,
+            },
+        )
         self.session_store.append_sdk_message(
             chat_session_id=command.chat_session_id,
             message_id=f"sdk_error_{uuid4().hex}",
@@ -503,22 +603,120 @@ def _extract_text_blocks(event: dict[str, object]) -> list[str]:
     return blocks
 
 
+def _extract_sdk_session_id(event: dict[str, object]) -> str | None:
+    session_id = event.get("session_id")
+    if isinstance(session_id, str) and session_id:
+        return session_id
+
+    data = event.get("data")
+    if isinstance(data, dict):
+        data_session_id = data.get("session_id")
+        if isinstance(data_session_id, str) and data_session_id:
+            return data_session_id
+
+    message = event.get("message")
+    if isinstance(message, dict):
+        message_session_id = message.get("session_id")
+        if isinstance(message_session_id, str) and message_session_id:
+            return message_session_id
+
+    return None
+
+
+def _extract_stream_text_deltas(event: dict[str, object]) -> list[str]:
+    event_type = event.get("type")
+    if event_type == "text_delta":
+        text = event.get("text")
+        return [text] if isinstance(text, str) and text else []
+    if event_type != "content_block_delta":
+        return []
+    delta = event.get("delta")
+    if not isinstance(delta, dict):
+        return []
+    text = delta.get("text")
+    return [text] if isinstance(text, str) and text else []
+
+
+def _join_stream_text_parts(parts: list[str]) -> str:
+    text = ""
+    for part in parts:
+        if not text:
+            text = part
+            continue
+        if text.endswith("\n") or part.startswith(("\n", " ")):
+            text = f"{text}{part}"
+        elif _should_insert_stream_space(text, part):
+            text = f"{text} {part}"
+        else:
+            text = f"{text}{part}"
+    return text.strip()
+
+
+def _should_insert_stream_space(current: str, next_part: str) -> bool:
+    return current[-1:].isalnum() and next_part[:1].isalnum()
+
+
 def _sdk_env(settings: Settings) -> dict[str, str]:
     env: dict[str, str] = {}
     if settings.agent_base_url:
         env["ANTHROPIC_BASE_URL"] = settings.agent_base_url
     if settings.agent_api_token:
+        env["ANTHROPIC_API_KEY"] = settings.agent_api_token
         env["ANTHROPIC_AUTH_TOKEN"] = settings.agent_api_token
     return env
 
 
-def _sdk_thinking_config(settings: Settings) -> dict[str, object]:
+def _sdk_thinking_config(settings: Settings) -> dict[str, object] | None:
+    if settings.agent_thinking_type == "disabled":
+        return None
     if settings.agent_thinking_type == "enabled":
         return {
             "type": "enabled",
             "budget_tokens": settings.agent_thinking_budget_tokens,
         }
     return {"type": settings.agent_thinking_type}
+
+
+def _min_deadline(first_deadline: float, second_deadline: float | None) -> float:
+    if second_deadline is None:
+        return first_deadline
+    return min(first_deadline, second_deadline)
+
+
+def _is_effective_agent_event(event: dict[str, object]) -> bool:
+    event_type = event.get("type")
+    if event_type in {
+        "assistant_message",
+        "result_message",
+        "runtime_error",
+        "cancelled",
+        "tool_use",
+        "tool_result",
+        "text_delta",
+        "thinking_delta",
+        "rate_limit_event",
+    }:
+        return True
+    if event_type == "content_block_delta":
+        delta = event.get("delta")
+        return isinstance(delta, dict) and bool(delta)
+    if _extract_tool_use_events(event) or _extract_tool_result_events(event):
+        return True
+    return bool(_extract_stream_text_deltas(event))
+
+
+def _sdk_failure_message(message: str, stderr_lines: list[str]) -> str:
+    error_message = message.strip() or "agent sdk call failed"
+    stderr_tail = "\n".join(line.strip() for line in stderr_lines if line.strip()).strip()
+    if not stderr_tail:
+        return error_message
+    return f"{error_message}\nSDK stderr:\n{stderr_tail}"
+
+
+def _redact_text(text: str, secret: str | None) -> str:
+    if not secret:
+        return text
+    return text.replace(secret, "[REDACTED]")
 
 
 async def _streaming_user_prompt(command: AgentTurnCommand) -> AsyncIterator[dict[str, object]]:

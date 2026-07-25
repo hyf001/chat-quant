@@ -26,6 +26,7 @@ export function WorkbenchPage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [detail, setDetail] = useState<ChatSessionDetail | null>(null);
   const [agentMessages, setAgentMessages] = useState<SdkMessage[]>([]);
+  const [conversationEnvelopes, setConversationEnvelopes] = useState<SDKStreamEnvelope[]>([]);
   const [historyQuery, setHistoryQuery] = useState("");
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
@@ -65,6 +66,7 @@ export function WorkbenchPage() {
       setDetail(sessionDetail);
       const agentDetail = await getAgentDetailOrNull(chatSessionId);
       setAgentMessages(agentDetail ? agentDetailToMessages(agentDetail) : []);
+      setConversationEnvelopes(agentDetail?.envelopes ?? []);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "会话详情加载失败");
     } finally {
@@ -87,6 +89,8 @@ export function WorkbenchPage() {
       void loadDetail(activeSessionId);
     } else {
       setDetail(null);
+      setAgentMessages([]);
+      setConversationEnvelopes([]);
     }
   }, [activeSessionId, loadDetail]);
 
@@ -130,11 +134,12 @@ export function WorkbenchPage() {
       let assistantDraft = "";
       const assistantMessageId = `local_assistant_${accepted.user_message_id}`;
       await readChatStream(accepted.stream_url, (envelope) => {
+        setConversationEnvelopes((current) => upsertEnvelope(current, envelope));
         const text = assistantTextFromEnvelope(envelope);
         if (!text) {
           return;
         }
-        assistantDraft = assistantDraft ? `${assistantDraft}\n\n${text}` : text;
+        assistantDraft = appendStreamText(assistantDraft, text, isDeltaEnvelope(envelope));
         setAgentMessages((current) =>
           upsertTextMessage(current, {
             id: assistantMessageId,
@@ -148,6 +153,7 @@ export function WorkbenchPage() {
       const agentDetail = await getAgentDetailOrNull(sessionId);
       if (agentDetail) {
         setAgentMessages(agentDetailToMessages(agentDetail));
+        setConversationEnvelopes(agentDetail.envelopes);
       }
       setDetail(await getChatSessionDetail(sessionId));
       await refreshSessions(historyQuery);
@@ -182,8 +188,10 @@ export function WorkbenchPage() {
         <ConversationShell
           session={activeSession}
           messages={agentMessages.length > 0 ? agentMessages : detail?.messages ?? []}
+          envelopes={conversationEnvelopes}
           assets={detail?.assets ?? []}
           isLoading={isDetailLoading}
+          isStreaming={isSending}
           error={error}
         />
       }
@@ -258,10 +266,17 @@ function upsertTextMessage(
 }
 
 function assistantTextFromEnvelope(envelope: SDKStreamEnvelope): string | null {
-  const event = envelope.sdk_event;
+  const event = unwrapEvent(envelope.sdk_event);
   const type = typeof event.type === "string" ? event.type : "";
   if (type === "assistant_message") {
     return textFromContentBlocks(event.content);
+  }
+  if (type === "content_block_delta") {
+    const delta = asRecord(event.delta);
+    return asString(delta?.text) ?? asString(event.text) ?? null;
+  }
+  if (type === "text_delta") {
+    return asString(event.text) ?? asString(asRecord(event.delta)?.text);
   }
   if (type === "result_message" && typeof event.result === "string") {
     return event.result.trim() || null;
@@ -270,6 +285,36 @@ function assistantTextFromEnvelope(envelope: SDKStreamEnvelope): string | null {
     return `运行失败：${event.message}`;
   }
   return null;
+}
+
+function isDeltaEnvelope(envelope: SDKStreamEnvelope): boolean {
+  const type = asString(unwrapEvent(envelope.sdk_event).type);
+  return type === "content_block_delta" || type === "text_delta";
+}
+
+function appendStreamText(current: string, next: string, isDelta: boolean): string {
+  if (!current) {
+    return next;
+  }
+  if (!next) {
+    return current;
+  }
+  if (!isDelta) {
+    return `${current}\n\n${next}`;
+  }
+  if (current.endsWith("\n") || next.startsWith("\n") || next.startsWith(" ")) {
+    return `${current}${next}`;
+  }
+  if (shouldInsertSpace(current, next)) {
+    return `${current} ${next}`;
+  }
+  return `${current}${next}`;
+}
+
+function shouldInsertSpace(current: string, next: string): boolean {
+  const last = current[current.length - 1];
+  const first = next[0];
+  return /[A-Za-z0-9]/.test(last) && /[A-Za-z0-9]/.test(first);
 }
 
 function textFromContentBlocks(content: unknown): string | null {
@@ -290,6 +335,63 @@ function textFromContentBlocks(content: unknown): string | null {
     .filter((value): value is string => Boolean(value))
     .join("\n");
   return text || null;
+}
+
+function upsertEnvelope(
+  envelopes: SDKStreamEnvelope[],
+  nextEnvelope: SDKStreamEnvelope,
+): SDKStreamEnvelope[] {
+  const existingIndex = envelopes.findIndex((envelope) => envelope.sequence === nextEnvelope.sequence);
+  if (existingIndex === -1) {
+    return [...envelopes, nextEnvelope].sort((left, right) => left.sequence - right.sequence);
+  }
+  return envelopes.map((envelope, index) => (index === existingIndex ? nextEnvelope : envelope));
+}
+
+function unwrapEvent(event: Record<string, unknown>): Record<string, unknown> {
+  const innerEvent = asRecord(event.event);
+  if (event.type === "stream_event" && innerEvent) {
+    return { ...innerEvent, uuid: event.uuid, session_id: event.session_id };
+  }
+  if (event.type === "stream_event") {
+    return normalizeFlattenedStreamEvent(event);
+  }
+  return event;
+}
+
+function normalizeFlattenedStreamEvent(event: Record<string, unknown>): Record<string, unknown> {
+  const delta = asRecord(event.delta);
+  const deltaType = asString(delta?.type);
+  if (deltaType === "text_delta") {
+    return { ...event, type: "text_delta", text: delta?.text };
+  }
+  if (deltaType === "thinking_delta") {
+    return { ...event, type: "content_block_delta" };
+  }
+  if (delta && ("text" in delta || "thinking" in delta)) {
+    return { ...event, type: "content_block_delta" };
+  }
+
+  const contentBlock = asRecord(event.content_block);
+  const contentBlockType = asString(contentBlock?.type);
+  if (contentBlockType) {
+    return { ...event, ...contentBlock, type: contentBlockType };
+  }
+
+  if (typeof event.result === "string") {
+    return { ...event, type: "result_message" };
+  }
+  return event;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
 function toSdkRole(role: string): SdkMessage["role"] {
