@@ -5,10 +5,10 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from app.core.config import get_settings
-from app.infrastructure.agent.claude_runtime import ClaudeAgentRuntime
-from app.infrastructure.agent.sdk_session_store import InMemoryAgentSessionStore
-from app.infrastructure.agent.sdk_stream_relay import InMemoryStreamRelay
-from app.infrastructure.agent.sdk_transcript_store import ClaudeSDKTranscriptReader
+from app.agent_runtime.claude_runtime import ClaudeAgentRuntime
+from app.agent_runtime.sdk_session_store import InMemoryAgentSessionStore
+from app.agent_runtime.sdk_stream_relay import InMemoryStreamRelay
+from app.agent_runtime.sdk_transcript_store import ClaudeSDKTranscriptReader
 from app.schemas.contracts.agent_runtime import (
     AgentScenario,
     AgentTurnCommand,

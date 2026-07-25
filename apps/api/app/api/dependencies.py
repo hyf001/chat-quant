@@ -37,6 +37,16 @@ def reset_m1_services(request: Request) -> None:
     request.app.state.m1_services = M1Services()
 
 
-UserId = Annotated[str, Header(alias="X-User-Id")]
-ProjectId = Annotated[str, Header(alias="X-Project-Id")]
+def get_user_id(x_user_id: Annotated[str | None, Header(alias="X-User-Id")] = None) -> str:
+    return x_user_id or get_settings().default_user_id
+
+
+def get_project_id(
+    x_project_id: Annotated[str | None, Header(alias="X-Project-Id")] = None,
+) -> str:
+    return x_project_id or get_settings().default_project_id
+
+
+UserId = Annotated[str, Depends(get_user_id)]
+ProjectId = Annotated[str, Depends(get_project_id)]
 ServicesDep = Annotated[M1Services, Depends(get_m1_services)]

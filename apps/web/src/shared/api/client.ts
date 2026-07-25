@@ -1,4 +1,9 @@
-import type { AgentScenario, ChatMessageAccepted, SDKStreamEnvelope } from "../types/agentRuntime";
+import type {
+  AgentChatSessionDetail,
+  AgentScenario,
+  ChatMessageAccepted,
+  SDKStreamEnvelope,
+} from "../types/agentRuntime";
 import type { BacktestDetail, BacktestRun, CreateBacktestRunPayload } from "../types/backtests";
 import type {
   ChatSession,
@@ -11,8 +16,9 @@ import type {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 export { API_BASE_URL };
 
-const DEFAULT_USER_ID = "demo_user";
-const DEFAULT_PROJECT_ID = "default_project";
+const API_USER_ID = import.meta.env.VITE_CHATQ_USER_ID ?? "local_user";
+const API_PROJECT_ID = import.meta.env.VITE_CHATQ_PROJECT_ID ?? "local_project";
+export { API_PROJECT_ID, API_USER_ID };
 
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
@@ -30,8 +36,8 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
     method: options.method ?? "GET",
     headers: {
       "Content-Type": "application/json",
-      "X-User-Id": DEFAULT_USER_ID,
-      "X-Project-Id": DEFAULT_PROJECT_ID,
+      "X-User-Id": API_USER_ID,
+      "X-Project-Id": API_PROJECT_ID,
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
@@ -149,8 +155,16 @@ export async function sendAgentChatMessage(
       message: input.message,
       chat_session_id: input.chatSessionId,
       scenario: input.scenario,
+      user_id: API_USER_ID,
+      project_id: API_PROJECT_ID,
     },
   });
+}
+
+export async function getAgentChatSessionDetail(
+  chatSessionId: string,
+): Promise<AgentChatSessionDetail> {
+  return requestJson<AgentChatSessionDetail>(`/api/chat/conversations/${chatSessionId}`);
 }
 
 export async function readChatStream(
@@ -201,7 +215,11 @@ export async function executePythonArtifact(
 export async function createBacktestRun(payload: CreateBacktestRunPayload): Promise<BacktestRun> {
   return requestJson<BacktestRun>("/api/backtests", {
     method: "POST",
-    body: payload,
+    body: {
+      ...payload,
+      user_id: API_USER_ID,
+      project_id: API_PROJECT_ID,
+    },
   });
 }
 

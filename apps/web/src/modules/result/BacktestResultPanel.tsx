@@ -2,8 +2,6 @@ import {
   Activity,
   BarChart3,
   LineChart,
-  Loader2,
-  Repeat2,
   ShieldAlert,
   TrendingUp,
   WalletCards,
@@ -13,10 +11,8 @@ import type { ReactNode } from "react";
 import type { BacktestDetail, CurvePoint } from "../../shared/types/backtests";
 
 type BacktestResultPanelProps = {
-  detail: BacktestDetail;
-  isRunning: boolean;
+  detail: BacktestDetail | null;
   error: string | null;
-  onRunDemo: () => void;
 };
 
 type MetricCardProps = {
@@ -28,32 +24,19 @@ type MetricCardProps = {
 
 export function BacktestResultPanel({
   detail,
-  isRunning,
   error,
-  onRunDemo,
 }: BacktestResultPanelProps) {
-  const metrics = detail.result?.metrics;
-  const equityCurve = detail.curves.find((curve) => curve.curve_type === "equity");
-  const drawdownCurve = detail.curves.find((curve) => curve.curve_type === "drawdown");
+  const metrics = detail?.result?.metrics;
+  const equityCurve = detail?.curves.find((curve) => curve.curve_type === "equity");
+  const drawdownCurve = detail?.curves.find((curve) => curve.curve_type === "drawdown");
 
   return (
     <section className="grid gap-4" aria-label="回测结果">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="text-xs font-semibold uppercase text-muted">M6 Backtest</div>
-          <h2 className="mt-1 truncate text-base font-semibold text-ink">
-            沪深300 均线突破回测
-          </h2>
+          <h2 className="mt-1 truncate text-base font-semibold text-ink">{backtestTitle(detail)}</h2>
         </div>
-        <button
-          className="inline-flex h-9 items-center gap-2 rounded-lg border border-line bg-panel px-3 text-sm font-semibold text-ink transition hover:border-strong disabled:cursor-not-allowed disabled:opacity-60"
-          type="button"
-          onClick={onRunDemo}
-          disabled={isRunning}
-        >
-          {isRunning ? <Loader2 className="animate-spin" size={16} /> : <Repeat2 size={16} />}
-          再次回测
-        </button>
       </div>
 
       {error ? (
@@ -87,22 +70,27 @@ export function BacktestResultPanel({
         />
       </div>
 
+      {detail ? (
       <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="grid gap-4 md:grid-cols-2">
-          <ChartBlock
-            title="收益曲线"
-            icon={<LineChart size={16} />}
-            points={equityCurve?.points ?? []}
-            valueKey="normalized_value"
-            tone="gain"
-          />
-          <ChartBlock
-            title="回撤曲线"
-            icon={<BarChart3 size={16} />}
-            points={drawdownCurve?.points ?? []}
-            valueKey="value"
-            tone="risk"
-          />
+          {equityCurve ? (
+            <ChartBlock
+              title="收益曲线"
+              icon={<LineChart size={16} />}
+              points={equityCurve.points}
+              valueKey="normalized_value"
+              tone="gain"
+            />
+          ) : null}
+          {drawdownCurve ? (
+            <ChartBlock
+              title="回撤曲线"
+              icon={<BarChart3 size={16} />}
+              points={drawdownCurve.points}
+              valueKey="value"
+              tone="risk"
+            />
+          ) : null}
         </div>
 
         <div className="rounded-lg border border-line bg-panel p-3">
@@ -132,10 +120,25 @@ export function BacktestResultPanel({
               </tbody>
             </table>
           </div>
+          {detail.trades.length === 0 ? (
+            <div className="mt-3 rounded-lg border border-dashed border-line bg-soft p-3 text-xs text-muted">
+              暂无交易明细
+            </div>
+          ) : null}
         </div>
       </div>
+      ) : null}
     </section>
   );
+}
+
+function backtestTitle(detail: BacktestDetail | null): string {
+  if (!detail) {
+    return "暂无回测结果";
+  }
+  const symbols = detail.run.config.symbols.join("、");
+  const dateRange = `${detail.run.config.start_date} 至 ${detail.run.config.end_date}`;
+  return `${symbols || detail.run.strategy_version_id} · ${dateRange}`;
 }
 
 function MetricCard({ label, value, tone = "neutral", icon }: MetricCardProps) {

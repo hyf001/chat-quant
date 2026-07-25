@@ -2,6 +2,8 @@
   "name": "chat-quant",
   "private": true,
   "scripts": {
+    "dev:start": "bash scripts/dev-start.sh",
+    "dev:stop": "bash scripts/dev-stop.sh",
     "dev:api": "uv run --project apps/api uvicorn app.main:app --reload --app-dir apps/api",
     "dev:web": "npm --prefix apps/web run dev",
     "lint:api": "uv run --project apps/api ruff check apps/api/app",

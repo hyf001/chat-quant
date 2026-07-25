@@ -1,5 +1,6 @@
 .DS_Store
 .env
+.env.local
 .venv/
 __pycache__/
 .pytest_cache/
@@ -12,5 +13,6 @@ dist/
 .vite/
 *.tsbuildinfo
 
+/.dev/
 /data/
 /storage/

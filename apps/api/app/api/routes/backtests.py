@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 
+from app.api.dependencies import ProjectId, UserId
 from app.domain.backtests.service import (
     BacktestConflictError,
     BacktestNotFoundError,
@@ -26,9 +27,20 @@ strategy_backtests_router = APIRouter(prefix="/strategy-versions", tags=["backte
 
 
 @router.post("", response_model=BacktestRunDTO, status_code=status.HTTP_201_CREATED)
-async def create_backtest(request: CreateBacktestRunRequest) -> BacktestRunDTO:
+async def create_backtest(
+    request: CreateBacktestRunRequest,
+    user_id: UserId,
+    project_id: ProjectId,
+) -> BacktestRunDTO:
     try:
-        return backtest_service.create_run(request)
+        return backtest_service.create_run(
+            request.model_copy(
+                update={
+                    "user_id": request.user_id or user_id,
+                    "project_id": request.project_id or project_id,
+                }
+            )
+        )
     except BacktestValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

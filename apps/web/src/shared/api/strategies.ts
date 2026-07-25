@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+import { API_BASE_URL, API_PROJECT_ID, API_USER_ID } from "./client";
 
 export type StrategyParamValue = number | string | boolean;
 
@@ -79,7 +79,11 @@ export type StrategyCopySummary = {
 };
 
 export async function listStrategies(): Promise<StrategySummary[]> {
-  return apiFetch<StrategySummary[]>("/api/strategies");
+  const params = new URLSearchParams({
+    user_id: API_USER_ID,
+    project_id: API_PROJECT_ID,
+  });
+  return apiFetch<StrategySummary[]>(`/api/strategies?${params.toString()}`);
 }
 
 export async function getStrategyVersion(versionId: string): Promise<StrategyVersion> {
@@ -95,6 +99,8 @@ export async function createStrategy(
     body: JSON.stringify({
       chat_session_id: chatSessionId,
       package: strategyPackage,
+      user_id: API_USER_ID,
+      project_id: API_PROJECT_ID,
     }),
   });
 }
@@ -108,53 +114,12 @@ export async function validateStrategyVersion(versionId: string): Promise<unknow
 export async function copyStrategySummary(versionId: string): Promise<StrategyCopySummary> {
   return apiFetch<StrategyCopySummary>(`/api/strategy-versions/${versionId}/copy`, {
     method: "POST",
-    body: JSON.stringify({ mode: "summary" }),
+    body: JSON.stringify({
+      mode: "summary",
+      user_id: API_USER_ID,
+      project_id: API_PROJECT_ID,
+    }),
   });
-}
-
-export function buildDemoStrategyPackage(): StrategyPackage {
-  return {
-    name: "沪深300 均线突破策略",
-    description: "短期均线上穿长期均线买入，下穿卖出，并加入波动过滤。",
-    strategy_type: "ma_cross",
-    entrypoint: "strategy.py:GeneratedStrategy",
-    code_artifact_id: "code_demo_ma_cross",
-    params_schema: {
-      fast_period: {
-        type: "integer",
-        title: "短期均线周期",
-        default: 20,
-        minimum: 2,
-        maximum: 250,
-        required: true,
-        ui: { control: "number", unit: "日" },
-      },
-      slow_period: {
-        type: "integer",
-        title: "长期均线周期",
-        default: 60,
-        minimum: 5,
-        maximum: 500,
-        required: true,
-        ui: { control: "number", unit: "日" },
-      },
-      volatility_filter: {
-        type: "string",
-        title: "波动过滤",
-        enum: ["off", "medium", "strong"],
-        default: "medium",
-        required: true,
-        ui: { control: "select" },
-      },
-    },
-    default_params: {
-      fast_period: 20,
-      slow_period: 60,
-      volatility_filter: "medium",
-    },
-    logic_summary: "MA 20/60 突破并使用中等波动过滤",
-    risk_notes: ["历史回测不代表未来收益，不构成投资建议"],
-  };
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {

@@ -4,7 +4,7 @@ type WorkspaceLayoutProps = {
   history: ReactNode;
   header: ReactNode;
   conversation: ReactNode;
-  result: ReactNode;
+  result?: ReactNode;
   composer: ReactNode;
   insight: ReactNode;
 };
@@ -25,9 +25,11 @@ export function WorkspaceLayout({
           {header}
           <div className="min-h-0 flex-1 overflow-auto">
             {conversation}
-            <div className="px-5 pb-6">
-              <div className="mx-auto w-full max-w-4xl">{result}</div>
-            </div>
+            {result ? (
+              <div className="px-5 pb-6">
+                <div className="mx-auto w-full max-w-4xl">{result}</div>
+              </div>
+            ) : null}
           </div>
           {composer}
         </section>

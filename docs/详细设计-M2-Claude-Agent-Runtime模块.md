@@ -32,7 +32,7 @@ M2 负责把 `claude-agent-sdk` 配置为 Chat-Quant 可控、可追踪、可恢
 
 ### 2.2 边界声明
 
-M2 是 `claude-agent-sdk` 的 Runtime 薄封装，不是任务编排引擎，也不是股票策略业务服务。M2 不实现独立 Agent，不实现自己的 tool-use 循环，不在平台侧复刻 Claude Code 的智能体框架。
+M2 是 `claude-agent-sdk` 的 Runtime 薄封装，不是任务编排引擎，也不是股票策略业务服务。M2 作为 Chat-Quant 的一等核心模块可以直接依赖 `claude-agent-sdk`；但 M1、M3-M6 等业务领域模块不直接依赖 SDK 类型，而是通过 M2 暴露的稳定契约、SDK session 引用和资产引用协作。M2 不实现独立 Agent，不实现自己的 tool-use 循环，不在平台侧复刻 Claude Code 的智能体框架。
 
 M2 范围内：
 
@@ -128,16 +128,16 @@ app/
   application/
     chat_service.py
     dto.py
-  infrastructure/
-    agent/
-      claude_runtime.py
-      prompts.py
-      sdk_skills.py
-      hooks.py
-      bash_command_policy.py
-      sdk_stream_relay.py
-      sdk_transcript_store.py
-      tool_call_logger.py
+  agent_runtime/
+    claude_runtime.py
+    prompts.py
+    sdk_skills.py
+    hooks.py
+    bash_command_policy.py
+    sdk_stream_relay.py
+    sdk_session_store.py
+    sdk_transcript_store.py
+    tool_call_logger.py
   domain/
     conversations/
       dto.py
@@ -630,7 +630,7 @@ CLI 不是 M2 的 API 契约，也不作为智能体 API 暴露。CLI 只是 SDK
 | `AGENT_TURN_TIMEOUT_SECONDS` | `300` | 单次 SDK turn 总超时 |
 | `AGENT_FIRST_TOKEN_TIMEOUT_SECONDS` | `15` | 首包超时，用于 UI 失败反馈 |
 | `AGENT_WORKDIR_ROOT` | `/var/lib/chatq/sdk-sessions` | SDK session 工作目录根路径 |
-| `AGENT_PROMPT_DIR` | `app/infrastructure/agent/prompts` | prompt 模板目录 |
+| `AGENT_PROMPT_DIR` | `app/agent_runtime/prompts` | prompt 模板目录 |
 | `AGENT_SDK_SKILL_SOURCES` | `system,user` | SDK 原生 skills 来源配置 |
 | `AGENT_SETTING_SOURCES` | `project,user` | SDK 配置来源，生产环境建议显式限制 |
 | `AGENT_INCLUDE_PARTIAL_MESSAGES` | `true` | 是否启用 SDK partial streaming，供前端实时显示 |

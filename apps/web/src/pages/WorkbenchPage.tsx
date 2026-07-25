@@ -4,92 +4,38 @@ import { Composer } from "../modules/composer";
 import { ConversationShell } from "../modules/conversation";
 import { HistoryPanel } from "../modules/history";
 import { InsightPanel } from "../modules/insight";
-import {
-  ArtifactList,
-  BacktestResultPanel,
-  RuntimeResultPanel,
-  demoBacktestDetail,
-  demoBacktestPayload,
-} from "../modules/result";
 import { WorkspaceHeader, WorkspaceLayout } from "../modules/workspace";
 import {
-  createBacktestRun,
   createChatSession,
-  executePythonArtifact,
+  getAgentChatSessionDetail,
   getChatSessionDetail,
   getRuntimeHealth,
-  listArtifacts,
   listChatSessions,
-  runBacktest,
-  sendChatMessage,
-  type BacktestDetail,
+  readChatStream,
+  sendAgentChatMessage,
+  type AgentChatSessionDetail,
   type ChatSession,
   type ChatSessionDetail,
-  type CodeArtifact,
-  type ExecutionResult,
   type RuntimeHealth,
+  type SDKStreamEnvelope,
+  type SdkMessage,
 } from "../shared/api";
-
-const sampleCode = `
-import csv
-import json
-import os
-from pathlib import Path
-
-payload = json.loads(Path(os.environ["CHATQ_STDIN_JSON"]).read_text(encoding="utf-8"))
-output_dir = Path(os.environ["CHATQ_OUTPUT_DIR"])
-tables_dir = output_dir / "tables"
-tables_dir.mkdir(parents=True, exist_ok=True)
-
-rows = [
-    {"symbol": symbol, "score": 88 - index * 3, "signal": "watch"}
-    for index, symbol in enumerate(payload["symbols"])
-]
-
-with (tables_dir / "screening.csv").open("w", newline="", encoding="utf-8") as file_obj:
-    writer = csv.DictWriter(file_obj, fieldnames=["symbol", "score", "signal"])
-    writer.writeheader()
-    writer.writerows(rows)
-
-result = {
-    "status": "succeeded",
-    "summary": "sample screening completed",
-    "rows": rows,
-    "warnings": [],
-}
-(output_dir / "result.json").write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
-print(f"screened {len(rows)} symbols")
-`.trim();
 
 export function WorkbenchPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [detail, setDetail] = useState<ChatSessionDetail | null>(null);
+  const [agentMessages, setAgentMessages] = useState<SdkMessage[]>([]);
   const [historyQuery, setHistoryQuery] = useState("");
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [artifacts, setArtifacts] = useState<CodeArtifact[]>([]);
-  const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null);
-  const [isLoadingArtifacts, setIsLoadingArtifacts] = useState(true);
-  const [artifactError, setArtifactError] = useState<string | null>(null);
   const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(null);
-  const [runtimeResult, setRuntimeResult] = useState<ExecutionResult | null>(null);
-  const [isRuntimeRunning, setIsRuntimeRunning] = useState(false);
-  const [runtimeError, setRuntimeError] = useState<string | null>(null);
-  const [backtestDetail, setBacktestDetail] = useState<BacktestDetail>(demoBacktestDetail);
-  const [isRunningBacktest, setIsRunningBacktest] = useState(false);
-  const [backtestError, setBacktestError] = useState<string | null>(null);
 
   const activeSession = useMemo(
     () => detail?.session ?? sessions.find((session) => session.id === activeSessionId) ?? null,
     [activeSessionId, detail?.session, sessions],
-  );
-
-  const selectedArtifact = useMemo(
-    () => artifacts.find((artifact) => artifact.artifact_id === selectedArtifactId) ?? null,
-    [artifacts, selectedArtifactId],
   );
 
   const refreshSessions = useCallback(
@@ -115,30 +61,15 @@ export function WorkbenchPage() {
     setIsDetailLoading(true);
     setError(null);
     try {
-      setDetail(await getChatSessionDetail(chatSessionId));
+      const sessionDetail = await getChatSessionDetail(chatSessionId);
+      setDetail(sessionDetail);
+      const agentDetail = await getAgentDetailOrNull(chatSessionId);
+      setAgentMessages(agentDetail ? agentDetailToMessages(agentDetail) : []);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "会话详情加载失败");
     } finally {
       setIsDetailLoading(false);
     }
-  }, []);
-
-  const loadArtifacts = useCallback((chatSessionId?: string | null) => {
-    setIsLoadingArtifacts(true);
-    setArtifactError(null);
-    listArtifacts(chatSessionId ?? undefined)
-      .then((items) => {
-        setArtifacts(items);
-        setSelectedArtifactId((current) =>
-          current && items.some((item) => item.artifact_id === current)
-            ? current
-            : items[0]?.artifact_id ?? null,
-        );
-      })
-      .catch((caught: unknown) => {
-        setArtifactError(caught instanceof Error ? caught.message : "Artifact request failed");
-      })
-      .finally(() => setIsLoadingArtifacts(false));
   }, []);
 
   useEffect(() => {
@@ -148,20 +79,16 @@ export function WorkbenchPage() {
   useEffect(() => {
     getRuntimeHealth()
       .then(setRuntimeHealth)
-      .catch((caught: unknown) => {
-        setRuntimeError(caught instanceof Error ? caught.message : "Runtime health failed");
-      });
+      .catch(() => setRuntimeHealth(null));
   }, []);
 
   useEffect(() => {
     if (activeSessionId) {
       void loadDetail(activeSessionId);
-      loadArtifacts(activeSessionId);
     } else {
       setDetail(null);
-      loadArtifacts(null);
     }
-  }, [activeSessionId, loadArtifacts, loadDetail]);
+  }, [activeSessionId, loadDetail]);
 
   const handleSearchChange = (query: string) => {
     setHistoryQuery(query);
@@ -189,56 +116,45 @@ export function WorkbenchPage() {
         setSessions((current) => [created, ...current]);
         setActiveSessionId(created.id);
         sessionId = created.id;
-      } else {
-        await sendChatMessage(sessionId, content);
+      }
+
+      const optimisticUserMessage = makeTextMessage({
+        id: `local_user_${Date.now()}`,
+        role: "user",
+        text: content,
+        createdAt: new Date().toISOString(),
+      });
+      setAgentMessages((current) => [...current, optimisticUserMessage]);
+
+      const accepted = await sendAgentChatMessage({ chatSessionId: sessionId, message: content });
+      let assistantDraft = "";
+      const assistantMessageId = `local_assistant_${accepted.user_message_id}`;
+      await readChatStream(accepted.stream_url, (envelope) => {
+        const text = assistantTextFromEnvelope(envelope);
+        if (!text) {
+          return;
+        }
+        assistantDraft = assistantDraft ? `${assistantDraft}\n\n${text}` : text;
+        setAgentMessages((current) =>
+          upsertTextMessage(current, {
+            id: assistantMessageId,
+            role: "assistant",
+            text: assistantDraft,
+            createdAt: envelope.received_at,
+          }),
+        );
+      });
+
+      const agentDetail = await getAgentDetailOrNull(sessionId);
+      if (agentDetail) {
+        setAgentMessages(agentDetailToMessages(agentDetail));
       }
       setDetail(await getChatSessionDetail(sessionId));
       await refreshSessions(historyQuery);
-      loadArtifacts(sessionId);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "消息发送失败");
     } finally {
       setIsSending(false);
-    }
-  };
-
-  const handleRunSample = async () => {
-    setIsRuntimeRunning(true);
-    setRuntimeError(null);
-    try {
-      setRuntimeResult(
-        await executePythonArtifact({
-          chat_session_id: activeSessionId ?? "conv_demo_m4",
-          code_artifact_id: selectedArtifactId ?? "code_demo_inline",
-          entrypoint: "analysis.py",
-          stdin_json: {
-            symbols: ["沪深300", "中证500", "创业板指"],
-            start_date: "2026-04-24",
-            end_date: "2026-07-24",
-          },
-          timeout_seconds: 30,
-          expected_outputs: ["result.json", "tables/screening.csv"],
-          purpose: "stock_screening",
-          code_files: [{ path: "analysis.py", content: sampleCode }],
-        }),
-      );
-    } catch (caught: unknown) {
-      setRuntimeError(caught instanceof Error ? caught.message : "Runtime execute failed");
-    } finally {
-      setIsRuntimeRunning(false);
-    }
-  };
-
-  const handleRunDemoBacktest = async () => {
-    setIsRunningBacktest(true);
-    setBacktestError(null);
-    try {
-      const run = await createBacktestRun(demoBacktestPayload);
-      setBacktestDetail(await runBacktest(run.id));
-    } catch (caught) {
-      setBacktestError(caught instanceof Error ? caught.message : "回测请求失败");
-    } finally {
-      setIsRunningBacktest(false);
     }
   };
 
@@ -260,56 +176,125 @@ export function WorkbenchPage() {
           session={activeSession}
           isConnected={!error}
           health={runtimeHealth}
-          backtestStatus={backtestDetail.run.status}
         />
       }
       conversation={
         <ConversationShell
           session={activeSession}
-          messages={detail?.messages ?? []}
+          messages={agentMessages.length > 0 ? agentMessages : detail?.messages ?? []}
           assets={detail?.assets ?? []}
           isLoading={isDetailLoading}
           error={error}
-          artifactList={
-            <ArtifactList
-              artifacts={artifacts}
-              selectedArtifactId={selectedArtifactId}
-              isLoading={isLoadingArtifacts}
-              error={artifactError}
-              onRefresh={() => loadArtifacts(activeSessionId)}
-              onSelectArtifact={setSelectedArtifactId}
-            />
-          }
         />
-      }
-      result={
-        <div className="grid gap-4">
-          <RuntimeResultPanel
-            health={runtimeHealth}
-            result={runtimeResult}
-            isRunning={isRuntimeRunning}
-            error={runtimeError}
-            onRunSample={handleRunSample}
-          />
-          <BacktestResultPanel
-            detail={backtestDetail}
-            isRunning={isRunningBacktest}
-            error={backtestError}
-            onRunDemo={handleRunDemoBacktest}
-          />
-        </div>
       }
       composer={<Composer disabled={isSending} onSendMessage={handleSendMessage} />}
       insight={
         <InsightPanel
           session={activeSession}
           assets={detail?.assets ?? []}
-          artifact={selectedArtifact}
+          artifact={null}
           health={runtimeHealth}
-          result={runtimeResult}
-          backtestDetail={backtestDetail}
+          result={null}
+          backtestDetail={null}
         />
       }
     />
   );
+}
+
+async function getAgentDetailOrNull(chatSessionId: string): Promise<AgentChatSessionDetail | null> {
+  try {
+    return await getAgentChatSessionDetail(chatSessionId);
+  } catch {
+    return null;
+  }
+}
+
+function agentDetailToMessages(agentDetail: AgentChatSessionDetail): SdkMessage[] {
+  return agentDetail.messages.map((message) =>
+    makeTextMessage({
+      id: message.message_id,
+      role: toSdkRole(message.role),
+      text: message.content,
+      createdAt: message.created_at,
+    }),
+  );
+}
+
+function makeTextMessage({
+  id,
+  role,
+  text,
+  createdAt,
+}: {
+  id: string;
+  role: SdkMessage["role"];
+  text: string;
+  createdAt: string;
+}): SdkMessage {
+  return {
+    uuid: id,
+    role,
+    content: [{ type: "text", text, tool_use_id: null, name: null }],
+    created_at: createdAt,
+  };
+}
+
+function upsertTextMessage(
+  messages: SdkMessage[],
+  next: { id: string; role: SdkMessage["role"]; text: string; createdAt: string },
+): SdkMessage[] {
+  const replacement = makeTextMessage({
+    id: next.id,
+    role: next.role,
+    text: next.text,
+    createdAt: next.createdAt,
+  });
+  const existingIndex = messages.findIndex((message) => message.uuid === next.id);
+  if (existingIndex === -1) {
+    return [...messages, replacement];
+  }
+  return messages.map((message, index) => (index === existingIndex ? replacement : message));
+}
+
+function assistantTextFromEnvelope(envelope: SDKStreamEnvelope): string | null {
+  const event = envelope.sdk_event;
+  const type = typeof event.type === "string" ? event.type : "";
+  if (type === "assistant_message") {
+    return textFromContentBlocks(event.content);
+  }
+  if (type === "result_message" && typeof event.result === "string") {
+    return event.result.trim() || null;
+  }
+  if (type === "runtime_error" && typeof event.message === "string") {
+    return `运行失败：${event.message}`;
+  }
+  return null;
+}
+
+function textFromContentBlocks(content: unknown): string | null {
+  if (!Array.isArray(content)) {
+    return null;
+  }
+  const text = content
+    .map((block) =>
+      block &&
+      typeof block === "object" &&
+      "type" in block &&
+      block.type === "text" &&
+      "text" in block &&
+      typeof block.text === "string"
+        ? block.text
+        : null,
+    )
+    .filter((value): value is string => Boolean(value))
+    .join("\n");
+  return text || null;
+}
+
+function toSdkRole(role: string): SdkMessage["role"] {
+  if (role === "assistant" || role === "tool" || role === "system" || role === "user") {
+    return role;
+  }
+  return "assistant";
 }

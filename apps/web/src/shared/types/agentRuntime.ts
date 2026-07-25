@@ -15,6 +15,13 @@ export type SDKStreamEnvelope = {
   sdk_event: SDKEvent;
 };
 
+export type ChatHistoryMessage = {
+  message_id: string;
+  role: string;
+  content: string;
+  created_at: string;
+};
+
 export type ChatMessageAccepted = {
   chat_session_id: string;
   user_message_id: string;
@@ -50,4 +57,15 @@ export type ChatSessionSummary = {
   sdkSessionId: string | null;
   title: string;
   status: "idle" | "running" | "completed" | "failed";
+};
+
+export type AgentChatSessionDetail = {
+  chat_session_id: string;
+  sdk_session_id: string | null;
+  title: string;
+  summary: string | null;
+  messages: ChatHistoryMessage[];
+  sdk_messages: Record<string, unknown>[];
+  envelopes: SDKStreamEnvelope[];
+  assets: AssetReference[];
 };

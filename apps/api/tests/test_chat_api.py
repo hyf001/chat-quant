@@ -3,9 +3,9 @@ from collections.abc import AsyncIterator
 from app.api.routes.chat import get_chat_application_service
 from app.application.chat_service import ChatApplicationService
 from app.core.config import Settings
-from app.infrastructure.agent.claude_runtime import ClaudeAgentRuntime
-from app.infrastructure.agent.sdk_session_store import InMemoryAgentSessionStore
-from app.infrastructure.agent.sdk_stream_relay import InMemoryStreamRelay
+from app.agent_runtime.claude_runtime import ClaudeAgentRuntime
+from app.agent_runtime.sdk_session_store import InMemoryAgentSessionStore
+from app.agent_runtime.sdk_stream_relay import InMemoryStreamRelay
 from app.main import app
 from claude_agent_sdk import AssistantMessage, ResultMessage, TextBlock
 from fastapi.testclient import TestClient

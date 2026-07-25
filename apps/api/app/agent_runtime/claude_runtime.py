@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Callable
-from dataclasses import asdict, dataclass, is_dataclass
 import sys
 import types
+from collections.abc import AsyncIterator, Callable
+from dataclasses import asdict, dataclass, is_dataclass
 from uuid import uuid4
 
 try:
@@ -31,10 +31,11 @@ except ModuleNotFoundError:
         model: str
         cwd: str
         can_use_tool: object
-        user: str
         include_partial_messages: bool
         setting_sources: list[str]
         skills: list[str]
+        env: dict[str, str]
+        thinking: dict[str, object] | None = None
 
     @dataclass
     class PermissionResultAllow:
@@ -124,21 +125,21 @@ except ModuleNotFoundError:
     sys.modules.setdefault("claude_agent_sdk", fallback_module)
     sys.modules.setdefault("claude_agent_sdk.types", fallback_types_module)
 
-from app.core.config import Settings
-from app.infrastructure.agent.bash_command_policy import (
+from app.agent_runtime.bash_command_policy import (
     BashCommand,
     CommandContext,
     load_default_policy,
     resolve_allowed_commands,
     validate_bash_command,
 )
-from app.infrastructure.agent.hooks import AgentRuntimeHooks
-from app.infrastructure.agent.prompts import build_system_prompt
-from app.infrastructure.agent.sdk_session_store import AgentSession, InMemoryAgentSessionStore
-from app.infrastructure.agent.sdk_skill_workspace import SDKSkillWorkspace
-from app.infrastructure.agent.sdk_skills import select_available_sdk_skills
-from app.infrastructure.agent.sdk_stream_relay import InMemoryStreamRelay
-from app.infrastructure.agent.tool_call_logger import ToolCallLogger
+from app.agent_runtime.hooks import AgentRuntimeHooks
+from app.agent_runtime.prompts import build_system_prompt
+from app.agent_runtime.sdk_session_store import AgentSession, InMemoryAgentSessionStore
+from app.agent_runtime.sdk_skill_workspace import SDKSkillWorkspace
+from app.agent_runtime.sdk_skills import select_available_sdk_skills
+from app.agent_runtime.sdk_stream_relay import InMemoryStreamRelay
+from app.agent_runtime.tool_call_logger import ToolCallLogger
+from app.core.config import Settings
 from app.schemas.contracts.agent_runtime import (
     AgentTurnCommand,
     AgentTurnResult,
@@ -162,6 +163,7 @@ class ClaudeAgentOptionsSnapshot:
     skills: tuple[str, ...]
     include_partial_messages: bool
     setting_sources: tuple[str, ...]
+    env: tuple[tuple[str, str], ...]
 
 
 class ClaudeAgentRuntime:
@@ -208,11 +210,12 @@ class ClaudeAgentRuntime:
         envelopes: list[SDKStreamEnvelope] = []
         result_message_id: str | None = None
         result_subtype: str | None = None
+        persisted_assistant_message = False
 
         try:
             sdk_options = self.build_sdk_options(command, options, allowed_commands)
             async for sdk_message in self.sdk_query(
-                prompt=command.user_prompt,
+                prompt=_streaming_user_prompt(command),
                 options=sdk_options,
             ):
                 event = serialize_sdk_message(sdk_message)
@@ -284,7 +287,17 @@ class ClaudeAgentRuntime:
                     message_id = str(
                         event.get("id") or event.get("uuid") or f"sdk_msg_{uuid4().hex}"
                     )
-                    assistant_parts.extend(_extract_text_blocks(event))
+                    text_parts = _extract_text_blocks(event)
+                    assistant_parts.extend(text_parts)
+                    assistant_text = "\n\n".join(part for part in text_parts if part).strip()
+                    if assistant_text:
+                        self.session_store.append_sdk_message(
+                            chat_session_id=command.chat_session_id,
+                            message_id=message_id,
+                            role="assistant",
+                            content=assistant_text,
+                        )
+                        persisted_assistant_message = True
                     message_refs.append(
                         SDKMessageRef(
                             sdk_message_uuid=message_id,
@@ -301,28 +314,44 @@ class ClaudeAgentRuntime:
                     result_text = str(event.get("result") or "")
                     if result_text:
                         assistant_parts.append(result_text)
+                        if not persisted_assistant_message:
+                            self.session_store.append_sdk_message(
+                                chat_session_id=command.chat_session_id,
+                                message_id=result_message_id or f"sdk_result_{uuid4().hex}",
+                                role="assistant",
+                                content=result_text,
+                            )
+                            persisted_assistant_message = True
 
                 if should_publish_original_event:
                     envelopes.append(
                         sink.publish(command.chat_session_id, session.sdk_session_id, event)
                     )
         except TimeoutError:
-            return _failed_result(command, RuntimeErrorCode.RUN_TIMEOUT, "agent turn timed out")
-        except RuntimeError as exc:
-            return _failed_result(
+            return self._publish_failed_turn(
+                command,
+                RuntimeErrorCode.RUN_TIMEOUT,
+                "agent turn timed out",
+                retryable=True,
+                sink=sink,
+            )
+        except Exception as exc:
+            return self._publish_failed_turn(
                 command,
                 RuntimeErrorCode.SDK_UNAVAILABLE,
                 str(exc),
                 retryable=True,
+                sink=sink,
             )
 
         assistant_message = "\n\n".join(part for part in assistant_parts if part).strip()
-        self.session_store.append_sdk_message(
-            chat_session_id=command.chat_session_id,
-            message_id=result_message_id or f"sdk_result_{uuid4().hex}",
-            role="assistant",
-            content=assistant_message,
-        )
+        if assistant_message and not persisted_assistant_message:
+            self.session_store.append_sdk_message(
+                chat_session_id=command.chat_session_id,
+                message_id=result_message_id or f"sdk_result_{uuid4().hex}",
+                role="assistant",
+                content=assistant_message,
+            )
         self.session_store.update_summary(
             command.chat_session_id,
             _build_summary(command.user_prompt),
@@ -377,6 +406,7 @@ class ClaudeAgentRuntime:
             skills=skills,
             include_partial_messages=self.settings.agent_include_partial_messages,
             setting_sources=("project",),
+            env=tuple(_sdk_env(self.settings).items()),
         )
 
     def build_sdk_options(
@@ -412,18 +442,19 @@ class ClaudeAgentRuntime:
 
         return ClaudeAgentOptions(
             tools=list(options.allowed_tools),
-            allowed_tools=list(options.allowed_tools),
+            allowed_tools=[],
             system_prompt=options.system_prompt,
-            permission_mode="dontAsk",
+            permission_mode="default",
             resume=command.sdk_session_id,
             max_turns=options.max_turns,
             model=options.model,
             cwd=options.cwd,
             can_use_tool=can_use_tool,
-            user=command.user_id,
             include_partial_messages=options.include_partial_messages,
             setting_sources=list(options.setting_sources),
             skills=list(options.skills),
+            env=dict(options.env),
+            thinking=_sdk_thinking_config(self.settings),
         )
 
     def enrich_sdk_event_with_artifacts(self, event: dict[str, object]) -> dict[str, object]:
@@ -431,6 +462,34 @@ class ClaudeAgentRuntime:
         if artifacts and "artifacts" not in event:
             return {**event, "artifacts": artifacts}
         return event
+
+    def _publish_failed_turn(
+        self,
+        command: AgentTurnCommand,
+        code: RuntimeErrorCode,
+        message: str,
+        *,
+        retryable: bool,
+        sink: InMemoryStreamRelay,
+    ) -> AgentTurnResult:
+        session = self.session_store.get_session(command.chat_session_id)
+        self.session_store.append_sdk_message(
+            chat_session_id=command.chat_session_id,
+            message_id=f"sdk_error_{uuid4().hex}",
+            role="assistant",
+            content=f"运行失败：{message}",
+        )
+        sink.publish(
+            command.chat_session_id,
+            session.sdk_session_id if session else command.sdk_session_id,
+            {
+                "type": "runtime_error",
+                "code": code.value,
+                "message": message,
+                "retryable": retryable,
+            },
+        )
+        return _failed_result(command, code, message, retryable=retryable)
 
 
 def _extract_text_blocks(event: dict[str, object]) -> list[str]:
@@ -442,6 +501,35 @@ def _extract_text_blocks(event: dict[str, object]) -> list[str]:
         if isinstance(block, dict) and block.get("type") == "text":
             blocks.append(str(block.get("text") or ""))
     return blocks
+
+
+def _sdk_env(settings: Settings) -> dict[str, str]:
+    env: dict[str, str] = {}
+    if settings.agent_base_url:
+        env["ANTHROPIC_BASE_URL"] = settings.agent_base_url
+    if settings.agent_api_token:
+        env["ANTHROPIC_AUTH_TOKEN"] = settings.agent_api_token
+    return env
+
+
+def _sdk_thinking_config(settings: Settings) -> dict[str, object]:
+    if settings.agent_thinking_type == "enabled":
+        return {
+            "type": "enabled",
+            "budget_tokens": settings.agent_thinking_budget_tokens,
+        }
+    return {"type": settings.agent_thinking_type}
+
+
+async def _streaming_user_prompt(command: AgentTurnCommand) -> AsyncIterator[dict[str, object]]:
+    event: dict[str, object] = {
+        "type": "user",
+        "message": {"role": "user", "content": command.user_prompt},
+        "parent_tool_use_id": None,
+    }
+    if command.sdk_session_id:
+        event["session_id"] = command.sdk_session_id
+    yield event
 
 
 def _extract_tool_use_events(event: dict[str, object]) -> list[dict[str, object]]:

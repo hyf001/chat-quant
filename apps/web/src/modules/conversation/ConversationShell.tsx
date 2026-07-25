@@ -1,5 +1,4 @@
 import { AlertCircle, Bot, Database, User } from "lucide-react";
-import type { ReactNode } from "react";
 
 import type { AssetLink, ChatSession, SdkMessage } from "../../shared/api";
 
@@ -9,7 +8,6 @@ type ConversationShellProps = {
   assets: AssetLink[];
   isLoading: boolean;
   error: string | null;
-  artifactList?: ReactNode;
 };
 
 function blockText(message: SdkMessage): string {
@@ -33,7 +31,6 @@ export function ConversationShell({
   assets,
   isLoading,
   error,
-  artifactList,
 }: ConversationShellProps) {
   return (
     <section className="px-5 py-6" aria-label="对话线程">
@@ -111,7 +108,6 @@ export function ConversationShell({
           </div>
         ) : null}
 
-        {artifactList}
       </div>
     </section>
   );

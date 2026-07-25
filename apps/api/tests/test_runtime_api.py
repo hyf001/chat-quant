@@ -92,7 +92,7 @@ def test_runtime_execute_timeout_returns_stable_error() -> None:
     assert result["error"]["code"] == "PROCESS_TIMEOUT"
 
 
-def test_runtime_backtest_execute_returns_standard_payload_artifacts() -> None:
+def test_runtime_backtest_execute_requires_real_data_adapter() -> None:
     response = client.post(
         "/api/runtime/backtests/execute",
         json={
@@ -118,11 +118,7 @@ def test_runtime_backtest_execute_returns_standard_payload_artifacts() -> None:
 
     assert response.status_code == 200
     result = response.json()
-    assert result["status"] == "succeeded"
-    assert result["schema_validation"]["schema"] == "BacktestResultPayload"
-    assert result["schema_validation"]["passed"] is True
-    assert {artifact["path"] for artifact in result["artifacts"]} >= {
-        "result.json",
-        "equity_curve.json",
-        "drawdown_curve.json",
-    }
+    assert result["status"] == "failed"
+    assert result["error"]["code"] == "PROCESS_EXIT_NONZERO"
+    assert "Real market data adapter is not configured" in result["error"]["detail"]
+    assert result["artifacts"] == []

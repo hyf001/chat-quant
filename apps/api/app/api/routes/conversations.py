@@ -43,8 +43,8 @@ def _raise_sdk_unavailable(error: SDKSessionReadError) -> None:
 async def create_chat_session(
     payload: ChatSessionCreateRequest,
     services: ServicesDep,
-    user_id: UserId = "demo_user",
-    project_id: ProjectId = "default_project",
+    user_id: UserId,
+    project_id: ProjectId,
 ):
     return await services.chat_sessions.create_chat_session(
         user_id=user_id,
@@ -64,7 +64,7 @@ async def create_chat_session(
 @router.get("", response_model=ChatSessionListResponse)
 async def list_chat_sessions(
     services: ServicesDep,
-    user_id: UserId = "demo_user",
+    user_id: UserId,
     query: str | None = Query(default=None, max_length=120),
     kind: str | None = Query(default=None, max_length=32),
     task_type: str | None = Query(default=None, max_length=32),
@@ -88,7 +88,7 @@ async def list_chat_sessions(
 async def get_chat_session_detail(
     chat_session_id: str,
     services: ServicesDep,
-    user_id: UserId = "demo_user",
+    user_id: UserId,
     message_limit: int | None = Query(default=None, ge=1, le=200),
 ):
     try:
@@ -113,7 +113,7 @@ async def update_chat_session(
     chat_session_id: str,
     payload: ChatSessionUpdateRequest,
     services: ServicesDep,
-    user_id: UserId = "demo_user",
+    user_id: UserId,
 ):
     try:
         return await services.chat_sessions.update_chat_session(
@@ -144,7 +144,7 @@ async def update_chat_session(
 async def delete_chat_session(
     chat_session_id: str,
     services: ServicesDep,
-    user_id: UserId = "demo_user",
+    user_id: UserId,
 ):
     try:
         await services.chat_sessions.soft_delete_chat_session(chat_session_id, user_id=user_id)
@@ -160,7 +160,7 @@ async def send_message(
     chat_session_id: str,
     payload: SendMessageRequest,
     services: ServicesDep,
-    user_id: UserId = "demo_user",
+    user_id: UserId,
 ):
     try:
         await services.chat_sessions.get_context(chat_session_id, user_id=user_id)
@@ -181,7 +181,7 @@ async def send_message(
 async def get_messages(
     chat_session_id: str,
     services: ServicesDep,
-    user_id: UserId = "demo_user",
+    user_id: UserId,
     limit: int | None = Query(default=None, ge=1, le=200),
 ):
     try:
@@ -201,7 +201,7 @@ async def get_messages(
 async def stream_messages(
     chat_session_id: str,
     services: ServicesDep,
-    user_id: UserId = "demo_user",
+    user_id: UserId,
 ):
     try:
         _, messages, _ = await services.chat_sessions.get_chat_session_detail(
@@ -227,7 +227,7 @@ async def link_asset(
     chat_session_id: str,
     payload: LinkAssetRequest,
     services: ServicesDep,
-    user_id: UserId = "demo_user",
+    user_id: UserId,
 ):
     try:
         return await services.asset_links.link_asset(
@@ -251,7 +251,7 @@ async def link_asset(
 async def get_context(
     chat_session_id: str,
     services: ServicesDep,
-    user_id: UserId = "demo_user",
+    user_id: UserId,
 ):
     try:
         session, assets = await services.chat_sessions.get_context(

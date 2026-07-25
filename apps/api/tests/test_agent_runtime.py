@@ -2,16 +2,16 @@ import asyncio
 import json
 from collections.abc import AsyncIterator
 
-from app.core.config import Settings
-from app.infrastructure.agent.bash_command_policy import (
+from app.agent_runtime.bash_command_policy import (
     CommandContext,
     load_default_policy,
     resolve_allowed_commands,
     validate_bash_command,
 )
-from app.infrastructure.agent.claude_runtime import ClaudeAgentRuntime, serialize_sdk_message
-from app.infrastructure.agent.sdk_session_store import InMemoryAgentSessionStore
-from app.infrastructure.agent.sdk_stream_relay import InMemoryStreamRelay
+from app.agent_runtime.claude_runtime import ClaudeAgentRuntime, serialize_sdk_message
+from app.agent_runtime.sdk_session_store import InMemoryAgentSessionStore
+from app.agent_runtime.sdk_stream_relay import InMemoryStreamRelay
+from app.core.config import Settings
 from app.schemas.contracts.agent_runtime import AgentScenario, AgentTurnCommand, RuntimeErrorCode
 from claude_agent_sdk import (
     AssistantMessage,
@@ -54,6 +54,34 @@ def test_policy_blocks_shell_control_operator() -> None:
 
 def test_runtime_runs_turn_and_publishes_sdk_envelopes() -> None:
     asyncio.run(_run_runtime_turn_assertions())
+
+
+def test_sdk_options_disable_thinking_by_default_for_compatible_agent_api() -> None:
+    runtime = ClaudeAgentRuntime(
+        settings=Settings(),
+        stream_relay=InMemoryStreamRelay(),
+        session_store=InMemoryAgentSessionStore(),
+        sdk_query=fake_sdk_query,
+    )
+    command = AgentTurnCommand(
+        user_id="user_1",
+        project_id="project_1",
+        chat_session_id="chat_1",
+        user_message_id="msg_1",
+        scenario=AgentScenario.CHAT_ANALYSIS,
+        working_dir="/tmp/chatq/sdk-sessions/chat_1",
+        sdk_session_id=None,
+        request_id="req_1",
+        user_prompt="你好",
+    )
+    options = runtime.build_agent_options(command, (), ())
+
+    sdk_options = runtime.build_sdk_options(command, options, ())
+
+    assert sdk_options.tools == ["Bash"]
+    assert sdk_options.allowed_tools == []
+    assert sdk_options.permission_mode == "default"
+    assert sdk_options.thinking == {"type": "disabled"}
 
 
 async def _run_runtime_turn_assertions() -> None:

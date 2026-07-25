@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.infrastructure.agent.bash_command_policy import (
+from app.agent_runtime.bash_command_policy import (
     BashCommand,
     CommandContext,
     validate_bash_command,

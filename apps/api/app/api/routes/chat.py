@@ -94,7 +94,7 @@ async def _sse_events(
             last_sequence = envelope.sequence
             payload = envelope.model_dump(mode="json")
             yield f"event: sdk\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
-            if envelope.sdk_event.get("type") in {"result_message", "cancelled"}:
+            if envelope.sdk_event.get("type") in {"result_message", "runtime_error", "cancelled"}:
                 yield "event: done\ndata: {}\n\n"
                 return
     yield "event: done\ndata: {}\n\n"

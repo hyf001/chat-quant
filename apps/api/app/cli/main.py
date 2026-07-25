@@ -47,8 +47,8 @@ def _add_artifact_commands(subcommands: argparse._SubParsersAction[argparse.Argu
     save_code.add_argument("--type", required=True)
     save_code.add_argument("--entrypoint", required=True)
     save_code.add_argument("--title", default="Agent 生成代码")
-    save_code.add_argument("--user-id", default="u_dev")
-    save_code.add_argument("--project-id", default="default")
+    save_code.add_argument("--user-id", default=_default_user_id())
+    save_code.add_argument("--project-id", default=_default_project_id())
     save_code.add_argument("--agent-run-id")
     save_code.add_argument("--source-message-id")
     save_code.add_argument("--tool-use-id")
@@ -59,8 +59,8 @@ def _add_artifact_commands(subcommands: argparse._SubParsersAction[argparse.Argu
     save_files.add_argument("--conversation-id", required=True)
     save_files.add_argument("--source-base-dir")
     save_files.add_argument("--parent-artifact-id")
-    save_files.add_argument("--user-id", default="u_dev")
-    save_files.add_argument("--project-id", default="default")
+    save_files.add_argument("--user-id", default=_default_user_id())
+    save_files.add_argument("--project-id", default=_default_project_id())
     save_files.add_argument("--agent-run-id")
     save_files.add_argument("--source-message-id")
     save_files.add_argument("--tool-use-id")
@@ -79,8 +79,8 @@ def _add_strategy_commands(subcommands: argparse._SubParsersAction[argparse.Argu
     create_parser = strategy_subcommands.add_parser("create")
     create_parser.add_argument("--conversation-id", required=True)
     create_parser.add_argument("--package-file", required=True)
-    create_parser.add_argument("--user-id", default="demo-user")
-    create_parser.add_argument("--project-id", default="default-project")
+    create_parser.add_argument("--user-id", default=_default_user_id())
+    create_parser.add_argument("--project-id", default=_default_project_id())
     create_parser.add_argument("--agent-run-id")
     create_parser.add_argument("--source-message-id")
     create_parser.add_argument("--source-tool-use-id")
@@ -104,8 +104,16 @@ def _add_strategy_commands(subcommands: argparse._SubParsersAction[argparse.Argu
     copy_parser.add_argument("--strategy-version-id", required=True)
     copy_parser.add_argument("--mode", choices=[mode.value for mode in StrategyCopyMode], required=True)
     copy_parser.add_argument("--conversation-id")
-    copy_parser.add_argument("--user-id", default="demo-user")
-    copy_parser.add_argument("--project-id", default="default-project")
+    copy_parser.add_argument("--user-id", default=_default_user_id())
+    copy_parser.add_argument("--project-id", default=_default_project_id())
+
+
+def _default_user_id() -> str:
+    return os.environ.get("CHATQ_DEFAULT_USER_ID", "local_user")
+
+
+def _default_project_id() -> str:
+    return os.environ.get("CHATQ_DEFAULT_PROJECT_ID", "local_project")
 
 
 def _dispatch_artifact(args: argparse.Namespace) -> int:

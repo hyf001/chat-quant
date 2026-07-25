@@ -5,13 +5,32 @@
 ## 开发启动
 
 ```bash
-uv sync --project apps/api
-uv run --project apps/api uvicorn app.main:app --reload --app-dir apps/api
+npm run dev:start
 ```
 
 ```bash
-npm install --prefix apps/web
-npm --prefix apps/web run dev
+npm run dev:stop
 ```
 
+API 默认运行在 `http://127.0.0.1:8000`，Web 默认运行在 `http://127.0.0.1:5173`。
 后端健康检查：`GET /api/health`
+
+## 运行配置
+
+后端可在 `.env` 中配置默认身份和 Agent 运行参数：
+
+```bash
+CHATQ_DEFAULT_USER_ID=
+CHATQ_DEFAULT_PROJECT_ID=
+ANTHROPIC_MODEL=
+ANTHROPIC_BASE_URL=
+ANTHROPIC_AUTH_TOKEN=
+```
+
+前端可在 `apps/web/.env.local` 中配置请求上下文：
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:8000
+VITE_CHATQ_USER_ID=
+VITE_CHATQ_PROJECT_ID=
+```

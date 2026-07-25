@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.api.dependencies import ProjectId, UserId
 from app.domain.strategies.models import (
     StrategyCopyMode,
     StrategyCopySummary,
@@ -23,8 +24,8 @@ router = APIRouter()
 class CreateStrategyRequest(BaseModel):
     chat_session_id: str = Field(min_length=1)
     package: StrategyPackage
-    user_id: str = "demo-user"
-    project_id: str = "default-project"
+    user_id: str | None = None
+    project_id: str | None = None
     source_sdk_session_id: str | None = None
     source_sdk_message_uuid: str | None = None
     source_sdk_tool_use_id: str | None = None
@@ -54,8 +55,8 @@ class CreateStrategyVersionRequest(BaseModel):
 
 class CopyStrategyVersionRequest(BaseModel):
     mode: StrategyCopyMode = StrategyCopyMode.SUMMARY
-    user_id: str = "demo-user"
-    project_id: str = "default-project"
+    user_id: str | None = None
+    project_id: str | None = None
     target_chat_session_id: str | None = None
 
     model_config = ConfigDict(extra="forbid")
@@ -63,18 +64,22 @@ class CopyStrategyVersionRequest(BaseModel):
 
 @router.get("/strategies", response_model=list[StrategySummary])
 async def list_strategies(
-    user_id: str = Query(default="demo-user"),
-    project_id: str = Query(default="default-project"),
+    user_id: UserId,
+    project_id: ProjectId,
 ) -> list[StrategySummary]:
     return strategy_service.list_strategies(user_id=user_id, project_id=project_id)
 
 
 @router.post("/strategies", response_model=StrategyCreateResult, status_code=201)
-async def create_strategy(request: CreateStrategyRequest) -> StrategyCreateResult:
+async def create_strategy(
+    request: CreateStrategyRequest,
+    user_id: UserId,
+    project_id: ProjectId,
+) -> StrategyCreateResult:
     try:
         return strategy_service.create_strategy(
-            user_id=request.user_id,
-            project_id=request.project_id,
+            user_id=request.user_id or user_id,
+            project_id=request.project_id or project_id,
             chat_session_id=request.chat_session_id,
             package=request.package,
             source_sdk_session_id=request.source_sdk_session_id,
@@ -150,13 +155,15 @@ async def validate_strategy_version(version_id: str) -> StrategyValidationResult
 async def copy_strategy_version(
     version_id: str,
     request: CopyStrategyVersionRequest,
+    user_id: UserId,
+    project_id: ProjectId,
 ) -> StrategyCopySummary:
     try:
         return strategy_service.copy_strategy_version(
             version_id,
             mode=request.mode,
-            user_id=request.user_id,
-            project_id=request.project_id,
+            user_id=request.user_id or user_id,
+            project_id=request.project_id or project_id,
             target_chat_session_id=request.target_chat_session_id,
         )
     except StrategyError as error:

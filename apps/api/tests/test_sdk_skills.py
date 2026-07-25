@@ -1,4 +1,4 @@
-from app.infrastructure.agent.sdk_skills import select_available_sdk_skills
+from app.agent_runtime.sdk_skills import select_available_sdk_skills
 from app.schemas.contracts.agent_runtime import AgentScenario
 
 

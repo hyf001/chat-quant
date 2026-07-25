@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.infrastructure.agent.bash_command_policy import BashCommand, describe_commands
+from app.agent_runtime.bash_command_policy import BashCommand, describe_commands
 from app.schemas.contracts.agent_runtime import AgentScenario, ChatSessionContext
 
 BASE_PROMPT_VERSION = "base:v1"

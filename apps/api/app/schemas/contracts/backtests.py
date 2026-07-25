@@ -93,8 +93,8 @@ class CreateBacktestRunRequest(BaseModel):
     end_date: date
     initial_cash: Decimal = Field(gt=0)
     commission: Decimal = Field(ge=0)
-    user_id: str = "demo_user"
-    project_id: str = "default_project"
+    user_id: str | None = None
+    project_id: str | None = None
     strategy_id: str | None = None
     code_artifact_id: str | None = None
     source_sdk_session_id: str | None = None

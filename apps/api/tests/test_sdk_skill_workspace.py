@@ -1,4 +1,4 @@
-from app.infrastructure.agent.sdk_skill_workspace import SDKSkillWorkspace
+from app.agent_runtime.sdk_skill_workspace import SDKSkillWorkspace
 
 
 def test_skill_workspace_copies_project_skills_into_session_cwd(tmp_path) -> None:

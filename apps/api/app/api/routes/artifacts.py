@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 
+from app.api.dependencies import ProjectId, UserId
 from app.application.artifact_service import CodeArtifactService
 from app.application.dependencies import get_artifact_service
 from app.domain.artifacts.errors import (
@@ -32,9 +33,22 @@ ArtifactServiceDep = Annotated[CodeArtifactService, Depends(get_artifact_service
 async def save_code_artifact(
     request: SaveCodeArtifactRequest,
     service: ArtifactServiceDep,
+    user_id: UserId,
+    project_id: ProjectId,
 ) -> CodeArtifactResponse:
     try:
-        artifact = service.save_code_artifact(request)
+        artifact = service.save_code_artifact(
+            request.model_copy(
+                update={
+                    "user_id": request.user_id
+                    if "user_id" in request.model_fields_set
+                    else user_id,
+                    "project_id": request.project_id
+                    if "project_id" in request.model_fields_set
+                    else project_id,
+                }
+            )
+        )
     except ArtifactError as exc:
         raise _http_error(exc) from exc
     return to_artifact_response(artifact)
@@ -44,9 +58,22 @@ async def save_code_artifact(
 async def save_generated_files(
     request: SaveGeneratedFilesRequest,
     service: ArtifactServiceDep,
+    user_id: UserId,
+    project_id: ProjectId,
 ) -> list[ArtifactFileResponse]:
     try:
-        files = service.save_generated_files(request)
+        files = service.save_generated_files(
+            request.model_copy(
+                update={
+                    "user_id": request.user_id
+                    if "user_id" in request.model_fields_set
+                    else user_id,
+                    "project_id": request.project_id
+                    if "project_id" in request.model_fields_set
+                    else project_id,
+                }
+            )
+        )
     except ArtifactError as exc:
         raise _http_error(exc) from exc
     return [to_file_response(file) for file in files]

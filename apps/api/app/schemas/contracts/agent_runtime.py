@@ -123,8 +123,8 @@ class ChatMessageRequest(BaseModel):
     message: str = Field(min_length=1, max_length=12000)
     chat_session_id: str | None = None
     scenario: AgentScenario | None = None
-    user_id: str = "demo_user"
-    project_id: str = "default"
+    user_id: str = "local_user"
+    project_id: str = "local_project"
 
 
 class ChatMessageAccepted(BaseModel):

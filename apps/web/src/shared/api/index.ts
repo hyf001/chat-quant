@@ -8,6 +8,7 @@ export {
   createBacktestRun,
   createChatSession,
   executePythonArtifact,
+  getAgentChatSessionDetail,
   getBacktest,
   getChatSessionDetail,
   getHealth,

@@ -21,8 +21,8 @@ class SaveCodeArtifactRequest(BaseModel):
     artifact_type: ArtifactType
     title: str
     files: list[CodeArtifactFileCreate]
-    user_id: str = "u_dev"
-    project_id: str = "default"
+    user_id: str = "local_user"
+    project_id: str = "local_project"
     source_sdk_session_id: str | None = None
     source_sdk_message_uuid: str | None = None
     source_sdk_tool_use_id: str | None = None
@@ -44,8 +44,8 @@ class SaveGeneratedFilesRequest(BaseModel):
     chat_session_id: str
     source_base_dir: str
     files: list[GeneratedFileCreate]
-    user_id: str = "u_dev"
-    project_id: str = "default"
+    user_id: str = "local_user"
+    project_id: str = "local_project"
     parent_artifact_id: str | None = None
     source_sdk_session_id: str | None = None
     source_sdk_message_uuid: str | None = None

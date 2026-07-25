@@ -1,21 +1,17 @@
-import { CheckCircle2, FileJson, Play, Terminal, XCircle } from "lucide-react";
+import { CheckCircle2, FileJson, Terminal, XCircle } from "lucide-react";
 
 import type { ExecutionResult, RuntimeHealth } from "../../shared/api/client";
 
 type RuntimeResultPanelProps = {
   health: RuntimeHealth | null;
   result: ExecutionResult | null;
-  isRunning: boolean;
   error: string | null;
-  onRunSample: () => void;
 };
 
 export function RuntimeResultPanel({
   health,
   result,
-  isRunning,
   error,
-  onRunSample,
 }: RuntimeResultPanelProps) {
   const statusTone = result?.status === "succeeded" ? "text-emerald-700" : "text-rose-700";
 
@@ -28,15 +24,6 @@ export function RuntimeResultPanel({
             Python {health?.python_version ?? "-"} · 输出目录 {health?.runtime_root_writable ? "可写" : "待确认"}
           </div>
         </div>
-        <button
-          className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-3 text-sm font-semibold text-white transition hover:bg-strong disabled:cursor-not-allowed disabled:bg-muted"
-          type="button"
-          onClick={onRunSample}
-          disabled={isRunning}
-        >
-          <Play size={15} />
-          {isRunning ? "运行中" : "运行样例"}
-        </button>
       </div>
 
       <div className="grid gap-3 p-4 sm:grid-cols-3">
