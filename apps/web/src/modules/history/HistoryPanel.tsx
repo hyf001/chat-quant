@@ -1,9 +1,7 @@
 import { Plus, RefreshCw, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { listStrategies, type StrategySummary } from "../../shared/api";
-import type { ChatSession } from "../../shared/api";
-import { IconButton } from "../../shared/components";
+import { listStrategies, type ChatSession, type StrategySummary } from "../../shared/api";
 
 type HistoryPanelProps = {
   sessions: ChatSession[];
@@ -53,10 +51,9 @@ export function HistoryPanel({
     try {
       setIsLoadingStrategies(true);
       setStrategyError(null);
-      const items = await listStrategies();
-      setStrategies(items);
-    } catch (loadError) {
-      setStrategyError(loadError instanceof Error ? loadError.message : "历史策略加载失败");
+      setStrategies(await listStrategies());
+    } catch (error) {
+      setStrategyError(error instanceof Error ? error.message : "历史策略加载失败");
     } finally {
       setIsLoadingStrategies(false);
     }
@@ -95,14 +92,8 @@ export function HistoryPanel({
 
       <div className="mb-3 text-xs font-semibold text-muted">最近会话</div>
       <div className="grid gap-2">
-        {isLoading ? (
-          <div className="rounded-lg border border-line bg-soft p-4 text-sm text-muted">加载中</div>
-        ) : null}
-        {!isLoading && sessions.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-line bg-soft p-4 text-sm text-muted">
-            暂无会话
-          </div>
-        ) : null}
+        {isLoading ? <Notice text="加载中" /> : null}
+        {!isLoading && sessions.length === 0 ? <Notice text="暂无会话" /> : null}
         {sessions.map((session) => {
           const isActive = session.id === activeSessionId;
           return (
@@ -123,14 +114,6 @@ export function HistoryPanel({
               <div className="mt-1 line-clamp-2 text-xs leading-5 text-muted">
                 {session.snippet || session.data_scope_label || "未输入消息"}
               </div>
-              <div className="mt-2 flex flex-wrap gap-1">
-                {session.symbols.slice(0, 3).map((symbol) => (
-                  <Tag key={symbol} text={symbol} />
-                ))}
-                {session.tags.slice(0, 2).map((tag) => (
-                  <Tag key={tag} text={tag} />
-                ))}
-              </div>
             </button>
           );
         })}
@@ -149,37 +132,31 @@ export function HistoryPanel({
         </button>
       </div>
 
-      {isLoadingStrategies ? <HistoryNotice text="正在读取策略资产" /> : null}
-      {!isLoadingStrategies && strategyError ? <HistoryNotice text={strategyError} tone="risk" /> : null}
-      {!isLoadingStrategies && !strategyError && strategies.length === 0 ? (
-        <HistoryNotice text="暂无策略资产" />
-      ) : null}
-
-      {!isLoadingStrategies && !strategyError && strategies.length > 0 ? (
-        <div className="grid gap-2">
-          {strategies.slice(0, 4).map((strategy) => (
-            <div className="rounded-lg border border-line bg-soft p-3" key={strategy.strategy_id}>
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0 truncate text-sm font-semibold">{strategy.name}</div>
-                <span className="shrink-0 rounded-full border border-line bg-panel px-2 py-0.5 text-xs text-muted">
-                  V{strategy.version}
-                </span>
+      <div className="grid gap-2">
+        {isLoadingStrategies ? <Notice text="正在读取策略资产" /> : null}
+        {!isLoadingStrategies && strategyError ? <Notice text={strategyError} tone="risk" /> : null}
+        {!isLoadingStrategies && !strategyError && strategies.length === 0 ? (
+          <Notice text="暂无策略资产" />
+        ) : null}
+        {!isLoadingStrategies && !strategyError
+          ? strategies.slice(0, 4).map((strategy) => (
+              <div className="rounded-lg border border-line bg-soft p-3" key={strategy.strategy_id}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 truncate text-sm font-semibold">{strategy.name}</div>
+                  <span className="shrink-0 rounded-full border border-line bg-panel px-2 py-0.5 text-xs text-muted">
+                    V{strategy.version}
+                  </span>
+                </div>
+                <div className="mt-2 line-clamp-2 text-xs leading-5 text-muted">
+                  {strategy.logic_summary ?? "策略逻辑摘要待补充"}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  <Tag text={statusLabel[strategy.version_status]} />
+                  <Tag text={strategy.strategy_type} />
+                </div>
               </div>
-              <div className="mt-2 line-clamp-2 text-xs leading-5 text-muted">
-                {strategy.logic_summary ?? "策略逻辑摘要待补充"}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                <Tag text={statusLabel[strategy.version_status]} />
-                <Tag text={strategy.strategy_type} />
-                <Tag text={summarizeParams(strategy.default_params)} />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="mt-4 lg:hidden">
-        <IconButton label="关闭历史" icon={<Plus size={16} />} />
+            ))
+          : null}
       </div>
     </aside>
   );
@@ -193,15 +170,7 @@ function Tag({ text }: { text: string }) {
   );
 }
 
-function HistoryNotice({ text, tone = "muted" }: { text: string; tone?: "muted" | "risk" }) {
+function Notice({ text, tone = "muted" }: { text: string; tone?: "muted" | "risk" }) {
   const toneClass = tone === "risk" ? "border-risk/40 text-risk" : "border-dashed text-muted";
   return <div className={`rounded-lg border bg-soft p-4 text-sm ${toneClass}`}>{text}</div>;
-}
-
-function summarizeParams(params: Record<string, number | string | boolean>): string {
-  const entries = Object.entries(params).slice(0, 2);
-  if (entries.length === 0) {
-    return "无默认参数";
-  }
-  return entries.map(([key, value]) => `${key}=${String(value)}`).join(" / ");
 }

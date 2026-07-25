@@ -115,8 +115,7 @@ export function WorkbenchPage() {
     setIsDetailLoading(true);
     setError(null);
     try {
-      const data = await getChatSessionDetail(chatSessionId);
-      setDetail(data);
+      setDetail(await getChatSessionDetail(chatSessionId));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "会话详情加载失败");
     } finally {
@@ -137,12 +136,9 @@ export function WorkbenchPage() {
         );
       })
       .catch((caught: unknown) => {
-        const message = caught instanceof Error ? caught.message : "Artifact request failed";
-        setArtifactError(message);
+        setArtifactError(caught instanceof Error ? caught.message : "Artifact request failed");
       })
-      .finally(() => {
-        setIsLoadingArtifacts(false);
-      });
+      .finally(() => setIsLoadingArtifacts(false));
   }, []);
 
   useEffect(() => {
@@ -196,9 +192,7 @@ export function WorkbenchPage() {
       } else {
         await sendChatMessage(sessionId, content);
       }
-
-      const updatedDetail = await getChatSessionDetail(sessionId);
-      setDetail(updatedDetail);
+      setDetail(await getChatSessionDetail(sessionId));
       await refreshSessions(historyQuery);
       loadArtifacts(sessionId);
     } catch (caught) {
@@ -212,21 +206,22 @@ export function WorkbenchPage() {
     setIsRuntimeRunning(true);
     setRuntimeError(null);
     try {
-      const executionResult = await executePythonArtifact({
-        chat_session_id: activeSessionId ?? "conv_demo_m4",
-        code_artifact_id: selectedArtifactId ?? "code_demo_inline",
-        entrypoint: "analysis.py",
-        stdin_json: {
-          symbols: ["沪深300", "中证500", "创业板指"],
-          start_date: "2026-04-24",
-          end_date: "2026-07-24",
-        },
-        timeout_seconds: 30,
-        expected_outputs: ["result.json", "tables/screening.csv"],
-        purpose: "stock_screening",
-        code_files: [{ path: "analysis.py", content: sampleCode }],
-      });
-      setRuntimeResult(executionResult);
+      setRuntimeResult(
+        await executePythonArtifact({
+          chat_session_id: activeSessionId ?? "conv_demo_m4",
+          code_artifact_id: selectedArtifactId ?? "code_demo_inline",
+          entrypoint: "analysis.py",
+          stdin_json: {
+            symbols: ["沪深300", "中证500", "创业板指"],
+            start_date: "2026-04-24",
+            end_date: "2026-07-24",
+          },
+          timeout_seconds: 30,
+          expected_outputs: ["result.json", "tables/screening.csv"],
+          purpose: "stock_screening",
+          code_files: [{ path: "analysis.py", content: sampleCode }],
+        }),
+      );
     } catch (caught: unknown) {
       setRuntimeError(caught instanceof Error ? caught.message : "Runtime execute failed");
     } finally {
@@ -239,8 +234,7 @@ export function WorkbenchPage() {
     setBacktestError(null);
     try {
       const run = await createBacktestRun(demoBacktestPayload);
-      const nextDetail = await runBacktest(run.id);
-      setBacktestDetail(nextDetail);
+      setBacktestDetail(await runBacktest(run.id));
     } catch (caught) {
       setBacktestError(caught instanceof Error ? caught.message : "回测请求失败");
     } finally {

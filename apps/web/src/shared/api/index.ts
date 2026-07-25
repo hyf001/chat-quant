@@ -1,3 +1,4 @@
+export * from "../types/agentRuntime";
 export * from "../types/backtests";
 export * from "./artifacts";
 export * from "./strategies";
@@ -12,7 +13,9 @@ export {
   getHealth,
   getRuntimeHealth,
   listChatSessions,
+  readChatStream,
   runBacktest,
+  sendAgentChatMessage,
   sendChatMessage,
 } from "./client";
 export type {

@@ -21,15 +21,9 @@ function blockText(message: SdkMessage): string {
 }
 
 function roleLabel(role: SdkMessage["role"]): string {
-  if (role === "user") {
-    return "你";
-  }
-  if (role === "assistant") {
-    return "Agent";
-  }
-  if (role === "tool") {
-    return "工具";
-  }
+  if (role === "user") return "你";
+  if (role === "assistant") return "Agent";
+  if (role === "tool") return "工具";
   return "系统";
 }
 

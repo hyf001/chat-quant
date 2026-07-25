@@ -1,3 +1,4 @@
+import type { AgentScenario, ChatMessageAccepted, SDKStreamEnvelope } from "../types/agentRuntime";
 import type { BacktestDetail, BacktestRun, CreateBacktestRunPayload } from "../types/backtests";
 import type {
   ChatSession,
@@ -16,6 +17,12 @@ const DEFAULT_PROJECT_ID = "default_project";
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
+};
+
+type SendAgentChatMessageInput = {
+  message: string;
+  chatSessionId?: string | null;
+  scenario?: AgentScenario;
 };
 
 async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -133,6 +140,50 @@ export async function sendChatMessage(
   });
 }
 
+export async function sendAgentChatMessage(
+  input: SendAgentChatMessageInput,
+): Promise<ChatMessageAccepted> {
+  return requestJson<ChatMessageAccepted>("/api/chat/messages", {
+    method: "POST",
+    body: {
+      message: input.message,
+      chat_session_id: input.chatSessionId,
+      scenario: input.scenario,
+    },
+  });
+}
+
+export async function readChatStream(
+  streamUrl: string,
+  onEnvelope: (envelope: SDKStreamEnvelope) => void,
+): Promise<void> {
+  const response = await fetch(toApiUrl(streamUrl));
+  if (!response.ok || response.body === null) {
+    throw new Error(`Chat stream failed: ${response.status}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    const events = buffer.split("\n\n");
+    buffer = events.pop() ?? "";
+    for (const event of events) {
+      const dataLine = event.split("\n").find((line) => line.startsWith("data: "));
+      if (!dataLine || dataLine === "data: {}") {
+        continue;
+      }
+      onEnvelope(JSON.parse(dataLine.slice(6)) as SDKStreamEnvelope);
+    }
+    if (done) {
+      break;
+    }
+  }
+}
+
 export async function getRuntimeHealth(): Promise<RuntimeHealth> {
   return requestJson<RuntimeHealth>("/api/runtime/health");
 }
@@ -165,4 +216,11 @@ export async function getBacktest(backtestRunId: string): Promise<BacktestDetail
   return requestJson<BacktestDetail>(
     `/api/backtests/${backtestRunId}?include_trades=true&include_curves=true`,
   );
+}
+
+function toApiUrl(url: string): string {
+  if (url.startsWith("http")) {
+    return url;
+  }
+  return `${API_BASE_URL}${url}`;
 }
