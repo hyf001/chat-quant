@@ -12,5 +12,5 @@ dist/
 .vite/
 *.tsbuildinfo
 
-data/
-storage/
+/data/
+/storage/

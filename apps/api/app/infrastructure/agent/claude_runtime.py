@@ -2,14 +2,127 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable
 from dataclasses import asdict, dataclass, is_dataclass
+import sys
+import types
 from uuid import uuid4
 
-from claude_agent_sdk import (
-    ClaudeAgentOptions,
-    PermissionResultAllow,
-    PermissionResultDeny,
-    query,
-)
+try:
+    from claude_agent_sdk import (
+        AssistantMessage,
+        ClaudeAgentOptions,
+        PermissionResultAllow,
+        PermissionResultDeny,
+        ResultMessage,
+        TextBlock,
+        ToolResultBlock,
+        ToolUseBlock,
+        UserMessage,
+        query,
+    )
+except ModuleNotFoundError:
+    @dataclass
+    class ClaudeAgentOptions:
+        tools: list[str]
+        allowed_tools: list[str]
+        system_prompt: str
+        permission_mode: str
+        resume: str | None
+        max_turns: int
+        model: str
+        cwd: str
+        can_use_tool: object
+        user: str
+        include_partial_messages: bool
+        setting_sources: list[str]
+        skills: list[str]
+
+    @dataclass
+    class PermissionResultAllow:
+        message: str | None = None
+
+    @dataclass
+    class PermissionResultDeny:
+        message: str
+        interrupt: bool = False
+
+    @dataclass
+    class TextBlock:
+        text: str
+
+    @dataclass
+    class ToolUseBlock:
+        id: str
+        name: str
+        input: dict[str, object]
+
+    @dataclass
+    class ToolResultBlock:
+        tool_use_id: str
+        content: str
+        is_error: bool = False
+
+    @dataclass
+    class AssistantMessage:
+        content: list[object]
+        model: str
+        session_id: str
+        message_id: str | None = None
+        uuid: str | None = None
+
+    @dataclass
+    class UserMessage:
+        content: list[object]
+        uuid: str
+
+    @dataclass
+    class SystemMessage:
+        content: list[object]
+        uuid: str
+
+    @dataclass
+    class ResultMessage:
+        subtype: str
+        duration_ms: int
+        duration_api_ms: int
+        is_error: bool
+        num_turns: int
+        session_id: str
+        result: str
+        uuid: str
+
+    async def query(*_args: object, **_kwargs: object) -> AsyncIterator[object]:
+        raise RuntimeError("claude-agent-sdk is not installed")
+
+    def get_session_messages(
+        _sdk_session_id: str,
+        *,
+        directory: str | None = None,
+        limit: int | None = None,
+    ) -> list[object]:
+        del directory, limit
+        return []
+
+    fallback_module = types.ModuleType("claude_agent_sdk")
+    fallback_module.__path__ = []  # type: ignore[attr-defined]
+    fallback_types_module = types.ModuleType("claude_agent_sdk.types")
+    for name, value in {
+        "AssistantMessage": AssistantMessage,
+        "ClaudeAgentOptions": ClaudeAgentOptions,
+        "PermissionResultAllow": PermissionResultAllow,
+        "PermissionResultDeny": PermissionResultDeny,
+        "ResultMessage": ResultMessage,
+        "TextBlock": TextBlock,
+        "ToolResultBlock": ToolResultBlock,
+        "ToolUseBlock": ToolUseBlock,
+        "UserMessage": UserMessage,
+        "SystemMessage": SystemMessage,
+        "get_session_messages": get_session_messages,
+        "query": query,
+    }.items():
+        setattr(fallback_module, name, value)
+        setattr(fallback_types_module, name, value)
+    sys.modules.setdefault("claude_agent_sdk", fallback_module)
+    sys.modules.setdefault("claude_agent_sdk.types", fallback_types_module)
 
 from app.core.config import Settings
 from app.infrastructure.agent.bash_command_policy import (
