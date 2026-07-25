@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -8,6 +9,11 @@ class Settings(BaseSettings):
     app_name: str = "Chat-Quant API"
     api_prefix: str = "/api"
     environment: str = Field(default="development", alias="CHATQ_ENV")
+    artifact_root: Path = Field(default=Path("data/artifacts"), alias="CHATQ_ARTIFACT_ROOT")
+    artifact_index_path: Path = Field(
+        default=Path("data/artifacts.sqlite3"),
+        alias="CHATQ_ARTIFACT_INDEX_PATH",
+    )
     cors_origins: list[str] = Field(
         default=["http://localhost:5173"],
         validation_alias=AliasChoices("CHATQ_API_CORS_ORIGINS", "CORS_ORIGINS"),
