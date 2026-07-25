@@ -1,1 +1,1 @@
-export { getHealth } from "./client";
+export { createBacktestRun, getBacktest, getHealth, runBacktest } from "./client";
