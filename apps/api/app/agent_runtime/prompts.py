@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from app.agent_runtime.bash_command_policy import BashCommand, describe_commands
 from app.schemas.contracts.agent_runtime import AgentScenario, ChatSessionContext
 
 BASE_PROMPT_VERSION = "base:v1"
@@ -20,7 +19,6 @@ SCENARIO_GUIDANCE: dict[AgentScenario, str] = {
 def build_system_prompt(
     scenario: AgentScenario,
     context: ChatSessionContext,
-    allowed_commands: tuple[BashCommand, ...],
 ) -> str:
     summary = context.summary or "暂无会话摘要。"
     assets = "\n".join(
@@ -28,17 +26,15 @@ def build_system_prompt(
         for asset in context.related_assets
     )
     asset_block = assets or "- 暂无关联资产。"
-    command_block = describe_commands(allowed_commands)
-
     return f"""你是 Chat-Quant 股票分析与策略验证工作台中的受控 Claude Agent。
 
 基础边界（{BASE_PROMPT_VERSION}）：
 1. 只处理股票分析、选股辅助、基础策略验证和历史复盘，不构成投资建议。
 2. 缺少关键参数时先提出少量澄清问题；信息基本足够时可以声明默认假设。
 3. 解释结果时说明数据口径、关键假设、局限和风险提示，回测不代表未来收益。
-4. 平台能力只能通过 SDK Bash 工具中的内部 `chatq ...` CLI 调用。
-5. 不要尝试真实交易、下单、读取系统敏感文件或调用白名单外命令。
-6. 生成会影响结果的代码时，应先用 `chatq artifact save-code` 保存，再通过平台运行命令执行。
+4. 平台能力通过 Claude Agent SDK 的工具、Skill 和插件提供；遵守 SDK 权限配置。
+5. 不要尝试真实交易、下单、读取系统敏感文件或绕过平台授权边界。
+6. 生成会影响结果的代码或资产时，优先使用平台已提供的 Skill、插件或 SDK 工具完成。
 
 场景指导：
 {SCENARIO_GUIDANCE[scenario]}
@@ -48,9 +44,6 @@ def build_system_prompt(
 
 当前授权资产引用：
 {asset_block}
-
-本轮允许的内部命令：
-{command_block}
 
 输出规范（{OUTPUT_PROMPT_VERSION}）：
 - 用自然语言说明任务理解、关键假设、执行过程和结论。

@@ -166,7 +166,7 @@ export function ConversationShell({
           </div>
         ) : null}
 
-        {session && textMessages.length === 0 ? (
+        {session && timelineItems.length === 0 && !isStreaming ? (
           <div className="rounded-lg border border-dashed border-line bg-panel p-5 text-sm leading-6 text-muted">
             当前会话还没有消息。
           </div>

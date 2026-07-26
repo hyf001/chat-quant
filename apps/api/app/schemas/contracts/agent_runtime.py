@@ -19,7 +19,6 @@ class RuntimeErrorCode(StrEnum):
     SDK_SESSION_EXPIRED = "SDK_SESSION_EXPIRED"
     FIRST_TOKEN_TIMEOUT = "FIRST_TOKEN_TIMEOUT"
     RUN_TIMEOUT = "RUN_TIMEOUT"
-    COMMAND_NOT_ALLOWED = "COMMAND_NOT_ALLOWED"
     TOOL_PERMISSION_DENIED = "TOOL_PERMISSION_DENIED"
     COMMAND_FAILED = "COMMAND_FAILED"
     COMMAND_OUTPUT_INVALID = "COMMAND_OUTPUT_INVALID"
@@ -49,7 +48,7 @@ class ChatSessionContext(BaseModel):
     metadata: dict[str, str] = Field(default_factory=dict)
 
 
-class AgentTurnCommand(BaseModel):
+class AgentExecutionCommand(BaseModel):
     user_id: str
     project_id: str
     chat_session_id: str
@@ -59,56 +58,11 @@ class AgentTurnCommand(BaseModel):
     system_prompt_key: str = "base:v1"
     sdk_skill_names: list[str] = Field(default_factory=list)
     allowed_tools: list[str] = Field(default_factory=list)
-    bash_command_policy_id: str = "default"
     working_dir: str
     sdk_session_id: str | None = None
     request_id: str
     deadline_seconds: int | None = None
     user_prompt: str
-
-
-class GeneratedArtifact(BaseModel):
-    artifact_type: str
-    artifact_id: str
-    title: str | None = None
-    uri: str | None = None
-
-
-class SDKMessageRef(BaseModel):
-    sdk_message_uuid: str
-    chat_session_id: str
-    sdk_session_id: str
-    message_type: str
-    role: str | None = None
-
-
-class SDKToolUseRef(BaseModel):
-    sdk_tool_use_id: str
-    sdk_message_uuid: str | None = None
-    chat_session_id: str
-    sdk_session_id: str
-    tool_name: str = "Bash"
-    bash_command: str
-    chatq_command: str | None = None
-    input_preview: str
-    tool_result_json: dict[str, object] | None = None
-    is_error: bool = False
-    output_ref: str | None = None
-
-
-class AgentTurnResult(BaseModel):
-    chat_session_id: str
-    user_message_id: str
-    sdk_session_id: str | None = None
-    sdk_result_message_id: str | None = None
-    sdk_result_subtype: str | None = None
-    assistant_message: str = ""
-    generated_artifacts: list[GeneratedArtifact] = Field(default_factory=list)
-    sdk_message_refs: list[SDKMessageRef] = Field(default_factory=list)
-    sdk_tool_uses: list[SDKToolUseRef] = Field(default_factory=list)
-    error_code: RuntimeErrorCode | None = None
-    error_message: str | None = None
-    retryable: bool = False
 
 
 class SDKStreamEnvelope(BaseModel):
@@ -140,7 +94,7 @@ class ChatSessionDetail(BaseModel):
     title: str
     summary: str | None = None
     messages: list[ChatHistoryMessage] = Field(default_factory=list)
-    sdk_messages: list[dict[str, object]] = Field(default_factory=list)
+    sdk_messages: list[SDKStreamEnvelope] = Field(default_factory=list)
     envelopes: list[SDKStreamEnvelope] = Field(default_factory=list)
     assets: list[AssetReference] = Field(default_factory=list)
 

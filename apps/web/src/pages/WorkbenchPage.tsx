@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Composer } from "../modules/composer";
 import { ConversationShell } from "../modules/conversation";
@@ -25,7 +25,6 @@ export function WorkbenchPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [detail, setDetail] = useState<ChatSessionDetail | null>(null);
-  const [agentMessages, setAgentMessages] = useState<SdkMessage[]>([]);
   const [conversationEnvelopes, setConversationEnvelopes] = useState<SDKStreamEnvelope[]>([]);
   const [historyQuery, setHistoryQuery] = useState("");
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
@@ -33,13 +32,17 @@ export function WorkbenchPage() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(null);
+  const streamingSessionIdRef = useRef<string | null>(null);
 
   const activeSession = useMemo(
     () => detail?.session ?? sessions.find((session) => session.id === activeSessionId) ?? null,
     [activeSessionId, detail?.session, sessions],
   );
-  const conversationMessages = agentMessages.length > 0 ? agentMessages : detail?.messages ?? [];
-  const conversationRuntimeEnvelopes = agentMessages.length > 0 ? conversationEnvelopes : [];
+  const conversationMessages = useMemo(
+    () => messagesFromEnvelopes(conversationEnvelopes),
+    [conversationEnvelopes],
+  );
+  const conversationRuntimeEnvelopes = conversationEnvelopes;
 
   const refreshSessions = useCallback(
     async (query = historyQuery) => {
@@ -67,8 +70,13 @@ export function WorkbenchPage() {
       const sessionDetail = await getChatSessionDetail(chatSessionId);
       setDetail(sessionDetail);
       const agentDetail = await getAgentDetailOrNull(chatSessionId);
-      setAgentMessages(agentDetail ? agentDetailToMessages(agentDetail) : []);
-      setConversationEnvelopes(agentDetail?.envelopes ?? []);
+      setConversationEnvelopes((current) =>
+        streamingSessionIdRef.current === chatSessionId
+          ? current
+          : agentDetail
+            ? agentDetailEnvelopes(agentDetail)
+            : [],
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "会话详情加载失败");
     } finally {
@@ -91,7 +99,6 @@ export function WorkbenchPage() {
       void loadDetail(activeSessionId);
     } else {
       setDetail(null);
-      setAgentMessages([]);
       setConversationEnvelopes([]);
     }
   }, [activeSessionId, loadDetail]);
@@ -120,50 +127,21 @@ export function WorkbenchPage() {
       if (!sessionId) {
         const created = await createChatSession({ initial_prompt: content });
         setSessions((current) => [created, ...current]);
+        streamingSessionIdRef.current = created.id;
         setActiveSessionId(created.id);
         sessionId = created.id;
+      } else {
+        streamingSessionIdRef.current = sessionId;
       }
-
-      const optimisticUserMessage = makeTextMessage({
-        id: `local_user_${Date.now()}`,
-        role: "user",
-        text: content,
-        createdAt: new Date().toISOString(),
-      });
-      setAgentMessages((current) => [...current, optimisticUserMessage]);
 
       const accepted = await sendAgentChatMessage({ chatSessionId: sessionId, message: content });
-      let assistantDraft = "";
-      const assistantMessageId = `local_assistant_${accepted.user_message_id}`;
       await readChatStream(accepted.stream_url, (envelope) => {
-        setConversationEnvelopes((current) => upsertEnvelope(current, envelope));
-        const text = assistantTextFromEnvelope(envelope);
-        if (!text) {
-          return;
-        }
-        assistantDraft = appendStreamText(assistantDraft, text, isDeltaEnvelope(envelope));
-        setAgentMessages((current) =>
-          upsertTextMessage(current, {
-            id: assistantMessageId,
-            role: "assistant",
-            text: assistantDraft,
-            createdAt: envelope.received_at,
-          }),
-        );
+        setConversationEnvelopes((current) => appendStreamEnvelope(current, envelope));
       });
-
-      const agentDetail = await getAgentDetailOrNull(sessionId);
-      if (agentDetail) {
-        setAgentMessages((current) =>
-          agentDetail.messages.length > 0 ? agentDetailToMessages(agentDetail) : current,
-        );
-        setConversationEnvelopes(agentDetail.envelopes);
-      }
-      setDetail(await getChatSessionDetail(sessionId));
-      await refreshSessions(historyQuery);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "消息发送失败");
     } finally {
+      streamingSessionIdRef.current = null;
       setIsSending(false);
     }
   };
@@ -222,15 +200,108 @@ async function getAgentDetailOrNull(chatSessionId: string): Promise<AgentChatSes
   }
 }
 
-function agentDetailToMessages(agentDetail: AgentChatSessionDetail): SdkMessage[] {
-  return agentDetail.messages.map((message) =>
-    makeTextMessage({
-      id: message.message_id,
-      role: toSdkRole(message.role),
-      text: message.content,
-      createdAt: message.created_at,
-    }),
-  );
+function agentDetailEnvelopes(agentDetail: AgentChatSessionDetail): SDKStreamEnvelope[] {
+  return agentDetail.envelopes.length > 0 ? agentDetail.envelopes : agentDetail.sdk_messages;
+}
+
+function messagesFromEnvelopes(envelopes: SDKStreamEnvelope[]): SdkMessage[] {
+  const messages: SdkMessage[] = [];
+  let activeAssistant: { id: string; text: string; createdAt: string } | null = null;
+
+  const flushAssistant = () => {
+    if (!activeAssistant?.text.trim()) {
+      activeAssistant = null;
+      return;
+    }
+    messages.push(
+      makeTextMessage({
+        id: activeAssistant.id,
+        role: "assistant",
+        text: activeAssistant.text,
+        createdAt: activeAssistant.createdAt,
+      }),
+    );
+    activeAssistant = null;
+  };
+
+  [...envelopes]
+    .sort((left, right) => left.sequence - right.sequence)
+    .forEach((envelope) => {
+      const event = unwrapEvent(envelope.sdk_event);
+      const type = asString(event.type);
+
+      if (type === "user_message") {
+        flushAssistant();
+        const text = textFromUserEvent(event);
+        if (text) {
+          messages.push(
+            makeTextMessage({
+              id: asString(event.id) ?? asString(event.uuid) ?? `sdk_user_${envelope.sequence}`,
+              role: "user",
+              text,
+              createdAt: envelope.received_at,
+            }),
+          );
+        }
+        return;
+      }
+
+      if (type === "assistant_message") {
+        const text = assistantTextFromEvent(event);
+        if (text) {
+          activeAssistant = {
+            id: asString(event.id) ?? asString(event.uuid) ?? `sdk_assistant_${envelope.sequence}`,
+            text,
+            createdAt: activeAssistant?.createdAt ?? envelope.received_at,
+          };
+          flushAssistant();
+        }
+        return;
+      }
+
+      const deltaText = assistantDeltaTextFromEvent(event);
+      if (deltaText) {
+        activeAssistant = {
+          id: activeAssistant?.id ?? `sdk_assistant_stream_${envelope.sequence}`,
+          text: appendStreamText(activeAssistant?.text ?? "", deltaText, true),
+          createdAt: activeAssistant?.createdAt ?? envelope.received_at,
+        };
+        return;
+      }
+
+      if (type === "result_message") {
+        if (!activeAssistant && messages.every((message) => message.role !== "assistant")) {
+          const resultText = asString(event.result);
+          if (resultText) {
+            activeAssistant = {
+              id: asString(event.uuid) ?? `sdk_result_${envelope.sequence}`,
+              text: resultText,
+              createdAt: envelope.received_at,
+            };
+          }
+        }
+        flushAssistant();
+        return;
+      }
+
+      if (type === "runtime_error") {
+        flushAssistant();
+        const message = asString(event.message);
+        if (message) {
+          messages.push(
+            makeTextMessage({
+              id: asString(event.uuid) ?? `sdk_error_${envelope.sequence}`,
+              role: "assistant",
+              text: `运行失败：${message}`,
+              createdAt: envelope.received_at,
+            }),
+          );
+        }
+      }
+    });
+
+  flushAssistant();
+  return messages;
 }
 
 function makeTextMessage({
@@ -252,29 +323,17 @@ function makeTextMessage({
   };
 }
 
-function upsertTextMessage(
-  messages: SdkMessage[],
-  next: { id: string; role: SdkMessage["role"]; text: string; createdAt: string },
-): SdkMessage[] {
-  const replacement = makeTextMessage({
-    id: next.id,
-    role: next.role,
-    text: next.text,
-    createdAt: next.createdAt,
-  });
-  const existingIndex = messages.findIndex((message) => message.uuid === next.id);
-  if (existingIndex === -1) {
-    return [...messages, replacement];
+function assistantTextFromEvent(event: Record<string, unknown>): string | null {
+  const text = textFromContentBlocks(event.content);
+  if (text) {
+    return text;
   }
-  return messages.map((message, index) => (index === existingIndex ? replacement : message));
+  const message = asRecord(event.message);
+  return message ? textFromContentBlocks(message.content) : null;
 }
 
-function assistantTextFromEnvelope(envelope: SDKStreamEnvelope): string | null {
-  const event = unwrapEvent(envelope.sdk_event);
-  const type = typeof event.type === "string" ? event.type : "";
-  if (type === "assistant_message") {
-    return textFromContentBlocks(event.content);
-  }
+function assistantDeltaTextFromEvent(event: Record<string, unknown>): string | null {
+  const type = asString(event.type);
   if (type === "content_block_delta") {
     const delta = asRecord(event.delta);
     return asString(delta?.text) ?? asString(event.text) ?? null;
@@ -282,18 +341,7 @@ function assistantTextFromEnvelope(envelope: SDKStreamEnvelope): string | null {
   if (type === "text_delta") {
     return asString(event.text) ?? asString(asRecord(event.delta)?.text);
   }
-  if (type === "result_message" && typeof event.result === "string") {
-    return event.result.trim() || null;
-  }
-  if (type === "runtime_error" && typeof event.message === "string") {
-    return `运行失败：${event.message}`;
-  }
   return null;
-}
-
-function isDeltaEnvelope(envelope: SDKStreamEnvelope): boolean {
-  const type = asString(unwrapEvent(envelope.sdk_event).type);
-  return type === "content_block_delta" || type === "text_delta";
 }
 
 function appendStreamText(current: string, next: string, isDelta: boolean): string {
@@ -341,15 +389,28 @@ function textFromContentBlocks(content: unknown): string | null {
   return text || null;
 }
 
-function upsertEnvelope(
+function textFromUserEvent(event: Record<string, unknown>): string | null {
+  const content = event.content;
+  if (typeof content === "string") {
+    return content;
+  }
+  const text = textFromContentBlocks(content);
+  if (text) {
+    return text;
+  }
+  const message = asRecord(event.message);
+  const messageContent = message?.content;
+  return typeof messageContent === "string" ? messageContent : textFromContentBlocks(messageContent);
+}
+
+function appendStreamEnvelope(
   envelopes: SDKStreamEnvelope[],
   nextEnvelope: SDKStreamEnvelope,
 ): SDKStreamEnvelope[] {
-  const existingIndex = envelopes.findIndex((envelope) => envelope.sequence === nextEnvelope.sequence);
-  if (existingIndex === -1) {
-    return [...envelopes, nextEnvelope].sort((left, right) => left.sequence - right.sequence);
-  }
-  return envelopes.map((envelope, index) => (index === existingIndex ? nextEnvelope : envelope));
+  const lastSequence = envelopes.at(-1)?.sequence ?? 0;
+  const sequence =
+    nextEnvelope.sequence > lastSequence ? nextEnvelope.sequence : lastSequence + 1;
+  return [...envelopes, { ...nextEnvelope, sequence }];
 }
 
 function unwrapEvent(event: Record<string, unknown>): Record<string, unknown> {
@@ -396,11 +457,4 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function asString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
-}
-
-function toSdkRole(role: string): SdkMessage["role"] {
-  if (role === "assistant" || role === "tool" || role === "system" || role === "user") {
-    return role;
-  }
-  return "assistant";
 }

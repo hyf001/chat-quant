@@ -25,7 +25,7 @@
 | Session storage | SDK 支持外部 SessionStore，用于把 transcript 持久化到共享存储 | 生产环境优先配置 SDK SessionStore；M1 不再复制一份 SDK message 表 |
 | Agent Skills in the SDK | Skills 是文件系统能力，由 SDK 发现和加载；`skills` option 只做可见性过滤 | M2 通过本地 plugin 注入系统级 skills，不把系统 skill 复制到用户项目 |
 | Streaming output | 开启 `include_partial_messages=True` 后会收到 `StreamEvent`；完整消息仍会以 `AssistantMessage`、`ResultMessage` 形式到达 | 前端实时输出用 `StreamEvent`；历史回放和资产定位仍使用完整 SDK messages |
-| Python SDK reference | Python 类型包含 `StreamEvent`、`AssistantMessage`、`ResultMessage` 等 | M2 的 stream relay 应透传 SDK 原生类型，不定义平台事件协议 |
+| Python SDK reference | Python 类型包含 `StreamEvent`、`AssistantMessage`、`ResultMessage` 等 | M2 使用统一消息解析器转换实时输出和历史 SDK messages，不定义另一套平台事件协议 |
 
 实现备注：
 
@@ -33,7 +33,7 @@
 2. Chat-Quant 系统级 skills 放在 `plugin/skills`，通过 SDK `plugins=[{"type": "local", "path": ".../plugin"}]` 注入所有用户项目。
 3. `include_partial_messages=True` 只影响当前 turn 的实时 UI；它产生的 `StreamEvent` 是 raw streaming event，不应被保存成业务消息表。
 4. SessionStore 是 SDK transcript 的持久层，条目按 SDK opaque JSON 保存。业务侧只保存 AssetLink 与 SDK session/message/tool_use 的引用。
-5. Bash 内部 `chatq ...` CLI 是 command policy 管控的运行能力，不是 Chat/Agent API。
+5. Bash 内部 `chatq ...` CLI 是通过 SDK options 暴露的运行能力，不是 Chat/Agent API。
 
 ## 2. SDK 核心能力
 
@@ -63,7 +63,7 @@
 无论使用哪种接口，Chat-Quant 都不需要实现底层工具循环。应用只需要：
 
 1. 构造 `ClaudeAgentOptions`。
-2. 注入 system prompt、session resume、SDK skills、`Bash`/必要内置工具、权限、hooks、工作目录、Bash 命令白名单等。
+2. 注入 system prompt、session resume、SDK skills、`Bash`/必要内置工具、权限、hooks、工作目录等 SDK options。
 3. 迭代接收 SDK messages，用于当前请求的实时流式展示。
 4. 保存 SDK session id 到 ChatSession；历史详情通过 `get_session_messages()` 或 SessionStore 读取 SDK messages。
 5. 只把代码、策略、回测等系统资产通过 AssetLink 关联到 `sdk_session_id`、SDK message uuid 或 SDK tool_use id。
@@ -84,7 +84,7 @@
 
 ## 4. Bash 平台能力边界
 
-Chat-Quant 首期选择 Bash 内部可执行的 `chatq ...` CLI 作为平台能力边界：Agent 通过 SDK 自带 `Bash` 工具执行白名单内的命令；CLI 再通过 FastAPI 或内部应用服务调用 M1-M6。CLI 清单不是 Chat/Agent API，不对前端或外部调用方暴露；它只是 M2 构建 SDK 运行环境和 Hook 校验时使用的 command policy。
+Chat-Quant 首期选择 Bash 内部可执行的 `chatq ...` CLI 作为平台能力边界：Agent 通过 SDK 自带 `Bash` 工具执行平台命令；CLI 再通过 FastAPI 或内部应用服务调用 M1-M6。CLI 清单不是 Chat/Agent API，不对前端或外部调用方暴露；M2 只负责通过 SDK options 配置工具可见性和权限。
 
 | 能力 | Bash 中允许的 CLI | 后端入口 |
 |---|---|---|
@@ -103,7 +103,7 @@ CLI 命令必须提供清晰描述、输入 schema、JSON/JSONL 输出、幂等�
 2. 对高风险能力必须使用 `PreToolUse` hook 做强制校验，例如越权路径、跨用户资产、真实交易关键词、外部写操作、超大回测。
 3. `permission_mode="bypassPermissions"` 只能在强隔离环境使用；生产默认不使用。
 4. 首期不启用额外 SDK 扩展工具；如果后续启用，必须先更新详细设计和权限模型。
-5. Bash 只能执行 command policy 白名单内的 `chatq ...` 前缀；禁止 shell control operators、重定向到非授权目录、命令替换、后台执行和任意包安装。
+5. Bash 权限通过 SDK `tools`、`allowed_tools`、`disallowed_tools` 和 `permission_mode` 配置表达；高风险能力后续需要新增独立 hook 时放入 `agent_runtime/hooks/`。
 6. CLI 返回失败时必须输出结构化 JSON 错误，让 Claude 能继续解释或改用其他路径。
 7. Hook 和 CLI 处理器都必须脱敏 API key、token、cookie、密钥路径和过长 stdout/stderr。
 

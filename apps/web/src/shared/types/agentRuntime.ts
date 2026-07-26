@@ -65,7 +65,7 @@ export type AgentChatSessionDetail = {
   title: string;
   summary: string | null;
   messages: ChatHistoryMessage[];
-  sdk_messages: Record<string, unknown>[];
+  sdk_messages: SDKStreamEnvelope[];
   envelopes: SDKStreamEnvelope[];
   assets: AssetReference[];
 };

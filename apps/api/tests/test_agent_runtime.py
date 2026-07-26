@@ -3,21 +3,16 @@ import json
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-from app.agent_runtime.bash_command_policy import (
-    CommandContext,
-    load_default_policy,
-    resolve_allowed_commands,
-    validate_bash_command,
-)
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime, serialize_sdk_message
 from app.agent_runtime.sdk_skills import select_available_sdk_skills
-from app.agent_runtime.sdk_stream_relay import InMemoryStreamRelay
 from app.core.config import Settings
-from app.schemas.contracts.agent_runtime import AgentScenario, AgentTurnCommand, RuntimeErrorCode
+from app.schemas.contracts.agent_runtime import (
+    AgentExecutionCommand,
+    AgentScenario,
+    RuntimeErrorCode,
+)
 from claude_agent_sdk import (
     AssistantMessage,
-    PermissionResultAllow,
-    PermissionResultDeny,
     ResultMessage,
     StreamEvent,
     TextBlock,
@@ -27,37 +22,8 @@ from claude_agent_sdk import (
 )
 
 
-def test_policy_rejects_strategy_backtest_cli_commands() -> None:
-    policy = load_default_policy()
-    allowed = resolve_allowed_commands(policy, AgentScenario.BACKTEST)
-
-    decision = validate_bash_command(
-        "chatq backtest get --chat-session-id chat_1 --sdk-session-id sdk_1 "
-        "--project-id project_1 --json",
-        allowed,
-        CommandContext(chat_session_id="chat_1", sdk_session_id="sdk_1", project_id="project_1"),
-    )
-
-    assert not decision.allowed
-    assert decision.code == RuntimeErrorCode.COMMAND_NOT_ALLOWED
-
-
-def test_policy_blocks_shell_control_operator() -> None:
-    policy = load_default_policy()
-    allowed = resolve_allowed_commands(policy, AgentScenario.CHAT_ANALYSIS)
-
-    decision = validate_bash_command(
-        "chatq artifact save-code --json; rm -rf /tmp/anything",
-        allowed,
-        CommandContext(chat_session_id="chat_1", sdk_session_id="sdk_1", project_id="project_1"),
-    )
-
-    assert not decision.allowed
-    assert decision.code == RuntimeErrorCode.TOOL_PERMISSION_DENIED
-
-
-def test_runtime_runs_turn_and_publishes_sdk_envelopes() -> None:
-    asyncio.run(_run_runtime_turn_assertions())
+def test_runtime_streams_sdk_envelopes() -> None:
+    asyncio.run(_run_runtime_stream_assertions())
 
 
 def test_runtime_preserves_stream_event_inner_type() -> None:
@@ -71,10 +37,9 @@ def test_runtime_extracts_session_id_from_system_event_data() -> None:
 def test_sdk_options_omit_thinking_by_default_for_compatible_agent_api() -> None:
     runtime = ClaudeAgentRuntime(
         settings=Settings(),
-        stream_relay=InMemoryStreamRelay(),
         sdk_query=fake_sdk_query,
     )
-    command = AgentTurnCommand(
+    command = AgentExecutionCommand(
         user_id="user_1",
         project_id="project_1",
         chat_session_id="chat_1",
@@ -85,13 +50,13 @@ def test_sdk_options_omit_thinking_by_default_for_compatible_agent_api() -> None
         request_id="req_1",
         user_prompt="你好",
     )
-    options = runtime.build_agent_options(command, (), ())
+    options = runtime.build_agent_options(command, ())
 
-    sdk_options = runtime.build_sdk_options(command, options, ())
+    sdk_options = runtime.build_sdk_options(command, options)
 
     assert sdk_options.tools == ["Bash"]
-    assert sdk_options.allowed_tools == []
-    assert sdk_options.permission_mode == "default"
+    assert sdk_options.allowed_tools == ["Bash"]
+    assert sdk_options.permission_mode == "dontAsk"
     assert sdk_options.thinking is None
     assert sdk_options.plugins == [
         {
@@ -110,10 +75,9 @@ def test_runtime_uses_plugin_namespaced_skills_without_copying_into_cwd(tmp_path
     working_dir.mkdir()
     runtime = ClaudeAgentRuntime(
         settings=Settings(_env_file=None, AGENT_SKILL_PLUGIN_DIR=str(plugin_dir)),
-        stream_relay=InMemoryStreamRelay(),
         sdk_query=fake_sdk_query,
     )
-    command = AgentTurnCommand(
+    command = AgentExecutionCommand(
         user_id="user_1",
         project_id="project_1",
         chat_session_id="chat_1",
@@ -134,23 +98,22 @@ def test_runtime_uses_plugin_namespaced_skills_without_copying_into_cwd(tmp_path
                 runtime.skill_plugin.list_skill_names(),
             ).names
         ),
-        (),
     )
-    sdk_options = runtime.build_sdk_options(command, options, ())
+    sdk_options = runtime.build_sdk_options(command, options)
 
     assert sdk_options.cwd == str(working_dir)
     assert sdk_options.plugins == [{"type": "local", "path": str(plugin_dir)}]
+    assert sdk_options.tools == ["Bash", "Skill"]
     assert sdk_options.skills == ["chat-quant:financial_data_query"]
     assert not (working_dir / ".claude" / "skills").exists()
 
 
-def test_sdk_permission_callback_allows_skill_tool() -> None:
+def test_sdk_options_delegate_permissions_to_sdk_rules_without_hooks() -> None:
     runtime = ClaudeAgentRuntime(
         settings=Settings(),
-        stream_relay=InMemoryStreamRelay(),
         sdk_query=fake_sdk_query,
     )
-    command = AgentTurnCommand(
+    command = AgentExecutionCommand(
         user_id="user_1",
         project_id="project_1",
         chat_session_id="chat_1",
@@ -164,17 +127,13 @@ def test_sdk_permission_callback_allows_skill_tool() -> None:
     options = runtime.build_agent_options(
         command,
         ("chat-quant:financial_data_query",),
-        (),
     )
-    sdk_options = runtime.build_sdk_options(command, options, ())
+    sdk_options = runtime.build_sdk_options(command, options)
 
-    skill_decision = asyncio.run(
-        sdk_options.can_use_tool("Skill", {"skill": "chat-quant:financial_data_query"}, None)
-    )
-    read_decision = asyncio.run(sdk_options.can_use_tool("Read", {"file_path": "/tmp/a"}, None))
-
-    assert isinstance(skill_decision, PermissionResultAllow)
-    assert isinstance(read_decision, PermissionResultDeny)
+    assert sdk_options.tools == ["Bash", "Skill"]
+    assert sdk_options.allowed_tools == ["Bash"]
+    assert "Skill" not in sdk_options.allowed_tools
+    assert not hasattr(sdk_options, "hooks") or sdk_options.hooks is None
 
 
 def test_sdk_env_maps_configured_token_to_claude_code_api_key() -> None:
@@ -184,10 +143,9 @@ def test_sdk_env_maps_configured_token_to_claude_code_api_key() -> None:
             ANTHROPIC_BASE_URL="https://api.example.test",
             ANTHROPIC_AUTH_TOKEN="secret_token",
         ),
-        stream_relay=InMemoryStreamRelay(),
         sdk_query=fake_sdk_query,
     )
-    command = AgentTurnCommand(
+    command = AgentExecutionCommand(
         user_id="user_1",
         project_id="project_1",
         chat_session_id="chat_1",
@@ -199,7 +157,7 @@ def test_sdk_env_maps_configured_token_to_claude_code_api_key() -> None:
         user_prompt="你好",
     )
 
-    options = runtime.build_agent_options(command, (), ())
+    options = runtime.build_agent_options(command, ())
 
     assert dict(options.env) == {
         "ANTHROPIC_API_KEY": "secret_token",
@@ -216,16 +174,22 @@ def test_runtime_includes_sdk_stderr_in_runtime_error() -> None:
     asyncio.run(_run_sdk_stderr_error_assertions())
 
 
-async def _run_runtime_turn_assertions() -> None:
-    stream_relay = InMemoryStreamRelay()
+async def _collect_stream(
+    runtime: ClaudeAgentRuntime,
+    command: AgentExecutionCommand,
+):
+    return [envelope async for envelope in runtime.stream_messages(command)]
+
+
+async def _run_runtime_stream_assertions() -> None:
     runtime = ClaudeAgentRuntime(
         settings=Settings(),
-        stream_relay=stream_relay,
         sdk_query=fake_sdk_query,
     )
 
-    result = await runtime.run_turn(
-        AgentTurnCommand(
+    envelopes = await _collect_stream(
+        runtime,
+        AgentExecutionCommand(
             user_id="user_1",
             project_id="project_1",
             chat_session_id="chat_1",
@@ -238,24 +202,20 @@ async def _run_runtime_turn_assertions() -> None:
         )
     )
 
-    envelopes = stream_relay.list_envelopes("chat_1")
-    assert result.error_code is None
-    assert result.sdk_session_id is not None
-    assert result.assistant_message
     assert [envelope.sequence for envelope in envelopes] == [1, 2, 3, 4]
-    assert result.sdk_tool_uses[0].chatq_command == "chatq artifact save-code"
+    assert envelopes[0].sdk_session_id == "sdk_query_1"
+    assert envelopes[-1].sdk_event["type"] == "result_message"
 
 
 async def _run_stream_event_type_assertions() -> None:
-    stream_relay = InMemoryStreamRelay()
     runtime = ClaudeAgentRuntime(
         settings=Settings(),
-        stream_relay=stream_relay,
         sdk_query=fake_stream_event_sdk_query,
     )
 
-    result = await runtime.run_turn(
-        AgentTurnCommand(
+    envelopes = await _collect_stream(
+        runtime,
+        AgentExecutionCommand(
             user_id="user_1",
             project_id="project_1",
             chat_session_id="chat_stream_1",
@@ -268,9 +228,6 @@ async def _run_stream_event_type_assertions() -> None:
         )
     )
 
-    envelopes = stream_relay.list_envelopes("chat_stream_1")
-    assert result.error_code is None
-    assert result.assistant_message == "你好"
     assert [envelope.sdk_event["type"] for envelope in envelopes] == [
         "content_block_delta",
         "content_block_delta",
@@ -284,15 +241,14 @@ async def _run_stream_event_type_assertions() -> None:
 
 
 async def _run_system_event_session_id_assertions() -> None:
-    stream_relay = InMemoryStreamRelay()
     runtime = ClaudeAgentRuntime(
         settings=Settings(),
-        stream_relay=stream_relay,
         sdk_query=fake_system_only_sdk_query,
     )
 
-    result = await runtime.run_turn(
-        AgentTurnCommand(
+    envelopes = await _collect_stream(
+        runtime,
+        AgentExecutionCommand(
             user_id="user_1",
             project_id="project_1",
             chat_session_id="chat_system_1",
@@ -305,25 +261,22 @@ async def _run_system_event_session_id_assertions() -> None:
         )
     )
 
-    envelopes = stream_relay.list_envelopes("chat_system_1")
-    assert result.sdk_session_id == "e7939275-7f1a-4958-823b-eafb4e2b3434"
-    assert envelopes[0].sdk_session_id == result.sdk_session_id
+    assert envelopes[0].sdk_session_id == "e7939275-7f1a-4958-823b-eafb4e2b3434"
     assert envelopes[-1].sdk_event["type"] == "runtime_error"
-    assert envelopes[-1].sdk_event["message"] == "agent sdk stream ended without assistant output"
+    assert envelopes[-1].sdk_event["message"] == "agent sdk stream ended without result message"
 
 
 async def _run_first_token_timeout_assertions() -> None:
-    stream_relay = InMemoryStreamRelay()
     settings = Settings(_env_file=None)
     settings.agent_first_token_timeout_seconds = 0.01  # type: ignore[assignment]
     runtime = ClaudeAgentRuntime(
         settings=settings,
-        stream_relay=stream_relay,
         sdk_query=fake_hanging_after_system_sdk_query,
     )
 
-    result = await runtime.run_turn(
-        AgentTurnCommand(
+    envelopes = await _collect_stream(
+        runtime,
+        AgentExecutionCommand(
             user_id="user_1",
             project_id="project_1",
             chat_session_id="chat_timeout_1",
@@ -337,23 +290,20 @@ async def _run_first_token_timeout_assertions() -> None:
         )
     )
 
-    envelopes = stream_relay.list_envelopes("chat_timeout_1")
-    assert result.error_code == RuntimeErrorCode.FIRST_TOKEN_TIMEOUT
-    assert result.sdk_session_id == "sdk_real_1"
     assert envelopes[-1].sdk_event["type"] == "runtime_error"
     assert envelopes[-1].sdk_event["code"] == RuntimeErrorCode.FIRST_TOKEN_TIMEOUT
+    assert envelopes[-1].sdk_session_id == "sdk_real_1"
 
 
 async def _run_sdk_stderr_error_assertions() -> None:
-    stream_relay = InMemoryStreamRelay()
     runtime = ClaudeAgentRuntime(
         settings=Settings(_env_file=None, ANTHROPIC_AUTH_TOKEN="secret_token"),
-        stream_relay=stream_relay,
         sdk_query=fake_stderr_error_sdk_query,
     )
 
-    result = await runtime.run_turn(
-        AgentTurnCommand(
+    envelopes = await _collect_stream(
+        runtime,
+        AgentExecutionCommand(
             user_id="user_1",
             project_id="project_1",
             chat_session_id="chat_stderr_1",
@@ -366,12 +316,11 @@ async def _run_sdk_stderr_error_assertions() -> None:
         )
     )
 
-    envelopes = stream_relay.list_envelopes("chat_stderr_1")
-    assert result.error_code == RuntimeErrorCode.SDK_UNAVAILABLE
-    assert "SDK stderr:" in result.error_message
-    assert "unsupported --thinking disabled" in result.error_message
-    assert "secret_token" not in result.error_message
     assert envelopes[-1].sdk_event["type"] == "runtime_error"
+    assert envelopes[-1].sdk_event["code"] == RuntimeErrorCode.SDK_UNAVAILABLE
+    assert "SDK stderr:" in envelopes[-1].sdk_event["message"]
+    assert "unsupported --thinking disabled" in envelopes[-1].sdk_event["message"]
+    assert "secret_token" not in envelopes[-1].sdk_event["message"]
 
 
 def test_sdk_message_serializer_preserves_standard_content_block_semantics() -> None:

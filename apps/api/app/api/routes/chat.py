@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 from collections.abc import AsyncIterator
 from typing import Annotated
@@ -8,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
-from app.api.dependencies import ServicesDep
+from app.api.dependencies import ServicesDep, UserId
 from app.application.chat_service import ChatApplicationService, chat_application_service
 from app.domain.chat_sessions.services import ChatSessionAccessError
 from app.schemas.contracts.agent_runtime import (
@@ -46,13 +45,22 @@ async def post_chat_message(
 async def stream_chat_session(
     chat_session_id: str,
     service: ChatServiceDep,
+    services: ServicesDep,
+    user_id: UserId,
     after: StreamAfterQuery = 0,
 ) -> StreamingResponse:
-    detail = service.get_session_detail(chat_session_id)
-    if detail is None:
-        raise HTTPException(status_code=404, detail="chat session not found")
+    try:
+        detail = await service.get_session_detail(
+            chat_session_id,
+            services.chat_sessions,
+            user_id=user_id,
+        )
+        if detail is None:
+            raise HTTPException(status_code=404, detail="chat session not found")
+    except ChatSessionAccessError:
+        raise HTTPException(status_code=403, detail="chat session access denied") from None
     return StreamingResponse(
-        _sse_events(service, chat_session_id, after),
+        _sse_events(service, chat_session_id, services, user_id, after),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache"},
     )
@@ -64,7 +72,7 @@ async def cancel_chat_session(
     request: CancelSessionRequest,
     service: ChatServiceDep,
 ) -> CancelSessionResponse:
-    cancelled = await service.cancel_session_turn(chat_session_id, request.reason)
+    cancelled = await service.cancel_session(chat_session_id, request.reason)
     if not cancelled:
         raise HTTPException(status_code=404, detail="chat session not found")
     return CancelSessionResponse(chat_session_id=chat_session_id, cancelled=True)
@@ -74,38 +82,38 @@ async def cancel_chat_session(
 async def get_chat_session(
     chat_session_id: str,
     service: ChatServiceDep,
+    services: ServicesDep,
+    user_id: UserId,
 ) -> ChatSessionDetail:
-    detail = service.get_session_detail(chat_session_id)
-    if detail is None:
-        raise HTTPException(status_code=404, detail="chat session not found")
+    try:
+        detail = await service.get_session_detail(
+            chat_session_id,
+            services.chat_sessions,
+            user_id=user_id,
+        )
+        if detail is None:
+            raise HTTPException(status_code=404, detail="chat session not found")
+    except ChatSessionAccessError:
+        raise HTTPException(status_code=403, detail="chat session access denied") from None
     return detail
 
 
 async def _sse_events(
     service: ChatApplicationService,
     chat_session_id: str,
+    services: ServicesDep,
+    user_id: str,
     after: int,
 ) -> AsyncIterator[str]:
-    last_sequence = after
-    idle_ticks = 0
-    while idle_ticks < 600:
-        envelopes = service.stream_relay.list_envelopes(chat_session_id, after=last_sequence)
-        if not envelopes:
-            if service.is_turn_running(chat_session_id):
-                idle_ticks = 0
-                yield ": keepalive\n\n"
-                await asyncio.sleep(0.5)
-                continue
-            idle_ticks += 1
-            await asyncio.sleep(0.05)
-            continue
-
-        idle_ticks = 0
-        for envelope in envelopes:
-            last_sequence = envelope.sequence
-            payload = envelope.model_dump(mode="json")
-            yield f"event: sdk\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
-            if envelope.sdk_event.get("type") in {"result_message", "runtime_error", "cancelled"}:
-                yield "event: done\ndata: {}\n\n"
-                return
+    del after
+    async for envelope in service.stream_chat_session(
+        chat_session_id,
+        services.chat_sessions,
+        user_id=user_id,
+    ):
+        payload = envelope.model_dump(mode="json")
+        yield f"event: sdk\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+        if envelope.sdk_event.get("type") in {"result_message", "runtime_error", "cancelled"}:
+            yield "event: done\ndata: {}\n\n"
+            return
     yield "event: done\ndata: {}\n\n"

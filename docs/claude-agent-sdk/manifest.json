@@ -1,0 +1,248 @@
+{
+  "source_index": "https://code.claude.com/docs/llms.txt",
+  "source_section": "https://code.claude.com/docs/en/agent-sdk/",
+  "fetched_at": "2026-07-26T06:00:55.619561Z",
+  "page_count": 30,
+  "pages": [
+    {
+      "title": "How the agent loop works",
+      "url": "https://code.claude.com/docs/en/agent-sdk/agent-loop.md",
+      "slug": "agent-loop",
+      "description": "Understand the message lifecycle, tool execution, context window, and architecture that power your SDK agents.",
+      "file": "agent-loop.md",
+      "bytes": 43962
+    },
+    {
+      "title": "Use Claude Code features in the SDK",
+      "url": "https://code.claude.com/docs/en/agent-sdk/claude-code-features.md",
+      "slug": "claude-code-features",
+      "description": "Load project instructions, skills, hooks, and other Claude Code features into your SDK agents.",
+      "file": "claude-code-features.md",
+      "bytes": 26237
+    },
+    {
+      "title": "Track cost and usage",
+      "url": "https://code.claude.com/docs/en/agent-sdk/cost-tracking.md",
+      "slug": "cost-tracking",
+      "description": "Learn how to track token usage, estimate costs, and configure prompt caching with the Claude Agent SDK.",
+      "file": "cost-tracking.md",
+      "bytes": 17979
+    },
+    {
+      "title": "Give Claude custom tools",
+      "url": "https://code.claude.com/docs/en/agent-sdk/custom-tools.md",
+      "slug": "custom-tools",
+      "description": "Define custom tools with the Claude Agent SDK's in-process MCP server so Claude can call your functions, hit your APIs, and perform domain-specific operations.",
+      "file": "custom-tools.md",
+      "bytes": 41400
+    },
+    {
+      "title": "Rewind file changes with checkpointing",
+      "url": "https://code.claude.com/docs/en/agent-sdk/file-checkpointing.md",
+      "slug": "file-checkpointing",
+      "description": "Track file changes during agent sessions and restore files to any previous state",
+      "file": "file-checkpointing.md",
+      "bytes": 32980
+    },
+    {
+      "title": "Intercept and control agent behavior with hooks",
+      "url": "https://code.claude.com/docs/en/agent-sdk/hooks.md",
+      "slug": "hooks",
+      "description": "Intercept and customize agent behavior at key execution points with hooks",
+      "file": "hooks.md",
+      "bytes": 49832
+    },
+    {
+      "title": "Hosting the Agent SDK",
+      "url": "https://code.claude.com/docs/en/agent-sdk/hosting.md",
+      "slug": "hosting",
+      "description": "Deploy the Agent SDK in production: subprocess architecture, session persistence, scaling, observability, and multi-tenant isolation for Docker, Kubernetes, and sandbox providers.",
+      "file": "hosting.md",
+      "bytes": 23109
+    },
+    {
+      "title": "Connect to external tools with MCP",
+      "url": "https://code.claude.com/docs/en/agent-sdk/mcp.md",
+      "slug": "mcp",
+      "description": "Configure MCP servers to extend your agent with external tools. Covers transport types, tool search for large tool sets, authentication, and error handling.",
+      "file": "mcp.md",
+      "bytes": 32929
+    },
+    {
+      "title": "Migrate to Claude Agent SDK",
+      "url": "https://code.claude.com/docs/en/agent-sdk/migration-guide.md",
+      "slug": "migration-guide",
+      "description": "Guide for migrating the Claude Code TypeScript and Python SDKs to the Claude Agent SDK",
+      "file": "migration-guide.md",
+      "bytes": 9753
+    },
+    {
+      "title": "Modifying system prompts",
+      "url": "https://code.claude.com/docs/en/agent-sdk/modifying-system-prompts.md",
+      "slug": "modifying-system-prompts",
+      "description": "Choose between the `claude_code` preset and a custom system prompt, and customize behavior with CLAUDE.md, output styles, append, or a fully custom prompt.",
+      "file": "modifying-system-prompts.md",
+      "bytes": 24079
+    },
+    {
+      "title": "Observability with OpenTelemetry",
+      "url": "https://code.claude.com/docs/en/agent-sdk/observability.md",
+      "slug": "observability",
+      "description": "Export traces, metrics, and events from the Agent SDK to your observability backend using OpenTelemetry.",
+      "file": "observability.md",
+      "bytes": 19215
+    },
+    {
+      "title": "Agent SDK overview",
+      "url": "https://code.claude.com/docs/en/agent-sdk/overview.md",
+      "slug": "overview",
+      "description": "Build production AI agents with Claude Code as a library",
+      "file": "overview.md",
+      "bytes": 29648
+    },
+    {
+      "title": "Configure permissions",
+      "url": "https://code.claude.com/docs/en/agent-sdk/permissions.md",
+      "slug": "permissions",
+      "description": "Control how your agent uses tools with permission modes, hooks, and declarative allow/deny rules.",
+      "file": "permissions.md",
+      "bytes": 20718
+    },
+    {
+      "title": "Plugins in the SDK",
+      "url": "https://code.claude.com/docs/en/agent-sdk/plugins.md",
+      "slug": "plugins",
+      "description": "Load custom plugins to extend Claude Code with skills, agents, hooks, and MCP servers through the Agent SDK",
+      "file": "plugins.md",
+      "bytes": 12418
+    },
+    {
+      "title": "Agent SDK reference - Python",
+      "url": "https://code.claude.com/docs/en/agent-sdk/python.md",
+      "slug": "python",
+      "description": "Complete API reference for the Python Agent SDK, including all functions, types, and classes.",
+      "file": "python.md",
+      "bytes": 190877
+    },
+    {
+      "title": "Quickstart",
+      "url": "https://code.claude.com/docs/en/agent-sdk/quickstart.md",
+      "slug": "quickstart",
+      "description": "Get started with the Python or TypeScript Agent SDK to build AI agents that work autonomously",
+      "file": "quickstart.md",
+      "bytes": 17955
+    },
+    {
+      "title": "Securely deploying AI agents",
+      "url": "https://code.claude.com/docs/en/agent-sdk/secure-deployment.md",
+      "slug": "secure-deployment",
+      "description": "A guide to securing Claude Code and Agent SDK deployments with isolation, credential management, and network controls",
+      "file": "secure-deployment.md",
+      "bytes": 24631
+    },
+    {
+      "title": "Persist sessions to external storage",
+      "url": "https://code.claude.com/docs/en/agent-sdk/session-storage.md",
+      "slug": "session-storage",
+      "description": "Mirror session transcripts to S3, Redis, or your own backend so any host can resume them.",
+      "file": "session-storage.md",
+      "bytes": 19075
+    },
+    {
+      "title": "Work with sessions",
+      "url": "https://code.claude.com/docs/en/agent-sdk/sessions.md",
+      "slug": "sessions",
+      "description": "How sessions persist agent conversation history, and when to use continue, resume, and fork to return to a prior run.",
+      "file": "sessions.md",
+      "bytes": 21631
+    },
+    {
+      "title": "Agent Skills in the SDK",
+      "url": "https://code.claude.com/docs/en/agent-sdk/skills.md",
+      "slug": "skills",
+      "description": "Extend Claude with specialized capabilities using Agent Skills in the Claude Agent SDK",
+      "file": "skills.md",
+      "bytes": 12663
+    },
+    {
+      "title": "Slash Commands in the SDK",
+      "url": "https://code.claude.com/docs/en/agent-sdk/slash-commands.md",
+      "slug": "slash-commands",
+      "description": "Learn how to use slash commands to control Claude Code sessions through the SDK",
+      "file": "slash-commands.md",
+      "bytes": 20489
+    },
+    {
+      "title": "Stream responses in real-time",
+      "url": "https://code.claude.com/docs/en/agent-sdk/streaming-output.md",
+      "slug": "streaming-output",
+      "description": "Get real-time responses from the Agent SDK as text and tool calls stream in",
+      "file": "streaming-output.md",
+      "bytes": 15737
+    },
+    {
+      "title": "Streaming Input",
+      "url": "https://code.claude.com/docs/en/agent-sdk/streaming-vs-single-mode.md",
+      "slug": "streaming-vs-single-mode",
+      "description": "Understanding the two input modes for Claude Agent SDK and when to use each",
+      "file": "streaming-vs-single-mode.md",
+      "bytes": 10694
+    },
+    {
+      "title": "Get structured output from agents",
+      "url": "https://code.claude.com/docs/en/agent-sdk/structured-outputs.md",
+      "slug": "structured-outputs",
+      "description": "Return validated JSON from agent workflows using JSON Schema, Zod, or Pydantic. Get type-safe, structured data after multi-turn tool use.",
+      "file": "structured-outputs.md",
+      "bytes": 21449
+    },
+    {
+      "title": "Subagents in the SDK",
+      "url": "https://code.claude.com/docs/en/agent-sdk/subagents.md",
+      "slug": "subagents",
+      "description": "Define and invoke subagents to isolate context, run tasks in parallel, and apply specialized instructions in your Claude Agent SDK applications.",
+      "file": "subagents.md",
+      "bytes": 38716
+    },
+    {
+      "title": "Todo Lists",
+      "url": "https://code.claude.com/docs/en/agent-sdk/todo-tracking.md",
+      "slug": "todo-tracking",
+      "description": "Track and display todos using the Claude Agent SDK for organized task management",
+      "file": "todo-tracking.md",
+      "bytes": 15942
+    },
+    {
+      "title": "Scale to many tools with tool search",
+      "url": "https://code.claude.com/docs/en/agent-sdk/tool-search.md",
+      "slug": "tool-search",
+      "description": "Scale your agent to thousands of tools by discovering and loading only what's needed, on demand.",
+      "file": "tool-search.md",
+      "bytes": 10988
+    },
+    {
+      "title": "Agent SDK reference - TypeScript",
+      "url": "https://code.claude.com/docs/en/agent-sdk/typescript.md",
+      "slug": "typescript",
+      "description": "Complete API reference for the TypeScript Agent SDK, including all functions, types, and interfaces.",
+      "file": "typescript.md",
+      "bytes": 218757
+    },
+    {
+      "title": "TypeScript SDK V2 session API (removed)",
+      "url": "https://code.claude.com/docs/en/agent-sdk/typescript-v2-preview.md",
+      "slug": "typescript-v2-preview",
+      "description": "Reference for the removed V2 TypeScript Agent SDK session API, with session-based send/stream patterns for multi-turn conversations.",
+      "file": "typescript-v2-preview.md",
+      "bytes": 12050
+    },
+    {
+      "title": "Handle approvals and user input",
+      "url": "https://code.claude.com/docs/en/agent-sdk/user-input.md",
+      "slug": "user-input",
+      "description": "Surface Claude's approval requests and clarifying questions to users, then return their decisions to the SDK.",
+      "file": "user-input.md",
+      "bytes": 39747
+    }
+  ]
+}
