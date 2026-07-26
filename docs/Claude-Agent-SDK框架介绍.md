@@ -23,14 +23,14 @@
 |---|---|---|
 | Sessions | SDK session 支持 resume，并可通过 SDK 读取历史 messages | ChatSession 只保存 `sdk_session_id` 和产品元数据；历史对话从 SDK session 读取 |
 | Session storage | SDK 支持外部 SessionStore，用于把 transcript 持久化到共享存储 | 生产环境优先配置 SDK SessionStore；M1 不再复制一份 SDK message 表 |
-| Agent Skills in the SDK | Skills 是 `.claude/skills/.../SKILL.md` 文件系统能力，由 SDK 发现和加载；`skills` option 只做可见性过滤 | M2 只配置 `skills`、`setting_sources`、`cwd`，不自建 skill loader，不手动拼接技能内容 |
+| Agent Skills in the SDK | Skills 是文件系统能力，由 SDK 发现和加载；`skills` option 只做可见性过滤 | M2 通过本地 plugin 注入系统级 skills，不把系统 skill 复制到用户项目 |
 | Streaming output | 开启 `include_partial_messages=True` 后会收到 `StreamEvent`；完整消息仍会以 `AssistantMessage`、`ResultMessage` 形式到达 | 前端实时输出用 `StreamEvent`；历史回放和资产定位仍使用完整 SDK messages |
 | Python SDK reference | Python 类型包含 `StreamEvent`、`AssistantMessage`、`ResultMessage` 等 | M2 的 stream relay 应透传 SDK 原生类型，不定义平台事件协议 |
 
 实现备注：
 
 1. `skills` 是 SDK 原生 option。未指定时按 SDK 默认发现；指定列表时只控制哪些已发现 skills 可用。
-2. Skills 通过 `setting_sources` 和 `cwd` 影响发现范围。生产环境应显式设置，避免加载不可控的本机配置。
+2. Chat-Quant 系统级 skills 放在 `plugin/skills`，通过 SDK `plugins=[{"type": "local", "path": ".../plugin"}]` 注入所有用户项目。
 3. `include_partial_messages=True` 只影响当前 turn 的实时 UI；它产生的 `StreamEvent` 是 raw streaming event，不应被保存成业务消息表。
 4. SessionStore 是 SDK transcript 的持久层，条目按 SDK opaque JSON 保存。业务侧只保存 AssetLink 与 SDK session/message/tool_use 的引用。
 5. Bash 内部 `chatq ...` CLI 是 command policy 管控的运行能力，不是 Chat/Agent API。
@@ -43,7 +43,7 @@
 |---|---|---|
 | Agent loop | SDK 负责多轮推理、工具调用、工具结果回填和最终结果生成 | 系统不实现自己的 `while tool_use` 循环 |
 | 内置工具 | `Read`、`Write`、`Edit`、`Bash`、`Glob`、`Grep`、`WebSearch`、`WebFetch` 等 | 本项目首期使用 SDK 自带 `Bash` 调用 `chatq ...` CLI；其他内置工具按最小权限开放 |
-| Skills | SDK 原生支持 `.claude/skills` 等 Claude Code skill 机制 | M2 只选择和配置允许使用的 SDK skills，由 SDK 原生机制加载 |
+| Skills | SDK 原生支持 skills 和 plugin 机制 | M2 只选择和配置允许使用的 plugin skills，由 SDK 原生机制加载 |
 | 扩展工具机制 | SDK 另有扩展工具能力 | 本项目首期不采用，避免新增一套工具注册与部署面；平台能力统一走 CLI |
 | 权限控制 | `allowed_tools` 预批准，`disallowed_tools` 移除或阻断工具，`permission_mode` 控制未命中规则时如何处理 | 必须同时使用 availability、allow、deny、hook，不能误把 `allowed_tools` 当唯一安全边界 |
 | Hooks | `PreToolUse`、`PostToolUse`、`Stop`、`SessionStart`、`SessionEnd`、`UserPromptSubmit` 等 | 用于审计、阻断越权、注入上下文、脱敏日志 |
@@ -51,7 +51,7 @@
 | Session messages | Python 提供 `get_session_messages()`，TypeScript 提供 `getSessionMessages()` | 历史会话详情不需要再保存一份 SDKMessage/ContentBlock/Result 表 |
 | SessionStore | SDK 可把 transcript 镜像到 S3、Redis、Postgres 或自定义后端 | 多机部署用 SDK SessionStore 作为 transcript 持久层，而不是 M1 自定义消息表 |
 | 流式消息 | 可处理 `AssistantMessage`、`ResultMessage`，开启 partial streaming 时获得增量消息 | 前端对话流和工具进度按 SDK message/content block 语义渲染 |
-| Claude Code 特性 | 可加载 `CLAUDE.md`、`.claude/skills`、hooks、plugins 等 | 生产环境建议显式设置 `setting_sources`，避免加载不可控本机配置 |
+| Claude Code 特性 | 可加载 `CLAUDE.md`、项目 skills、hooks、plugins 等 | 系统级 skills 通过 `plugin/skills` 统一注入，用户项目仍作为 SDK `cwd` |
 
 ## 3. `query()` 与 `ClaudeSDKClient`
 

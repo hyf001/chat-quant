@@ -1,0 +1,1202 @@
+# Wiki Index
+
+> AKShare 数据字典 wiki 内容目录。每个页面都来自官方数据字典快照，并保留可追溯来源。
+> Last updated: 2026-07-26 | Total pages: 1098
+
+## Concepts
+
+- [[article-article|AKShare 波动率数据]] - 数据分类，包含 4 个接口。
+- [[bank-bank|AKShare 银行数据]] - 数据分类，包含 1 个接口。
+- [[bond-bond|AKShare 债券数据]] - 数据分类，包含 43 个接口。
+- [[currency-currency|AKShare 货币数据]] - 数据分类，包含 5 个接口。
+- [[dc-dc|AKShare 加密货币数据]] - 数据分类，包含 3 个接口。
+- [[energy-energy|AKShare 能源数据]] - 数据分类，包含 8 个接口。
+- [[event-event|AKShare 迁徙数据]] - 数据分类，包含 2 个接口。
+- [[fund-fund-private|AKShare 私募基金数据]] - 数据分类，包含 14 个接口。
+- [[fund-fund-public|AKShare 公募基金数据]] - 数据分类，包含 76 个接口。
+- [[futures-futures|AKShare 期货数据]] - 数据分类，包含 54 个接口。
+- [[fx-fx|AKShare 外汇数据]] - 数据分类，包含 11 个接口。
+- [[hf-hf|AKShare 高频数据]] - 数据分类，包含 1 个接口。
+- [[index-index|AKShare 指数数据]] - 数据分类，包含 87 个接口。
+- [[interest-rate-interest-rate|AKShare 利率数据]] - 数据分类，包含 14 个接口。
+- [[macro-macro|AKShare 宏观数据]] - 数据分类，包含 215 个接口。
+- [[nlp-nlp|AKShare 自然语言处理]] - 数据分类，包含 2 个接口。
+- [[option-option|AKShare 期权数据]] - 数据分类，包含 42 个接口。
+- [[others-others|AKShare 另类数据]] - 数据分类，包含 35 个接口。
+- [[qdii-qdii|AKShare QDII 数据]] - 数据分类，包含 3 个接口。
+- [[qhkc-broker|席位]] - 数据分类，包含 13 个接口。
+- [[qhkc-commodity|商品]] - 数据分类，包含 19 个接口。
+- [[qhkc-fund|资金]] - 数据分类，包含 5 个接口。
+- [[qhkc-fundamental|基本面]] - 数据分类，包含 12 个接口。
+- [[qhkc-index|AKShare 奇货可查]] - 数据分类，包含 0 个接口。
+- [[qhkc-index-data|指数]] - 数据分类，包含 8 个接口。
+- [[qhkc-tools|工具]] - 数据分类，包含 2 个接口。
+- [[spot-spot|AKShare 现货数据]] - 数据分类，包含 13 个接口。
+- [[stock-stock|AKShare 股票数据]] - 数据分类，包含 375 个接口。
+- [[tool-tool|AKShare 工具箱]] - 数据分类，包含 1 个接口。
+
+## Entities
+
+### AKShare 波动率数据
+
+- [[article-epu-index|article_epu_index]] - 国家或地区的经济政策不确定性(EPU)数据
+- [[article-ff-crr|article_ff_crr]] - 获取 Current Research Returns 多因子数据; 更多信息请访问目标地址
+- [[article-oman-rv|article_oman_rv]] - 获取 Oxford-Man 已实现波动率数据
+- [[article-rlab-rv|article_rlab_rv]] - 获取 Risk-Lab 已实现波动率数据
+
+### AKShare 银行数据
+
+- [[bank-fjcf-table-detail|bank_fjcf_table_detail]] - 首页-政务信息-行政处罚-银保监分局本级-XXXX行政处罚信息公开表, 是信息公开表不是处罚决定书书
+
+### AKShare 债券数据
+
+- [[bond-available-index-cbond|bond_available_index_cbond]] - 中国债券信息网-中债指数-中债指数族系当中, 非指定期限部分的可选指数
+- [[bond-buy-back-hist-em|bond_buy_back_hist_em]] - 东方财富网-行情中心-债券市场-质押式回购-历史数据
+- [[bond-cash-summary-sse|bond_cash_summary_sse]] - 上登债券信息网-市场数据-市场统计-市场概览-债券现券市场概览
+- [[bond-cb-adj-logs-jsl|bond_cb_adj_logs_jsl]] - 集思录-单个可转债的转股价格-调整记录
+- [[bond-cb-index-jsl|bond_cb_index_jsl]] - 可转债-集思录可转债等权指数
+- [[bond-cb-jsl|bond_cb_jsl]] - 集思录可转债实时数据，包含行情数据（涨跌幅，成交量和换手率等）及可转债基本信息（转股价，溢价率和到期收益率等）
+- [[bond-cb-profile-sina|bond_cb_profile_sina]] - 新浪财经-债券-可转债-详情资料
+- [[bond-cb-redeem-jsl|bond_cb_redeem_jsl]] - 集思录可转债-强赎
+- [[bond-cb-summary-sina|bond_cb_summary_sina]] - 新浪财经-债券-可转债-债券概况
+- [[bond-china-close-return|bond_china_close_return]] - 收盘收益率曲线历史数据, 该接口只能获取近 3 个月的数据，且每次获取的数据不超过 1 个月
+- [[bond-china-yield|bond_china_yield]] - 中国债券信息网-国债及其他债券收益率曲线
+- [[bond-composite-index-cbond|bond_composite_index_cbond]] - 中国债券信息网-中债指数-中债指数族系-分类指数-按待偿期限
+- [[bond-corporate-issue-cninfo|bond_corporate_issue_cninfo]] - 巨潮资讯-数据中心-专题统计-债券报表-债券发行-企业债发行
+- [[bond-cov-comparison|bond_cov_comparison]] - 东方财富网-行情中心-债券市场-可转债比价表
+- [[bond-cov-issue-cninfo|bond_cov_issue_cninfo]] - 巨潮资讯-数据中心-专题统计-债券报表-债券发行-可转债发行
+- [[bond-cov-stock-issue-cninfo|bond_cov_stock_issue_cninfo]] - 巨潮资讯-数据中心-专题统计-债券报表-债券发行-可转债转股
+- [[bond-deal-summary-sse|bond_deal_summary_sse]] - 上登债券信息网-市场数据-市场统计-市场概览-债券成交概览
+- [[bond-debt-nafmii|bond_debt_nafmii]] - 中国银行间市场交易商协会-非金融企业债务融资工具注册信息系统
+- [[bond-gb-us-sina|bond_gb_us_sina]] - 新浪财经-债券-美国国债收益率行情数据
+- [[bond-gb-zh-sina|bond_gb_zh_sina]] - 新浪财经-债券-中国国债收益率行情数据
+- [[bond-index-general-cbond|bond_index_general_cbond]] - 中国债券信息网-中债指数-中债指数族系
+- [[bond-info-cm|bond_info_cm]] - 中国外汇交易中心暨全国银行间同业拆借中心-数据-债券信息-信息查询
+- [[bond-info-detail-cm|bond_info_detail_cm]] - 中国外汇交易中心暨全国银行间同业拆借中心-数据-债券信息-信息查询-债券详情
+- [[bond-local-government-issue-cninfo|bond_local_government_issue_cninfo]] - 巨潮资讯-数据中心-专题统计-债券报表-债券发行-地方债发行
+- [[bond-new-composite-index-cbond|bond_new_composite_index_cbond]] - 中国债券信息网-中债指数-中债指数族系-总指数-综合类指数-中债-新综合指数
+- [[bond-sh-buy-back-em|bond_sh_buy_back_em]] - 东方财富网-行情中心-债券市场-上证质押式回购
+- [[bond-spot-deal|bond_spot_deal]] - 中国外汇交易中心暨全国银行间同业拆借中心-市场数据-市场行情-债券市场行情-现券市场成交行情
+- [[bond-spot-quote|bond_spot_quote]] - 中国外汇交易中心暨全国银行间同业拆借中心-市场数据-市场行情-债券市场行情-现券市场做市报价
+- [[bond-sz-buy-back-em|bond_sz_buy_back_em]] - 东方财富网-行情中心-债券市场-深证质押式回购
+- [[bond-treasure-issue-cninfo|bond_treasure_issue_cninfo]] - 巨潮资讯-数据中心-专题统计-债券报表-债券发行-国债发行
+- [[bond-treasury-index-cbond|bond_treasury_index_cbond]] - 中国债券信息网-中债指数-中债指数族系-总指数-综合类指数-中债-国债指数
+- [[bond-zh-cov|bond_zh_cov]] - 东方财富网-数据中心-新股数据-可转债数据一览表
+- [[bond-zh-cov-info|bond_zh_cov_info]] - 东方财富网-数据中心-新股数据-可转债详情
+- [[bond-zh-cov-info-ths|bond_zh_cov_info_ths]] - 同花顺-数据中心-可转债
+- [[bond-zh-cov-value-analysis-bond-bond|bond_zh_cov_value_analysis]] - 东方财富网-行情中心-新股数据-可转债数据-可转债价值分析
+- [[bond-zh-cov-value-analysis-bond-bond-2|bond_zh_cov_value_analysis]] - 东方财富网-行情中心-新股数据-可转债数据-可转债溢价率分析
+- [[bond-zh-hs-cov-daily|bond_zh_hs_cov_daily]] - 新浪财经-历史行情数据，日频率更新, 新上的标的需要次日更新数据
+- [[bond-zh-hs-cov-min|bond_zh_hs_cov_min]] - 东方财富网-可转债-分时行情
+- [[bond-zh-hs-cov-pre-min|bond_zh_hs_cov_pre_min]] - 东方财富网-可转债-分时行情-盘前分时
+- [[bond-zh-hs-cov-spot|bond_zh_hs_cov_spot]] - 新浪财经-沪深可转债数据
+- [[bond-zh-hs-daily|bond_zh_hs_daily]] - 新浪财经-债券-沪深债券-历史行情数据, 历史数据按日频率更新
+- [[bond-zh-hs-spot|bond_zh_hs_spot]] - 新浪财经-债券-沪深债券-实时行情数据
+- [[bond-zh-us-rate|bond_zh_us_rate]] - 东方财富网-数据中心-经济数据-中美国债收益率历史数据
+
+### AKShare 货币数据
+
+- [[currency-convert|currency_convert]] - 指定货币对指定货币数量的转换后价格
+- [[currency-currencies|currency_currencies]] - 所有货币的基础信息
+- [[currency-history|currency_history]] - 货币报价历史数据
+- [[currency-latest|currency_latest]] - 货币报价最新数据
+- [[currency-time-series|currency_time_series]] - 货币报价时间序列数据
+
+### AKShare 加密货币数据
+
+- [[crypto-bitcoin-cme|crypto_bitcoin_cme]] - 芝加哥商业交易所-比特币成交量报告
+- [[crypto-bitcoin-hold-report|crypto_bitcoin_hold_report]] - 比特币持仓报告
+- [[crypto-js-spot|crypto_js_spot]] - 加密货币实时行情
+
+### AKShare 能源数据
+
+- [[energy-carbon-bj|energy_carbon_bj]] - 北京市碳排放权电子交易平台-北京市碳排放权公开交易行情
+- [[energy-carbon-domestic|energy_carbon_domestic]] - 碳交易网-行情信息
+- [[energy-carbon-eu|energy_carbon_eu]] - 深圳碳排放交易所-国际碳情
+- [[energy-carbon-gz|energy_carbon_gz]] - 广州碳排放权交易中心-行情信息
+- [[energy-carbon-hb|energy_carbon_hb]] - 湖北碳排放权交易中心-碳排放权交易数据
+- [[energy-carbon-sz|energy_carbon_sz]] - 深圳碳排放交易所-国内碳情
+- [[energy-oil-detail|energy_oil_detail]] - 东方财富-数据中心-中国油价-地区油价
+- [[energy-oil-hist|energy_oil_hist]] - 东方财富-数据中心-中国油价-汽柴油历史调价信息
+
+### AKShare 迁徙数据
+
+- [[migration-area-baidu|migration_area_baidu]] - 百度-百度地图慧眼-百度迁徙-迁入/迁出地数据接口
+- [[migration-scale-baidu|migration_scale_baidu]] - 百度-百度地图慧眼-百度迁徙-迁徙规模
+
+### AKShare 私募基金数据
+
+- [[amac-aoin-info|amac_aoin_info]] - 中国证券投资基金业协会-信息公示-基金产品公示-证券公司直投基金
+- [[amac-fund-abs|amac_fund_abs]] - 中国证券投资基金业协会-信息公示-产品公示-资产支持专项计划
+- [[amac-fund-account-info|amac_fund_account_info]] - 中国证券投资基金业协会-信息公示-基金产品公示-基金公司及子公司集合资管产品公示
+- [[amac-fund-info|amac_fund_info]] - 中国证券投资基金业协会-信息公示-基金产品公示-私募基金管理人基金产品
+- [[amac-fund-sub-info|amac_fund_sub_info]] - 中国证券投资基金业协会-信息公示-基金产品公示-证券公司私募投资基金
+- [[amac-futures-info|amac_futures_info]] - 中国证券投资基金业协会-信息公示-基金产品公示-期货公司集合资管产品公示
+- [[amac-manager-cancelled-info|amac_manager_cancelled_info]] - 中国证券投资基金业协会-信息公示-诚信信息-已注销私募基金管理人名单
+- [[amac-manager-classify-info|amac_manager_classify_info]] - 中国证券投资基金业协会-信息公示-私募基金管理人公示-私募基金管理人分类公示
+- [[amac-manager-info|amac_manager_info]] - 中国证券投资基金业协会-信息公示-私募基金管理人公示-私募基金管理人综合查询
+- [[amac-member-info|amac_member_info]] - 中国证券投资基金业协会-信息公示-会员信息-会员机构综合查询
+- [[amac-member-sub-info|amac_member_sub_info]] - 中国证券投资基金业协会-信息公示-私募基金管理人公示-证券公司私募基金子公司管理人信息公示
+- [[amac-person-bond-org-list|amac_person_bond_org_list]] - 中国证券投资基金业协会-信息公示-从业人员信息-债券投资交易相关人员公示
+- [[amac-person-fund-org-list|amac_person_fund_org_list]] - 中国证券投资基金业协会-信息公示-从业人员信息-基金从业人员资格注册信息
+- [[amac-securities-info|amac_securities_info]] - 中国证券投资基金业协会-信息公示-基金产品公示-证券公司集合资管产品公示
+
+### AKShare 公募基金数据
+
+- [[fund-announcement-dividend-em|fund_announcement_dividend_em]] - 东方财富网站-天天基金网-基金档案-基金公告-分红配送
+- [[fund-announcement-personnel-em|fund_announcement_personnel_em]] - 东方财富网站-天天基金网-基金档案-基金公告-人事调整
+- [[fund-announcement-report-em|fund_announcement_report_em]] - 东方财富网站-天天基金网-基金档案-基金公告-定期报告
+- [[fund-aum-em|fund_aum_em]] - 天天基金网-基金数据-基金规模
+- [[fund-aum-hist-em|fund_aum_hist_em]] - 天天基金网-基金数据-基金公司历年管理规模排行列表
+- [[fund-aum-trend-em|fund_aum_trend_em]] - 天天基金网-基金数据-市场全部基金规模走势
+- [[fund-balance-position-lg|fund_balance_position_lg]] - 乐咕乐股-基金仓位-平衡混合型基金仓位
+- [[fund-cf-em|fund_cf_em]] - 天天基金网-基金数据-分红送配-基金拆分
+- [[fund-etf-category-sina|fund_etf_category_sina]] - 新浪财经-基金列表及行情数据
+- [[fund-etf-category-ths|fund_etf_category_ths]] - 同花顺理财-基金数据-每日净值-实时行情
+- [[fund-etf-dividend-sina|fund_etf_dividend_sina]] - 新浪财经-基金-ETF 基金-累计分红
+- [[fund-etf-fund-daily-em|fund_etf_fund_daily_em]] - 东方财富网站-天天基金网-基金数据-场内交易基金-实时数据, 此接口数据每个交易日 **16:00～23:00**
+- [[fund-etf-fund-info-em|fund_etf_fund_info_em]] - 东方财富网站-天天基金网-基金数据-场内交易基金-历史净值数据
+- [[fund-etf-hist-em|fund_etf_hist_em]] - 东方财富-ETF 行情; 历史数据按日频率更新, 当日收盘价请在收盘后获取
+- [[fund-etf-hist-min-em|fund_etf_hist_min_em]] - 东方财富-ETF 分时行情; 该接口只能获取近期的分时数据，注意时间周期的设置
+- [[fund-etf-hist-sina|fund_etf_hist_sina]] - 新浪财经-基金行情的日频率行情数据
+- [[fund-etf-scale-sse|fund_etf_scale_sse]] - 上海证券交易所-产品-基金产品-ETF产品-ETF产品列表-基金规模
+- [[fund-etf-scale-szse|fund_etf_scale_szse]] - 深圳证券交易所-基金产品-基金列表-ETF基金份额
+- [[fund-etf-spot-em|fund_etf_spot_em]] - 东方财富-ETF 实时行情
+- [[fund-etf-spot-ths|fund_etf_spot_ths]] - 同花顺理财-基金数据-每日净值-ETF-实时行情
+- [[fund-exchange-rank-em|fund_exchange_rank_em]] - 东方财富网-数据中心-场内交易基金排行榜
+- [[fund-fee-em|fund_fee_em]] - 天天基金-基金档案-购买信息
+- [[fund-fh-em|fund_fh_em]] - 天天基金网-基金数据-分红送配-基金分红
+- [[fund-fh-rank-em|fund_fh_rank_em]] - 天天基金网-基金数据-分红送配-基金分红排行
+- [[fund-financial-fund-daily-em|fund_financial_fund_daily_em]] - 东方财富网-天天基金网-基金数据-理财型基金-实时数据, 此接口数据每个交易日 **16:00～23:00** 更新
+- [[fund-financial-fund-info-em|fund_financial_fund_info_em]] - 东方财富网站-天天基金网-基金数据-理财型基金收益-历史净值明细
+- [[fund-graded-fund-daily-em|fund_graded_fund_daily_em]] - 东方财富网-天天基金网-基金数据-分级基金-实时数据, 此接口数据每个交易日 **16:00～23:00**
+- [[fund-graded-fund-info-em|fund_graded_fund_info_em]] - 东方财富网站-天天基金网-基金数据-分级基金-历史数据
+- [[fund-hk-fund-hist-em|fund_hk_fund_hist_em]] - 东方财富网站-天天基金网-基金数据-香港基金-历史净值明细
+- [[fund-hk-rank-em|fund_hk_rank_em]] - 东方财富网-数据中心-基金排行-香港基金排行
+- [[fund-hold-structure-em|fund_hold_structure_em]] - 天天基金网-基金数据-规模份额-持有人结构
+- [[fund-individual-achievement-xq|fund_individual_achievement_xq]] - 雪球基金-基金详情-基金业绩-详情
+- [[fund-individual-analysis-xq|fund_individual_analysis_xq]] - 雪球基金-基金详情-数据分析
+- [[fund-individual-basic-info-xq|fund_individual_basic_info_xq]] - 雪球基金-基金详情
+- [[fund-individual-detail-hold-xq|fund_individual_detail_hold_xq]] - 雪球基金-基金详情-基金持仓-详情
+- [[fund-individual-detail-info-xq|fund_individual_detail_info_xq]] - 雪球基金-基金详情-基金交易规则
+- [[fund-individual-profit-probability-xq|fund_individual_profit_probability_xq]] - 雪球基金-基金详情-盈利概率；历史任意时点买入，持有满X时间，盈利概率，以及平均收益
+- [[fund-info-index-em|fund_info_index_em]] - 东方财富网-天天基金网-基金数据-基金基本信息-指数型
+- [[fund-info-ths|fund_info_ths]] - 同花顺-基金数据-基金基本信息
+- [[fund-lcx-rank-em|fund_lcx_rank_em]] - 东方财富网-数据中心-理财基金排行, 每个交易日17点后更新, 货币基金的单位净值均为 1.0000 元，最新一年期定存利率: 1.50%
+- [[fund-linghuo-position-lg|fund_linghuo_position_lg]] - 乐咕乐股-基金仓位-灵活配置型基金仓位
+- [[fund-lof-hist-em|fund_lof_hist_em]] - 东方财富-LOF 行情; 历史数据按日频率更新, 当日收盘价请在收盘后获取
+- [[fund-lof-hist-min-em|fund_lof_hist_min_em]] - 东方财富-LOF 分时行情; 该接口只能获取近期的分时数据，注意时间周期的设置
+- [[fund-lof-spot-em|fund_lof_spot_em]] - 东方财富-LOF 实时行情
+- [[fund-manager-em|fund_manager_em]] - 天天基金网-基金数据-基金经理大全
+- [[fund-money-fund-daily-em|fund_money_fund_daily_em]] - 东方财富网-天天基金网-基金数据-货币型基金收益, 此接口数据每个交易日 **16:00～23:00**
+- [[fund-money-fund-info-em|fund_money_fund_info_em]] - 东方财富网-天天基金网-基金数据-货币型基金-历史净值
+- [[fund-money-rank-em|fund_money_rank_em]] - 东方财富网-数据中心-货币型基金排行
+- [[fund-name-em|fund_name_em]] - 东方财富网-天天基金网-基金数据-所有基金的基本信息数据
+- [[fund-new-found-em|fund_new_found_em]] - 天天基金网-基金数据-新发基金-新成立基金
+- [[fund-new-found-ths|fund_new_found_ths]] - 天天基金网-基金数据-新发基金-新成立基金
+- [[fund-open-fund-daily-em|fund_open_fund_daily_em]] - 东方财富网-天天基金网-基金数据, 此接口在每个交易日 **16:00-23:00** 更新当日的最新开放式基金净值数据
+- [[fund-open-fund-info-em|fund_open_fund_info_em]] - 东方财富网-天天基金网-基金数据-具体基金信息
+- [[fund-open-fund-rank-em|fund_open_fund_rank_em]] - 东方财富网-数据中心-开放式基金排行
+- [[fund-overview-em|fund_overview_em]] - 天天基金-基金档案-基本概况
+- [[fund-portfolio-bond-hold-em|fund_portfolio_bond_hold_em]] - 天天基金网-基金档案-投资组合-债券持仓
+- [[fund-portfolio-change-em|fund_portfolio_change_em]] - 天天基金网-基金档案-投资组合-重大变动
+- [[fund-portfolio-hold-em|fund_portfolio_hold_em]] - 天天基金网-基金档案-投资组合-基金持仓
+- [[fund-portfolio-industry-allocation-em|fund_portfolio_industry_allocation_em]] - 天天基金网-基金档案-投资组合-行业配置
+- [[fund-purchase-em|fund_purchase_em]] - 东方财富网站-天天基金网-基金数据-基金申购状态
+- [[fund-rating-all|fund_rating_all]] - 天天基金网-基金评级-基金评级总汇
+- [[fund-rating-ja|fund_rating_ja]] - 天天基金网-基金评级-济安金信评级
+- [[fund-rating-sh|fund_rating_sh]] - 天天基金网-基金评级-上海证券评级
+- [[fund-rating-zs|fund_rating_zs]] - 天天基金网-基金评级-招商证券评级
+- [[fund-report-asset-allocation-cninfo|fund_report_asset_allocation_cninfo]] - 巨潮资讯-数据中心-专题统计-基金报表-基金资产配置
+- [[fund-report-industry-allocation-cninfo|fund_report_industry_allocation_cninfo]] - 巨潮资讯-数据中心-专题统计-基金报表-基金行业配置
+- [[fund-report-stock-cninfo|fund_report_stock_cninfo]] - 巨潮资讯-数据中心-专题统计-基金报表-基金重仓股
+- [[fund-scale-change-em|fund_scale_change_em]] - 天天基金网-基金数据-规模份额-规模变动
+- [[fund-scale-close-sina|fund_scale_close_sina]] - 基金数据中心-基金规模-封闭式基金
+- [[fund-scale-daily-szse|fund_scale_daily_szse]] - 深圳证券交易所-基金产品-基金规模-日频数据
+- [[fund-scale-open-sina|fund_scale_open_sina]] - 基金数据中心-基金规模-开放式基金
+- [[fund-scale-structured-sina|fund_scale_structured_sina]] - 基金数据中心-基金规模-分级子基金
+- [[fund-stock-position-lg|fund_stock_position_lg]] - 乐咕乐股-基金仓位-股票型基金仓位
+- [[fund-value-estimation-em|fund_value_estimation_em]] - 东方财富网-数据中心-净值估算
+- [[reits-hist-em|reits_hist_em]] - 东方财富网-行情中心-REITs-沪深 REITs-历史行情
+- [[reits-realtime-em|reits_realtime_em]] - 东方财富网-行情中心-REITs-沪深 REITs-实时行情
+
+### AKShare 期货数据
+
+- [[futures-comex-inventory|futures_comex_inventory]] - 东方财富网-数据中心-期货期权-COMEX 库存数据
+- [[futures-comm-info|futures_comm_info]] - 九期网-期货手续费数据
+- [[futures-comm-js|futures_comm_js]] - 金十财经-期货手续费数据
+- [[futures-contract-detail|futures_contract_detail]] - 新浪财经-期货-期货合约详情数据
+- [[futures-contract-detail-em|futures_contract_detail_em]] - 东方财富-期货-期货合约详情数据
+- [[futures-contract-info-cffex|futures_contract_info_cffex]] - 中国金融期货交易所-数据-交易参数
+- [[futures-contract-info-czce|futures_contract_info_czce]] - 郑州商品交易所-交易数据-参考数据
+- [[futures-contract-info-dce|futures_contract_info_dce]] - 大连商品交易所-数据中心-业务数据-交易参数-合约信息
+- [[futures-contract-info-gfex|futures_contract_info_gfex]] - 广州期货交易所-业务/服务-合约信息
+- [[futures-contract-info-ine|futures_contract_info_ine]] - 上海国际能源交易中心-业务指南-交易参数汇总(期货)
+- [[futures-contract-info-shfe|futures_contract_info_shfe]] - 上海期货交易所-交易所服务-业务数据-交易参数汇总查询
+- [[futures-dce-position-rank|futures_dce_position_rank]] - 大连商品交易所指定交易日的具体合约的持仓排名
+- [[futures-delivery-czce|futures_delivery_czce]] - 郑州商品交易所-交割统计
+- [[futures-delivery-dce|futures_delivery_dce]] - 大连商品交易所-交割统计
+- [[futures-delivery-match-czce|futures_delivery_match_czce]] - 郑州商品交易所-交割配对
+- [[futures-delivery-match-dce|futures_delivery_match_dce]] - 大连商品交易所-交割配对
+- [[futures-delivery-shfe|futures_delivery_shfe]] - 上海期货交易所-交割统计
+- [[futures-fees-info|futures_fees_info]] - openctp 期货交易费用参照表
+- [[futures-foreign-commodity-realtime|futures_foreign_commodity_realtime]] - 新浪财经-外盘商品期货数据
+- [[futures-foreign-detail|futures_foreign_detail]] - 新浪财经-期货外盘期货合约详情
+- [[futures-foreign-hist|futures_foreign_hist]] - 新浪财经-期货外盘历史行情数据
+- [[futures-gfex-position-rank|futures_gfex_position_rank]] - 广州期货交易所-日成交持仓排名
+- [[futures-gfex-warehouse-receipt|futures_gfex_warehouse_receipt]] - 广州期货交易所-行情数据-仓单日报
+- [[futures-global-hist-em|futures_global_hist_em]] - 东方财富网-行情中心-期货市场-国际期货-历史行情数据
+- [[futures-global-spot-em|futures_global_spot_em]] - 东方财富网-行情中心-期货市场-国际期货-实时行情数据
+- [[futures-hist-em|futures_hist_em]] - 东方财富网-期货行情-行情数据；其中 weekly, monthly 获取的成交额和持仓量未经验证
+- [[futures-hog-core|futures_hog_core]] - 玄田数据-核心数据
+- [[futures-hog-cost|futures_hog_cost]] - 玄田数据-成本维度
+- [[futures-hog-supply|futures_hog_supply]] - 玄田数据-供应维度
+- [[futures-hold-pos-sina|futures_hold_pos_sina]] - 新浪财经-期货-成交持仓
+- [[futures-hq-subscribe-exchange-symbol|futures_hq_subscribe_exchange_symbol]] - 新浪财经-外盘商品期货品种代码表数据
+- [[futures-index-ccidx|futures_index_ccidx]] - 中证商品指数
+- [[futures-inventory-99|futures_inventory_99]] - 99 期货网-大宗商品库存数据
+- [[futures-inventory-em|futures_inventory_em]] - 东方财富网-期货数据-库存数据; 近 60 个交易日的期货库存日频率数据
+- [[futures-main-sina|futures_main_sina]] - 新浪财经-期货-主力连续合约历史数据
+- [[futures-news-shmet|futures_news_shmet]] - 上海金属网-快讯
+- [[futures-rule|futures_rule]] - 国泰君安期货-交易日历数据表
+- [[futures-settle|futures_settle]] - 提供各交易所的结算参数数据，包括保证金、手续费、涨跌停板等参数
+- [[futures-settlement-price-sgx|futures_settlement_price_sgx]] - 新加坡交易所-衍生品-历史数据-历史结算价格; 数据于下个工作日新加坡时间下午 2 点起提供
+- [[futures-shfe-warehouse-receipt|futures_shfe_warehouse_receipt]] - 提供上海期货交易所指定交割仓库期货仓单日报
+- [[futures-spot-stock|futures_spot_stock]] - 东方财富网-数据中心-现货与股票
+- [[futures-spot-sys|futures_spot_sys]] - 生意社-商品与期货-现期图
+- [[futures-stock-shfe-js|futures_stock_shfe_js]] - 金十财经-上海期货交易所指定交割仓库库存周报
+- [[futures-to-spot-czce|futures_to_spot_czce]] - 郑州商品交易所-期转现统计数据
+- [[futures-to-spot-dce|futures_to_spot_dce]] - 大连商品交易所-期转现统计数据
+- [[futures-to-spot-shfe|futures_to_spot_shfe]] - 上海期货交易所-期转现数据
+- [[futures-warehouse-receipt-czce|futures_warehouse_receipt_czce]] - 郑州商品交易所-交易数据-仓单日报
+- [[futures-warehouse-receipt-dce|futures_warehouse_receipt_dce]] - 大连商品交易所-行情数据-统计数据-日统计-仓单日报
+- [[futures-zh-daily-sina|futures_zh_daily_sina]] - 新浪财经-期货-日频数据
+- [[futures-zh-minute-sina|futures_zh_minute_sina]] - 新浪财经-期货-分时数据
+- [[futures-zh-realtime|futures_zh_realtime]] - 新浪财经-期货实时行情数据
+- [[futures-zh-spot|futures_zh_spot]] - 新浪财经-期货页面的实时行情数据
+- [[get-futures-daily|get_futures_daily]] - 提供各交易所各品种的网站的历史行情数据, 其中 20040625, 20070604, 20081226, 20090119 原网页数据缺失
+- [[index-hog-spot-price|index_hog_spot_price]] - 行情宝-生猪市场价格指数
+
+### AKShare 外汇数据
+
+- [[currency-boc-safe|currency_boc_safe]] - 外汇管理局-人民币汇率中间价
+- [[currency-boc-sina|currency_boc_sina]] - 新浪财经-中行人民币牌价历史数据
+- [[currency-pair-map|currency_pair_map]] - 指定币种的所有能够获取到的货币对信息，历史数据可以调用 **ak.currency_history()** 获取
+- [[forex-hist-em|forex_hist_em]] - 东方财富网-行情中心-外汇市场-所有汇率-历史行情数据
+- [[forex-spot-em|forex_spot_em]] - 东方财富网-行情中心-外汇市场-所有汇率-实时行情数据
+- [[fx-c-swap-cm|fx_c_swap_cm]] - 中国外汇交易中心暨全国银行间同业拆借中心-基准-外汇市场-外汇掉期曲线-外汇掉期 C-Swap 定盘曲线
+- [[fx-pair-quote|fx_pair_quote]] - 外币对即期报价
+- [[fx-quote-baidu|fx_quote_baidu]] - 百度股市通-外汇-行情榜单
+- [[fx-spot-quote|fx_spot_quote]] - 人民币外汇即期报价
+- [[fx-swap-quote|fx_swap_quote]] - 人民币外汇远掉报价
+- [[macro-fx-sentiment|macro_fx_sentiment]] - 货币对-投机情绪报告
+
+### AKShare 高频数据
+
+- [[hf-sp-500|hf_sp_500]] - 获取标普 500 指数的分钟数据, 由于数据量比较大, 需要等待, 由于服务器在国外, 建议使用代理访问
+
+### AKShare 指数数据
+
+- [[drewry-wci-index|drewry_wci_index]] - Drewry 集装箱指数的数据
+- [[index-ai-cx|index_ai_cx]] - 财新指数-AI策略指数
+- [[index-all-cni|index_all_cni]] - 国证指数-最近交易日的所有指数的代码和基本信息
+- [[index-analysis-daily-sw|index_analysis_daily_sw]] - 申万宏源研究-指数分析-日报表
+- [[index-analysis-monthly-sw|index_analysis_monthly_sw]] - 申万宏源研究-指数分析-月报表
+- [[index-analysis-weekly-sw|index_analysis_weekly_sw]] - 申万宏源研究-指数分析-周报表
+- [[index-awpr-cx|index_awpr_cx]] - 财新指数-新经济入职工资溢价水平
+- [[index-bei-cx|index_bei_cx]] - 财新指数-基石经济指数
+- [[index-bi-cx|index_bi_cx]] - 财新指数-基础指数
+- [[index-cci-cx|index_cci_cx]] - 财新指数-大宗商品指数
+- [[index-ci-cx|index_ci_cx]] - 财新指数-资本投入指数
+- [[index-component-sw|index_component_sw]] - 申万宏源研究-指数发布-指数详情-成分股
+- [[index-dei-cx|index_dei_cx]] - 财新指数-数字经济指数
+- [[index-detail-cni|index_detail_cni]] - 国证指数-指数样本详情数据；20251125 开始只能获取近期的数据
+- [[index-detail-hist-adjust-cni|index_detail_hist_adjust_cni]] - 国证指数-样本详情-历史调样
+- [[index-detail-hist-cni|index_detail_hist_cni]] - 国证指数-历史样本数据，返回所有历史数据
+- [[index-eri|index_eri]] - 浙江省排污权交易指数的数据
+- [[index-fi-cx|index_fi_cx]] - 财新指数-融合指数
+- [[index-global-hist-em|index_global_hist_em]] - 东方财富网-行情中心-全球指数-历史行情数据
+- [[index-global-hist-sina|index_global_hist_sina]] - 新浪财经-行情中心-环球市场-历史行情
+- [[index-global-spot-em|index_global_spot_em]] - 东方财富网-行情中心-全球指数-实时行情数据
+- [[index-hist-cni|index_hist_cni]] - 国证指数-具体指数的日频率行情数据
+- [[index-hist-fund-sw|index_hist_fund_sw]] - 申万宏源研究-申万指数-指数发布-基金指数-历史行情
+- [[index-hist-sw|index_hist_sw]] - 申万宏源研究-指数发布-指数详情-指数历史数据
+- [[index-ii-cx|index_ii_cx]] - 财新指数-产业指数
+- [[index-inner-quote-sugar-msweet|index_inner_quote_sugar_msweet]] - 沐甜科技数据中心-配额内进口糖估算指数
+- [[index-kq-fashion|index_kq_fashion]] - 指定 symbol 的柯桥时尚指数的所有数据
+- [[index-kq-fz|index_kq_fz]] - 指定 symbol 的柯桥纺织品指数的所有历史数据
+- [[index-li-cx|index_li_cx]] - 财新指数-劳动力投入指数
+- [[index-min-sw|index_min_sw]] - 申万宏源研究-指数发布-指数详情-指数分时数据
+- [[index-neaw-cx|index_neaw_cx]] - 财新指数-新经济行业入职平均工资水平
+- [[index-neei-cx|index_neei_cx]] - 财新指数-新动能指数
+- [[index-nei-cx|index_nei_cx]] - 财新指数-中国新经济指数
+- [[index-news-sentiment-scope|index_news_sentiment_scope]] - 数库-A股新闻情绪指数
+- [[index-option-1000index-min-qvix|index_option_1000index_min_qvix]] - 中证1000股指 期权波动率指数-分时
+- [[index-option-1000index-qvix|index_option_1000index_qvix]] - 中证1000股指 期权波动率指数 QVIX
+- [[index-option-100etf-min-qvix|index_option_100etf_min_qvix]] - 深证100ETF 期权波动率指数-分时
+- [[index-option-100etf-qvix|index_option_100etf_qvix]] - 深证100ETF 期权波动率指数 QVIX
+- [[index-option-300etf-min-qvix|index_option_300etf_min_qvix]] - 300ETF 期权波动率指数-分时
+- [[index-option-300etf-qvix|index_option_300etf_qvix]] - 300ETF 期权波动率指数 QVIX
+- [[index-option-300index-min-qvix|index_option_300index_min_qvix]] - 中证300股指 期权波动率指数-分时
+- [[index-option-300index-qvix|index_option_300index_qvix]] - 中证300股指 期权波动率指数 QVIX
+- [[index-option-500etf-min-qvix|index_option_500etf_min_qvix]] - 500ETF 期权波动率指数-分时
+- [[index-option-500etf-qvix|index_option_500etf_qvix]] - 500ETF 期权波动率指数 QVIX
+- [[index-option-50etf-min-qvix|index_option_50etf_min_qvix]] - 50ETF 期权波动率指数-分时
+- [[index-option-50etf-qvix|index_option_50etf_qvix]] - 50ETF 期权波动率指数 QVIX; 又称中国版的恐慌指数
+- [[index-option-50index-min-qvix|index_option_50index_min_qvix]] - 上证50股指 期权波动率指数-分时
+- [[index-option-50index-qvix|index_option_50index_qvix]] - 上证50股指 期权波动率指数 QVIX
+- [[index-option-cyb-min-qvix|index_option_cyb_min_qvix]] - 创业板 期权波动率指数-分时
+- [[index-option-cyb-qvix|index_option_cyb_qvix]] - 创业板 期权波动率指数 QVIX
+- [[index-option-kcb-min-qvix|index_option_kcb_min_qvix]] - 科创板 期权波动率指数-分时
+- [[index-option-kcb-qvix|index_option_kcb_qvix]] - 科创板 期权波动率指数 QVIX
+- [[index-outer-quote-sugar-msweet|index_outer_quote_sugar_msweet]] - 沐甜科技数据中心-配额外进口糖估算指数
+- [[index-pmi-com-cx|index_pmi_com_cx]] - 财新数据-指数报告-财新中国 PMI-综合 PMI
+- [[index-pmi-man-cx|index_pmi_man_cx]] - 财新数据-指数报告-财新中国 PMI-制造业 PMI
+- [[index-pmi-ser-cx|index_pmi_ser_cx]] - 财新数据-指数报告-财新中国 PMI-服务业 PMI
+- [[index-price-cflp|index_price_cflp]] - 获取指定 symbol 的中国公路物流运价指数的数据
+- [[index-qli-cx|index_qli_cx]] - 财新指数-高质量因子
+- [[index-realtime-fund-sw|index_realtime_fund_sw]] - 申万宏源研究-申万指数-指数发布-基金指数-实时行情
+- [[index-realtime-sw|index_realtime_sw]] - 申万宏源研究-指数系列; 注意其中大类风格指数和金创指数的字段与其他分类不同
+- [[index-si-cx|index_si_cx]] - 财新指数-溢出指数
+- [[index-stock-cons|index_stock_cons]] - 指定指数的最新成份股票信息, 注意该接口返回的数据有部分是重复会导致数据缺失, 可以调用 **ak.index_stock_cons_sina()** 获取主流指数数据, 或调用**ak.index_stock_cons_csindex()**获取中证指数网提供的成分数据
+- [[index-stock-cons-csindex|index_stock_cons_csindex]] - 中证指数网站-成份股目录，可以通过 ak.index_csindex_all() 获取所有指数
+- [[index-stock-cons-weight-csindex|index_stock_cons_weight_csindex]] - 中证指数网站-成份股权重
+- [[index-sugar-msweet|index_sugar_msweet]] - 沐甜科技数据中心-中国食糖指数
+- [[index-ti-cx|index_ti_cx]] - 财新指数-科技投入指数
+- [[index-us-stock-sina|index_us_stock_sina]] - 新浪财经-美股指数行情
+- [[index-volume-cflp|index_volume_cflp]] - 指定 symbol 的中国公路物流运量指数的数据
+- [[index-yw|index_yw]] - 指定 symbol 的义乌小商品指数的近期历史数据
+- [[index-zh-a-hist|index_zh_a_hist]] - 东方财富网-中国股票指数-行情数据
+- [[index-zh-a-hist-min-em|index_zh_a_hist_min_em]] - 东方财富网-指数数据-分时行情
+- [[spot-goods|spot_goods]] - 新浪财经-商品现货价格指数
+- [[stock-hk-index-daily-em|stock_hk_index_daily_em]] - 东方财富网-港股-股票指数数据
+- [[stock-hk-index-daily-sina|stock_hk_index_daily_sina]] - 新浪财经-港股指数-历史行情数据
+- [[stock-hk-index-spot-em|stock_hk_index_spot_em]] - 东方财富网-行情中心-港股-指数实时行情
+- [[stock-hk-index-spot-sina|stock_hk_index_spot_sina]] - 新浪财经-行情中心-港股指数
+- [[stock-zh-index-daily|stock_zh_index_daily]] - 股票指数的历史数据按日频率更新
+- [[stock-zh-index-daily-em|stock_zh_index_daily_em]] - 东方财富股票指数数据, 历史数据按日频率更新
+- [[stock-zh-index-daily-tx|stock_zh_index_daily_tx]] - 股票指数(或者股票)历史行情数据, 支持自定义时间范围
+- [[stock-zh-index-hist-csindex|stock_zh_index_hist_csindex]] - 中证指数日频率的数据
+- [[stock-zh-index-spot-em|stock_zh_index_spot_em]] - 东方财富网-行情中心-沪深京指数
+- [[stock-zh-index-spot-sina|stock_zh_index_spot_sina]] - 新浪财经-中国股票指数数据
+- [[stock-zh-index-value-csindex|stock_zh_index_value_csindex]] - 中证指数-指数估值数据
+- [[sw-index-first-info|sw_index_first_info]] - 申万一级行业信息
+- [[sw-index-second-info|sw_index_second_info]] - 申万二级行业信息
+- [[sw-index-third-cons|sw_index_third_cons]] - 申万三级行业成份
+- [[sw-index-third-info|sw_index_third_info]] - 申万三级行业信息
+
+### AKShare 利率数据
+
+- [[macro-bank-australia-interest-rate|macro_bank_australia_interest_rate]] - 澳洲联储决议报告, 数据区间从 19800201-至今
+- [[macro-bank-brazil-interest-rate|macro_bank_brazil_interest_rate]] - 巴西利率决议报告, 数据区间从20080201-至今
+- [[macro-bank-china-interest-rate|macro_bank_china_interest_rate]] - 中国央行决议报告, 数据区间从 19910105-至今
+- [[macro-bank-english-interest-rate|macro_bank_english_interest_rate]] - 英国央行决议报告, 数据区间从 19700101-至今
+- [[macro-bank-euro-interest-rate|macro_bank_euro_interest_rate]] - 欧洲央行决议报告, 数据区间从 19990101-至今
+- [[macro-bank-india-interest-rate|macro_bank_india_interest_rate]] - 印度利率决议报告, 数据区间从 20000801-至今
+- [[macro-bank-japan-interest-rate|macro_bank_japan_interest_rate]] - 日本利率决议报告, 数据区间从 20080214-至今
+- [[macro-bank-newzealand-interest-rate|macro_bank_newzealand_interest_rate]] - 新西兰联储决议报告, 数据区间从 19990401-至今
+- [[macro-bank-russia-interest-rate|macro_bank_russia_interest_rate]] - 俄罗斯利率决议报告, 数据区间从 20030601-至今
+- [[macro-bank-switzerland-interest-rate|macro_bank_switzerland_interest_rate]] - 瑞士央行利率决议报告, 数据区间从 20080313-至今
+- [[macro-bank-usa-interest-rate|macro_bank_usa_interest_rate]] - 美联储利率决议报告, 数据区间从 19820927-至今
+- [[rate-interbank|rate_interbank]] - 东方财富-拆借利率一览-具体市场的具体品种的具体指标的拆借利率数据
+- [[repo-rate-hist|repo_rate_hist]] - 回购定盘利率数据
+- [[repo-rate-query|repo_rate_query]] - 回购定盘利率数据
+
+### AKShare 宏观数据
+
+- [[macro-australia-bank-rate|macro_australia_bank_rate]] - 东方财富-经济数据-澳大利亚-央行公布利率决议
+- [[macro-australia-cpi-quarterly|macro_australia_cpi_quarterly]] - 东方财富-经济数据-澳大利亚-消费者物价指数季率
+- [[macro-australia-cpi-yearly|macro_australia_cpi_yearly]] - 东方财富-经济数据-澳大利亚-消费者物价指数年率
+- [[macro-australia-ppi-quarterly|macro_australia_ppi_quarterly]] - 东方财富-经济数据-澳大利亚-生产者物价指数季率
+- [[macro-australia-retail-rate-monthly|macro_australia_retail_rate_monthly]] - 东方财富-经济数据-澳大利亚-零售销售月率
+- [[macro-australia-trade|macro_australia_trade]] - 东方财富-经济数据-澳大利亚-贸易帐
+- [[macro-australia-unemployment-rate|macro_australia_unemployment_rate]] - 东方财富-经济数据-澳大利亚-失业率
+- [[macro-canada-bank-rate|macro_canada_bank_rate]] - 东方财富-经济数据-加拿大-央行公布利率决议
+- [[macro-canada-core-cpi-monthly|macro_canada_core_cpi_monthly]] - 东方财富-经济数据-加拿大-核心消费者物价指数月率
+- [[macro-canada-core-cpi-yearly|macro_canada_core_cpi_yearly]] - 东方财富-经济数据-加拿大-核心消费者物价指数年率
+- [[macro-canada-cpi-monthly|macro_canada_cpi_monthly]] - 东方财富-经济数据-加拿大-消费者物价指数月率
+- [[macro-canada-cpi-yearly|macro_canada_cpi_yearly]] - 东方财富-经济数据-加拿大-消费者物价指数年率
+- [[macro-canada-gdp-monthly|macro_canada_gdp_monthly]] - 东方财富-经济数据-加拿大-GDP 月率
+- [[macro-canada-new-house-rate|macro_canada_new_house_rate]] - 东方财富-经济数据-加拿大-新屋开工
+- [[macro-canada-retail-rate-monthly|macro_canada_retail_rate_monthly]] - 东方财富-经济数据-加拿大-零售销售月率
+- [[macro-canada-trade|macro_canada_trade]] - 东方财富-经济数据-加拿大-贸易帐
+- [[macro-canada-unemployment-rate|macro_canada_unemployment_rate]] - 东方财富-经济数据-加拿大-失业率
+- [[macro-china-agricultural-index|macro_china_agricultural_index]] - 农副指数数据, 数据区间从 20111205-至今
+- [[macro-china-agricultural-product|macro_china_agricultural_product]] - 农产品批发价格总指数, 数据区间从 20050927-至今
+- [[macro-china-au-report|macro_china_au_report]] - 上海黄金交易所报告, 数据区间从 20140905-至今
+- [[macro-china-bank-financing|macro_china_bank_financing]] - 银行理财产品发行数量, 数据区间从 2000 一月-至今
+- [[macro-china-bdti-index|macro_china_bdti_index]] - 原油运输指数数据, 数据区间从 20011227-至今
+- [[macro-china-bond-public|macro_china_bond_public]] - 中国外汇交易中心暨全国银行间同业拆借中心-债券信息披露-新债发行; 近期债券发行数据
+- [[macro-china-bsi-index|macro_china_bsi_index]] - 超灵便型船运价指数数据, 数据区间从 20060103-至今
+- [[macro-china-central-bank-balance|macro_china_central_bank_balance]] - 新浪财经-中国宏观经济数据-央行货币当局资产负债
+- [[macro-china-commodity-price-index|macro_china_commodity_price_index]] - 大宗商品价格数据, 数据区间从 20111205-至今
+- [[macro-china-construction-index|macro_china_construction_index]] - 建材指数数据, 数据区间从 20111205-至今
+- [[macro-china-construction-price-index|macro_china_construction_price_index]] - 建材价格指数数据, 数据区间从 20100615-至今
+- [[macro-china-consumer-goods-retail|macro_china_consumer_goods_retail]] - 东方财富-经济数据-社会消费品零售总额
+- [[macro-china-cpi|macro_china_cpi]] - 中国居民消费价格指数, 数据区间从 200801 至今, 月度数据
+- [[macro-china-cpi-monthly|macro_china_cpi_monthly]] - 中国月度 CPI 数据, 数据区间从 19960201-至今
+- [[macro-china-cpi-yearly|macro_china_cpi_yearly]] - 中国年度 CPI 数据, 数据区间从 19860201-至今
+- [[macro-china-cx-pmi-yearly|macro_china_cx_pmi_yearly]] - 中国年度财新 PMI 数据, 数据区间从 20120120-至今
+- [[macro-china-cx-services-pmi-yearly|macro_china_cx_services_pmi_yearly]] - 中国财新服务业 PMI 报告, 数据区间从 20120405-至今
+- [[macro-china-czsr|macro_china_czsr]] - 中国财政收入, 数据区间从 200801 至今, 月度数据
+- [[macro-china-daily-energy|macro_china_daily_energy]] - 中国日度沿海六大电库存数据, 数据区间从20160101-至今, 不再更新, 只能获得历史数据
+- [[macro-china-energy-index|macro_china_energy_index]] - 能源指数数据, 数据区间从 20111205-至今
+- [[macro-china-enterprise-boom-index|macro_china_enterprise_boom_index]] - 中国企业景气及企业家信心指数数据, 数据区间从 2005 一季度-至今
+- [[macro-china-exports-yoy|macro_china_exports_yoy]] - 中国以美元计算出口年率报告, 数据区间从 19820201-至今
+- [[macro-china-fdi|macro_china_fdi]] - 东方财富-经济数据一览-中国-外商直接投资数据, 数据区间从 200801-202307
+- [[macro-china-foreign-exchange-gold|macro_china_foreign_exchange_gold]] - 国家统计局-央行黄金和外汇储备, 比东财接口数据时间长
+- [[macro-china-freight-index|macro_china_freight_index]] - 新浪财经-中国宏观经济数据-航贸运价指数
+- [[macro-china-fx-gold|macro_china_fx_gold]] - 中国外汇和黄金储备, 数据区间从 200801 至今, 月度数据
+- [[macro-china-fx-reserves-yearly|macro_china_fx_reserves_yearly]] - 中国年度外汇储备数据, 数据区间从 20140115-至今
+- [[macro-china-gdp|macro_china_gdp]] - 中国国内生产总值, 数据区间从 200601 至今, 月度数据
+- [[macro-china-gdp-yearly|macro_china_gdp_yearly]] - 金十数据中心-中国 GDP 年率报告, 数据区间从 20110120-至今
+- [[macro-china-gdzctz|macro_china_gdzctz]] - 中国城镇固定资产投资, 数据区间从 200802 至今, 月度数据
+- [[macro-china-gyzjz|macro_china_gyzjz]] - 东方财富-中国工业增加值增长, 数据区间从 2008 - 至今
+- [[macro-china-hgjck|macro_china_hgjck]] - 中国海关进出口增减情况一览表, 数据区间从 200801 至今, 月度数据
+- [[macro-china-hk-building-amount|macro_china_hk_building_amount]] - 东方财富-经济数据一览-中国香港-香港楼宇买卖合约成交金额
+- [[macro-china-hk-building-volume|macro_china_hk_building_volume]] - 东方财富-经济数据一览-中国香港-香港楼宇买卖合约数量
+- [[macro-china-hk-cpi|macro_china_hk_cpi]] - 东方财富-经济数据一览-中国香港-消费者物价指数
+- [[macro-china-hk-cpi-ratio|macro_china_hk_cpi_ratio]] - 东方财富-经济数据一览-中国香港-消费者物价指数年率
+- [[macro-china-hk-gbp|macro_china_hk_gbp]] - 东方财富-经济数据一览-中国香港-香港 GDP
+- [[macro-china-hk-gbp-ratio|macro_china_hk_gbp_ratio]] - 东方财富-经济数据一览-中国香港-香港 GDP 同比
+- [[macro-china-hk-market-info|macro_china_hk_market_info]] - 香港同业拆借报告, 数据区间从 20170320-至今
+- [[macro-china-hk-ppi|macro_china_hk_ppi]] - 东方财富-经济数据一览-中国香港-香港制造业PPI年率
+- [[macro-china-hk-rate-of-unemployment|macro_china_hk_rate_of_unemployment]] - 东方财富-经济数据一览-中国香港-失业率
+- [[macro-china-hk-trade-diff-ratio|macro_china_hk_trade_diff_ratio]] - 东方财富-经济数据一览-中国香港-香港商品贸易差额年率
+- [[macro-china-imports-yoy|macro_china_imports_yoy]] - 中国以美元计算进口年率报告, 数据区间从 19960201-至今
+- [[macro-china-industrial-production-yoy|macro_china_industrial_production_yoy]] - 中国规模以上工业增加值年率报告, 数据区间从 19900301-至今
+- [[macro-china-insurance|macro_china_insurance]] - 新浪财经-中国宏观经济数据-保险业经营情况
+- [[macro-china-insurance-income|macro_china_insurance_income]] - 原保险保费收入, 数据区间从 200407-至今
+- [[macro-china-international-tourism-fx|macro_china_international_tourism_fx]] - 国家统计局-国际旅游外汇收入构成
+- [[macro-china-lpi-index|macro_china_lpi_index]] - 物流景气指数数据, 数据区间从 20130701-至今
+- [[macro-china-lpr|macro_china_lpr]] - 中国 LPR 品种数据, 数据区间从 19910421-至今
+- [[macro-china-m2-yearly|macro_china_m2_yearly]] - 中国年度 M2 数据, 数据区间从 19980201-至今
+- [[macro-china-market-margin-sh|macro_china_market_margin_sh]] - 上海融资融券报告, 数据区间从 20100331-至今
+- [[macro-china-market-margin-sz|macro_china_market_margin_sz]] - 深圳融资融券报告, 数据区间从 20100331-至今
+- [[macro-china-mobile-number|macro_china_mobile_number]] - 手机出货量, 数据区间从 201201-至今
+- [[macro-china-money-supply|macro_china_money_supply]] - 东方财富-经济数据-中国宏观-中国货币供应量; 数据区间从 200801 至今, 月度数据
+- [[macro-china-national-tax-receipts|macro_china_national_tax_receipts]] - 中国全国税收收入数据, 数据区间从 2005 一季度-至今
+- [[macro-china-nbs-nation|macro_china_nbs_nation]] - 国家统计局全国数据通用接口，包括月度数据、季度数据、年度数据，具体指标见国家统计局新站官网。
+- [[macro-china-nbs-region|macro_china_nbs_region]] - 国家统计局地区数据通用接口，包括分省月度数据、分省季度数据、分省年度数据、主要城市月度价格、主要城市年度数据、港澳台月度数据、港澳台年度数据，具体指标见国家统计局新站官网。
+- [[macro-china-new-financial-credit|macro_china_new_financial_credit]] - 中国新增信贷数据数据, 数据区间从 200801 至今, 月度数据
+- [[macro-china-new-house-price|macro_china_new_house_price]] - 中国新房价指数月度数据, 数据区间从 201101-至今
+- [[macro-china-non-man-pmi|macro_china_non_man_pmi]] - 中国官方非制造业 PMI, 数据区间从 20160101-至今
+- [[macro-china-passenger-load-factor|macro_china_passenger_load_factor]] - 国家统计局-民航客座率及载运率
+- [[macro-china-pmi|macro_china_pmi]] - 采购经理人指数, 数据区间从 200801 至今, 月度数据
+- [[macro-china-pmi-yearly|macro_china_pmi_yearly]] - 中国年度PMI数据, 数据区间从 20050201-至今
+- [[macro-china-postal-telecommunicational|macro_china_postal_telecommunicational]] - 国家统计局-邮电业务基本情况-非累计
+- [[macro-china-ppi|macro_china_ppi]] - 工业品出厂价格指数, 数据区间从 200601 至今, 月度数据
+- [[macro-china-ppi-yearly|macro_china_ppi_yearly]] - 中国年度 PPI 数据, 数据区间从 19950801-至今
+- [[macro-china-qyspjg|macro_china_qyspjg]] - 东方财富-经济数据一览-中国-企业商品价格指数, 数据区间从 20050101-至今
+- [[macro-china-real-estate|macro_china_real_estate]] - 国家统计局-国房景气指数
+- [[macro-china-reserve-requirement-ratio|macro_china_reserve_requirement_ratio]] - 国家统计局-存款准备金率
+- [[macro-china-retail-price-index|macro_china_retail_price_index]] - 国家统计局-商品零售价格指数
+- [[macro-china-rmb|macro_china_rmb]] - 中国人民币汇率中间价报告, 数据区间从 20170103-20210513
+- [[macro-china-shibor-all|macro_china_shibor_all]] - 上海银行业同业拆借报告, 数据区间从 20170317-至今
+- [[macro-china-shrzgm|macro_china_shrzgm]] - 商务数据中心-国内贸易-社会融资规模增量统计, 数据区间从 201501-至今
+- [[macro-china-society-electricity|macro_china_society_electricity]] - 国家统计局-全社会用电分类情况表
+- [[macro-china-society-traffic-volume|macro_china_society_traffic_volume]] - 国家统计局-全社会客货运输量-非累计
+- [[macro-china-stock-market-cap|macro_china_stock_market_cap]] - 全国股票交易统计表, 数据区间从 200801 至今, 月度数据
+- [[macro-china-supply-of-money|macro_china_supply_of_money]] - 新浪财经-中国宏观经济数据-货币供应量
+- [[macro-china-swap-rate|macro_china_swap_rate]] - 国家统计局-FR007利率互换曲线历史数据
+- [[macro-china-trade-balance|macro_china_trade_balance]] - 中国以美元计算贸易帐报告, 数据区间从19810201-至今
+- [[macro-china-urban-unemployment|macro_china_urban_unemployment]] - 国家统计局-月度数据-城镇调查失业率
+- [[macro-china-vegetable-basket|macro_china_vegetable_basket]] - 菜篮子产品批发价格指数, 数据区间从 20050927-至今
+- [[macro-china-wbck|macro_china_wbck]] - 本外币存款, 数据区间从 200802 至今, 月度数据
+- [[macro-china-whxd|macro_china_whxd]] - 外汇贷款数据, 数据区间从 200802 至今, 月度数据
+- [[macro-china-xfzxx|macro_china_xfzxx]] - 东方财富网-消费者信心指数
+- [[macro-china-yw-electronic-index|macro_china_yw_electronic_index]] - 义乌小商品指数-电子元器件数据, 数据区间从 20060911-至今
+- [[macro-cnbs|macro_cnbs]] - 中国国家金融与发展实验室-中国宏观杠杆率数据
+- [[macro-cons-gold|macro_cons_gold]] - 全球最大黄金 ETF—SPDR Gold Trust 持仓报告, 数据区间从 20041119-至今
+- [[macro-cons-opec-month|macro_cons_opec_month]] - 欧佩克报告, 数据区间从 20170118-至今
+- [[macro-cons-silver|macro_cons_silver]] - 全球最大白银 ETF--iShares Silver Trust 持仓报告, 数据区间从 20041202-至今
+- [[macro-euro-cpi-mom|macro_euro_cpi_mom]] - 欧元区 CPI 月率报告, 数据区间从 19900301-至今
+- [[macro-euro-cpi-yoy|macro_euro_cpi_yoy]] - 欧元区 CPI 年率报告, 数据区间从 19910201-至今
+- [[macro-euro-current-account-mom|macro_euro_current_account_mom]] - 欧元区经常帐报告, 数据区间从 20080221-至今
+- [[macro-euro-employment-change-qoq|macro_euro_employment_change_qoq]] - 欧元区季调后就业人数季率报告, 数据区间从 20083017-至今
+- [[macro-euro-gdp-yoy|macro_euro_gdp_yoy]] - 欧元区季度 GDP 年率报告, 数据区间从 20131114-至今
+- [[macro-euro-industrial-production-mom|macro_euro_industrial_production_mom]] - 欧元区工业产出月率报告, 数据区间从 19910301-至今
+- [[macro-euro-lme-holding|macro_euro_lme_holding]] - 伦敦金属交易所(LME)-持仓报告, 数据区间从 20151022-至今
+- [[macro-euro-lme-stock|macro_euro_lme_stock]] - 伦敦金属交易所(LME)-库存报告, 数据区间从 20140702-至今
+- [[macro-euro-manufacturing-pmi|macro_euro_manufacturing_pmi]] - 欧元区制造业 PMI 初值报告, 数据区间从 20080222-至今
+- [[macro-euro-ppi-mom|macro_euro_ppi_mom]] - 欧元区 PPI 月率报告, 数据区间从 19810301-至今
+- [[macro-euro-retail-sales-mom|macro_euro_retail_sales_mom]] - 欧元区零售销售月率报告, 数据区间从 20000301-至今
+- [[macro-euro-sentix-investor-confidence|macro_euro_sentix_investor_confidence]] - 欧元区 Sentix 投资者信心指数报告, 数据区间从 20020801-至今
+- [[macro-euro-services-pmi|macro_euro_services_pmi]] - 欧元区服务业 PMI 终值报告, 数据区间从 20080222-至今
+- [[macro-euro-trade-balance|macro_euro_trade_balance]] - 欧元区未季调贸易帐报告, 数据区间从 19990201-至今
+- [[macro-euro-unemployment-rate-mom|macro_euro_unemployment_rate_mom]] - 欧元区失业率报告, 数据区间从 19980501-至今
+- [[macro-euro-zew-economic-sentiment|macro_euro_zew_economic_sentiment]] - 欧元区 ZEW 经济景气指数报告, 数据区间从 20080212-至今
+- [[macro-germany-cpi-monthly|macro_germany_cpi_monthly]] - 东方财富-数据中心-经济数据一览-德国-消费者物价指数月率终值
+- [[macro-germany-cpi-yearly|macro_germany_cpi_yearly]] - 东方财富-数据中心-经济数据一览-德国-消费者物价指数年率终值
+- [[macro-germany-gdp|macro_germany_gdp]] - 东方财富-数据中心-经济数据一览-德国-GDP
+- [[macro-germany-ifo|macro_germany_ifo]] - 东方财富-数据中心-经济数据一览-IFO商业景气指数
+- [[macro-germany-retail-sale-monthly|macro_germany_retail_sale_monthly]] - 东方财富-数据中心-经济数据一览-德国-实际零售销售月率
+- [[macro-germany-retail-sale-yearly|macro_germany_retail_sale_yearly]] - 东方财富-数据中心-经济数据一览-德国-实际零售销售年率
+- [[macro-germany-trade-adjusted|macro_germany_trade_adjusted]] - 东方财富-数据中心-经济数据一览-德国-贸易帐(季调后)
+- [[macro-germany-zew|macro_germany_zew]] - 东方财富-数据中心-经济数据一览-德国-ZEW 经济景气指数
+- [[macro-global-sox-index|macro_global_sox_index]] - 费城半导体指数数据, 数据区间从 19940504-至今
+- [[macro-info-ws|macro_info_ws]] - 华尔街见闻-日历-宏观
+- [[macro-japan-bank-rate|macro_japan_bank_rate]] - 东方财富-经济数据-日本-央行公布利率决议
+- [[macro-japan-core-cpi-yearly|macro_japan_core_cpi_yearly]] - 东方财富-经济数据-日本-全国核心消费者物价指数年率
+- [[macro-japan-cpi-yearly|macro_japan_cpi_yearly]] - 东方财富-经济数据-日本-全国消费者物价指数年率
+- [[macro-japan-head-indicator|macro_japan_head_indicator]] - 东方财富-经济数据-日本-领先指标终值
+- [[macro-japan-unemployment-rate|macro_japan_unemployment_rate]] - 东方财富-经济数据-日本-失业率
+- [[macro-rmb-deposit|macro_rmb_deposit]] - 同花顺-数据中心-宏观数据-人民币存款余额
+- [[macro-rmb-loan|macro_rmb_loan]] - 同花顺-数据中心-宏观数据-新增人民币贷款
+- [[macro-shipping-bci|macro_shipping_bci]] - 海岬型运费指数, 数据区间从 19990430-至今
+- [[macro-shipping-bcti|macro_shipping_bcti]] - 成品油运输指数, 数据区间从 20011217-至今
+- [[macro-shipping-bdi|macro_shipping_bdi]] - 波罗的海干散货指数, 数据区间从 19881019-至今
+- [[macro-shipping-bpi|macro_shipping_bpi]] - 巴拿马型运费指数, 数据区间从 19981231-至今
+- [[macro-stock-finance|macro_stock_finance]] - 同花顺-数据中心-宏观数据-股票筹资
+- [[macro-swiss-cpi-yearly|macro_swiss_cpi_yearly]] - 东方财富-经济数据-瑞士-消费者物价指数年率
+- [[macro-swiss-gbd-bank-rate|macro_swiss_gbd_bank_rate]] - 东方财富-经济数据-瑞士-央行公布利率决议
+- [[macro-swiss-gbd-yearly|macro_swiss_gbd_yearly]] - 东方财富-经济数据-瑞士-GDP 年率
+- [[macro-swiss-gdp-quarterly|macro_swiss_gdp_quarterly]] - 东方财富-经济数据-瑞士-GDP 季率
+- [[macro-swiss-svme|macro_swiss_svme]] - 东方财富-经济数据-瑞士-SVME采购经理人指数
+- [[macro-swiss-trade|macro_swiss_trade]] - 东方财富-经济数据-瑞士-贸易帐
+- [[macro-uk-bank-rate|macro_uk_bank_rate]] - 东方财富-经济数据-英国-央行公布利率决议
+- [[macro-uk-core-cpi-monthly|macro_uk_core_cpi_monthly]] - 东方财富-经济数据-英国-核心消费者物价指数月率
+- [[macro-uk-core-cpi-yearly|macro_uk_core_cpi_yearly]] - 东方财富-经济数据-英国-核心消费者物价指数年率
+- [[macro-uk-cpi-monthly|macro_uk_cpi_monthly]] - 东方财富-经济数据-英国-消费者物价指数月率
+- [[macro-uk-cpi-yearly|macro_uk_cpi_yearly]] - 东方财富-经济数据-英国-消费者物价指数年率
+- [[macro-uk-gdp-quarterly|macro_uk_gdp_quarterly]] - 东方财富-经济数据-英国-GDP 季率初值
+- [[macro-uk-gdp-yearly|macro_uk_gdp_yearly]] - 东方财富-经济数据-英国-GDP 年率初值
+- [[macro-uk-halifax-monthly|macro_uk_halifax_monthly]] - 东方财富-经济数据-英国-Halifax 房价指数月率
+- [[macro-uk-halifax-yearly|macro_uk_halifax_yearly]] - 东方财富-经济数据-英国-Halifax 房价指数年率
+- [[macro-uk-retail-monthly|macro_uk_retail_monthly]] - 东方财富-经济数据-英国-零售销售月率
+- [[macro-uk-retail-yearly|macro_uk_retail_yearly]] - 东方财富-经济数据-英国-零售销售年率
+- [[macro-uk-rightmove-monthly|macro_uk_rightmove_monthly]] - 东方财富-经济数据-英国-Rightmove 房价指数月率
+- [[macro-uk-rightmove-yearly|macro_uk_rightmove_yearly]] - 东方财富-经济数据-英国-Rightmove 房价指数年率
+- [[macro-uk-trade|macro_uk_trade]] - 东方财富-经济数据-英国-贸易帐
+- [[macro-uk-unemployment-rate|macro_uk_unemployment_rate]] - 东方财富-经济数据-英国-失业率
+- [[macro-usa-adp-employment|macro_usa_adp_employment]] - 美国 ADP 就业人数报告, 数据区间从 20010601-至今
+- [[macro-usa-api-crude-stock|macro_usa_api_crude_stock]] - 美国 API 原油库存报告, 数据区间从 20120328-至今
+- [[macro-usa-building-permits|macro_usa_building_permits]] - 美国营建许可总数报告, 数据区间从 20080220-至今
+- [[macro-usa-business-inventories|macro_usa_business_inventories]] - 美国商业库存月率报告, 数据区间从 19920301-至今
+- [[macro-usa-cb-consumer-confidence|macro_usa_cb_consumer_confidence]] - 美国谘商会消费者信心指数报告, 数据区间从 19700101-至今
+- [[macro-usa-cftc-c-holding|macro_usa_cftc_c_holding]] - 美国商品期货交易委员会CFTC商品类非商业持仓报告, 数据区间从 19830107-至今
+- [[macro-usa-cftc-merchant-currency-holding|macro_usa_cftc_merchant_currency_holding]] - 美国商品期货交易委员会CFTC外汇类商业持仓报告, 数据区间从 19860115-至今
+- [[macro-usa-cftc-merchant-goods-holding|macro_usa_cftc_merchant_goods_holding]] - 美国商品期货交易委员会 CFTC 商品类商业持仓报告, 数据区间从 19860115-至今
+- [[macro-usa-cftc-nc-holding|macro_usa_cftc_nc_holding]] - 美国商品期货交易委员会CFTC外汇类非商业持仓报告, 数据区间从 19830107-至今
+- [[macro-usa-cme-merchant-goods-holding|macro_usa_cme_merchant_goods_holding]] - CME-贵金属, 数据区间从 20180405-至今
+- [[macro-usa-core-cpi-monthly|macro_usa_core_cpi_monthly]] - 美国核心 CPI 月率报告, 数据区间从 19700101-至今
+- [[macro-usa-core-pce-price|macro_usa_core_pce_price]] - 美国核心 PCE 物价指数年率报告, 数据区间从 19700101-至今
+- [[macro-usa-core-ppi|macro_usa_core_ppi]] - 美国核心生产者物价指数(PPI)报告, 数据区间从 20080318-至今
+- [[macro-usa-cpi-monthly|macro_usa_cpi_monthly]] - 美国 CPI 月率报告, 数据区间从 19700101-至今
+- [[macro-usa-cpi-yoy|macro_usa_cpi_yoy]] - 东方财富-经济数据一览-美国-CPI年率, 数据区间从2008-至今
+- [[macro-usa-crude-inner|macro_usa_crude_inner]] - 美国原油产量报告, 数据区间从 19830107-至今, 每周三公布(美国节假日除外), 美国能源信息署(EIA)
+- [[macro-usa-current-account|macro_usa_current_account]] - 美国经常帐报告, 数据区间从 20080317-至今
+- [[macro-usa-durable-goods-orders|macro_usa_durable_goods_orders]] - 美国耐用品订单月率报告, 数据区间从 20080227-至今
+- [[macro-usa-eia-crude-rate|macro_usa_eia_crude_rate]] - 美国EIA原油库存报告, 数据区间从 19950801-至今
+- [[macro-usa-exist-home-sales|macro_usa_exist_home_sales]] - 美国成屋销售总数年化报告, 数据区间从 19700101-至今
+- [[macro-usa-export-price|macro_usa_export_price]] - 美国出口价格指数报告, 数据区间从 19890201-至今
+- [[macro-usa-factory-orders|macro_usa_factory_orders]] - 美国工厂订单月率报告, 数据区间从 19920401-至今
+- [[macro-usa-gdp-monthly|macro_usa_gdp_monthly]] - 美国国内生产总值(GDP)报告, 数据区间从 20080228-至今
+- [[macro-usa-house-price-index|macro_usa_house_price_index]] - 美国 FHFA 房价指数月率报告, 数据区间从 19910301-至今
+- [[macro-usa-house-starts|macro_usa_house_starts]] - 美国新屋开工总数年化报告, 数据区间从 19700101-至今
+- [[macro-usa-import-price|macro_usa_import_price]] - 美国进口物价指数报告, 数据区间从 19890201-至今
+- [[macro-usa-industrial-production|macro_usa_industrial_production]] - 美国工业产出月率报告, 数据区间从 19700101-至今
+- [[macro-usa-initial-jobless|macro_usa_initial_jobless]] - 美国初请失业金人数报告, 数据区间从 19700101-至今
+- [[macro-usa-ism-non-pmi|macro_usa_ism_non_pmi]] - 美国 ISM 非制造业 PMI 报告, 数据区间从 19970801-至今
+- [[macro-usa-ism-pmi|macro_usa_ism_pmi]] - 美国 ISM 制造业 PMI 报告, 数据区间从 19700101-至今
+- [[macro-usa-job-cuts|macro_usa_job_cuts]] - 美国挑战者企业裁员人数报告, 数据区间从 19940201-至今
+- [[macro-usa-lmci|macro_usa_lmci]] - 美联储劳动力市场状况指数报告, 数据区间从 20141006-至今
+- [[macro-usa-michigan-consumer-sentiment|macro_usa_michigan_consumer_sentiment]] - 美国密歇根大学消费者信心指数初值报告, 数据区间从 19700301-至今
+- [[macro-usa-nahb-house-market-index|macro_usa_nahb_house_market_index]] - 美国 NAHB 房产市场指数报告, 数据区间从 19850201-至今
+- [[macro-usa-new-home-sales|macro_usa_new_home_sales]] - 美国新屋销售总数年化报告, 数据区间从 19700101-至今
+- [[macro-usa-nfib-small-business|macro_usa_nfib_small_business]] - 美国NFIB小型企业信心指数报告, 数据区间从 19750201-至今
+- [[macro-usa-non-farm|macro_usa_non_farm]] - 美国非农就业人数报告, 数据区间从 19700102-至今
+- [[macro-usa-pending-home-sales|macro_usa_pending_home_sales]] - 美国成屋签约销售指数月率报告, 数据区间从 20010301-至今
+- [[macro-usa-personal-spending|macro_usa_personal_spending]] - 美国个人支出月率报告, 数据区间从 19700101-至今
+- [[macro-usa-phs|macro_usa_phs]] - 东方财富-经济数据一览-美国-未决房屋销售月率, 数据区间从 20080201-至今
+- [[macro-usa-pmi|macro_usa_pmi]] - 美国 Markit 制造业 PMI 初值报告, 数据区间从 20120601-至今
+- [[macro-usa-ppi|macro_usa_ppi]] - 美国生产者物价指数(PPI)报告, 数据区间从 20080226-至今
+- [[macro-usa-real-consumer-spending|macro_usa_real_consumer_spending]] - 美国实际个人消费支出季率初值报告, 数据区间从 20131107-至今
+- [[macro-usa-retail-sales|macro_usa_retail_sales]] - 美国零售销售月率报告, 数据区间从 19920301-至今
+- [[macro-usa-rig-count|macro_usa_rig_count]] - 贝克休斯钻井报告, 数据区间从 19870717-至今
+- [[macro-usa-services-pmi|macro_usa_services_pmi]] - 美国Markit服务业PMI初值报告, 数据区间从 20120701-至今
+- [[macro-usa-spcs20|macro_usa_spcs20]] - 美国S&P/CS20座大城市房价指数年率报告, 数据区间从 20010201-至今
+- [[macro-usa-trade-balance|macro_usa_trade_balance]] - 美国贸易帐报告, 数据区间从 19700101-至今
+- [[macro-usa-unemployment-rate|macro_usa_unemployment_rate]] - 美国失业率报告, 数据区间从 19700101-至今
+- [[news-economic-baidu|news_economic_baidu]] - 全球宏观指标重大事件
+
+### AKShare 自然语言处理
+
+- [[nlp-answer|nlp_answer]] - 思知-对话机器人的接口, 以此来进行智能问答
+- [[nlp-ownthink|nlp_ownthink]] - 思知-知识图谱的接口, 以此来查询知识图谱数据
+
+### AKShare 期权数据
+
+- [[option-cffex-hs300-daily-sina|option_cffex_hs300_daily_sina]] - 中金所-沪深300指数-指定合约-日频行情
+- [[option-cffex-hs300-list-sina|option_cffex_hs300_list_sina]] - 中金所-沪深300指数-所有合约, 返回的第一个合约为主力合约
+- [[option-cffex-hs300-spot-sina|option_cffex_hs300_spot_sina]] - 新浪财经-中金所-沪深300指数-指定合约-实时行情
+- [[option-cffex-sz50-daily-sina|option_cffex_sz50_daily_sina]] - 中金所-上证50指数-指定合约-日频行情
+- [[option-cffex-sz50-list-sina|option_cffex_sz50_list_sina]] - 中金所-上证50指数-所有合约, 返回的第一个合约为主力合约
+- [[option-cffex-sz50-spot-sina|option_cffex_sz50_spot_sina]] - 新浪财经-中金所-上证50指数-指定合约-实时行情
+- [[option-cffex-zz1000-daily-sina|option_cffex_zz1000_daily_sina]] - 中金所-中证1000指数-指定合约-日频行情
+- [[option-cffex-zz1000-list-sina|option_cffex_zz1000_list_sina]] - 中金所-中证1000指数-所有合约, 返回的第一个合约为主力合约
+- [[option-cffex-zz1000-spot-sina|option_cffex_zz1000_spot_sina]] - 新浪财经-中金所-中证1000指数-指定合约-实时行情
+- [[option-comm-info|option_comm_info]] - 九期网-商品期权手续费数据
+- [[option-commodity-contract-sina|option_commodity_contract_sina]] - 新浪财经-商品期权当前在交易的合约
+- [[option-commodity-contract-table-sina|option_commodity_contract_table_sina]] - 新浪财经-商品期权的 T 型报价表
+- [[option-commodity-hist-sina|option_commodity_hist_sina]] - 新浪财经-商品期权的历史行情数据-日频率
+- [[option-contract-info-ctp|option_contract_info_ctp]] - openctp 期权合约信息
+- [[option-current-day-sse|option_current_day_sse]] - 上海证券交易所-产品-股票期权-信息披露-当日合约
+- [[option-current-day-szse|option_current_day_szse]] - 深圳证券交易所-期权子网-行情数据-当日合约
+- [[option-current-em|option_current_em]] - 东方财富网-行情中心-期权市场
+- [[option-czce-hist|option_czce_hist]] - 郑州商品交易所的商品期权历史行情数据
+- [[option-daily-stats-sse|option_daily_stats_sse]] - 上海证券交易所-产品-股票期权-每日统计
+- [[option-daily-stats-szse|option_daily_stats_szse]] - 深圳证券交易所-市场数据-期权数据-日度概况
+- [[option-finance-board|option_finance_board]] - 上海证券交易所、深圳证券交易所、中国金融期货交易所的金融期权行情数据
+- [[option-finance-minute-sina|option_finance_minute_sina]] - 新浪财经-金融期权-股票期权分时行情数据
+- [[option-hist-czce|option_hist_czce]] - 郑州商品交易所-商品期权数据
+- [[option-hist-dce|option_hist_dce]] - 大连商品交易所-商品期权数据
+- [[option-hist-gfex|option_hist_gfex]] - 广州期货交易所-商品期权数据
+- [[option-hist-shfe|option_hist_shfe]] - 上海期货交易所-商品期权数据
+- [[option-lhb-em|option_lhb_em]] - 东方财富网-数据中心-期货期权-期权龙虎榜单-金融期权
+- [[option-margin|option_margin]] - 唯爱期货-期权保证金
+- [[option-minute-em|option_minute_em]] - 东方财富网-行情中心-期权市场-分时行情
+- [[option-premium-analysis-em|option_premium_analysis_em]] - 东方财富网-数据中心-特色数据-期权折溢价
+- [[option-risk-analysis-em|option_risk_analysis_em]] - 东方财富网-数据中心-特色数据-期权风险分析
+- [[option-risk-indicator-sse|option_risk_indicator_sse]] - 上海证券交易所-产品-股票期权-期权风险指标数据
+- [[option-sse-codes-sina|option_sse_codes_sina]] - 新浪期权-看涨看跌合约合约的代码
+- [[option-sse-daily-sina|option_sse_daily_sina]] - 期权行情日数据
+- [[option-sse-expire-day-sina|option_sse_expire_day_sina]] - 获取指定到期月份指定品种的剩余到期时间
+- [[option-sse-greeks-sina|option_sse_greeks_sina]] - 新浪财经-期权希腊字母信息表
+- [[option-sse-list-sina|option_sse_list_sina]] - 获取期权-上交所-50ETF-合约到期月份列表
+- [[option-sse-minute-sina|option_sse_minute_sina]] - 期权行情分钟数据, 只能返还当天的分钟数据
+- [[option-sse-spot-price-sina|option_sse_spot_price_sina]] - 期权实时数据
+- [[option-sse-underlying-spot-price-sina|option_sse_underlying_spot_price_sina]] - 获取期权标的物的实时数据
+- [[option-value-analysis-em|option_value_analysis_em]] - 东方财富网-数据中心-特色数据-期权价值分析
+- [[option-vol-gfex|option_vol_gfex]] - 广州期货交易所-商品期权数据-隐含波动参考值
+
+### AKShare 另类数据
+
+- [[air-city-table|air_city_table]] - 所有能获取空气质量数据的城市表
+- [[air-quality-hebei|air_quality_hebei]] - 河北省实时空气质量数据
+- [[air-quality-hist|air_quality_hist]] - 指定城市和数据频率下并且在指定时间段内的空气质量数据
+- [[air-quality-rank|air_quality_rank]] - 获取指定 date 时间点上所有城市(168个)的空气质量数据
+- [[air-quality-watch-point|air_quality_watch_point]] - 获取每个城市的所有空气质量监测点的数据
+- [[business-value-artist|business_value_artist]] - 艺恩-艺人-艺人商业价值
+- [[car-market-cate-cpca|car_market_cate_cpca]] - 乘联会-统计数据-车型大类
+- [[car-market-country-cpca|car_market_country_cpca]] - 乘联会-统计数据-国别细分市场
+- [[car-market-fuel-cpca|car_market_fuel_cpca]] - 乘联会-统计数据-车型大类
+- [[car-market-man-rank-cpca|car_market_man_rank_cpca]] - 乘联会-统计数据-厂商排名
+- [[car-market-segment-cpca|car_market_segment_cpca]] - 乘联会-统计数据-级别细分市场
+- [[car-market-total-cpca|car_market_total_cpca]] - 乘联会-统计数据-总体市场
+- [[car-sale-rank-gasgoo|car_sale_rank_gasgoo]] - 盖世汽车资讯的汽车销量排行榜数据
+- [[forbes-rank|forbes_rank]] - 福布斯中国-榜单数据, 一共 87 个指标的数据可以获取
+- [[fortune-rank|fortune_rank]] - 指定年份财富世界 500 强公司排行榜
+- [[game-hot-rank-taptap|game_hot_rank_taptap]] - 按照榜单类型查询 TapTap 平台游戏排行榜数据
+- [[hurun-rank|hurun_rank]] - 胡润百富榜单；富豪榜系列，创业系列，500强系列，特色系列
+- [[index-bloomberg-billionaires|index_bloomberg_billionaires]] - 彭博亿万富豪指数, 全球前 500 名; 该接口需要使用代理访问
+- [[index-bloomberg-billionaires-hist|index_bloomberg_billionaires_hist]] - 按照年份查询彭博亿万富豪指数; 该接口需要使用代理访问
+- [[movie-boxoffice-cinema-daily|movie_boxoffice_cinema_daily]] - 指定日期的每日各影院的票房数据
+- [[movie-boxoffice-cinema-weekly|movie_boxoffice_cinema_weekly]] - 指定日期的完整周各影院的票房数据
+- [[movie-boxoffice-daily|movie_boxoffice_daily]] - 指定日期的电影票房数据, 每日 10:30, 12:30更新日票房，16:30 同时补充前 7 日票房
+- [[movie-boxoffice-monthly|movie_boxoffice_monthly]] - 获取指定日期所在月份的票房数据, 每月5号更新上月票房，并补充之前两个月票房
+- [[movie-boxoffice-realtime|movie_boxoffice_realtime]] - 当前时刻的实时电影票房数据, 每 5 分钟更新一次数据, 实时票房包含今天未开映场次已售出的票房
+- [[movie-boxoffice-weekly|movie_boxoffice_weekly]] - 指定日期所在完整周的票房数据, 影片周票房数据初始更新周期为每周二，下周二补充数据
+- [[movie-boxoffice-yearly|movie_boxoffice_yearly]] - 指定日期所在年度的票房数据
+- [[movie-boxoffice-yearly-first-week|movie_boxoffice_yearly_first_week]] - 指定日期所在年度的年度首周票房数据
+- [[news-cctv|news_cctv]] - 新闻联播文字稿, 数据区间从 20160330-至今
+- [[online-value-artist|online_value_artist]] - 艺恩-艺人-艺人流量价值
+- [[stock-js-weibo-report|stock_js_weibo_report]] - 微博舆情报告中近期受关注的股票
+- [[sunrise-daily|sunrise_daily]] - 中国各大城市-日出和日落时间, 数据区间从 19990101-至今, 推荐使用代理访问
+- [[sunrise-monthly|sunrise_monthly]] - 中国各大城市-日出和日落时间, 数据区间从 19990101-至今, 推荐使用代理访问
+- [[video-tv|video_tv]] - 艺恩-视频放映-电视剧集
+- [[video-variety-show|video_variety_show]] - 艺恩-视频放映-综艺节目
+- [[xincaifu-rank|xincaifu_rank]] - 新财富 500 富豪榜, 从 2003 年至今
+
+### AKShare QDII 数据
+
+- [[qdii-a-index-jsl|qdii_a_index_jsl]] - 集思录-T+0 QDII-亚洲市场-亚洲指数
+- [[qdii-e-comm-jsl|qdii_e_comm_jsl]] - 集思录-T+0 QDII-欧美市场-欧美商品
+- [[qdii-e-index-jsl|qdii_e_index_jsl]] - 集思录-T+0 QDII-欧美市场-欧美指数
+
+### 席位
+
+- [[broker-all|broker_all]] - 所有席位数据接口
+- [[broker-bbr|broker_bbr]] - 席位多空比数据接口
+- [[broker-calendar|broker_calendar]] - 席位盈亏数据接口
+- [[broker-flow|broker_flow]] - 席位每日大资金流动数据接口
+- [[broker-in-loss-list|broker_in_loss_list]] - 席位亏损排行数据接口
+- [[broker-in-profit-list|broker_in_profit_list]] - 席位盈利排行数据接口
+- [[broker-net-money|broker_net_money]] - 席位净持仓保证金数据接口
+- [[broker-net-money-chge|broker_net_money_chge]] - 席位净持仓保证金变化数据接口
+- [[broker-pk|broker_pk]] - 席位对对碰数据接口
+- [[broker-positions|broker_positions]] - 席位持仓数据接口
+- [[broker-positions-process|broker_positions_process]] - 建仓过程数据接口
+- [[broker-profit|broker_profit]] - 席位的商品盈亏数据接口
+- [[broker-total-money|broker_total_money]] - 席位总持仓保证金数据接口
+
+### 商品
+
+- [[variety-all|variety_all]] - 商品列表数据接口
+- [[variety-all-positions|variety_all_positions]] - 商品持仓数据接口
+- [[variety-bbr|variety_bbr]] - 合约多空比数据接口
+- [[variety-list|variety_list]] - 合约索引数据接口
+- [[variety-longhu-top-qhkc-commodity|variety_longhu_top]] - 龙虎比排行数据接口
+- [[variety-longhu-top-qhkc-commodity-2|variety_longhu_top]] - 龙虎比排行数据接口
+- [[variety-money|variety_money]] - 商品沉淀资金数据接口
+- [[variety-net-money|variety_net_money]] - 合约净持仓保证金数据接口
+- [[variety-net-money-chge|variety_net_money_chge]] - 合约净持仓保证金变化数据接口
+- [[variety-net-positions|variety_net_positions]] - 商品净持仓数据接口
+- [[variety-niuxiong-top-qhkc-commodity|variety_niuxiong_top]] - 牛熊线排行数据接口
+- [[variety-niuxiong-top-qhkc-commodity-2|variety_niuxiong_top]] - 牛熊线排行数据接口
+- [[variety-no-futures|variety_no_futures]] - 非期货公司净持仓数据接口
+- [[variety-positions|variety_positions]] - 合约持仓数据接口
+- [[variety-profit|variety_profit]] - 商品的席位盈亏数据接口
+- [[variety-quotes|variety_quotes]] - 合约行情数据接口
+- [[variety-reports|variety_reports]] - 商品相关研报数据接口
+- [[variety-strategies|variety_strategies]] - 自研指标数据接口
+- [[variety-total-money|variety_total_money]] - 合约总持仓保证金数据接口
+
+### 资金
+
+- [[commodity-flow-long|commodity_flow_long]] - 每日净流多列表（商品）接口
+- [[commodity-flow-short|commodity_flow_short]] - 每日净流空列表(商品)接口
+- [[money-in-out|money_in_out]] - 每日商品保证金沉淀变化接口
+- [[stock-flow-long|stock_flow_long]] - 每日净流多列表(指数)接口
+- [[stock-flow-short|stock_flow_short]] - 每日净流空列表(指数)接口
+
+### 基本面
+
+- [[basis|basis]] - 基差数据接口
+- [[free-ratio|free_ratio]] - 自由价比数据接口
+- [[free-spread|free_spread]] - 自由价差数据接口
+- [[intertemporal-arbitrage|intertemporal_arbitrage]] - 跨期套利数据接口
+- [[inventory-qhkc-fundamental|inventory]] - 库存数据接口-参数类型一
+- [[inventory-qhkc-fundamental-2|inventory]] - 库存数据接口-参数类型二
+- [[profit|profit]] - 利润数据接口
+- [[term-structure|term_structure]] - 期限结构接口
+- [[trader-prices|trader_prices]] - 现货贸易商报价接口
+- [[virtual-real|virtual_real]] - 虚实盘比数据接口
+- [[warehouse-receipt-qhkc-fundamental|warehouse_receipt]] - 仓单数据接口
+- [[warehouse-receipt-qhkc-fundamental-2|warehouse_receipt]] - 仓单汇总数据接口
+
+### 指数
+
+- [[index-info|index_info]] - 指数信息接口
+- [[index-mine|index_mine]] - 个人指数列表接口
+- [[index-money|index_money]] - 指数沉淀资金数据接口
+- [[index-official|index_official]] - 公共指数列表接口
+- [[index-profit|index_profit]] - 指数的席位盈亏数据接口
+- [[index-quotes|index_quotes]] - 指数行情数据接口
+- [[index-trend|index_trend]] - 指数资金动向接口
+- [[index-weights|index_weights]] - 指数权重数据接口
+
+### 工具
+
+- [[long-pool|long_pool]] - 龙虎牛熊多头合约池接口
+- [[short-pool|short_pool]] - 龙虎牛熊空头合约池
+
+### AKShare 现货数据
+
+- [[spot-corn-price-soozhu|spot_corn_price_soozhu]] - 搜猪-生猪大数据-全国玉米价格走势
+- [[spot-golden-benchmark-sge|spot_golden_benchmark_sge]] - 上海黄金交易所-数据资讯-上海金基准价-历史数据
+- [[spot-hist-sge|spot_hist_sge]] - 上海黄金交易所-数据资讯-行情走势-历史数据
+- [[spot-hog-crossbred-soozhu|spot_hog_crossbred_soozhu]] - 搜猪-生猪大数据-全国后备二元母猪
+- [[spot-hog-lean-price-soozhu|spot_hog_lean_price_soozhu]] - 搜猪-生猪大数据-全国瘦肉型肉猪
+- [[spot-hog-soozhu|spot_hog_soozhu]] - 搜猪-生猪大数据-各省均价实时排行榜
+- [[spot-hog-three-way-soozhu|spot_hog_three_way_soozhu]] - 搜猪-生猪大数据-全国三元仔猪
+- [[spot-hog-year-trend-soozhu|spot_hog_year_trend_soozhu]] - 搜猪-生猪大数据-今年以来全国出栏均价走势
+- [[spot-mixed-feed-soozhu|spot_mixed_feed_soozhu]] - 搜猪-生猪大数据-全国育肥猪合料（含自配料）半月走势
+- [[spot-price-qh|spot_price_qh]] - 99 期货-数据-期现-现货走势
+- [[spot-quotations-sge|spot_quotations_sge]] - 上海黄金交易所-数据资讯-行情走势-实时数据
+- [[spot-silver-benchmark-sge|spot_silver_benchmark_sge]] - 上海黄金交易所-数据资讯-上海银基准价-历史数据
+- [[spot-soybean-price-soozhu|spot_soybean_price_soozhu]] - 搜猪-生猪大数据-全国豆粕价格走势
+
+### AKShare 股票数据
+
+- [[news-report-time-baidu|news_report_time_baidu]] - 百度股市通-财报发行
+- [[news-trade-notify-dividend-baidu|news_trade_notify_dividend_baidu]] - 百度股市通-交易提醒-分红派息
+- [[news-trade-notify-suspend-baidu|news_trade_notify_suspend_baidu]] - 百度股市通-交易提醒-停复牌
+- [[stock-a-all-pb|stock_a_all_pb]] - 乐咕乐股-A 股等权重与中位数市净率
+- [[stock-a-below-net-asset-statistics|stock_a_below_net_asset_statistics]] - 乐咕乐股-A 股破净股统计数据
+- [[stock-a-congestion-lg|stock_a_congestion_lg]] - 乐咕乐股-大盘拥挤度
+- [[stock-a-gxl-lg|stock_a_gxl_lg]] - 乐咕乐股-股息率-A 股股息率
+- [[stock-a-high-low-statistics|stock_a_high_low_statistics]] - 不同市场的创新高和新低的股票数量
+- [[stock-a-ttm-lyr|stock_a_ttm_lyr]] - 乐咕乐股-A 股等权重市盈率与中位数市盈率
+- [[stock-account-statistics-em|stock_account_statistics_em]] - 东方财富网-数据中心-特色数据-股票账户统计
+- [[stock-add-stock|stock_add_stock]] - 新浪财经-发行与分配-增发
+- [[stock-allotment-cninfo|stock_allotment_cninfo]] - 巨潮资讯-个股-配股实施方案
+- [[stock-analyst-detail-em|stock_analyst_detail_em]] - 东方财富网-数据中心-研究报告-东方财富分析师指数-分析师详情
+- [[stock-analyst-rank-em|stock_analyst_rank_em]] - 东方财富网-数据中心-研究报告-东方财富分析师指数
+- [[stock-balance-sheet-by-report-delisted-em|stock_balance_sheet_by_report_delisted_em]] - 东方财富-股票-财务分析-资产负债表-已退市股票-按报告期
+- [[stock-balance-sheet-by-report-em|stock_balance_sheet_by_report_em]] - 东方财富-股票-财务分析-资产负债表-按报告期
+- [[stock-balance-sheet-by-yearly-em|stock_balance_sheet_by_yearly_em]] - 东方财富-股票-财务分析-资产负债表-按年度
+- [[stock-bid-ask-em|stock_bid_ask_em]] - 东方财富-行情报价
+- [[stock-bj-a-spot-em|stock_bj_a_spot_em]] - 东方财富网-京 A 股-实时行情数据
+- [[stock-board-change-em|stock_board_change_em]] - 东方财富-行情中心-当日板块异动详情
+- [[stock-board-concept-cons-em|stock_board_concept_cons_em]] - 东方财富-沪深板块-概念板块-板块成份
+- [[stock-board-concept-hist-em|stock_board_concept_hist_em]] - 东方财富-沪深板块-概念板块-历史行情数据
+- [[stock-board-concept-hist-min-em|stock_board_concept_hist_min_em]] - 东方财富-沪深板块-概念板块-分时历史行情数据
+- [[stock-board-concept-index-ths|stock_board_concept_index_ths]] - 同花顺-板块-概念板块-指数日频率数据
+- [[stock-board-concept-info-ths|stock_board_concept_info_ths]] - 同花顺-板块-概念板块-板块简介
+- [[stock-board-concept-name-em|stock_board_concept_name_em]] - 东方财富网-行情中心-沪深京板块-概念板块
+- [[stock-board-concept-spot-em|stock_board_concept_spot_em]] - 东方财富网-行情中心-沪深京板块-概念板块-实时行情
+- [[stock-board-industry-cons-em|stock_board_industry_cons_em]] - 东方财富-沪深板块-行业板块-板块成份
+- [[stock-board-industry-hist-em|stock_board_industry_hist_em]] - 东方财富-沪深板块-行业板块-历史行情数据
+- [[stock-board-industry-hist-min-em|stock_board_industry_hist_min_em]] - 东方财富-沪深板块-行业板块-分时历史行情数据
+- [[stock-board-industry-index-ths|stock_board_industry_index_ths]] - 同花顺-板块-行业板块-指数日频率数据
+- [[stock-board-industry-name-em|stock_board_industry_name_em]] - 东方财富-沪深京板块-行业板块
+- [[stock-board-industry-spot-em|stock_board_industry_spot_em]] - 东方财富网-沪深板块-行业板块-实时行情
+- [[stock-board-industry-summary-ths|stock_board_industry_summary_ths]] - 同花顺-同花顺行业一览表
+- [[stock-buffett-index-lg|stock_buffett_index_lg]] - 乐估乐股-底部研究-巴菲特指标
+- [[stock-cash-flow-sheet-by-quarterly-em|stock_cash_flow_sheet_by_quarterly_em]] - 东方财富-股票-财务分析-现金流量表-按单季度
+- [[stock-cash-flow-sheet-by-report-delisted-em|stock_cash_flow_sheet_by_report_delisted_em]] - 东方财富-股票-财务分析-现金流量表-已退市股票-按报告期
+- [[stock-cash-flow-sheet-by-report-em|stock_cash_flow_sheet_by_report_em]] - 东方财富-股票-财务分析-现金流量表-按报告期
+- [[stock-cash-flow-sheet-by-yearly-em|stock_cash_flow_sheet_by_yearly_em]] - 东方财富-股票-财务分析-现金流量表-按年度
+- [[stock-cg-equity-mortgage-cninfo|stock_cg_equity_mortgage_cninfo]] - 巨潮资讯-数据中心-专题统计-公司治理-股权质押
+- [[stock-cg-guarantee-cninfo|stock_cg_guarantee_cninfo]] - 巨潮资讯-数据中心-专题统计-公司治理-对外担保
+- [[stock-cg-lawsuit-cninfo|stock_cg_lawsuit_cninfo]] - 巨潮资讯-数据中心-专题统计-公司治理-公司诉讼
+- [[stock-changes-em|stock_changes_em]] - 东方财富-行情中心-盘口异动数据
+- [[stock-circulate-stock-holder|stock_circulate_stock_holder]] - 新浪财经-股东股本-流通股东
+- [[stock-comment-detail-scrd-desire-em|stock_comment_detail_scrd_desire_em]] - 东方财富网-数据中心-特色数据-千股千评-市场热度-市场参与意愿
+- [[stock-comment-detail-scrd-focus-em|stock_comment_detail_scrd_focus_em]] - 东方财富网-数据中心-特色数据-千股千评-市场热度-用户关注指数
+- [[stock-comment-detail-zhpj-lspf-em|stock_comment_detail_zhpj_lspf_em]] - 东方财富网-数据中心-特色数据-千股千评-综合评价-历史评分
+- [[stock-comment-detail-zlkp-jgcyd-em|stock_comment_detail_zlkp_jgcyd_em]] - 东方财富网-数据中心-特色数据-千股千评-主力控盘-机构参与度
+- [[stock-comment-em|stock_comment_em]] - 东方财富网-数据中心-特色数据-千股千评
+- [[stock-concept-cons-futu|stock_concept_cons_futu]] - 富途牛牛-主题投资-概念板块-成分股
+- [[stock-concept-fund-flow-hist|stock_concept_fund_flow_hist]] - 东方财富网-数据中心-资金流向-概念资金流-概念历史资金流
+- [[stock-cy-a-spot-em|stock_cy_a_spot_em]] - 东方财富网-创业板-实时行情
+- [[stock-cyq-em|stock_cyq_em]] - 东方财富网-概念板-行情中心-日K-筹码分布
+- [[stock-dividend-cninfo|stock_dividend_cninfo]] - 巨潮资讯-个股-历史分红
+- [[stock-dxsyl-em|stock_dxsyl_em]] - 东方财富网-数据中心-新股申购-打新收益率
+- [[stock-dzjy-hygtj|stock_dzjy_hygtj]] - 东方财富网-数据中心-大宗交易-活跃 A 股统计
+- [[stock-dzjy-hyyybtj|stock_dzjy_hyyybtj]] - 东方财富网-数据中心-大宗交易-活跃营业部统计
+- [[stock-dzjy-mrmx|stock_dzjy_mrmx]] - 东方财富网-数据中心-大宗交易-每日明细
+- [[stock-dzjy-mrtj|stock_dzjy_mrtj]] - 东方财富网-数据中心-大宗交易-每日统计
+- [[stock-dzjy-sctj|stock_dzjy_sctj]] - 东方财富网-数据中心-大宗交易-市场统计
+- [[stock-dzjy-yybph|stock_dzjy_yybph]] - 东方财富网-数据中心-大宗交易-营业部排行
+- [[stock-ebs-lg|stock_ebs_lg]] - 乐咕乐股-股债利差
+- [[stock-esg-hz-sina|stock_esg_hz_sina]] - 新浪财经-ESG评级中心-ESG评级-华证指数
+- [[stock-esg-msci-sina|stock_esg_msci_sina]] - 新浪财经-ESG评级中心-ESG评级-MSCI
+- [[stock-esg-rate-sina|stock_esg_rate_sina]] - 新浪财经-ESG评级中心-ESG评级-ESG评级数据
+- [[stock-esg-rft-sina|stock_esg_rft_sina]] - 新浪财经-ESG评级中心-ESG评级-路孚特
+- [[stock-esg-zd-sina|stock_esg_zd_sina]] - 新浪财经-ESG评级中心-ESG评级-秩鼎
+- [[stock-fhps-detail-em|stock_fhps_detail_em]] - 东方财富网-数据中心-分红送配-分红送配详情
+- [[stock-fhps-detail-ths|stock_fhps_detail_ths]] - 同花顺-分红情况
+- [[stock-fhps-em|stock_fhps_em]] - 东方财富-数据中心-年报季报-分红配送
+- [[stock-financial-abstract|stock_financial_abstract]] - 新浪财经-财务报表-关键指标
+- [[stock-financial-abstract-new-ths|stock_financial_abstract_new_ths]] - 同花顺-财务指标-重要指标；替换 stock_financial_abstract_ths 接口
+- [[stock-financial-analysis-indicator|stock_financial_analysis_indicator]] - 新浪财经-财务分析-财务指标
+- [[stock-financial-analysis-indicator-em|stock_financial_analysis_indicator_em]] - 东方财富-A股-财务分析-主要指标
+- [[stock-financial-benefit-new-ths|stock_financial_benefit_new_ths]] - 同花顺-财务指标-利润表；替换 stock_financial_benefit_ths 接口
+- [[stock-financial-cash-new-ths|stock_financial_cash_new_ths]] - 同花顺-财务指标-现金流量表；替换 stock_financial_cash_ths 接口
+- [[stock-financial-debt-new-ths|stock_financial_debt_new_ths]] - 同花顺-财务指标-资产负债表；替换 stock_financial_debt_ths 接口
+- [[stock-financial-hk-analysis-indicator-em|stock_financial_hk_analysis_indicator_em]] - 东方财富-港股-财务分析-主要指标
+- [[stock-financial-hk-report-em|stock_financial_hk_report_em]] - 东方财富-港股-财务报表-三大报表
+- [[stock-financial-report-sina|stock_financial_report_sina]] - 新浪财经-财务报表-三大报表
+- [[stock-financial-us-analysis-indicator-em|stock_financial_us_analysis_indicator_em]] - 东方财富-美股-财务分析-主要指标
+- [[stock-financial-us-report-em|stock_financial_us_report_em]] - 东方财富-美股-财务分析-三大报表
+- [[stock-fund-flow-big-deal|stock_fund_flow_big_deal]] - 同花顺-数据中心-资金流向-大单追踪
+- [[stock-fund-flow-concept|stock_fund_flow_concept]] - 同花顺-数据中心-资金流向-概念资金流
+- [[stock-fund-flow-individual|stock_fund_flow_individual]] - 同花顺-数据中心-资金流向-个股资金流
+- [[stock-fund-flow-industry|stock_fund_flow_industry]] - 同花顺-数据中心-资金流向-行业资金流
+- [[stock-fund-stock-holder|stock_fund_stock_holder]] - 新浪财经-股本股东-基金持股
+- [[stock-gddh-em|stock_gddh_em]] - 东方财富网-数据中心-股东大会
+- [[stock-gdfx-free-holding-analyse-em|stock_gdfx_free_holding_analyse_em]] - 东方财富网-数据中心-股东分析-股东持股分析-十大流通股东
+- [[stock-gdfx-free-holding-change-em|stock_gdfx_free_holding_change_em]] - 东方财富网-数据中心-股东分析-股东持股变动统计-十大流通股东
+- [[stock-gdfx-free-holding-detail-em|stock_gdfx_free_holding_detail_em]] - 东方财富网-数据中心-股东分析-股东持股明细-十大流通股东
+- [[stock-gdfx-free-holding-statistics-em|stock_gdfx_free_holding_statistics_em]] - 东方财富网-数据中心-股东分析-股东持股统计-十大股东
+- [[stock-gdfx-free-holding-teamwork-em|stock_gdfx_free_holding_teamwork_em]] - 东方财富网-数据中心-股东分析-股东协同-十大流通股东
+- [[stock-gdfx-free-top-10-em|stock_gdfx_free_top_10_em]] - 东方财富网-个股-十大流通股东
+- [[stock-gdfx-holding-analyse-em|stock_gdfx_holding_analyse_em]] - 东方财富网-数据中心-股东分析-股东持股分析-十大股东
+- [[stock-gdfx-holding-change-em|stock_gdfx_holding_change_em]] - 东方财富网-数据中心-股东分析-股东持股变动统计-十大股东
+- [[stock-gdfx-holding-detail-em|stock_gdfx_holding_detail_em]] - 东方财富网-数据中心-股东分析-股东持股明细-十大股东
+- [[stock-gdfx-holding-statistics-em|stock_gdfx_holding_statistics_em]] - 东方财富网-数据中心-股东分析-股东持股统计-十大股东
+- [[stock-gdfx-holding-teamwork-em|stock_gdfx_holding_teamwork_em]] - 东方财富网-数据中心-股东分析-股东协同-十大股东
+- [[stock-gdfx-top-10-em|stock_gdfx_top_10_em]] - 东方财富网-个股-十大股东
+- [[stock-ggcg-em|stock_ggcg_em]] - 东方财富网-数据中心-特色数据-高管持股
+- [[stock-gpzy-distribute-statistics-bank-em|stock_gpzy_distribute_statistics_bank_em]] - 东方财富网-数据中心-特色数据-股权质押-质押机构分布统计-银行
+- [[stock-gpzy-distribute-statistics-company-em|stock_gpzy_distribute_statistics_company_em]] - 东方财富网-数据中心-特色数据-股权质押-质押机构分布统计-证券公司
+- [[stock-gpzy-individual-pledge-ratio-detail-em|stock_gpzy_individual_pledge_ratio_detail_em]] - 东方财富网-数据中心-股权质押-个股
+- [[stock-gpzy-industry-data-em|stock_gpzy_industry_data_em]] - 东方财富网-数据中心-特色数据-股权质押-上市公司质押比例-行业数据
+- [[stock-gpzy-pledge-ratio-detail-em|stock_gpzy_pledge_ratio_detail_em]] - 东方财富网-数据中心-特色数据-股权质押-重要股东股权质押明细
+- [[stock-gpzy-pledge-ratio-em|stock_gpzy_pledge_ratio_em]] - 东方财富网-数据中心-特色数据-股权质押-上市公司质押比例
+- [[stock-gpzy-profile-em|stock_gpzy_profile_em]] - 东方财富网-数据中心-特色数据-股权质押-股权质押市场概况
+- [[stock-gsrl-gsdt-em|stock_gsrl_gsdt_em]] - 东方财富网-数据中心-股市日历-公司动态
+- [[stock-history-dividend|stock_history_dividend]] - 新浪财经-发行与分配-历史分红
+- [[stock-history-dividend-detail|stock_history_dividend_detail]] - 新浪财经-发行与分配-分红配股
+- [[stock-hk-company-profile-em|stock_hk_company_profile_em]] - 东方财富-港股-公司资料
+- [[stock-hk-daily|stock_hk_daily]] - 港股-历史行情数据, 可以选择返回复权后数据,更新频率为日频
+- [[stock-hk-dividend-payout-em|stock_hk_dividend_payout_em]] - 东方财富-港股-核心必读-分红派息
+- [[stock-hk-famous-spot-em|stock_hk_famous_spot_em]] - 东方财富网-行情中心-港股市场-知名港股实时行情数据
+- [[stock-hk-fhpx-detail-ths|stock_hk_fhpx_detail_ths]] - 同花顺-港股-分红派息
+- [[stock-hk-financial-indicator-em|stock_hk_financial_indicator_em]] - 东方财富-港股-核心必读-最新指标
+- [[stock-hk-ggt-components-em|stock_hk_ggt_components_em]] - 东方财富网-行情中心-港股市场-港股通成份股
+- [[stock-hk-growth-comparison-em|stock_hk_growth_comparison_em]] - 东方财富-港股-行业对比-成长性对比
+- [[stock-hk-gxl-lg|stock_hk_gxl_lg]] - 乐咕乐股-股息率-恒生指数股息率
+- [[stock-hk-hist|stock_hk_hist]] - 港股-历史行情数据, 可以选择返回复权后数据, 更新频率为日频
+- [[stock-hk-hist-min-em|stock_hk_hist_min_em]] - 东方财富网-行情首页-港股-每日分时行情
+- [[stock-hk-hot-rank-detail-em|stock_hk_hot_rank_detail_em]] - 东方财富网-股票热度-历史趋势
+- [[stock-hk-hot-rank-detail-realtime-em|stock_hk_hot_rank_detail_realtime_em]] - 东方财富网-个股人气榜-实时变动
+- [[stock-hk-hot-rank-em|stock_hk_hot_rank_em]] - 东方财富-个股人气榜-人气榜-港股市场
+- [[stock-hk-hot-rank-latest-em|stock_hk_hot_rank_latest_em]] - 东方财富-个股人气榜-最新排名
+- [[stock-hk-indicator-eniu|stock_hk_indicator_eniu]] - 亿牛网-港股个股指标: 市盈率, 市净率, 股息率, ROE, 市值
+- [[stock-hk-main-board-spot-em|stock_hk_main_board_spot_em]] - 港股主板的实时行情数据; 该数据有 15 分钟延时
+- [[stock-hk-profit-forecast-et|stock_hk_profit_forecast_et]] - 经济通-公司资料-盈利预测
+- [[stock-hk-scale-comparison-em|stock_hk_scale_comparison_em]] - 东方财富-港股-行业对比-规模对比
+- [[stock-hk-security-profile-em|stock_hk_security_profile_em]] - 东方财富-港股-证券资料
+- [[stock-hk-spot|stock_hk_spot]] - 获取所有港股的实时行情数据 15 分钟延时
+- [[stock-hk-spot-em|stock_hk_spot_em]] - 所有港股的实时行情数据; 该数据有 15 分钟延时
+- [[stock-hk-valuation-baidu|stock_hk_valuation_baidu]] - 百度股市通-港股-财务报表-估值数据
+- [[stock-hk-valuation-comparison-em|stock_hk_valuation_comparison_em]] - 东方财富-港股-行业对比-估值对比
+- [[stock-hold-change-cninfo|stock_hold_change_cninfo]] - 巨潮资讯-数据中心-专题统计-股东股本-股本变动
+- [[stock-hold-control-cninfo|stock_hold_control_cninfo]] - 巨潮资讯-数据中心-专题统计-股东股本-实际控制人持股变动
+- [[stock-hold-management-detail-cninfo|stock_hold_management_detail_cninfo]] - 巨潮资讯-数据中心-专题统计-股东股本-高管持股变动明细
+- [[stock-hold-management-detail-em|stock_hold_management_detail_em]] - 东方财富网-数据中心-特色数据-高管持股-董监高及相关人员持股变动明细
+- [[stock-hold-management-person-em|stock_hold_management_person_em]] - 东方财富网-数据中心-特色数据-高管持股-人员增减持股变动明细
+- [[stock-hold-num-cninfo|stock_hold_num_cninfo]] - 巨潮资讯-数据中心-专题统计-股东股本-股东人数及持股集中度
+- [[stock-hot-deal-xq|stock_hot_deal_xq]] - 雪球-沪深股市-热度排行榜-交易排行榜
+- [[stock-hot-follow-xq|stock_hot_follow_xq]] - 雪球-沪深股市-热度排行榜-关注排行榜
+- [[stock-hot-keyword-em|stock_hot_keyword_em]] - 东方财富-个股人气榜-热门关键词
+- [[stock-hot-rank-detail-em|stock_hot_rank_detail_em]] - 东方财富网-股票热度-历史趋势及粉丝特征
+- [[stock-hot-rank-detail-realtime-em|stock_hot_rank_detail_realtime_em]] - 东方财富网-个股人气榜-实时变动
+- [[stock-hot-rank-em|stock_hot_rank_em]] - 东方财富网站-股票热度
+- [[stock-hot-rank-latest-em|stock_hot_rank_latest_em]] - 东方财富-个股人气榜-最新排名
+- [[stock-hot-rank-relate-em|stock_hot_rank_relate_em]] - 东方财富-个股人气榜-相关股票
+- [[stock-hot-search-baidu|stock_hot_search_baidu]] - 百度股市通-热搜股票
+- [[stock-hot-tweet-xq|stock_hot_tweet_xq]] - 雪球-沪深股市-热度排行榜-讨论排行榜
+- [[stock-hot-up-em|stock_hot_up_em]] - 东方财富-个股人气榜-飙升榜
+- [[stock-hsgt-board-rank-em|stock_hsgt_board_rank_em]] - 东方财富网-数据中心-沪深港通持股-板块排行
+- [[stock-hsgt-fund-flow-summary-em|stock_hsgt_fund_flow_summary_em]] - 东方财富网-数据中心-资金流向-沪深港通资金流向
+- [[stock-hsgt-fund-min-em|stock_hsgt_fund_min_em]] - 东方财富-数据中心-沪深港通-市场概括-分时数据
+- [[stock-hsgt-hist-em|stock_hsgt_hist_em]] - 东方财富网-数据中心-资金流向-沪深港通资金流向-沪深港通历史数据
+- [[stock-hsgt-hold-stock-em|stock_hsgt_hold_stock_em]] - 东方财富网-数据中心-沪深港通持股-个股排行
+- [[stock-hsgt-individual-detail-em|stock_hsgt_individual_detail_em]] - 东方财富网-数据中心-沪深港通-沪深港通持股-具体股票-个股详情
+- [[stock-hsgt-individual-em|stock_hsgt_individual_em]] - 东方财富网-数据中心-沪深港通-沪深港通持股-具体股票
+- [[stock-hsgt-institution-statistics-em|stock_hsgt_institution_statistics_em]] - 东方财富网-数据中心-沪深港通-沪深港通持股-机构排行
+- [[stock-hsgt-sh-hk-spot-em|stock_hsgt_sh_hk_spot_em]] - 东方财富网-行情中心-沪深港通-港股通(沪>港)-股票；按股票代码排序
+- [[stock-hsgt-stock-statistics-em|stock_hsgt_stock_statistics_em]] - 东方财富网-数据中心-沪深港通-沪深港通持股-每日个股统计
+- [[stock-index-pb-lg|stock_index_pb_lg]] - 乐咕乐股-指数市净率
+- [[stock-index-pe-lg|stock_index_pe_lg]] - 乐咕乐股-指数市盈率
+- [[stock-individual-basic-info-hk-xq|stock_individual_basic_info_hk_xq]] - 雪球-个股-公司概况-公司简介
+- [[stock-individual-basic-info-us-xq|stock_individual_basic_info_us_xq]] - 雪球-个股-公司概况-公司简介
+- [[stock-individual-basic-info-xq|stock_individual_basic_info_xq]] - 雪球财经-个股-公司概况-公司简介
+- [[stock-individual-fund-flow|stock_individual_fund_flow]] - 东方财富网-数据中心-个股资金流向
+- [[stock-individual-fund-flow-rank|stock_individual_fund_flow_rank]] - 东方财富网-数据中心-资金流向-排名
+- [[stock-individual-info-em|stock_individual_info_em]] - 东方财富-个股-股票信息
+- [[stock-individual-notice-report|stock_individual_notice_report]] - 东方财富网-数据中心-公告大全-个股
+- [[stock-individual-spot-xq|stock_individual_spot_xq]] - 雪球-行情中心-个股
+- [[stock-industry-category-cninfo|stock_industry_category_cninfo]] - 巨潮资讯-数据-行业分类数据
+- [[stock-industry-change-cninfo|stock_industry_change_cninfo]] - 巨潮资讯-数据-上市公司行业归属的变动情况
+- [[stock-industry-clf-hist-sw|stock_industry_clf_hist_sw]] - 申万宏源研究-行业分类-全部行业分类
+- [[stock-industry-pe-ratio-cninfo|stock_industry_pe_ratio_cninfo]] - 巨潮资讯-数据中心-行业分析-行业市盈率
+- [[stock-info-a-code-name|stock_info_a_code_name]] - 沪深京 A 股股票代码和股票简称数据
+- [[stock-info-bj-name-code|stock_info_bj_name_code]] - 北京证券交易所股票代码和简称数据
+- [[stock-info-change-name|stock_info_change_name]] - 新浪财经-股票曾用名
+- [[stock-info-sh-delist|stock_info_sh_delist]] - 上海证券交易所暂停/终止上市股票
+- [[stock-info-sh-name-code|stock_info_sh_name_code]] - 上海证券交易所股票代码和简称数据
+- [[stock-info-sz-change-name|stock_info_sz_change_name]] - 深证证券交易所-市场数据-股票数据-名称变更
+- [[stock-info-sz-delist|stock_info_sz_delist]] - 深证证券交易所终止/暂停上市股票
+- [[stock-info-sz-name-code|stock_info_sz_name_code]] - 深证证券交易所股票代码和股票简称数据
+- [[stock-inner-trade-xq|stock_inner_trade_xq]] - 雪球-行情中心-沪深股市-内部交易
+- [[stock-institute-hold|stock_institute_hold]] - 新浪财经-机构持股-机构持股一览表
+- [[stock-institute-hold-detail|stock_institute_hold_detail]] - 新浪财经-机构持股-机构持股详情
+- [[stock-institute-recommend|stock_institute_recommend]] - 新浪财经-机构推荐池-具体指标的数据
+- [[stock-institute-recommend-detail|stock_institute_recommend_detail]] - 新浪财经-机构推荐池-股票评级记录
+- [[stock-intraday-em|stock_intraday_em]] - 东方财富-分时数据
+- [[stock-intraday-sina|stock_intraday_sina]] - 新浪财经-日内分时数据
+- [[stock-ipo-benefit-ths|stock_ipo_benefit_ths]] - 同花顺-数据中心-新股数据-IPO受益股
+- [[stock-ipo-declare-em|stock_ipo_declare_em]] - 东方财富网-数据中心-新股申购-首发申报信息-首发申报企业信息
+- [[stock-ipo-hk-ths|stock_ipo_hk_ths]] - 同花顺-数据中心-新股申购与中签-港股
+- [[stock-ipo-info|stock_ipo_info]] - 新浪财经-发行与分配-新股发行
+- [[stock-ipo-review-em|stock_ipo_review_em]] - 东方财富网-数据中心-新股申购-新股上会信息
+- [[stock-ipo-summary-cninfo|stock_ipo_summary_cninfo]] - 巨潮资讯-个股-上市相关
+- [[stock-ipo-ths|stock_ipo_ths]] - 同花顺-数据中心-新股申购与中签
+- [[stock-ipo-tutor-em|stock_ipo_tutor_em]] - 东方财富网-数据中心-新股申购-IPO辅导信息
+- [[stock-irm-ans-cninfo|stock_irm_ans_cninfo]] - 互动易-回答
+- [[stock-irm-cninfo|stock_irm_cninfo]] - 互动易-提问
+- [[stock-jgdy-detail-em|stock_jgdy_detail_em]] - 东方财富网-数据中心-特色数据-机构调研-机构调研详细
+- [[stock-jgdy-tj-em|stock_jgdy_tj_em]] - 东方财富网-数据中心-特色数据-机构调研-机构调研统计
+- [[stock-kc-a-spot-em|stock_kc_a_spot_em]] - 东方财富网-科创板-实时行情
+- [[stock-lh-yyb-capital|stock_lh_yyb_capital]] - 龙虎榜-营业部排行-资金实力最强
+- [[stock-lh-yyb-control|stock_lh_yyb_control]] - 龙虎榜-营业部排行-抱团操作实力
+- [[stock-lh-yyb-most|stock_lh_yyb_most]] - 龙虎榜-营业部排行-上榜次数最多
+- [[stock-lhb-detail-daily-sina|stock_lhb_detail_daily_sina]] - 新浪财经-龙虎榜-每日详情
+- [[stock-lhb-detail-em|stock_lhb_detail_em]] - 东方财富网-数据中心-龙虎榜单-龙虎榜详情
+- [[stock-lhb-ggtj-sina|stock_lhb_ggtj_sina]] - 新浪财经-龙虎榜-个股上榜统计
+- [[stock-lhb-hyyyb-em|stock_lhb_hyyyb_em]] - 东方财富网-数据中心-龙虎榜单-每日活跃营业部
+- [[stock-lhb-jgmmtj-em|stock_lhb_jgmmtj_em]] - 东方财富网-数据中心-龙虎榜单-机构买卖每日统计
+- [[stock-lhb-jgmx-sina|stock_lhb_jgmx_sina]] - 新浪财经-龙虎榜-机构席位成交明细
+- [[stock-lhb-jgstatistic-em|stock_lhb_jgstatistic_em]] - 东方财富网-数据中心-龙虎榜单-机构席位追踪
+- [[stock-lhb-jgzz-sina|stock_lhb_jgzz_sina]] - 新浪财经-龙虎榜-机构席位追踪
+- [[stock-lhb-stock-detail-em|stock_lhb_stock_detail_em]] - 东方财富网-数据中心-龙虎榜单-个股龙虎榜详情
+- [[stock-lhb-stock-statistic-em|stock_lhb_stock_statistic_em]] - 东方财富网-数据中心-龙虎榜单-个股上榜统计
+- [[stock-lhb-traderstatistic-em|stock_lhb_traderstatistic_em]] - 东方财富网-数据中心-龙虎榜单-营业部统计
+- [[stock-lhb-yyb-detail-em|stock_lhb_yyb_detail_em]] - 东方财富网-数据中心-龙虎榜单-营业部历史交易明细-营业部交易明细
+- [[stock-lhb-yybph-em|stock_lhb_yybph_em]] - 东方财富网-数据中心-龙虎榜单-营业部排行
+- [[stock-lhb-yytj-sina|stock_lhb_yytj_sina]] - 新浪财经-龙虎榜-营业上榜统计
+- [[stock-lrb-em|stock_lrb_em]] - 东方财富-数据中心-年报季报-业绩快报-利润表
+- [[stock-main-fund-flow|stock_main_fund_flow]] - 东方财富网-数据中心-资金流向-主力净流入排名
+- [[stock-main-stock-holder|stock_main_stock_holder]] - 新浪财经-股本股东-主要股东
+- [[stock-management-change-ths|stock_management_change_ths]] - 同花顺-公司大事-高管持股变动
+- [[stock-margin-account-info|stock_margin_account_info]] - 东方财富网-数据中心-融资融券-融资融券账户统计-两融账户信息
+- [[stock-margin-bse|stock_margin_bse]] - 北京证券交易所-融资融券数据-融资融券汇总数据
+- [[stock-margin-detail-bse|stock_margin_detail_bse]] - 北京证券交易所-融资融券数据-融资融券交易明细数据
+- [[stock-margin-detail-sse|stock_margin_detail_sse]] - 上海证券交易所-融资融券数据-融资融券明细数据
+- [[stock-margin-detail-szse|stock_margin_detail_szse]] - 深证证券交易所-融资融券数据-融资融券交易明细数据
+- [[stock-margin-ratio-pa|stock_margin_ratio_pa]] - 融资融券-标的证券名单及保证金比例查询
+- [[stock-margin-sse|stock_margin_sse]] - 上海证券交易所-融资融券数据-融资融券汇总数据
+- [[stock-margin-szse|stock_margin_szse]] - 深圳证券交易所-融资融券数据-融资融券汇总数据
+- [[stock-margin-underlying-info-bse|stock_margin_underlying_info_bse]] - 北京证券交易所-融资融券数据-标的证券信息
+- [[stock-margin-underlying-info-szse|stock_margin_underlying_info_szse]] - 深圳证券交易所-融资融券数据-标的证券信息
+- [[stock-market-activity-legu|stock_market_activity_legu]] - 乐咕乐股网-赚钱效应分析数据
+- [[stock-market-fund-flow|stock_market_fund_flow]] - 东方财富网-数据中心-资金流向-大盘
+- [[stock-market-pb-lg|stock_market_pb_lg]] - 乐咕乐股-主板市净率
+- [[stock-market-pe-lg|stock_market_pe_lg]] - 乐咕乐股-主板市盈率
+- [[stock-new-a-spot-em|stock_new_a_spot_em]] - 东方财富网-新股-实时行情数据
+- [[stock-new-gh-cninfo|stock_new_gh_cninfo]] - 巨潮资讯-数据中心-新股数据-新股过会
+- [[stock-new-ipo-cninfo|stock_new_ipo_cninfo]] - 巨潮资讯-数据中心-新股数据-新股发行
+- [[stock-news-em|stock_news_em]] - 东方财富指定个股的新闻资讯数据
+- [[stock-news-main-cx|stock_news_main_cx]] - 财新网-财新数据通-最新
+- [[stock-notice-report|stock_notice_report]] - 东方财富网-数据中心-公告大全-沪深京 A 股公告
+- [[stock-pg-em|stock_pg_em]] - 东方财富网-数据中心-新股数据-配股
+- [[stock-price-js|stock_price_js]] - 美港电讯-美港目标价数据
+- [[stock-profile-cninfo|stock_profile_cninfo]] - 巨潮资讯-个股-公司概况
+- [[stock-profit-forecast-em|stock_profit_forecast_em]] - 东方财富网-数据中心-研究报告-盈利预测; 该数据源网页端返回数据有异常, 本接口已修复该异常
+- [[stock-profit-forecast-ths|stock_profit_forecast_ths]] - 同花顺-盈利预测
+- [[stock-profit-sheet-by-quarterly-em|stock_profit_sheet_by_quarterly_em]] - 东方财富-股票-财务分析-利润表-按单季度
+- [[stock-profit-sheet-by-report-delisted-em|stock_profit_sheet_by_report_delisted_em]] - 东方财富-股票-财务分析-利润表-已退市股票-按报告期
+- [[stock-profit-sheet-by-report-em|stock_profit_sheet_by_report_em]] - 东方财富-股票-财务分析-利润表-报告期
+- [[stock-profit-sheet-by-yearly-em|stock_profit_sheet_by_yearly_em]] - 东方财富-股票-财务分析-利润表-按年度
+- [[stock-qbzf-em|stock_qbzf_em]] - 东方财富网-数据中心-新股数据-增发-全部增发
+- [[stock-qsjy-em|stock_qsjy_em]] - 东方财富网-数据中心-特色数据-券商业绩月报
+- [[stock-rank-cxfl-ths|stock_rank_cxfl_ths]] - 同花顺-数据中心-技术选股-持续放量
+- [[stock-rank-cxsl-ths|stock_rank_cxsl_ths]] - 同花顺-数据中心-技术选股-持续缩量
+- [[stock-rank-forecast-cninfo|stock_rank_forecast_cninfo]] - 巨潮资讯-数据中心-评级预测-投资评级
+- [[stock-rank-ljqd-ths|stock_rank_ljqd_ths]] - 同花顺-数据中心-技术选股-量价齐跌
+- [[stock-rank-ljqs-ths|stock_rank_ljqs_ths]] - 同花顺-数据中心-技术选股-量价齐升
+- [[stock-rank-xstp-ths|stock_rank_xstp_ths]] - 同花顺-数据中心-技术选股-向上突破
+- [[stock-rank-xxtp-ths|stock_rank_xxtp_ths]] - 同花顺-数据中心-技术选股-向下突破
+- [[stock-rank-xzjp-ths|stock_rank_xzjp_ths]] - 同花顺-数据中心-技术选股-险资举牌
+- [[stock-register-all-em|stock_register_all_em]] - 东方财富网-数据中心-新股数据-IPO审核信息-全部
+- [[stock-register-bj|stock_register_bj]] - 东方财富网-数据中心-新股数据-IPO审核信息-北交所
+- [[stock-register-cyb|stock_register_cyb]] - 东方财富网-数据中心-新股数据-IPO审核信息-创业板
+- [[stock-register-db|stock_register_db]] - 东方财富网-数据中心-新股数据-注册制审核-达标企业
+- [[stock-register-kcb|stock_register_kcb]] - 东方财富网-数据中心-新股数据-IPO审核信息-科创板
+- [[stock-register-sh|stock_register_sh]] - 东方财富网-数据中心-新股数据-IPO审核信息-上海主板
+- [[stock-register-sz|stock_register_sz]] - 东方财富网-数据中心-新股数据-IPO审核信息-深圳主板
+- [[stock-report-disclosure|stock_report_disclosure]] - 巨潮资讯-数据-预约披露的数据
+- [[stock-report-fund-hold|stock_report_fund_hold]] - 东方财富网-数据中心-主力数据-基金持仓
+- [[stock-report-fund-hold-detail|stock_report_fund_hold_detail]] - 东方财富网-数据中心-主力数据-基金持仓-基金持仓明细表
+- [[stock-repurchase-em|stock_repurchase_em]] - 东方财富网-数据中心-股票回购-股票回购数据
+- [[stock-research-report-em|stock_research_report_em]] - 东方财富网-数据中心-研究报告-个股研报
+- [[stock-restricted-release-detail-em|stock_restricted_release_detail_em]] - 东方财富网-数据中心-限售股解禁-解禁详情一览
+- [[stock-restricted-release-queue-em|stock_restricted_release_queue_em]] - 东方财富网-数据中心-个股限售解禁-解禁批次
+- [[stock-restricted-release-queue-sina|stock_restricted_release_queue_sina]] - 新浪财经-发行分配-限售解禁
+- [[stock-restricted-release-stockholder-em|stock_restricted_release_stockholder_em]] - 东方财富网-数据中心-个股限售解禁-解禁股东
+- [[stock-restricted-release-summary-em|stock_restricted_release_summary_em]] - 东方财富网-数据中心-特色数据-限售股解禁
+- [[stock-sector-detail|stock_sector_detail]] - 新浪行业-板块行情-成份详情, 由于新浪网页提供的统计数据有误, 部分行业数量大于统计数
+- [[stock-sector-fund-flow-hist|stock_sector_fund_flow_hist]] - 东方财富网-数据中心-资金流向-行业资金流-行业历史资金流
+- [[stock-sector-fund-flow-rank|stock_sector_fund_flow_rank]] - 东方财富网-数据中心-资金流向-板块资金流-排名
+- [[stock-sector-fund-flow-summary|stock_sector_fund_flow_summary]] - 东方财富网-数据中心-资金流向-行业资金流-xx行业个股资金流
+- [[stock-sector-spot|stock_sector_spot]] - 新浪行业-板块行情
+- [[stock-sgt-reference-exchange-rate-sse|stock_sgt_reference_exchange_rate_sse]] - 沪港通-港股通信息披露-参考汇率
+- [[stock-sgt-reference-exchange-rate-szse|stock_sgt_reference_exchange_rate_szse]] - 深港通-港股通业务信息-参考汇率
+- [[stock-sgt-settlement-exchange-rate-sse|stock_sgt_settlement_exchange_rate_sse]] - 沪港通-港股通信息披露-结算汇兑
+- [[stock-sgt-settlement-exchange-rate-szse|stock_sgt_settlement_exchange_rate_szse]] - 深港通-港股通业务信息-结算汇率
+- [[stock-sh-a-spot-em|stock_sh_a_spot_em]] - 东方财富网-沪 A 股-实时行情数据
+- [[stock-share-change-cninfo|stock_share_change_cninfo]] - 巨潮资讯-数据-公司股本变动
+- [[stock-share-hold-change-bse|stock_share_hold_change_bse]] - 北京证券交易所-信息披露-监管信息-董监高及相关人员持股变动
+- [[stock-share-hold-change-sse|stock_share_hold_change_sse]] - 上海证券交易所-披露-监管信息公开-公司监管-董董监高人员股份变动
+- [[stock-share-hold-change-szse|stock_share_hold_change_szse]] - 深圳证券交易所-信息披露-监管信息公开-董监高人员股份变动
+- [[stock-shareholder-change-ths|stock_shareholder_change_ths]] - 同花顺-公司大事-股东持股变动
+- [[stock-sns-sseinfo|stock_sns_sseinfo]] - 上证e互动-提问与回答
+- [[stock-sse-deal-daily|stock_sse_deal_daily]] - 上海证券交易所-数据-股票数据-成交概况-股票成交概况-每日股票情况
+- [[stock-sse-summary|stock_sse_summary]] - 上海证券交易所-股票数据总貌
+- [[stock-staq-net-stop|stock_staq_net_stop]] - 东方财富网-行情中心-沪深个股-两网及退市
+- [[stock-sy-em|stock_sy_em]] - 东方财富网-数据中心-特色数据-商誉-个股商誉明细
+- [[stock-sy-hy-em|stock_sy_hy_em]] - 东方财富网-数据中心-特色数据-商誉-行业商誉
+- [[stock-sy-jz-em|stock_sy_jz_em]] - 东方财富网-数据中心-特色数据-商誉-个股商誉减值明细
+- [[stock-sy-profile-em|stock_sy_profile_em]] - 东方财富网-数据中心-特色数据-商誉-A股商誉市场概况
+- [[stock-sy-yq-em|stock_sy_yq_em]] - 东方财富网-数据中心-特色数据-商誉-商誉减值预期明细
+- [[stock-sz-a-spot-em|stock_sz_a_spot_em]] - 东方财富网-深 A 股-实时行情数据
+- [[stock-szse-area-summary|stock_szse_area_summary]] - 深圳证券交易所-市场总貌-地区交易排序
+- [[stock-szse-sector-summary|stock_szse_sector_summary]] - 深圳证券交易所-统计资料-股票行业成交数据
+- [[stock-szse-summary|stock_szse_summary]] - 深圳证券交易所-市场总貌-证券类别统计
+- [[stock-tfp-em|stock_tfp_em]] - 东方财富网-数据中心-特色数据-停复牌信息
+- [[stock-us-daily|stock_us_daily]] - 美股历史行情数据，设定 adjust="qfq" 则返回前复权后的数据，默认 adjust="", 则返回未复权的数据，历史数据按日频率更新
+- [[stock-us-famous-spot-em|stock_us_famous_spot_em]] - 美股-知名美股的实时行情数据
+- [[stock-us-hist|stock_us_hist]] - 东方财富网-行情-美股-每日行情
+- [[stock-us-hist-min-em|stock_us_hist_min_em]] - 东方财富网-行情首页-美股-每日分时行情
+- [[stock-us-pink-spot-em|stock_us_pink_spot_em]] - 美股粉单市场的实时行情数据
+- [[stock-us-spot|stock_us_spot]] - 新浪财经-美股; 获取的数据有 15 分钟延迟; 建议使用 ak.stock_us_spot_em() 来获取数据
+- [[stock-us-spot-em|stock_us_spot_em]] - 东方财富网-美股-实时行情
+- [[stock-us-valuation-baidu|stock_us_valuation_baidu]] - 百度股市通-美股-财务报表-估值数据
+- [[stock-value-em|stock_value_em]] - 东方财富网-数据中心-估值分析-每日互动-每日互动-估值分析
+- [[stock-xgsglb-em|stock_xgsglb_em]] - 东方财富网-数据中心-新股数据-新股申购-新股申购与中签查询
+- [[stock-xgsr-ths|stock_xgsr_ths]] - 同花顺-数据中心-新股数据-新股上市首日
+- [[stock-xjll-em|stock_xjll_em]] - 东方财富-数据中心-年报季报-业绩快报-现金流量表
+- [[stock-yjbb-em|stock_yjbb_em]] - 东方财富-数据中心-年报季报-业绩报表
+- [[stock-yjkb-em|stock_yjkb_em]] - 东方财富-数据中心-年报季报-业绩快报
+- [[stock-yjyg-em|stock_yjyg_em]] - 东方财富-数据中心-年报季报-业绩预告
+- [[stock-yysj-em|stock_yysj_em]] - 东方财富-数据中心-年报季报-预约披露时间
+- [[stock-yzxdr-em|stock_yzxdr_em]] - 东方财富网-数据中心-特色数据-一致行动人
+- [[stock-zcfz-bj-em|stock_zcfz_bj_em]] - 东方财富-数据中心-年报季报-业绩快报-资产负债表
+- [[stock-zcfz-em|stock_zcfz_em]] - 东方财富-数据中心-年报季报-业绩快报-资产负债表
+- [[stock-zdhtmx-em|stock_zdhtmx_em]] - 东方财富网-数据中心-重大合同-重大合同明细
+- [[stock-zh-a-cdr-daily|stock_zh_a_cdr_daily]] - 上海证券交易所-科创板-CDR
+- [[stock-zh-a-daily|stock_zh_a_daily]] - 新浪财经-沪深京 A 股的数据, 历史数据按日频率更新; 注意其中的 **sh689009** 为 CDR, 请 通过 **ak.stock_zh_a_cdr_daily** 接口获取
+- [[stock-zh-a-disclosure-relation-cninfo|stock_zh_a_disclosure_relation_cninfo]] - 巨潮资讯-首页-公告查询-信息披露调研
+- [[stock-zh-a-disclosure-report-cninfo|stock_zh_a_disclosure_report_cninfo]] - 巨潮资讯-首页-公告查询-信息披露公告
+- [[stock-zh-a-gbjg-em|stock_zh_a_gbjg_em]] - 东方财富-A股数据-股本结构
+- [[stock-zh-a-gdhs|stock_zh_a_gdhs]] - 东方财富网-数据中心-特色数据-股东户数数据
+- [[stock-zh-a-gdhs-detail-em|stock_zh_a_gdhs_detail_em]] - 东方财富网-数据中心-特色数据-股东户数详情
+- [[stock-zh-a-hist|stock_zh_a_hist]] - 东方财富-沪深京 A 股日频率数据; 历史数据按日频率更新, 当日收盘价请在收盘后获取
+- [[stock-zh-a-hist-min-em|stock_zh_a_hist_min_em]] - 东方财富网-行情首页-沪深京 A 股-每日分时行情; 该接口只能获取近期的分时数据，注意时间周期的设置
+- [[stock-zh-a-hist-pre-min-em|stock_zh_a_hist_pre_min_em]] - 东方财富-股票行情-盘前数据
+- [[stock-zh-a-hist-tx|stock_zh_a_hist_tx]] - 腾讯证券-日频-股票历史数据; 历史数据按日频率更新, 当日收盘价请在收盘后获取
+- [[stock-zh-a-minute|stock_zh_a_minute]] - 新浪财经-沪深京 A 股股票或者指数的分时数据，目前可以获取 1, 5, 15, 30, 60 分钟的数据频率, 可以指定是否复权
+- [[stock-zh-a-new|stock_zh_a_new]] - 新浪财经-行情中心-沪深股市-次新股
+- [[stock-zh-a-new-em|stock_zh_a_new_em]] - 东方财富网-行情中心-沪深个股-新股
+- [[stock-zh-a-spot|stock_zh_a_spot]] - 新浪财经-沪深京 A 股数据, 重复运行本函数会被新浪暂时封 IP, 建议增加时间间隔
+- [[stock-zh-a-spot-em|stock_zh_a_spot_em]] - 东方财富网-沪深京 A 股-实时行情数据
+- [[stock-zh-a-st-em|stock_zh_a_st_em]] - 东方财富网-行情中心-沪深个股-风险警示板
+- [[stock-zh-a-stop-em|stock_zh_a_stop_em]] - 东方财富网-行情中心-沪深个股-两网及退市
+- [[stock-zh-a-tick-tx|stock_zh_a_tick_tx]] - 每个交易日 16:00 提供当日数据; 如遇到数据缺失, 请使用 **ak.stock_zh_a_tick_163()** 接口(注意数据会有一定差异)
+- [[stock-zh-ab-comparison-em|stock_zh_ab_comparison_em]] - 东方财富网-行情中心-沪深京个股-AB股比价-全部AB股比价
+- [[stock-zh-ah-daily|stock_zh_ah_daily]] - 腾讯财经-A+H 股数据
+- [[stock-zh-ah-name|stock_zh_ah_name]] - A+H 股数据是从腾讯财经获取的数据, 历史数据按日频率更新
+- [[stock-zh-ah-spot|stock_zh_ah_spot]] - A+H 股数据是从腾讯财经获取的数据, 延迟 15 分钟更新
+- [[stock-zh-ah-spot-em|stock_zh_ah_spot_em]] - 东方财富网-行情中心-沪深港通-AH股比价-实时行情, 延迟 15 分钟更新
+- [[stock-zh-b-daily|stock_zh_b_daily]] - B 股数据是从新浪财经获取的数据, 历史数据按日频率更新
+- [[stock-zh-b-minute|stock_zh_b_minute]] - 新浪财经 B 股股票或者指数的分时数据，目前可以获取 1, 5, 15, 30, 60 分钟的数据频率, 可以指定是否复权
+- [[stock-zh-b-spot|stock_zh_b_spot]] - B 股数据是从新浪财经获取的数据, 重复运行本函数会被新浪暂时封 IP, 建议增加时间间隔
+- [[stock-zh-b-spot-em|stock_zh_b_spot_em]] - 东方财富网-实时行情数据
+- [[stock-zh-dupont-comparison-em|stock_zh_dupont_comparison_em]] - 东方财富-行情中心-同行比较-杜邦分析比较
+- [[stock-zh-growth-comparison-em|stock_zh_growth_comparison_em]] - 东方财富-行情中心-同行比较-成长性比较
+- [[stock-zh-kcb-daily|stock_zh_kcb_daily]] - 新浪财经-科创板股票历史行情数据
+- [[stock-zh-kcb-report-em|stock_zh_kcb_report_em]] - 东方财富-科创板报告数据
+- [[stock-zh-kcb-spot|stock_zh_kcb_spot]] - 新浪财经-科创板股票实时行情数据
+- [[stock-zh-scale-comparison-em|stock_zh_scale_comparison_em]] - 东方财富-行情中心-同行比较-公司规模
+- [[stock-zh-valuation-baidu|stock_zh_valuation_baidu]] - 百度股市通-A 股-财务报表-估值数据
+- [[stock-zh-valuation-comparison-em|stock_zh_valuation_comparison_em]] - 东方财富-行情中心-同行比较-估值比较
+- [[stock-zh-vote-baidu|stock_zh_vote_baidu]] - 百度股市通- A 股或指数-股评-投票
+- [[stock-zt-pool-dtgc-em|stock_zt_pool_dtgc_em]] - 东方财富网-行情中心-涨停板行情-跌停股池
+- [[stock-zt-pool-em|stock_zt_pool_em]] - 东方财富网-行情中心-涨停板行情-涨停股池
+- [[stock-zt-pool-previous-em|stock_zt_pool_previous_em]] - 东方财富网-行情中心-涨停板行情-昨日涨停股池
+- [[stock-zt-pool-strong-em|stock_zt_pool_strong_em]] - 东方财富网-行情中心-涨停板行情-强势股池
+- [[stock-zt-pool-sub-new-em|stock_zt_pool_sub_new_em]] - 东方财富网-行情中心-涨停板行情-次新股池
+- [[stock-zt-pool-zbgc-em|stock_zt_pool_zbgc_em]] - 东方财富网-行情中心-涨停板行情-炸板股池
+- [[stock-zygc-em|stock_zygc_em]] - 东方财富网-个股-主营构成
+- [[stock-zyjs-ths|stock_zyjs_ths]] - 同花顺-主营介绍
+
+### AKShare 工具箱
+
+- [[tool-trade-date-hist-sina|tool_trade_date_hist_sina]] - 新浪财经-股票交易日历数据
+
+## Comparisons
+
+- 暂无。
+
+## Queries
+
+- 暂无。
+
+## Meta
+
+- [[_meta/topic-map|AKShare Topic Map]]

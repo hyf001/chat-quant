@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "FastAPI backend for Chat-Quant"
 requires-python = ">=3.12"
 dependencies = [
-  "alembic>=1.18.5",
   "aiosqlite>=0.21.0",
   "backtrader>=1.9.78.123",
   "claude-agent-sdk>=0.2.127",

@@ -28,10 +28,6 @@ class Settings(BaseSettings):
     claude_agent_cwd: str | None = Field(default=None, alias="CHATQ_CLAUDE_AGENT_CWD")
     artifact_root: Path = Field(default=Path("data/artifacts"), alias="CHATQ_ARTIFACT_ROOT")
     database_path: Path = Field(default=Path("data/chat-quant.db"), alias="CHATQ_DATABASE_PATH")
-    chat_session_auto_migrate: bool = Field(
-        default=True,
-        alias="CHATQ_CHAT_SESSION_AUTO_MIGRATE",
-    )
     cors_origins: list[str] = Field(
         default=[
             "http://localhost:5173",
@@ -60,9 +56,13 @@ class Settings(BaseSettings):
         default="/tmp/chatq/sdk-sessions",
         alias="AGENT_WORKDIR_ROOT",
     )
-    agent_project_skill_dir: str = Field(
-        default="apps/api/agent_workdir/.claude/skills",
-        alias="AGENT_PROJECT_SKILL_DIR",
+    agent_skill_plugin_dir: str = Field(
+        default="plugin",
+        alias="AGENT_SKILL_PLUGIN_DIR",
+    )
+    agent_skill_plugin_name: str = Field(
+        default="chat-quant",
+        alias="AGENT_SKILL_PLUGIN_NAME",
     )
     agent_include_partial_messages: bool = Field(
         default=True,

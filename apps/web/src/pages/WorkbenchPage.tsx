@@ -154,7 +154,9 @@ export function WorkbenchPage() {
 
       const agentDetail = await getAgentDetailOrNull(sessionId);
       if (agentDetail) {
-        setAgentMessages(agentDetailToMessages(agentDetail));
+        setAgentMessages((current) =>
+          agentDetail.messages.length > 0 ? agentDetailToMessages(agentDetail) : current,
+        );
         setConversationEnvelopes(agentDetail.envelopes);
       }
       setDetail(await getChatSessionDetail(sessionId));

@@ -7,7 +7,7 @@ from app.core.config import Settings
 from app.domain.chat_sessions.models import AssetRelationType, AssetType
 from app.domain.chat_sessions.services import AssetLinkService, ChatSessionService
 from app.infrastructure.db import SQLAlchemyAssetLinkRepository, SQLAlchemyChatSessionRepository
-from app.infrastructure.db.migrations import run_database_migrations
+from app.infrastructure.db.schema import ensure_database_schema
 from app.infrastructure.db.session import make_engine, make_session_factory
 
 
@@ -22,7 +22,7 @@ async def _run_persistence_assertions(tmp_path: Path) -> None:
         _env_file=None,
         CHATQ_DATABASE_PATH=tmp_path / "chat-quant.db",
     )
-    run_database_migrations(settings)
+    ensure_database_schema(settings)
 
     session_factory = make_session_factory(make_engine(settings))
     service = ChatSessionService(

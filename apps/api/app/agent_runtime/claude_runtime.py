@@ -35,6 +35,7 @@ except ModuleNotFoundError:
         include_partial_messages: bool
         setting_sources: list[str]
         skills: list[str]
+        plugins: list[dict[str, str]]
         env: dict[str, str]
         thinking: dict[str, object] | None = None
         stderr: Callable[[str], None] | None = None
@@ -136,7 +137,7 @@ from app.agent_runtime.bash_command_policy import (
 )
 from app.agent_runtime.hooks import AgentRuntimeHooks
 from app.agent_runtime.prompts import build_system_prompt
-from app.agent_runtime.sdk_skill_workspace import SDKSkillWorkspace
+from app.agent_runtime.sdk_skill_plugin import SDKSkillPlugin
 from app.agent_runtime.sdk_skills import select_available_sdk_skills
 from app.agent_runtime.sdk_stream_relay import InMemoryStreamRelay
 from app.agent_runtime.tool_call_logger import ToolCallLogger
@@ -167,6 +168,7 @@ class ClaudeAgentOptionsSnapshot:
     include_partial_messages: bool
     setting_sources: tuple[str, ...]
     env: tuple[tuple[str, str], ...]
+    plugins: tuple[dict[str, str], ...]
 
 
 class ClaudeAgentRuntime:
@@ -183,7 +185,10 @@ class ClaudeAgentRuntime:
         self.policy = load_default_policy()
         self.hooks = AgentRuntimeHooks()
         self.tool_logger = ToolCallLogger()
-        self.skill_workspace = SDKSkillWorkspace(settings.agent_project_skill_dir)
+        self.skill_plugin = SDKSkillPlugin(
+            settings.agent_skill_plugin_dir,
+            settings.agent_skill_plugin_name,
+        )
 
     async def run_turn(
         self,
@@ -204,8 +209,7 @@ class ClaudeAgentRuntime:
             )
             return _failed_result(command, pre_run_decision.code, pre_run_decision.reason)
 
-        project_skill_dir = self.skill_workspace.prepare(command.working_dir)
-        available_skills = self.skill_workspace.list_skill_names(project_skill_dir)
+        available_skills = self.skill_plugin.list_skill_names()
         current_sdk_session_id = command.sdk_session_id
         allowed_commands = resolve_allowed_commands(self.policy, command.scenario)
         skill_selection = select_available_sdk_skills(
@@ -213,7 +217,11 @@ class ClaudeAgentRuntime:
             command.sdk_skill_names,
             available_skills,
         )
-        options = self.build_agent_options(command, skill_selection.names, allowed_commands)
+        options = self.build_agent_options(
+            command,
+            self.skill_plugin.qualify_skill_names(skill_selection.names),
+            allowed_commands,
+        )
         assistant_parts: list[str] = []
         streamed_assistant_parts: list[str] = []
         message_refs: list[SDKMessageRef] = []
@@ -462,6 +470,7 @@ class ClaudeAgentRuntime:
             include_partial_messages=self.settings.agent_include_partial_messages,
             setting_sources=("project",),
             env=tuple(_sdk_env(self.settings).items()),
+            plugins=self.skill_plugin.sdk_plugin_configs(),
         )
 
     def build_sdk_options(
@@ -482,6 +491,8 @@ class ClaudeAgentRuntime:
             tool_input: dict[str, object],
             _context: object,
         ) -> PermissionResultAllow | PermissionResultDeny:
+            if tool_name == "Skill":
+                return PermissionResultAllow()
             if tool_name != "Bash":
                 return PermissionResultDeny(
                     message="Chat-Quant M2 only permits Bash for whitelisted chatq commands.",
@@ -509,6 +520,7 @@ class ClaudeAgentRuntime:
             include_partial_messages=options.include_partial_messages,
             setting_sources=list(options.setting_sources),
             skills=list(options.skills),
+            plugins=[dict(plugin_config) for plugin_config in options.plugins],
             env=dict(options.env),
             thinking=_sdk_thinking_config(self.settings),
             stderr=stderr,

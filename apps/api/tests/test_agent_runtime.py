@@ -1,6 +1,7 @@
 import asyncio
 import json
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 from app.agent_runtime.bash_command_policy import (
     CommandContext,
@@ -9,11 +10,14 @@ from app.agent_runtime.bash_command_policy import (
     validate_bash_command,
 )
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime, serialize_sdk_message
+from app.agent_runtime.sdk_skills import select_available_sdk_skills
 from app.agent_runtime.sdk_stream_relay import InMemoryStreamRelay
 from app.core.config import Settings
 from app.schemas.contracts.agent_runtime import AgentScenario, AgentTurnCommand, RuntimeErrorCode
 from claude_agent_sdk import (
     AssistantMessage,
+    PermissionResultAllow,
+    PermissionResultDeny,
     ResultMessage,
     StreamEvent,
     TextBlock,
@@ -89,6 +93,88 @@ def test_sdk_options_omit_thinking_by_default_for_compatible_agent_api() -> None
     assert sdk_options.allowed_tools == []
     assert sdk_options.permission_mode == "default"
     assert sdk_options.thinking is None
+    assert sdk_options.plugins == [
+        {
+            "type": "local",
+            "path": str((Path.cwd() / "plugin").resolve()),
+        }
+    ]
+
+
+def test_runtime_uses_plugin_namespaced_skills_without_copying_into_cwd(tmp_path) -> None:
+    plugin_dir = tmp_path / "plugin"
+    skill_dir = plugin_dir / "skills" / "financial_data_query"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text("# Financial Data Query\n", encoding="utf-8")
+    working_dir = tmp_path / "user-project"
+    working_dir.mkdir()
+    runtime = ClaudeAgentRuntime(
+        settings=Settings(_env_file=None, AGENT_SKILL_PLUGIN_DIR=str(plugin_dir)),
+        stream_relay=InMemoryStreamRelay(),
+        sdk_query=fake_sdk_query,
+    )
+    command = AgentTurnCommand(
+        user_id="user_1",
+        project_id="project_1",
+        chat_session_id="chat_1",
+        user_message_id="msg_1",
+        scenario=AgentScenario.CHAT_ANALYSIS,
+        working_dir=str(working_dir),
+        sdk_session_id=None,
+        request_id="req_1",
+        user_prompt="你好",
+    )
+
+    options = runtime.build_agent_options(
+        command,
+        runtime.skill_plugin.qualify_skill_names(
+            select_available_sdk_skills(
+                command.scenario,
+                command.sdk_skill_names,
+                runtime.skill_plugin.list_skill_names(),
+            ).names
+        ),
+        (),
+    )
+    sdk_options = runtime.build_sdk_options(command, options, ())
+
+    assert sdk_options.cwd == str(working_dir)
+    assert sdk_options.plugins == [{"type": "local", "path": str(plugin_dir)}]
+    assert sdk_options.skills == ["chat-quant:financial_data_query"]
+    assert not (working_dir / ".claude" / "skills").exists()
+
+
+def test_sdk_permission_callback_allows_skill_tool() -> None:
+    runtime = ClaudeAgentRuntime(
+        settings=Settings(),
+        stream_relay=InMemoryStreamRelay(),
+        sdk_query=fake_sdk_query,
+    )
+    command = AgentTurnCommand(
+        user_id="user_1",
+        project_id="project_1",
+        chat_session_id="chat_1",
+        user_message_id="msg_1",
+        scenario=AgentScenario.CHAT_ANALYSIS,
+        working_dir="/tmp/chatq/sdk-sessions/chat_1",
+        sdk_session_id=None,
+        request_id="req_1",
+        user_prompt="你好",
+    )
+    options = runtime.build_agent_options(
+        command,
+        ("chat-quant:financial_data_query",),
+        (),
+    )
+    sdk_options = runtime.build_sdk_options(command, options, ())
+
+    skill_decision = asyncio.run(
+        sdk_options.can_use_tool("Skill", {"skill": "chat-quant:financial_data_query"}, None)
+    )
+    read_decision = asyncio.run(sdk_options.can_use_tool("Read", {"file_path": "/tmp/a"}, None))
+
+    assert isinstance(skill_decision, PermissionResultAllow)
+    assert isinstance(read_decision, PermissionResultDeny)
 
 
 def test_sdk_env_maps_configured_token_to_claude_code_api_key() -> None:

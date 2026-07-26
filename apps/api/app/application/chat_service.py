@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from uuid import uuid4
 
 from claude_agent_sdk import get_session_messages as sdk_get_session_messages
@@ -76,13 +77,14 @@ class ChatApplicationService:
                 has_history=sdk_session_id is not None,
             ),
             context=context,
-            working_dir=f"{get_settings().agent_workdir_root}/{chat_session_id}",
+            working_dir=f"{self.runtime.settings.agent_workdir_root}/{chat_session_id}",
             sdk_session_id=sdk_session_id,
             request_id=f"req_{uuid4().hex}",
-            deadline_seconds=get_settings().agent_turn_timeout_seconds,
+            deadline_seconds=self.runtime.settings.agent_turn_timeout_seconds,
             user_prompt=request.message,
         )
         stream_after = self.stream_relay.latest_sequence(chat_session_id)
+        Path(command.working_dir).mkdir(parents=True, exist_ok=True)
         self._running_tasks[chat_session_id] = asyncio.create_task(
             self._run_agent_turn(command, chat_sessions)
         )
@@ -139,7 +141,7 @@ class ChatApplicationService:
         try:
             messages = sdk_get_session_messages(
                 sdk_session_id,
-                directory=f"{get_settings().agent_workdir_root}/{chat_session_id}",
+                directory=f"{self.runtime.settings.agent_workdir_root}/{chat_session_id}",
             )
             return [serialize_sdk_message(message) for message in messages]
         except FileNotFoundError:

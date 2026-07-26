@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import AsyncIterator
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime
@@ -113,6 +114,32 @@ def test_follow_up_message_does_not_resume_generated_sdk_placeholder() -> None:
 
 def test_chat_message_syncs_sdk_session_id_to_m1_index() -> None:
     asyncio.run(_run_m1_index_sync_assertions())
+
+
+def test_chat_message_creates_agent_working_directory(tmp_path: Path) -> None:
+    asyncio.run(_run_working_directory_creation_assertions(tmp_path))
+
+
+async def _run_working_directory_creation_assertions(tmp_path: Path) -> None:
+    workdir_root = tmp_path / "sdk-sessions"
+    chat_session_id = "conv_workdir_creation"
+    isolated_stream_relay = InMemoryStreamRelay()
+    isolated_runtime = ClaudeAgentRuntime(
+        settings=Settings(AGENT_WORKDIR_ROOT=str(workdir_root)),
+        stream_relay=isolated_stream_relay,
+        sdk_query=fake_sdk_query,
+    )
+    isolated_service = ChatApplicationService(
+        isolated_runtime,
+        isolated_stream_relay,
+    )
+
+    accepted = await isolated_service.handle_user_message(
+        ChatMessageRequest(message="你好", chat_session_id=chat_session_id)
+    )
+    await isolated_service._running_tasks[accepted.chat_session_id]
+
+    assert (workdir_root / chat_session_id).is_dir()
 
 
 async def _run_m1_index_sync_assertions() -> None:

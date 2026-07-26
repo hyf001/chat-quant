@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from app.schemas.contracts.agent_runtime import AgentScenario
 
 ALLOWED_SKILLS = {
-    "stock_query",
+    "financial_data_query",
     "charting",
     "strategy_authoring",
     "backtest",
@@ -13,12 +13,12 @@ ALLOWED_SKILLS = {
 }
 
 SCENARIO_SKILLS: dict[AgentScenario, tuple[str, ...]] = {
-    AgentScenario.CHAT_ANALYSIS: ("stock_query", "charting", "risk_disclaimer"),
-    AgentScenario.SCREENING: ("stock_query", "charting", "risk_disclaimer"),
+    AgentScenario.CHAT_ANALYSIS: ("financial_data_query", "charting", "risk_disclaimer"),
+    AgentScenario.SCREENING: ("financial_data_query", "charting", "risk_disclaimer"),
     AgentScenario.STRATEGY_BUILD: ("strategy_authoring", "backtest", "risk_disclaimer"),
     AgentScenario.BACKTEST: ("backtest", "charting", "risk_disclaimer"),
     AgentScenario.FOLLOW_UP: (
-        "stock_query",
+        "financial_data_query",
         "charting",
         "strategy_authoring",
         "backtest",
@@ -43,7 +43,7 @@ def select_available_sdk_skills(
     available: tuple[str, ...],
 ) -> SkillSelection:
     defaults = SCENARIO_SKILLS[scenario]
-    candidates = tuple(requested) if requested else defaults
+    candidates = tuple(_skill_short_name(skill) for skill in requested) if requested else defaults
     available_set = set(available)
     accepted = tuple(
         skill for skill in candidates if skill in ALLOWED_SKILLS and skill in available_set
@@ -51,3 +51,7 @@ def select_available_sdk_skills(
     rejected = tuple(skill for skill in candidates if skill not in ALLOWED_SKILLS)
     warnings = tuple(f"SDK skill is not allowed and was ignored: {skill}" for skill in rejected)
     return SkillSelection(names=accepted, warnings=warnings)
+
+
+def _skill_short_name(skill_name: str) -> str:
+    return skill_name.rsplit(":", maxsplit=1)[-1]

@@ -2,28 +2,6 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "API: FastAPI 后端调试",
-      "type": "debugpy",
-      "request": "launch",
-      "python": "${workspaceFolder}/.venv/bin/python3",
-      "module": "uvicorn",
-      "args": [
-        "app.main:app",
-        "--app-dir",
-        "apps/api",
-        "--host",
-        "127.0.0.1",
-        "--port",
-        "8000"
-      ],
-      "cwd": "${workspaceFolder}",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}/apps/api"
-      },
-      "console": "integratedTerminal",
-      "justMyCode": false
-    },
-    {
       "name": "API: FastAPI 后端调试 (reload)",
       "type": "debugpy",
       "request": "launch",

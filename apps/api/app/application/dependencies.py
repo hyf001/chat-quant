@@ -10,7 +10,7 @@ from app.infrastructure.db import (
     SQLAlchemyArtifactRepository,
     SQLAlchemyStrategyRepository,
 )
-from app.infrastructure.db.migrations import run_database_migrations
+from app.infrastructure.db.schema import ensure_database_schema
 from app.infrastructure.db.session import make_engine, make_session_factory
 from app.infrastructure.storage import FilesystemArtifactStore
 
@@ -20,8 +20,7 @@ logger = get_logger(__name__)
 @lru_cache
 def get_database_session_factory():
     settings = get_settings()
-    if settings.chat_session_auto_migrate:
-        run_database_migrations(settings)
+    ensure_database_schema(settings)
     engine = make_engine(settings)
     return make_session_factory(engine)
 

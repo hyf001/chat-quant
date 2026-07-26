@@ -12,7 +12,17 @@ def test_select_available_sdk_skills_enables_only_installed_allowlisted_skills()
     selection = select_available_sdk_skills(
         AgentScenario.CHAT_ANALYSIS,
         [],
-        ("stock_query", "risk_disclaimer", "unknown_local_skill"),
+        ("financial_data_query", "risk_disclaimer", "unknown_local_skill"),
     )
 
-    assert selection.names == ("stock_query", "risk_disclaimer")
+    assert selection.names == ("financial_data_query", "risk_disclaimer")
+
+
+def test_select_available_sdk_skills_accepts_plugin_qualified_requests() -> None:
+    selection = select_available_sdk_skills(
+        AgentScenario.CHAT_ANALYSIS,
+        ["chat-quant:financial_data_query"],
+        ("financial_data_query", "risk_disclaimer"),
+    )
+
+    assert selection.names == ("financial_data_query",)
