@@ -52,7 +52,7 @@ class CodeArtifactService:
         self.repository = repository
         self.store = store
 
-    def save_code_artifact(self, command: SaveCodeArtifactRequest) -> CodeArtifact:
+    async def save_code_artifact(self, command: SaveCodeArtifactRequest) -> CodeArtifact:
         validate_entrypoint(command.artifact_type, command.entrypoint)
         if len(command.files) == 0:
             raise ArtifactPathEscapeError("at least one file is required")
@@ -64,7 +64,7 @@ class CodeArtifactService:
             [(item.relative_path, item.checksum) for item in normalized_files],
         )
         if command.source_sdk_tool_use_id:
-            existing = self.repository.find_idempotent(
+            existing = await self.repository.find_idempotent(
                 command.source_sdk_tool_use_id,
                 command.artifact_type.value,
                 checksum,
@@ -83,7 +83,9 @@ class CodeArtifactService:
 
         now = datetime.now(UTC)
         artifact_id = command.parent_artifact_id or self._new_id("ca")
-        parent = self.repository.get_artifact(artifact_id) if command.parent_artifact_id else None
+        parent = (
+            await self.repository.get_artifact(artifact_id) if command.parent_artifact_id else None
+        )
         if command.parent_artifact_id and parent is None:
             raise ArtifactNotFoundError("parent artifact was not found")
 
@@ -154,7 +156,7 @@ class CodeArtifactService:
             },
             created_by_sdk_tool_use_id=command.source_sdk_tool_use_id,
         )
-        self.repository.save_artifact(artifact, version_record)
+        await self.repository.save_artifact(artifact, version_record)
         logger.info(
             "code artifact saved",
             extra={
@@ -168,11 +170,11 @@ class CodeArtifactService:
         )
         return artifact
 
-    def save_generated_files(self, command: SaveGeneratedFilesRequest) -> list[ArtifactFile]:
+    async def save_generated_files(self, command: SaveGeneratedFilesRequest) -> list[ArtifactFile]:
         if len(command.files) == 0:
             raise ArtifactPathEscapeError("at least one file is required")
 
-        parent = self.repository.get_artifact(command.parent_artifact_id or "")
+        parent = await self.repository.get_artifact(command.parent_artifact_id or "")
         if command.parent_artifact_id is not None and parent is None:
             raise ArtifactNotFoundError("parent artifact was not found")
         if parent is None:
@@ -201,7 +203,7 @@ class CodeArtifactService:
             )
             for item, stored in zip(normalized_files, stored_files, strict=True)
         ]
-        self.repository.add_files(parent.id, artifact_files)
+        await self.repository.add_files(parent.id, artifact_files)
         logger.info(
             "generated artifact files saved",
             extra={
@@ -212,24 +214,24 @@ class CodeArtifactService:
         )
         return artifact_files
 
-    def get_artifact(self, artifact_id: str) -> CodeArtifact:
-        artifact = self.repository.get_artifact(artifact_id)
+    async def get_artifact(self, artifact_id: str) -> CodeArtifact:
+        artifact = await self.repository.get_artifact(artifact_id)
         if artifact is None:
             raise ArtifactNotFoundError("artifact was not found")
         return artifact
 
-    def list_artifacts(self, chat_session_id: str | None = None) -> list[CodeArtifact]:
-        return self.repository.list_artifacts(chat_session_id=chat_session_id)
+    async def list_artifacts(self, chat_session_id: str | None = None) -> list[CodeArtifact]:
+        return await self.repository.list_artifacts(chat_session_id=chat_session_id)
 
-    def get_file(self, artifact_id: str, file_id: str) -> tuple[ArtifactFile, Path]:
-        artifact = self.get_artifact(artifact_id)
+    async def get_file(self, artifact_id: str, file_id: str) -> tuple[ArtifactFile, Path]:
+        artifact = await self.get_artifact(artifact_id)
         for artifact_file in artifact.files:
             if artifact_file.id == file_id:
                 return artifact_file, self.store.absolute_path(artifact_file.storage_uri)
         raise ArtifactNotFoundError("artifact file was not found")
 
-    def get_entrypoint(self, artifact_id: str) -> tuple[CodeArtifact, ArtifactFile, Path]:
-        artifact = self.get_artifact(artifact_id)
+    async def get_entrypoint(self, artifact_id: str) -> tuple[CodeArtifact, ArtifactFile, Path]:
+        artifact = await self.get_artifact(artifact_id)
         if artifact.artifact_type not in SCRIPT_ARTIFACT_TYPES or artifact.entrypoint is None:
             raise ArtifactPathEscapeError("artifact does not expose an executable entrypoint")
         entrypoint_path, _ = parse_entrypoint(artifact.entrypoint)

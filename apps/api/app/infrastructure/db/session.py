@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import Settings
 
@@ -13,25 +17,26 @@ class Base(DeclarativeBase):
     pass
 
 
-def sqlite_url(path: Path) -> str:
+def sync_sqlite_url(path: Path) -> str:
     return f"sqlite:///{path}"
 
 
-def chat_session_database_url(settings: Settings) -> str:
-    return sqlite_url(settings.chat_session_index_path)
+def async_sqlite_url(path: Path) -> str:
+    return f"sqlite+aiosqlite:///{path}"
 
 
-def make_engine(database_url: str, *, connect_args: dict[str, object] | None = None) -> Engine:
-    return create_engine(database_url, connect_args=connect_args or {})
+def database_url(settings: Settings) -> str:
+    return async_sqlite_url(settings.database_path)
 
 
-def make_chat_session_engine(settings: Settings) -> Engine:
-    settings.chat_session_index_path.parent.mkdir(parents=True, exist_ok=True)
-    return make_engine(
-        chat_session_database_url(settings),
-        connect_args={"check_same_thread": False},
-    )
+def sync_database_url(settings: Settings) -> str:
+    return sync_sqlite_url(settings.database_path)
 
 
-def make_session_factory(engine: Engine) -> sessionmaker[Session]:
-    return sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+def make_engine(settings: Settings) -> AsyncEngine:
+    settings.database_path.parent.mkdir(parents=True, exist_ok=True)
+    return create_async_engine(database_url(settings))
+
+
+def make_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)

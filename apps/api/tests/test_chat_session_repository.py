@@ -7,8 +7,8 @@ from app.core.config import Settings
 from app.domain.chat_sessions.models import AssetRelationType, AssetType
 from app.domain.chat_sessions.services import AssetLinkService, ChatSessionService
 from app.infrastructure.db import SQLAlchemyAssetLinkRepository, SQLAlchemyChatSessionRepository
-from app.infrastructure.db.migrations import run_chat_session_migrations
-from app.infrastructure.db.session import make_chat_session_engine, make_session_factory
+from app.infrastructure.db.migrations import run_database_migrations
+from app.infrastructure.db.session import make_engine, make_session_factory
 
 
 def test_sqlalchemy_chat_session_repository_persists_index_across_instances(
@@ -20,11 +20,11 @@ def test_sqlalchemy_chat_session_repository_persists_index_across_instances(
 async def _run_persistence_assertions(tmp_path: Path) -> None:
     settings = Settings(
         _env_file=None,
-        CHATQ_CHAT_SESSION_INDEX_PATH=tmp_path / "conversations.sqlite3",
+        CHATQ_DATABASE_PATH=tmp_path / "chat-quant.db",
     )
-    run_chat_session_migrations(settings)
+    run_database_migrations(settings)
 
-    session_factory = make_session_factory(make_chat_session_engine(settings))
+    session_factory = make_session_factory(make_engine(settings))
     service = ChatSessionService(
         SQLAlchemyChatSessionRepository(session_factory),
         SQLAlchemyAssetLinkRepository(session_factory),
@@ -58,8 +58,8 @@ async def _run_persistence_assertions(tmp_path: Path) -> None:
     )
 
     restored_service = ChatSessionService(
-        SQLAlchemyChatSessionRepository(make_session_factory(make_chat_session_engine(settings))),
-        SQLAlchemyAssetLinkRepository(make_session_factory(make_chat_session_engine(settings))),
+        SQLAlchemyChatSessionRepository(make_session_factory(make_engine(settings))),
+        SQLAlchemyAssetLinkRepository(make_session_factory(make_engine(settings))),
     )
     items, total = await restored_service.list_chat_sessions(user_id="user_a", query="持久")
     detail, assets = await restored_service.get_context(

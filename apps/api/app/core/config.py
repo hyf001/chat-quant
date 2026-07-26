@@ -27,14 +27,7 @@ class Settings(BaseSettings):
     )
     claude_agent_cwd: str | None = Field(default=None, alias="CHATQ_CLAUDE_AGENT_CWD")
     artifact_root: Path = Field(default=Path("data/artifacts"), alias="CHATQ_ARTIFACT_ROOT")
-    artifact_index_path: Path = Field(
-        default=Path("data/artifacts.sqlite3"),
-        alias="CHATQ_ARTIFACT_INDEX_PATH",
-    )
-    chat_session_index_path: Path = Field(
-        default=Path("data/conversations.sqlite3"),
-        alias="CHATQ_CHAT_SESSION_INDEX_PATH",
-    )
+    database_path: Path = Field(default=Path("data/chat-quant.db"), alias="CHATQ_DATABASE_PATH")
     chat_session_auto_migrate: bool = Field(
         default=True,
         alias="CHATQ_CHAT_SESSION_AUTO_MIGRATE",

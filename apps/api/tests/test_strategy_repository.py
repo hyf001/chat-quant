@@ -1,24 +1,34 @@
 from pathlib import Path
 
+import pytest
+from app.core.config import Settings
 from app.domain.strategies.models import StrategyPackage
-from app.domain.strategies.repository import StrategyRepository
 from app.domain.strategies.service import StrategyService
+from app.infrastructure.db.migrations import run_database_migrations
+from app.infrastructure.db.session import make_engine, make_session_factory
+from app.infrastructure.db.strategy_repository import SQLAlchemyStrategyRepository
 from tests.test_strategy_api import strategy_package
 
 
-def test_sqlite_repository_persists_strategy_across_instances(tmp_path: Path) -> None:
-    db_path = tmp_path / "m5.sqlite3"
-    service = StrategyService(StrategyRepository(str(db_path)))
-    created = service.create_strategy(
+@pytest.mark.asyncio
+async def test_sqlalchemy_repository_persists_strategy_across_instances(
+    tmp_path: Path,
+) -> None:
+    settings = Settings(_env_file=None, CHATQ_DATABASE_PATH=tmp_path / "chat-quant.db")
+    run_database_migrations(settings)
+
+    session_factory = make_session_factory(make_engine(settings))
+    service = StrategyService(SQLAlchemyStrategyRepository(session_factory))
+    created = await service.create_strategy(
         user_id="user_a",
         project_id="project_a",
         chat_session_id="conv_persisted",
         package=StrategyPackage.model_validate(strategy_package()),
     )
 
-    restored_service = StrategyService(StrategyRepository(str(db_path)))
-    detail = restored_service.get_strategy(created.strategy_id)
-    versions = restored_service.repository.list_versions(created.strategy_id)
+    restored_service = StrategyService(SQLAlchemyStrategyRepository(session_factory))
+    detail = await restored_service.get_strategy(created.strategy_id)
+    versions = await restored_service.repository.list_versions(created.strategy_id)
 
     assert detail.strategy.chat_session_id == "conv_persisted"
     assert detail.strategy.current_version_id == versions[0].id

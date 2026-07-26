@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.dependencies import ProjectId, UserId
-from app.application.dependencies import get_strategy_backtest_engine
+from app.application.dependencies import get_strategy_backtest_engine, get_strategy_service
 from app.domain.backtests.models import (
     StrategyBacktestConfig,
     StrategyBacktestDetail,
@@ -18,9 +20,10 @@ from app.domain.strategies.models import (
     StrategyStatus,
     StrategySummary,
 )
-from app.domain.strategies.service import StrategyError, strategy_service
+from app.domain.strategies.service import StrategyError, StrategyService
 
 router = APIRouter()
+StrategyServiceDep = Annotated[StrategyService, Depends(get_strategy_service)]
 
 
 class CreateStrategyRequest(BaseModel):
@@ -57,8 +60,9 @@ class StrategyBacktestRequest(BaseModel):
 async def list_strategies(
     user_id: UserId,
     project_id: ProjectId,
+    service: StrategyServiceDep,
 ) -> list[StrategySummary]:
-    return strategy_service.list_strategies(user_id=user_id, project_id=project_id)
+    return await service.list_strategies(user_id=user_id, project_id=project_id)
 
 
 @router.post("/strategies", response_model=StrategyCreateResult, status_code=201)
@@ -66,9 +70,10 @@ async def create_strategy(
     request: CreateStrategyRequest,
     user_id: UserId,
     project_id: ProjectId,
+    service: StrategyServiceDep,
 ) -> StrategyCreateResult:
     try:
-        return strategy_service.create_strategy(
+        return await service.create_strategy(
             user_id=request.user_id or user_id,
             project_id=request.project_id or project_id,
             chat_session_id=request.chat_session_id,
@@ -82,17 +87,21 @@ async def create_strategy(
 
 
 @router.get("/strategies/{strategy_id}", response_model=StrategyDetail)
-async def get_strategy(strategy_id: str) -> StrategyDetail:
+async def get_strategy(strategy_id: str, service: StrategyServiceDep) -> StrategyDetail:
     try:
-        return strategy_service.get_strategy(strategy_id)
+        return await service.get_strategy(strategy_id)
     except StrategyError as error:
         raise _http_error(error) from error
 
 
 @router.patch("/strategies/{strategy_id}", response_model=StrategyRecord)
-async def update_strategy(strategy_id: str, request: UpdateStrategyRequest) -> StrategyRecord:
+async def update_strategy(
+    strategy_id: str,
+    request: UpdateStrategyRequest,
+    service: StrategyServiceDep,
+) -> StrategyRecord:
     try:
-        return strategy_service.update_strategy_metadata(
+        return await service.update_strategy_metadata(
             strategy_id,
             name=request.name,
             description=request.description,
@@ -104,9 +113,9 @@ async def update_strategy(strategy_id: str, request: UpdateStrategyRequest) -> S
 
 
 @router.delete("/strategies/{strategy_id}", response_model=StrategyRecord)
-async def delete_strategy(strategy_id: str) -> StrategyRecord:
+async def delete_strategy(strategy_id: str, service: StrategyServiceDep) -> StrategyRecord:
     try:
-        return strategy_service.update_strategy_metadata(
+        return await service.update_strategy_metadata(
             strategy_id,
             status=StrategyStatus.DELETED,
         )
@@ -125,9 +134,10 @@ async def backtest_strategy(
     request: StrategyBacktestRequest,
     user_id: UserId,
     project_id: ProjectId,
+    service: StrategyServiceDep,
 ) -> StrategyBacktestDetail:
     try:
-        return strategy_service.backtest_strategy(
+        return await service.backtest_strategy(
             strategy_id=strategy_id,
             user_id=request.user_id or user_id,
             project_id=request.project_id or project_id,

@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import Depends, Header, Request
 
+from app.application.dependencies import get_database_session_factory
 from app.core.config import get_settings
 from app.domain.chat_sessions.repositories import (
     AssetLinkRepository,
@@ -13,8 +14,6 @@ from app.domain.chat_sessions.repositories import (
 )
 from app.domain.chat_sessions.services import AssetLinkService, ChatSessionService
 from app.infrastructure.db import SQLAlchemyAssetLinkRepository, SQLAlchemyChatSessionRepository
-from app.infrastructure.db.migrations import run_chat_session_migrations
-from app.infrastructure.db.session import make_chat_session_engine, make_session_factory
 
 
 class M1Services:
@@ -26,10 +25,7 @@ class M1Services:
         settings = get_settings()
         uses_default_repositories = session_repository is None or asset_repository is None
         if session_repository is None or asset_repository is None:
-            if settings.chat_session_auto_migrate:
-                run_chat_session_migrations(settings)
-            engine = make_chat_session_engine(settings)
-            session_factory = make_session_factory(engine)
+            session_factory = get_database_session_factory()
             session_repository = session_repository or SQLAlchemyChatSessionRepository(
                 session_factory
             )

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from sqlalchemy import String, cast, func, select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.chat_sessions.models import (
     AssetLink,
@@ -21,27 +21,27 @@ from app.infrastructure.db.models import ChatSessionAssetLinkRow, ChatSessionRow
 
 
 class SQLAlchemyChatSessionRepository(ChatSessionRepository):
-    def __init__(self, session_factory: sessionmaker[Session]) -> None:
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory
 
     async def create(self, session: ChatSession) -> ChatSession:
-        with self._session_factory() as db:
+        async with self._session_factory() as db:
             db.add(_session_to_row(session))
-            db.commit()
+            await db.commit()
         return replace(session)
 
     async def update(self, session: ChatSession) -> ChatSession:
-        with self._session_factory() as db:
-            row = db.get(ChatSessionRow, session.id)
+        async with self._session_factory() as db:
+            row = await db.get(ChatSessionRow, session.id)
             if row is None:
                 raise ChatSessionNotFoundError(session.id)
             _apply_session(row, session)
-            db.commit()
+            await db.commit()
         return replace(session)
 
     async def get(self, chat_session_id: str) -> ChatSession | None:
-        with self._session_factory() as db:
-            row = db.get(ChatSessionRow, chat_session_id)
+        async with self._session_factory() as db:
+            row = await db.get(ChatSessionRow, chat_session_id)
             return _row_to_session(row) if row is not None else None
 
     async def list_for_user(
@@ -73,25 +73,28 @@ class SQLAlchemyChatSessionRepository(ChatSessionRepository):
                 | func.lower(cast(ChatSessionRow.tags, String)).like(pattern)
             )
 
-        with self._session_factory() as db:
-            total = db.scalar(select(func.count()).select_from(ChatSessionRow).where(*filters)) or 0
-            rows = db.scalars(
+        async with self._session_factory() as db:
+            total = await db.scalar(
+                select(func.count()).select_from(ChatSessionRow).where(*filters)
+            ) or 0
+            result = await db.scalars(
                 select(ChatSessionRow)
                 .where(*filters)
                 .order_by(ChatSessionRow.updated_at.desc())
                 .limit(limit)
                 .offset(offset)
-            ).all()
+            )
+            rows = result.all()
             return [_row_to_session(row) for row in rows], total
 
 
 class SQLAlchemyAssetLinkRepository(AssetLinkRepository):
-    def __init__(self, session_factory: sessionmaker[Session]) -> None:
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory
 
     async def upsert(self, link: AssetLink) -> AssetLink:
-        with self._session_factory() as db:
-            row = db.scalar(
+        async with self._session_factory() as db:
+            row = await db.scalar(
                 select(ChatSessionAssetLinkRow).where(
                     ChatSessionAssetLinkRow.chat_session_id == link.chat_session_id,
                     ChatSessionAssetLinkRow.asset_type == link.asset_type.value,
@@ -109,34 +112,36 @@ class SQLAlchemyAssetLinkRepository(AssetLinkRepository):
                     updated_at=link.updated_at,
                 )
                 _apply_link(row, updated)
-                db.commit()
+                await db.commit()
                 return updated
 
             db.add(_link_to_row(link))
-            db.commit()
+            await db.commit()
         return replace(link)
 
     async def list_for_chat_session(self, chat_session_id: str) -> list[AssetLink]:
-        with self._session_factory() as db:
-            rows = db.scalars(
+        async with self._session_factory() as db:
+            result = await db.scalars(
                 select(ChatSessionAssetLinkRow)
                 .where(ChatSessionAssetLinkRow.chat_session_id == chat_session_id)
                 .order_by(ChatSessionAssetLinkRow.created_at.asc())
-            ).all()
+            )
+            rows = result.all()
             return [_row_to_link(row) for row in rows]
 
     async def list_for_sdk_message(
         self, *, sdk_session_id: str, sdk_message_uuid: str
     ) -> list[AssetLink]:
-        with self._session_factory() as db:
-            rows = db.scalars(
+        async with self._session_factory() as db:
+            result = await db.scalars(
                 select(ChatSessionAssetLinkRow)
                 .where(
                     ChatSessionAssetLinkRow.sdk_session_id == sdk_session_id,
                     ChatSessionAssetLinkRow.sdk_message_uuid == sdk_message_uuid,
                 )
                 .order_by(ChatSessionAssetLinkRow.created_at.asc())
-            ).all()
+            )
+            rows = result.all()
             return [_row_to_link(row) for row in rows]
 
 

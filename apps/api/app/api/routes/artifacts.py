@@ -37,7 +37,7 @@ async def save_code_artifact(
     project_id: ProjectId,
 ) -> CodeArtifactResponse:
     try:
-        artifact = service.save_code_artifact(
+        artifact = await service.save_code_artifact(
             request.model_copy(
                 update={
                     "user_id": request.user_id
@@ -62,7 +62,7 @@ async def save_generated_files(
     project_id: ProjectId,
 ) -> list[ArtifactFileResponse]:
     try:
-        files = service.save_generated_files(
+        files = await service.save_generated_files(
             request.model_copy(
                 update={
                     "user_id": request.user_id
@@ -84,8 +84,9 @@ async def list_artifacts(
     service: ArtifactServiceDep,
     chat_session_id: str | None = None,
 ) -> ArtifactListResponse:
+    artifacts = await service.list_artifacts(chat_session_id)
     return ArtifactListResponse(
-        items=[to_artifact_response(item) for item in service.list_artifacts(chat_session_id)]
+        items=[to_artifact_response(item) for item in artifacts]
     )
 
 
@@ -95,7 +96,7 @@ async def get_artifact(
     service: ArtifactServiceDep,
 ) -> CodeArtifactResponse:
     try:
-        artifact = service.get_artifact(artifact_id)
+        artifact = await service.get_artifact(artifact_id)
     except ArtifactError as exc:
         raise _http_error(exc) from exc
     return to_artifact_response(artifact)
@@ -107,7 +108,7 @@ async def get_artifact_entrypoint(
     service: ArtifactServiceDep,
 ) -> ArtifactEntrypointResponse:
     try:
-        artifact, main_file, absolute_root_path = service.get_entrypoint(artifact_id)
+        artifact, main_file, absolute_root_path = await service.get_entrypoint(artifact_id)
     except ArtifactError as exc:
         raise _http_error(exc) from exc
     return ArtifactEntrypointResponse(
@@ -126,7 +127,7 @@ async def download_artifact_file(
     file_id: str,
     service: ArtifactServiceDep,
 ) -> FileResponse:
-    artifact_file, path = _get_download_path(service, artifact_id, file_id)
+    artifact_file, path = await _get_download_path(service, artifact_id, file_id)
     return FileResponse(
         path=path,
         media_type=artifact_file.mime_type,
@@ -140,19 +141,19 @@ async def preview_artifact_file(
     file_id: str,
     service: ArtifactServiceDep,
 ) -> FileResponse:
-    artifact_file, path = _get_download_path(service, artifact_id, file_id)
+    artifact_file, path = await _get_download_path(service, artifact_id, file_id)
     if artifact_file.mime_type == "text/html":
         raise HTTPException(status_code=400, detail={"code": "ARTIFACT_PREVIEW_DISABLED"})
     return FileResponse(path=path, media_type=artifact_file.mime_type)
 
 
-def _get_download_path(
+async def _get_download_path(
     service: CodeArtifactService,
     artifact_id: str,
     file_id: str,
 ) -> tuple[ArtifactFile, Path]:
     try:
-        artifact_file, path = service.get_file(artifact_id, file_id)
+        artifact_file, path = await service.get_file(artifact_id, file_id)
     except ArtifactError as exc:
         raise _http_error(exc) from exc
     if not path.is_file():

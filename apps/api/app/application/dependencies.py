@@ -3,11 +3,27 @@ from functools import lru_cache
 from app.application.artifact_service import CodeArtifactService
 from app.core.config import get_settings
 from app.core.logging import get_logger
+from app.domain.backtests.service import BacktestService
+from app.domain.strategies.service import StrategyService
 from app.infrastructure.backtests import BacktraderStrategyBacktestEngine
-from app.infrastructure.db import SQLiteArtifactRepository
+from app.infrastructure.db import (
+    SQLAlchemyArtifactRepository,
+    SQLAlchemyStrategyRepository,
+)
+from app.infrastructure.db.migrations import run_database_migrations
+from app.infrastructure.db.session import make_engine, make_session_factory
 from app.infrastructure.storage import FilesystemArtifactStore
 
 logger = get_logger(__name__)
+
+
+@lru_cache
+def get_database_session_factory():
+    settings = get_settings()
+    if settings.chat_session_auto_migrate:
+        run_database_migrations(settings)
+    engine = make_engine(settings)
+    return make_session_factory(engine)
 
 
 @lru_cache
@@ -17,13 +33,23 @@ def get_artifact_service() -> CodeArtifactService:
         "artifact service initialized",
         extra={
             "artifact_root": str(settings.artifact_root),
-            "artifact_index_path": str(settings.artifact_index_path),
+            "database_path": str(settings.database_path),
         },
     )
     return CodeArtifactService(
-        repository=SQLiteArtifactRepository(settings.artifact_index_path),
+        repository=SQLAlchemyArtifactRepository(get_database_session_factory()),
         store=FilesystemArtifactStore(settings.artifact_root),
     )
+
+
+@lru_cache
+def get_strategy_service() -> StrategyService:
+    return StrategyService(SQLAlchemyStrategyRepository(get_database_session_factory()))
+
+
+@lru_cache
+def get_backtest_service() -> BacktestService:
+    return BacktestService(SQLAlchemyStrategyRepository(get_database_session_factory()))
 
 
 @lru_cache

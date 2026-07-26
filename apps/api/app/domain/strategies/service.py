@@ -23,7 +23,7 @@ from app.domain.strategies.models import (
     utc_now,
     validate_param_value,
 )
-from app.domain.strategies.repository import StrategyRepository, strategy_repository
+from app.domain.strategies.repository import StrategyRepository
 
 
 class StrategyError(Exception):
@@ -38,13 +38,13 @@ class StrategyService:
     def __init__(self, repository: StrategyRepository) -> None:
         self.repository = repository
 
-    def list_strategies(self, user_id: str, project_id: str) -> list[StrategySummary]:
+    async def list_strategies(self, user_id: str, project_id: str) -> list[StrategySummary]:
         return [
-            self._to_summary(strategy)
-            for strategy in self.repository.list_strategies(user_id, project_id)
+            await self._to_summary(strategy)
+            for strategy in await self.repository.list_strategies(user_id, project_id)
         ]
 
-    def create_strategy(
+    async def create_strategy(
         self,
         *,
         user_id: str,
@@ -78,18 +78,18 @@ class StrategyService:
         )
         strategy.current_version_id = version.id
 
-        self.repository.add_strategy(strategy)
-        self.repository.add_version(version)
+        await self.repository.add_strategy(strategy)
+        await self.repository.add_version(version)
         return StrategyCreateResult(
             strategy_id=strategy.id,
             entrypoint=version.entrypoint,
         )
 
-    def get_strategy(self, strategy_id: str) -> StrategyDetail:
-        strategy = self._require_strategy(strategy_id)
+    async def get_strategy(self, strategy_id: str) -> StrategyDetail:
+        strategy = await self._require_strategy(strategy_id)
         return StrategyDetail(strategy=strategy)
 
-    def update_strategy_metadata(
+    async def update_strategy_metadata(
         self,
         strategy_id: str,
         *,
@@ -98,7 +98,7 @@ class StrategyService:
         tags: list[str] | None = None,
         status: StrategyStatus | None = None,
     ) -> StrategyRecord:
-        strategy = self._require_strategy(strategy_id)
+        strategy = await self._require_strategy(strategy_id)
         if strategy.status == StrategyStatus.DELETED:
             raise StrategyError("STRATEGY_DELETED", "Strategy is deleted", 409)
 
@@ -113,7 +113,7 @@ class StrategyService:
             update_data["status"] = status
 
         strategy = strategy.model_copy(update=update_data)
-        self.repository.save_strategy(strategy)
+        await self.repository.save_strategy(strategy)
         return strategy
 
     def _build_version(
@@ -147,8 +147,8 @@ class StrategyService:
             code_checksum=_checksum(package),
         )
 
-    def _to_summary(self, strategy: StrategyRecord) -> StrategySummary:
-        version = self._require_version(strategy.current_version_id or "")
+    async def _to_summary(self, strategy: StrategyRecord) -> StrategySummary:
+        version = await self._require_version(strategy.current_version_id or "")
         return StrategySummary(
             strategy_id=strategy.id,
             strategy_version_id=version.id,
@@ -163,7 +163,7 @@ class StrategyService:
             updated_at=strategy.updated_at,
         )
 
-    def backtest_strategy(
+    async def backtest_strategy(
         self,
         *,
         strategy_id: str,
@@ -173,16 +173,16 @@ class StrategyService:
         config: StrategyBacktestConfig,
         engine: StrategyBacktestEngine,
     ) -> StrategyBacktestDetail:
-        backtest = self._create_backtest(
+        backtest = await self._create_backtest(
             strategy_id=strategy_id,
             user_id=user_id,
             project_id=project_id,
             chat_session_id=chat_session_id,
             config=config,
         )
-        return self._execute_backtest(backtest.id, engine=engine)
+        return await self._execute_backtest(backtest.id, engine=engine)
 
-    def _create_backtest(
+    async def _create_backtest(
         self,
         *,
         strategy_id: str,
@@ -191,7 +191,7 @@ class StrategyService:
         chat_session_id: str,
         config: StrategyBacktestConfig,
     ) -> StrategyBacktestRecord:
-        strategy = self._require_strategy(strategy_id)
+        strategy = await self._require_strategy(strategy_id)
         if strategy.status != StrategyStatus.ACTIVE:
             raise StrategyError("STRATEGY_NOT_ACTIVE", "Strategy is not active", 409)
         if strategy.current_version_id is None:
@@ -200,7 +200,7 @@ class StrategyService:
                 "Strategy has no executable code",
                 422,
             )
-        version = self._require_version(strategy.current_version_id)
+        version = await self._require_version(strategy.current_version_id)
 
         merged_params = dict(version.default_params)
         merged_params.update(config.params)
@@ -217,25 +217,25 @@ class StrategyService:
             config=config,
             config_hash=_hash_backtest_config(config),
         )
-        self.repository.add_backtest(backtest)
+        await self.repository.add_backtest(backtest)
         return backtest
 
-    def _execute_backtest(
+    async def _execute_backtest(
         self,
         backtest_id: str,
         *,
         engine: StrategyBacktestEngine,
     ) -> StrategyBacktestDetail:
-        backtest = self._require_backtest(backtest_id)
+        backtest = await self._require_backtest(backtest_id)
         if backtest.status in {
             StrategyBacktestStatus.RUNNING,
             StrategyBacktestStatus.SUCCEEDED,
             StrategyBacktestStatus.FAILED,
             StrategyBacktestStatus.CANCELED,
         }:
-            return self._get_backtest_detail(backtest_id)
+            return await self._get_backtest_detail(backtest_id)
 
-        version = self._require_version(backtest.strategy_version_id)
+        version = await self._require_version(backtest.strategy_version_id)
         started_at = utc_now()
         running = backtest.model_copy(
             update={
@@ -245,7 +245,7 @@ class StrategyService:
                 "updated_at": started_at,
             }
         )
-        self.repository.save_backtest(running)
+        await self.repository.save_backtest(running)
 
         try:
             result = engine.execute(backtest=running, version=version)
@@ -261,7 +261,7 @@ class StrategyService:
                     "updated_at": failed_at,
                 }
             )
-            self.repository.save_backtest(failed)
+            await self.repository.save_backtest(failed)
             return StrategyBacktestDetail(backtest=failed)
 
         completed_at = utc_now()
@@ -273,31 +273,31 @@ class StrategyService:
                 "updated_at": completed_at,
             }
         )
-        self.repository.save_backtest_result(result)
-        self.repository.save_backtest(succeeded)
+        await self.repository.save_backtest_result(result)
+        await self.repository.save_backtest(succeeded)
         return StrategyBacktestDetail(backtest=succeeded, result=result)
 
-    def _get_backtest_detail(self, backtest_id: str) -> StrategyBacktestDetail:
-        backtest = self._require_backtest(backtest_id)
+    async def _get_backtest_detail(self, backtest_id: str) -> StrategyBacktestDetail:
+        backtest = await self._require_backtest(backtest_id)
         return StrategyBacktestDetail(
             backtest=backtest,
-            result=self.repository.get_backtest_result(backtest_id),
+            result=await self.repository.get_backtest_result(backtest_id),
         )
 
-    def _require_strategy(self, strategy_id: str) -> StrategyRecord:
-        strategy = self.repository.get_strategy(strategy_id)
+    async def _require_strategy(self, strategy_id: str) -> StrategyRecord:
+        strategy = await self.repository.get_strategy(strategy_id)
         if strategy is None:
             raise StrategyError("STRATEGY_NOT_FOUND", "Strategy not found", 404)
         return strategy
 
-    def _require_version(self, version_id: str) -> StrategyVersionRecord:
-        version = self.repository.get_version(version_id)
+    async def _require_version(self, version_id: str) -> StrategyVersionRecord:
+        version = await self.repository.get_version(version_id)
         if version is None:
             raise StrategyError("STRATEGY_VERSION_NOT_FOUND", "Strategy version not found", 404)
         return version
 
-    def _require_backtest(self, backtest_id: str) -> StrategyBacktestRecord:
-        backtest = self.repository.get_backtest(backtest_id)
+    async def _require_backtest(self, backtest_id: str) -> StrategyBacktestRecord:
+        backtest = await self.repository.get_backtest(backtest_id)
         if backtest is None:
             raise StrategyError("STRATEGY_BACKTEST_NOT_FOUND", "Strategy backtest not found", 404)
         return backtest
@@ -358,5 +358,3 @@ def _normalize_tags(tags: list[str]) -> list[str]:
             normalized.append(stripped[:32])
     return normalized
 
-
-strategy_service = StrategyService(strategy_repository)
