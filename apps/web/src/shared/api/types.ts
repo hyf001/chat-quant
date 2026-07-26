@@ -28,6 +28,7 @@ export type SdkMessage = {
   role: SdkMessageRole;
   content: SdkContentBlock[];
   created_at: string;
+  source_sequence?: number;
 };
 
 export type AssetLink = {

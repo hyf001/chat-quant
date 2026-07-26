@@ -60,6 +60,7 @@ class AgentExecutionCommand(BaseModel):
     allowed_tools: list[str] = Field(default_factory=list)
     working_dir: str
     sdk_session_id: str | None = None
+    should_finalize_initial_title: bool = False
     request_id: str
     deadline_seconds: int | None = None
     user_prompt: str

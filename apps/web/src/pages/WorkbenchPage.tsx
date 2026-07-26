@@ -206,7 +206,12 @@ function agentDetailEnvelopes(agentDetail: AgentChatSessionDetail): SDKStreamEnv
 
 function messagesFromEnvelopes(envelopes: SDKStreamEnvelope[]): SdkMessage[] {
   const messages: SdkMessage[] = [];
-  let activeAssistant: { id: string; text: string; createdAt: string } | null = null;
+  let activeAssistant: {
+    id: string;
+    text: string;
+    createdAt: string;
+    sourceSequence: number;
+  } | null = null;
 
   const flushAssistant = () => {
     if (!activeAssistant?.text.trim()) {
@@ -219,6 +224,7 @@ function messagesFromEnvelopes(envelopes: SDKStreamEnvelope[]): SdkMessage[] {
         role: "assistant",
         text: activeAssistant.text,
         createdAt: activeAssistant.createdAt,
+        sourceSequence: activeAssistant.sourceSequence,
       }),
     );
     activeAssistant = null;
@@ -240,6 +246,7 @@ function messagesFromEnvelopes(envelopes: SDKStreamEnvelope[]): SdkMessage[] {
               role: "user",
               text,
               createdAt: envelope.received_at,
+              sourceSequence: envelope.sequence,
             }),
           );
         }
@@ -253,6 +260,7 @@ function messagesFromEnvelopes(envelopes: SDKStreamEnvelope[]): SdkMessage[] {
             id: asString(event.id) ?? asString(event.uuid) ?? `sdk_assistant_${envelope.sequence}`,
             text,
             createdAt: activeAssistant?.createdAt ?? envelope.received_at,
+            sourceSequence: activeAssistant?.sourceSequence ?? envelope.sequence,
           };
           flushAssistant();
         }
@@ -265,6 +273,7 @@ function messagesFromEnvelopes(envelopes: SDKStreamEnvelope[]): SdkMessage[] {
           id: activeAssistant?.id ?? `sdk_assistant_stream_${envelope.sequence}`,
           text: appendStreamText(activeAssistant?.text ?? "", deltaText, true),
           createdAt: activeAssistant?.createdAt ?? envelope.received_at,
+          sourceSequence: activeAssistant?.sourceSequence ?? envelope.sequence,
         };
         return;
       }
@@ -277,6 +286,7 @@ function messagesFromEnvelopes(envelopes: SDKStreamEnvelope[]): SdkMessage[] {
               id: asString(event.uuid) ?? `sdk_result_${envelope.sequence}`,
               text: resultText,
               createdAt: envelope.received_at,
+              sourceSequence: envelope.sequence,
             };
           }
         }
@@ -294,6 +304,7 @@ function messagesFromEnvelopes(envelopes: SDKStreamEnvelope[]): SdkMessage[] {
               role: "assistant",
               text: `运行失败：${message}`,
               createdAt: envelope.received_at,
+              sourceSequence: envelope.sequence,
             }),
           );
         }
@@ -309,17 +320,20 @@ function makeTextMessage({
   role,
   text,
   createdAt,
+  sourceSequence,
 }: {
   id: string;
   role: SdkMessage["role"];
   text: string;
   createdAt: string;
+  sourceSequence?: number;
 }): SdkMessage {
   return {
     uuid: id,
     role,
     content: [{ type: "text", text, tool_use_id: null, name: null }],
     created_at: createdAt,
+    source_sequence: sourceSequence,
   };
 }
 

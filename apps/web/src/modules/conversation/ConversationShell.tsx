@@ -115,7 +115,11 @@ export function ConversationShell({
     [isStreaming, timelineItems],
   );
   const elapsedLabel = useMemo(
-    () => formatElapsed(getRunStartedAt(textMessages, envelopes), isStreaming ? new Date(now).toISOString() : getRunEndedAt(envelopes)),
+    () =>
+      formatElapsed(
+        getRunStartedAt(textMessages, envelopes),
+        isStreaming ? new Date(now).toISOString() : getRunEndedAt(envelopes),
+      ),
     [envelopes, isStreaming, textMessages, now],
   );
   const latestAssistantId = useMemo(() => {
@@ -196,7 +200,13 @@ export function ConversationShell({
               />
             );
           }
-          return <ToolGroupEntry isActive={isStreaming && item.id === lastTimelineItemId(timelineItems)} key={item.id} toolGroup={item.toolGroup} />;
+          return (
+            <ToolGroupEntry
+              isActive={isStreaming && item.id === lastTimelineItemId(timelineItems)}
+              key={item.id}
+              toolGroup={item.toolGroup}
+            />
+          );
         })}
 
         {isStreaming && session && thinkingProcesses.length === 0 ? (
@@ -397,7 +407,7 @@ function buildTimelineItems(
     type: "message",
     id: `message_${message.uuid}`,
     timestamp: message.created_at,
-    sequence: 0,
+    sequence: message.source_sequence ?? 0,
     message,
   }));
   const thinkingItems: TimelineItem[] = thinkingProcesses.map((thinking) => ({
@@ -416,6 +426,9 @@ function buildTimelineItems(
   }));
 
   return [...messageItems, ...thinkingItems, ...toolItems].sort((left, right) => {
+    if (left.sequence > 0 && right.sequence > 0 && left.sequence !== right.sequence) {
+      return left.sequence - right.sequence;
+    }
     const timeDelta = timestampMs(left.timestamp) - timestampMs(right.timestamp);
     if (timeDelta !== 0) {
       return timeDelta;

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from uuid import uuid4
 
+from claude_agent_sdk import get_session_info as sdk_get_session_info
 from claude_agent_sdk import get_session_messages as sdk_get_session_messages
 
 from app.domain.chat_sessions.models import (
@@ -32,6 +33,26 @@ def _default_title(prompt: str | None = None) -> str:
     if not normalized:
         return "新的量化会话"
     return normalized[:40]
+
+
+def _initial_answer_title(prompt: str) -> str:
+    stripped = " ".join(prompt.strip().split())
+    if not stripped:
+        return "新的分析会话"
+    return stripped[:20]
+
+
+def _valid_title(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    stripped = " ".join(value.strip().split())
+    return stripped[:200] if stripped else None
+
+
+@dataclass(frozen=True, slots=True)
+class EnsuredChatSession:
+    session: ChatSession
+    created: bool
 
 
 class ChatSessionAccessError(PermissionError):
@@ -184,18 +205,53 @@ class ChatSessionService:
         title: str | None = None,
         initial_prompt: str | None = None,
     ) -> ChatSession:
+        ensured = await self.ensure_chat_session_with_status(
+            chat_session_id=chat_session_id,
+            user_id=user_id,
+            project_id=project_id,
+            title=title,
+            initial_prompt=initial_prompt,
+        )
+        return ensured.session
+
+    async def ensure_chat_session_with_status(
+        self,
+        *,
+        chat_session_id: str,
+        user_id: str,
+        project_id: str,
+        title: str | None = None,
+        initial_prompt: str | None = None,
+    ) -> EnsuredChatSession:
         session = await self._sessions.get(chat_session_id)
         if session is None or session.deleted_at is not None:
-            return await self.create_chat_session(
-                user_id=user_id,
-                project_id=project_id,
-                chat_session_id=chat_session_id,
-                title=title,
-                initial_prompt=initial_prompt,
+            return EnsuredChatSession(
+                session=await self.create_chat_session(
+                    user_id=user_id,
+                    project_id=project_id,
+                    chat_session_id=chat_session_id,
+                    title=title,
+                    initial_prompt=initial_prompt,
+                ),
+                created=True,
             )
         if session.user_id != user_id:
             raise ChatSessionAccessError(chat_session_id)
-        return session
+        return EnsuredChatSession(session=session, created=False)
+
+    def initial_answer_title(
+        self,
+        chat_session_id: str,
+        *,
+        initial_prompt: str,
+        sdk_session_id: str | None,
+    ) -> str:
+        return (
+            self._sdk_session_title(chat_session_id, sdk_session_id)
+            or _initial_answer_title(
+                self._sdk_first_user_prompt(chat_session_id, sdk_session_id) or initial_prompt
+            )
+        )
 
     async def get_chat_session_detail(
         self, chat_session_id: str, *, user_id: str, message_limit: int | None = None
@@ -240,6 +296,84 @@ class ChatSessionService:
         if self._agent_workdir_root:
             return f"{self._agent_workdir_root.rstrip('/')}/{chat_session_id}"
         return None
+
+    def _sdk_session_title(self, chat_session_id: str, sdk_session_id: str | None) -> str | None:
+        if not sdk_session_id:
+            return None
+        try:
+            info = sdk_get_session_info(
+                sdk_session_id,
+                directory=self._sdk_message_directory(chat_session_id),
+            )
+        except Exception:  # pragma: no cover - SDK metadata failures should not break chat sync.
+            return None
+        if info is None:
+            return None
+        title = (
+            info.get("custom_title")
+            if isinstance(info, dict)
+            else getattr(info, "custom_title", None)
+        )
+        return _valid_title(title)
+
+    def _sdk_first_user_prompt(
+        self, chat_session_id: str, sdk_session_id: str | None
+    ) -> str | None:
+        if not sdk_session_id:
+            return None
+        try:
+            messages = sdk_get_session_messages(
+                sdk_session_id,
+                directory=self._sdk_message_directory(chat_session_id),
+            )
+        except Exception:  # pragma: no cover - SDK history failures fall back to request prompt.
+            return None
+        for message in messages:
+            role = _sdk_message_role(message)
+            if role != "user":
+                continue
+            content = _sdk_message_content(message)
+            if content:
+                return content
+        return None
+
+
+def _sdk_message_role(message: object) -> str | None:
+    message_type = getattr(message, "type", None)
+    if isinstance(message_type, str) and message_type:
+        return "user" if message_type in {"user", "user_message"} else message_type
+    if isinstance(message, dict):
+        dict_type = message.get("type")
+        if isinstance(dict_type, str) and dict_type:
+            return "user" if dict_type in {"user", "user_message"} else dict_type
+        role = message.get("role")
+        return role if isinstance(role, str) else None
+    return None
+
+
+def _sdk_message_content(message: object) -> str | None:
+    if isinstance(message, str):
+        return _valid_title(message)
+    if isinstance(message, dict):
+        return _content_text(message.get("content") or message.get("message"))
+    content = getattr(message, "content", None)
+    if content is not None:
+        return _content_text(content)
+    return _content_text(getattr(message, "message", None))
+
+
+def _content_text(content: object) -> str | None:
+    if isinstance(content, str):
+        return _valid_title(content)
+    if isinstance(content, dict):
+        return _content_text(content.get("content"))
+    if isinstance(content, list):
+        parts = [text for item in content if (text := _content_text(item))]
+        return _valid_title(" ".join(parts))
+    text = getattr(content, "text", None)
+    if isinstance(text, str):
+        return _valid_title(text)
+    return None
 
 
 class AssetLinkService:

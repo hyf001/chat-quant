@@ -50,8 +50,8 @@ class ChatApplicationService:
         chat_session_id = request.chat_session_id or f"chat_{uuid4().hex}"
         user_message_id = f"msg_user_{uuid4().hex}"
         title = _title_from_prompt(request.message)
-        indexed_session = (
-            await chat_sessions.ensure_chat_session(
+        ensured_session = (
+            await chat_sessions.ensure_chat_session_with_status(
                 chat_session_id=chat_session_id,
                 user_id=request.user_id,
                 project_id=request.project_id,
@@ -61,6 +61,7 @@ class ChatApplicationService:
             if chat_sessions is not None
             else None
         )
+        indexed_session = ensured_session.session if ensured_session is not None else None
         if indexed_session is not None:
             sdk_session_id = indexed_session.sdk_session_id
         else:
@@ -90,6 +91,8 @@ class ChatApplicationService:
             context=context,
             working_dir=working_dir,
             sdk_session_id=sdk_session_id,
+            should_finalize_initial_title=indexed_session is not None
+            and indexed_session.sdk_session_id is None,
             request_id=f"req_{uuid4().hex}",
             deadline_seconds=self.runtime.settings.agent_turn_timeout_seconds,
             user_prompt=request.message,
@@ -195,12 +198,14 @@ class ChatApplicationService:
             if (
                 chat_sessions is not None
                 and not session_index_synced
-                and envelope.sdk_event.get("type") in {"result_message", "runtime_error", "cancelled"}
+                and envelope.sdk_event.get("type")
+                in {"result_message", "runtime_error", "cancelled"}
             ):
                 await _sync_chat_session_index(
                     chat_sessions,
                     command,
                     latest_sdk_session_id,
+                    envelope.sdk_event,
                 )
                 session_index_synced = True
             yield envelope
@@ -210,6 +215,7 @@ class ChatApplicationService:
                 chat_sessions,
                 command,
                 latest_sdk_session_id,
+                None,
             )
 
     async def cancel_session(self, chat_session_id: str, reason: str) -> bool:
@@ -280,11 +286,21 @@ async def _sync_chat_session_index(
     chat_sessions: ChatSessionService,
     command: AgentExecutionCommand,
     sdk_session_id: str | None,
+    terminal_event: dict[str, object] | None,
 ) -> None:
     try:
+        title: str | None = None
+        del terminal_event
+        if command.should_finalize_initial_title:
+            title = chat_sessions.initial_answer_title(
+                command.chat_session_id,
+                initial_prompt=command.user_prompt,
+                sdk_session_id=sdk_session_id,
+            )
         await chat_sessions.update_chat_session(
             command.chat_session_id,
             user_id=command.user_id,
+            title=title,
             snippet=command.user_prompt[:160],
             summary=_summary_from_prompt(command.user_prompt),
             sdk_session_id=sdk_session_id,
