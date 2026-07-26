@@ -20,6 +20,20 @@ AKShare wiki 位于：
 - `docs/akshare/wiki/entities/interfaces/*.md`：接口页，包含参数、返回字段、示例代码和来源摘录。
 - `docs/akshare/wiki/raw/data-dictionary/`：原始数据字典快照，仅在需要核对源文时阅读。
 
+## 当前运行环境
+
+当前环境是 `/Users/huyufei/Documents/hyf/code/github/chat-quant` 下的虚拟环境解释器：
+
+```text
+.venv/bin/python
+```
+
+执行查询时，从仓库根目录运行：
+
+```bash
+.venv/bin/python -c "import sys; print(sys.executable); print(sys.version)"
+```
+
 ## 渐进式阅读
 
 每次开始查数前，先做轻量定向：

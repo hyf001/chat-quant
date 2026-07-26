@@ -5,6 +5,7 @@ description = "FastAPI backend for Chat-Quant"
 requires-python = ">=3.12"
 dependencies = [
   "aiosqlite>=0.21.0",
+  "akshare>=1.18.78",
   "backtrader>=1.9.78.123",
   "claude-agent-sdk>=0.2.127",
   "fastapi>=0.116.1",
