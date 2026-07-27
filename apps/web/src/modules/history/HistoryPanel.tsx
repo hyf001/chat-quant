@@ -1,7 +1,6 @@
-import { Plus, RefreshCw, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Code2, Plus, Settings, Terminal } from "lucide-react";
 
-import { listStrategies, type ChatSession, type StrategySummary } from "../../shared/api";
+import type { ChatSession } from "../../shared/api";
 
 type HistoryPanelProps = {
   sessions: ChatSession[];
@@ -13,164 +12,83 @@ type HistoryPanelProps = {
   onSelectSession: (chatSessionId: string) => void;
 };
 
-const statusLabel: Record<StrategySummary["version_status"], string> = {
-  draft: "草稿",
-  validating: "校验中",
-  validated: "已校验",
-  invalid: "未通过",
-  archived: "已归档",
-};
-
-function formatTime(value: string): string {
-  return new Intl.DateTimeFormat("zh-CN", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
 export function HistoryPanel({
   sessions,
   activeSessionId,
-  query,
+  query: _query,
   isLoading,
   onCreateSession,
-  onQueryChange,
+  onQueryChange: _onQueryChange,
   onSelectSession,
 }: HistoryPanelProps) {
-  const [strategies, setStrategies] = useState<StrategySummary[]>([]);
-  const [isLoadingStrategies, setIsLoadingStrategies] = useState(true);
-  const [strategyError, setStrategyError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void refreshStrategies();
-  }, []);
-
-  async function refreshStrategies() {
-    try {
-      setIsLoadingStrategies(true);
-      setStrategyError(null);
-      setStrategies(await listStrategies());
-    } catch (error) {
-      setStrategyError(error instanceof Error ? error.message : "历史策略加载失败");
-    } finally {
-      setIsLoadingStrategies(false);
-    }
-  }
-
   return (
-    <aside className="hidden border-r border-line bg-panel/85 px-4 py-5 lg:block" aria-label="历史会话">
-      <div className="mb-5 flex items-center gap-3">
-        <div className="grid size-9 place-items-center rounded-lg bg-brand text-sm font-bold text-white">
-          CQ
-        </div>
-        <div className="min-w-0">
-          <div className="truncate text-sm font-semibold">Chat-Quant</div>
-          <div className="truncate text-xs text-muted">股票分析智能体</div>
-        </div>
-      </div>
-
-      <button
-        className="mb-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-ink px-3 text-sm font-semibold text-white transition hover:bg-strong focus:outline-none focus:ring-2 focus:ring-brand/40"
-        type="button"
-        onClick={onCreateSession}
-      >
-        <Plus size={16} />
-        新建会话
-      </button>
-
-      <label className="mb-4 flex h-9 items-center gap-2 rounded-lg border border-line bg-soft px-3 text-sm text-muted">
-        <Search size={15} />
-        <input
-          className="min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-muted"
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="搜索标题、摘要、标签"
-        />
-      </label>
-
-      <div className="mb-3 text-xs font-semibold text-muted">最近会话</div>
-      <div className="grid gap-2">
-        {isLoading ? <Notice text="加载中" /> : null}
-        {!isLoading && sessions.length === 0 ? <Notice text="暂无会话" /> : null}
-        {sessions.map((session) => {
-          const isActive = session.id === activeSessionId;
-          return (
-            <button
-              className={`w-full rounded-lg border p-3 text-left transition focus:outline-none focus:ring-2 focus:ring-brand/30 ${
-                isActive
-                  ? "border-brand bg-brand/10"
-                  : "border-line bg-soft hover:border-strong hover:bg-panel"
-              }`}
-              key={session.id}
-              type="button"
-              onClick={() => onSelectSession(session.id)}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1 truncate text-sm font-semibold">{session.title}</div>
-                <div className="shrink-0 text-[11px] text-muted">{formatTime(session.updated_at)}</div>
-              </div>
-              <div className="mt-1 line-clamp-2 text-xs leading-5 text-muted">
-                {session.snippet || session.data_scope_label || "未输入消息"}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mb-3 mt-5 flex items-center justify-between gap-2">
-        <div className="text-xs font-semibold text-muted">策略资产</div>
+    <aside
+      className="flex h-full w-64 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900 text-zinc-300"
+      aria-label="历史会话"
+    >
+      <div className="border-b border-zinc-800 p-3">
         <button
-          className="grid size-8 place-items-center rounded-lg border border-line bg-soft text-ink transition hover:border-strong hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs font-semibold text-zinc-900 transition-colors hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-white/40"
           type="button"
-          aria-label="刷新策略资产"
-          onClick={refreshStrategies}
-          disabled={isLoadingStrategies}
+          onClick={onCreateSession}
         >
-          <RefreshCw size={14} />
+          <Plus className="h-4 w-4" />
+          <span>新建 Agent 任务</span>
         </button>
       </div>
 
-      <div className="grid gap-2">
-        {isLoadingStrategies ? <Notice text="正在读取策略资产" /> : null}
-        {!isLoadingStrategies && strategyError ? <Notice text={strategyError} tone="risk" /> : null}
-        {!isLoadingStrategies && !strategyError && strategies.length === 0 ? (
-          <Notice text="暂无策略资产" />
-        ) : null}
-        {!isLoadingStrategies && !strategyError
-          ? strategies.slice(0, 4).map((strategy) => (
-              <div className="rounded-lg border border-line bg-soft p-3" key={strategy.strategy_id}>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 truncate text-sm font-semibold">{strategy.name}</div>
-                  <span className="shrink-0 rounded-full border border-line bg-panel px-2 py-0.5 text-xs text-muted">
-                    V{strategy.version}
-                  </span>
-                </div>
-                <div className="mt-2 line-clamp-2 text-xs leading-5 text-muted">
-                  {strategy.logic_summary ?? "策略逻辑摘要待补充"}
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  <Tag text={statusLabel[strategy.version_status]} />
-                  <Tag text={strategy.strategy_type} />
-                </div>
-              </div>
-            ))
-          : null}
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-2">
+        <div>
+          <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+            历史执行记录
+          </div>
+          <div className="mt-1 space-y-1">
+            {isLoading ? <Notice text="加载中" /> : null}
+            {!isLoading && sessions.length === 0 ? <Notice text="暂无会话" /> : null}
+            {sessions.map((session) => {
+              const isActive = session.id === activeSessionId;
+              return (
+                <button
+                  className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
+                    isActive
+                      ? "border border-zinc-700 bg-zinc-800 font-medium text-white"
+                      : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                  }`}
+                  key={session.id}
+                  type="button"
+                  onClick={() => onSelectSession(session.id)}
+                >
+                  {isActive ? (
+                    <Terminal className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                  ) : (
+                    <Code2 className="h-3.5 w-3.5 shrink-0" />
+                  )}
+                  <span className="truncate">{session.title}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between border-t border-zinc-800 p-3 text-xs text-zinc-400">
+        <span className="truncate font-mono text-[11px]">workspace: chat-quant</span>
+        <button
+          className="grid h-6 w-6 shrink-0 place-items-center rounded text-zinc-400 transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+          type="button"
+          aria-label="设置"
+        >
+          <Settings className="h-4 w-4" />
+        </button>
       </div>
     </aside>
   );
 }
 
-function Tag({ text }: { text: string }) {
+function Notice({ text }: { text: string }) {
   return (
-    <span className="max-w-full truncate rounded-full border border-line bg-panel px-2 py-0.5 text-xs text-muted">
+    <div className="rounded-md border border-dashed border-zinc-700 px-2.5 py-2 text-xs text-zinc-500">
       {text}
-    </span>
+    </div>
   );
-}
-
-function Notice({ text, tone = "muted" }: { text: string; tone?: "muted" | "risk" }) {
-  const toneClass = tone === "risk" ? "border-risk/40 text-risk" : "border-dashed text-muted";
-  return <div className={`rounded-lg border bg-soft p-4 text-sm ${toneClass}`}>{text}</div>;
 }

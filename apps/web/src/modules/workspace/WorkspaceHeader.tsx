@@ -1,7 +1,6 @@
-import { Activity, WifiOff } from "lucide-react";
+import { Cpu } from "lucide-react";
 
 import type { BacktestRunStatus, ChatSession, RuntimeHealth } from "../../shared/api";
-import { StatusPill } from "../../shared/components";
 
 type WorkspaceHeaderProps = {
   session: ChatSession | null;
@@ -16,22 +15,31 @@ export function WorkspaceHeader({
   health,
   backtestStatus,
 }: WorkspaceHeaderProps) {
-  const runtimeLabel = health?.status === "ok" ? "M4 已连接" : null;
-  const backtestLabel = backtestStatus ? `M6 ${backtestStatus}` : null;
-  const statusLabel = backtestLabel ?? runtimeLabel ?? (isConnected ? "M1 已连接" : "连接异常");
+  const taskLabel = session?.id ? `TASK-${session.id.slice(0, 4).toUpperCase()}` : "TASK-NEW";
+  const isActive = Boolean(backtestStatus) || health?.status === "ok" || isConnected;
 
   return (
-    <header className="flex min-h-16 items-center justify-between gap-4 border-b border-line bg-panel/80 px-5">
-      <div className="min-w-0">
-        <h1 className="truncate text-lg font-semibold">{session?.title ?? "Chat-Quant 工作台"}</h1>
-        <p className="mt-1 truncate text-xs text-muted">
-          {session?.data_scope_label ?? session?.kind ?? "会话、消息、运行、回测和资产上下文"}
-        </p>
+    <header className="flex h-12 shrink-0 items-center justify-between border-b border-zinc-200 bg-white px-6">
+      <div className="flex min-w-0 items-center gap-3 text-xs">
+        <span className="flex shrink-0 items-center gap-1.5 font-bold text-zinc-900">
+          <Cpu className="h-4 w-4 text-zinc-700" />
+          Codex Execution Engine
+        </span>
+        <span className="text-zinc-300">|</span>
+        <span className="truncate font-mono text-zinc-500">{taskLabel}</span>
       </div>
-      <StatusPill
-        icon={isConnected || runtimeLabel || backtestLabel ? <Activity size={14} /> : <WifiOff size={14} />}
-        label={statusLabel}
-      />
+      <span
+        className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 font-mono text-[10px] ${
+          isActive
+            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+            : "border-red-200 bg-red-50 text-red-700"
+        }`}
+      >
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${isActive ? "animate-pulse bg-emerald-500" : "bg-red-500"}`}
+        />
+        {isActive ? "ACTIVE" : "OFFLINE"}
+      </span>
     </header>
   );
 }

@@ -15,25 +15,24 @@ export function WorkspaceLayout({
   conversation,
   result,
   composer,
-  insight,
+  insight: _insight,
 }: WorkspaceLayoutProps) {
   return (
-    <main className="min-h-screen bg-app text-ink">
-      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[292px_minmax(0,1fr)_360px]">
+    <main className="flex h-screen overflow-hidden bg-white font-sans text-zinc-900">
+      <div className="flex h-full min-w-0 flex-1">
         {history}
-        <section className="flex min-h-screen min-w-0 flex-col">
+        <section className="flex h-full min-w-0 flex-1 flex-col bg-white">
           {header}
-          <div className="min-h-0 flex-1 overflow-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto p-8">
             {conversation}
             {result ? (
-              <div className="px-5 pb-6">
-                <div className="mx-auto w-full max-w-4xl">{result}</div>
+              <div className="mx-auto mt-6 w-full max-w-3xl">
+                <div>{result}</div>
               </div>
             ) : null}
           </div>
           {composer}
         </section>
-        {insight}
       </div>
     </main>
   );

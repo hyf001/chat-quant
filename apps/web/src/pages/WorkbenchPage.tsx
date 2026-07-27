@@ -33,6 +33,7 @@ export function WorkbenchPage() {
   const [error, setError] = useState<string | null>(null);
   const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(null);
   const streamingSessionIdRef = useRef<string | null>(null);
+  const loadDetailRequestIdRef = useRef(0);
 
   const activeSession = useMemo(
     () => detail?.session ?? sessions.find((session) => session.id === activeSessionId) ?? null,
@@ -64,12 +65,20 @@ export function WorkbenchPage() {
   );
 
   const loadDetail = useCallback(async (chatSessionId: string) => {
+    const requestId = loadDetailRequestIdRef.current + 1;
+    loadDetailRequestIdRef.current = requestId;
     setIsDetailLoading(true);
     setError(null);
     try {
       const sessionDetail = await getChatSessionDetail(chatSessionId);
+      if (requestId !== loadDetailRequestIdRef.current) {
+        return;
+      }
       setDetail(sessionDetail);
       const agentDetail = await getAgentDetailOrNull(chatSessionId);
+      if (requestId !== loadDetailRequestIdRef.current) {
+        return;
+      }
       setConversationEnvelopes((current) =>
         streamingSessionIdRef.current === chatSessionId
           ? current
@@ -78,9 +87,13 @@ export function WorkbenchPage() {
             : [],
       );
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "会话详情加载失败");
+      if (requestId === loadDetailRequestIdRef.current) {
+        setError(caught instanceof Error ? caught.message : "会话详情加载失败");
+      }
     } finally {
-      setIsDetailLoading(false);
+      if (requestId === loadDetailRequestIdRef.current) {
+        setIsDetailLoading(false);
+      }
     }
   }, []);
 
@@ -98,6 +111,7 @@ export function WorkbenchPage() {
     if (activeSessionId) {
       void loadDetail(activeSessionId);
     } else {
+      loadDetailRequestIdRef.current += 1;
       setDetail(null);
       setConversationEnvelopes([]);
     }

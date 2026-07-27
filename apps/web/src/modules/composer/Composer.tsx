@@ -1,4 +1,3 @@
-import { Send } from "lucide-react";
 import { FormEvent, useState } from "react";
 
 type ComposerProps = {
@@ -20,26 +19,25 @@ export function Composer({ disabled, onSendMessage }: ComposerProps) {
   };
 
   return (
-    <footer className="border-t border-line bg-app/95 px-5 py-4">
+    <footer className="shrink-0 border-t border-zinc-200 bg-white p-4">
       <form
-        className="mx-auto flex max-w-4xl items-end gap-2 rounded-lg border border-line bg-panel p-2 shadow-panel"
+        className="mx-auto flex max-w-3xl items-center gap-2 rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2.5 transition-all focus-within:border-zinc-900 focus-within:bg-white"
         onSubmit={handleSubmit}
       >
-        <textarea
-          className="min-h-12 flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none placeholder:text-muted"
+        <span className="select-none font-mono text-xs font-bold text-zinc-500">&gt;</span>
+        <input
+          className="min-w-0 flex-1 bg-transparent text-xs text-zinc-900 outline-none placeholder:text-zinc-400"
           disabled={disabled}
           onChange={(event) => setContent(event.target.value)}
-          placeholder="输入股票问题、选股条件或策略想法..."
-          rows={2}
+          placeholder="向 Agent 追加指令..."
           value={content}
         />
         <button
-          className="grid size-10 place-items-center rounded-lg bg-brand text-white transition hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:cursor-not-allowed disabled:bg-muted"
-          aria-label="发送"
+          className="shrink-0 rounded bg-zinc-900 px-3.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-black focus:outline-none focus:ring-2 focus:ring-zinc-900/25 disabled:cursor-not-allowed disabled:bg-zinc-900"
           disabled={disabled || content.trim().length === 0}
           type="submit"
         >
-          <Send size={17} />
+          发送
         </button>
       </form>
     </footer>

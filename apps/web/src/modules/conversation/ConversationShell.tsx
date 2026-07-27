@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, ChevronDown, Loader2 } from "lucide-react";
+import { AlertCircle, Brain, ChevronDown, FileText, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -148,30 +148,37 @@ export function ConversationShell({
   }, [isStreaming]);
 
   return (
-    <section className="px-5 py-6" aria-label="对话线程">
-      <div className="mx-auto grid w-full max-w-4xl gap-5">
+    <section aria-label="对话线程">
+      <div className="mx-auto w-full max-w-3xl space-y-6">
         {error ? (
-          <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            <AlertCircle className="mt-0.5 shrink-0" size={17} />
+          <div className="flex items-start gap-3 rounded-md border-2 border-red-500 bg-red-50/20 p-4 text-xs font-medium text-red-950 shadow-md">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
             <span className="min-w-0 break-words">{error}</span>
           </div>
         ) : null}
 
         {isLoading ? (
-          <div className="rounded-lg border border-line bg-panel p-4 text-sm text-muted">加载中</div>
+          <div className="rounded-md border border-zinc-300 bg-zinc-50/50 p-4 text-xs text-zinc-600">
+            加载中
+          </div>
         ) : null}
 
         {!isLoading && !session ? (
-          <div className="rounded-lg border border-line bg-panel p-5">
-            <div className="text-sm font-semibold">开始新的量化会话</div>
-            <p className="mt-2 text-sm leading-6 text-muted">
+          <div className="relative border-l-2 border-zinc-900 pl-6">
+            <div className="absolute -left-[9px] top-0 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-zinc-900">
+              <div className="h-1.5 w-1.5 rounded-full bg-white" />
+            </div>
+            <div className="mb-1 font-mono text-[11px] font-bold uppercase text-zinc-400">
+              PROMPT
+            </div>
+            <p className="text-base font-semibold text-zinc-900">
               输入股票问题、选股条件或策略想法后，系统会创建历史入口并保存会话上下文。
             </p>
           </div>
         ) : null}
 
         {session && timelineItems.length === 0 && !isStreaming ? (
-          <div className="rounded-lg border border-dashed border-line bg-panel p-5 text-sm leading-6 text-muted">
+          <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50/50 p-5 text-xs leading-6 text-zinc-500">
             当前会话还没有消息。
           </div>
         ) : null}
@@ -216,13 +223,15 @@ export function ConversationShell({
         {activityLabel ? <ActivityHint label={activityLabel} /> : null}
 
         {assets.length > 0 ? (
-          <div className="rounded-lg border border-line bg-panel p-4">
-            <div className="text-sm font-semibold">会话资产</div>
+          <div className="rounded-md border border-zinc-300 bg-white p-4">
+            <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+              会话资产
+            </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {assets.slice(0, 4).map((asset) => (
-                <div className="rounded-lg border border-line bg-soft p-3" key={asset.id}>
-                  <div className="truncate text-sm font-medium">{asset.asset_id}</div>
-                  <div className="mt-1 text-xs text-muted">
+                <div className="rounded border border-zinc-200 bg-zinc-50 p-3" key={asset.id}>
+                  <div className="truncate text-xs font-bold text-zinc-900">{asset.asset_id}</div>
+                  <div className="mt-1 text-xs text-zinc-500">
                     {asset.asset_type} · {asset.relation_type}
                   </div>
                 </div>
@@ -238,7 +247,7 @@ export function ConversationShell({
 
 function ActivityHint({ label }: { label: string }) {
   return (
-    <div className="px-1 text-sm text-muted">
+    <div className="pl-6 text-xs text-zinc-500">
       <span className="inline-flex items-center gap-2">
         <span className="activity-dot" aria-hidden="true" />
         {label}
@@ -255,10 +264,10 @@ function TurnStatusEntry({
   isStreaming: boolean;
 }) {
   return (
-    <div className="border-t border-line/70 pt-4 text-sm text-muted">
+    <div className="border-l-2 border-zinc-200 pl-6 text-xs text-zinc-500">
       <span className="inline-flex items-center gap-1">
         {isStreaming ? "处理中" : "已处理"} {elapsedLabel}
-        <ChevronDown size={14} />
+        <ChevronDown className="h-3.5 w-3.5" />
       </span>
     </div>
   );
@@ -276,26 +285,32 @@ function MessageEntry({
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
   const isLatestAssistant = message.uuid === latestAssistantId;
+  if (isUser) {
+    return (
+      <article className="relative border-l-2 border-zinc-900 pl-6">
+        <div className="absolute -left-[9px] top-0 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-zinc-900">
+          <div className="h-1.5 w-1.5 rounded-full bg-white" />
+        </div>
+        <div className="mb-1 font-mono text-[11px] font-bold uppercase text-zinc-400">
+          PROMPT
+        </div>
+        <div className="whitespace-pre-wrap break-words text-base font-semibold text-zinc-900">
+          {blockText(message)}
+        </div>
+      </article>
+    );
+  }
+
   return (
-    <article
-      className={`flex ${isUser ? "justify-end" : "justify-start border-t border-line/70 pt-5"}`}
-    >
-      <div
-        className={
-          isUser
-            ? "max-w-[78%] rounded-lg bg-soft px-4 py-3 text-sm leading-6 text-ink shadow-sm"
-            : "w-full min-w-0 text-ink"
-        }
-      >
+    <article className="border-l-2 border-zinc-200 pl-6">
+      <div className="min-w-0 text-sm leading-relaxed text-zinc-800">
         {isAssistant ? (
-          <div className="text-sm leading-7">
+          <div>
             <MarkdownContent text={blockText(message)} />
             {isStreaming && isLatestAssistant ? <span className="streaming-caret" /> : null}
           </div>
         ) : (
-          <p className="whitespace-pre-wrap break-words text-sm leading-6">
-            {blockText(message)}
-          </p>
+          <p className="whitespace-pre-wrap break-words">{blockText(message)}</p>
         )}
       </div>
     </article>
@@ -320,27 +335,27 @@ function ThinkingEntry({
   isActive: boolean;
 }) {
   return (
-    <div className="border-t border-line/70 pt-5">
-      <details className="group" open={isActive}>
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-ink">
+    <div className="border-l-2 border-zinc-200 pl-6">
+      <details className="group overflow-hidden rounded-md border border-zinc-300 bg-zinc-50/50" open={isActive}>
+        <summary className="flex cursor-pointer list-none items-center justify-between px-3.5 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-100">
           <span className="inline-flex min-w-0 items-center gap-2">
             {isActive ? (
-              <span className="thinking-rings text-brand" aria-hidden="true">
+              <span className="thinking-rings text-zinc-500" aria-hidden="true">
                 <span />
                 <span />
                 <span />
               </span>
             ) : (
-              <Loader2 className="text-muted" size={16} />
+              <Brain className="h-4 w-4 text-zinc-500" />
             )}
-            思考过程
+            思考逻辑 (Task Decomposition)
           </span>
-          <span className="flex shrink-0 items-center gap-2 text-xs text-muted">
+          <span className="flex shrink-0 items-center gap-2 text-xs text-zinc-400">
             {thinking ? formatElapsed(thinking.startedAt, thinking.completedAt) : "进行中"}
-            <ChevronDown className="transition group-open:rotate-180" size={16} />
+            <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
           </span>
         </summary>
-        <p className="mt-3 whitespace-pre-wrap break-words border-l border-line pl-3 text-sm leading-6 text-muted">
+        <p className="whitespace-pre-wrap break-words border-t border-zinc-200 bg-white p-3.5 font-mono text-xs leading-relaxed text-zinc-600">
           {thinking?.text || "正在组织思路"}
           {isActive ? <span className="streaming-caret" /> : null}
         </p>
@@ -357,38 +372,94 @@ function ToolGroupEntry({
   isActive: boolean;
 }) {
   return (
-    <div className="border-t border-line/70 pt-5" aria-label="工具调用">
-      <details className="group" open={isActive}>
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm text-muted">
-          <span className="flex min-w-0 items-center gap-2">
+    <div className="border-l-2 border-zinc-200 pl-6" aria-label="工具调用">
+      <details
+        className={`group overflow-hidden rounded-md bg-white ${
+          toolGroup.status === "failed"
+            ? "border-2 border-red-500 bg-red-50/20"
+            : "border border-zinc-300"
+        }`}
+        open={isActive}
+      >
+        <summary
+          className={`flex cursor-pointer list-none items-center gap-2.5 px-3.5 py-2 font-mono text-xs transition-colors ${
+            toolGroup.status === "failed"
+              ? "bg-red-50 hover:bg-red-100/60"
+              : "bg-zinc-50 hover:bg-zinc-100"
+          }`}
+        >
+          <span className="flex min-w-0 items-center gap-2.5">
             {toolGroup.status === "running" ? (
-              <Loader2 className="shrink-0 animate-spin" size={14} />
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-zinc-700" />
             ) : toolGroup.status === "failed" ? (
-              <AlertCircle className="shrink-0 text-red-500" size={16} />
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
             ) : (
-              <CheckCircle2 className="shrink-0" size={15} />
+              <FileText className="h-4 w-4 shrink-0 text-zinc-700" />
             )}
-            <span className="truncate font-medium">{toolSummary(toolGroup)}</span>
+            <span
+              className={`truncate font-bold ${
+                toolGroup.status === "failed" ? "text-red-950" : "text-zinc-900"
+              }`}
+            >
+              {toolSummary(toolGroup)}
+            </span>
+            <span
+              className={`truncate ${
+                toolGroup.status === "failed" ? "text-red-900/80" : "text-zinc-500"
+              }`}
+            >
+              {toolGroup.calls[0]?.command ?? ""}
+            </span>
           </span>
-          <span className="flex shrink-0 items-center gap-2 text-xs text-muted">
-            {formatElapsed(toolGroup.startedAt, toolGroup.completedAt)}
-            <ChevronDown className="transition group-open:rotate-180" size={16} />
+          <span className="ml-auto flex shrink-0 items-center gap-2">
+            <span
+              className={`rounded px-2 py-0.5 font-sans text-[10px] font-bold ${
+                toolGroup.status === "failed"
+                  ? "bg-red-600 text-white"
+                  : toolGroup.status === "running"
+                    ? "bg-zinc-900 text-white"
+                    : "bg-zinc-200 text-zinc-800"
+              }`}
+            >
+              {toolGroup.status === "failed" ? "FAILED" : toolGroup.status === "running" ? "RUNNING" : "SUCCESS"}
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 transition-transform group-open:rotate-180 ${
+                toolGroup.status === "failed" ? "text-red-400" : "text-zinc-400"
+              }`}
+            />
           </span>
         </summary>
-        <div className="mt-3 grid gap-3">
+        <div className="grid gap-3 border-t border-zinc-300 bg-zinc-950 p-3 font-mono text-xs text-zinc-200">
           {toolGroup.calls.map((toolCall) => (
-            <div className="border-l border-line pl-3" key={toolCall.id}>
-              <div className="mb-2 px-1 text-xs text-muted">{toolCall.name}</div>
-              <div className="rounded-lg border border-line/70 bg-soft/70 p-3 font-mono text-xs leading-6 text-ink">
-                <div className="whitespace-pre-wrap break-words text-muted">$ {toolCall.command}</div>
+            <div className="space-y-2" key={toolCall.id}>
+              <div>
+                <span className="font-bold uppercase text-zinc-500 text-[10px]">Input</span>
+                <pre className="mt-0.5 whitespace-pre-wrap break-words text-zinc-300">
+                  {toolCall.command}
+                </pre>
+              </div>
+              <div>
+                <span
+                  className={`font-bold uppercase text-[10px] ${
+                    toolCall.status === "failed" ? "text-red-400" : "text-zinc-500"
+                  }`}
+                >
+                  {toolCall.status === "failed" ? "Stderr Output" : "Output"}
+                </span>
                 {toolCall.detail ? (
-                  <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words border-t border-line/70 pt-3 text-muted">
+                  <pre
+                    className={`mt-0.5 max-h-64 overflow-auto whitespace-pre-wrap break-words ${
+                      toolCall.status === "failed" ? "text-red-400" : "text-emerald-400"
+                    }`}
+                  >
                     {toolCall.detail}
                   </pre>
-                ) : null}
-                <div className="mt-3 flex justify-end text-xs text-muted">
-                  {toolCall.status === "failed" ? "失败" : toolCall.status === "running" ? "运行中" : "成功"}
-                </div>
+                ) : (
+                  <pre className="mt-0.5 text-zinc-500">
+                    {toolCall.status === "running" ? "Running..." : "No output"}
+                  </pre>
+                )}
               </div>
             </div>
           ))}
@@ -621,16 +692,10 @@ function latestCompletedAt(toolCalls: ToolCallView[]): string | null {
 
 function toolSummary(toolGroup: ToolGroupView): string {
   if (toolGroup.calls.length > 1) {
-    return "运行了多个命令";
+    return "tool:batch";
   }
-  const command = toolGroup.calls[0]?.command ?? "";
-  if (command.startsWith("cat ") || command.startsWith("sed ") || command.startsWith("rg ")) {
-    return "读取文件";
-  }
-  if (command.startsWith("git ")) {
-    return `已运行 ${truncateText(command, 42)}`;
-  }
-  return "运行了命令";
+  const name = toolGroup.calls[0]?.name ?? "command";
+  return `tool:${name}`;
 }
 
 function truncateText(value: string, maxLength: number): string {
