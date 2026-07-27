@@ -69,6 +69,7 @@ class SDKStreamEnvelope(BaseModel):
     sequence: int
     chat_session_id: str
     sdk_session_id: str | None = None
+    turn_id: str | None = None
     received_at: datetime
     sdk_event: dict[str, object]
 

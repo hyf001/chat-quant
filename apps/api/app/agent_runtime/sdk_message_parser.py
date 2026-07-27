@@ -17,11 +17,41 @@ def parse_sdk_message(message: object) -> dict[str, object]:
     return data
 
 
+class SDKTurnTracker:
+    def __init__(self) -> None:
+        self._uuid_to_turn_id: dict[str, str] = {}
+
+    def annotate(self, event: dict[str, object]) -> str | None:
+        turn_id = extract_sdk_prompt_id(event)
+        if turn_id is None:
+            turn_id = self._turn_id_from_parent(event)
+
+        event_uuid = _event_uuid(event)
+        if turn_id is not None and event_uuid is not None:
+            self._uuid_to_turn_id[event_uuid] = turn_id
+        return turn_id
+
+    def _turn_id_from_parent(self, event: dict[str, object]) -> str | None:
+        for key in ("parentUuid", "parent_uuid", "sourceToolAssistantUUID"):
+            parent_uuid = _string_value(event.get(key))
+            if parent_uuid and parent_uuid in self._uuid_to_turn_id:
+                return self._uuid_to_turn_id[parent_uuid]
+        return None
+
+
 def enrich_sdk_event_with_artifacts(event: dict[str, object]) -> dict[str, object]:
     artifacts = _extract_artifacts_from_event(event)
     if artifacts and "artifacts" not in event:
         return {**event, "artifacts": artifacts}
     return event
+
+
+def extract_sdk_prompt_id(event: dict[str, object]) -> str | None:
+    for key in ("promptId", "prompt_id"):
+        prompt_id = _string_value(event.get(key))
+        if prompt_id:
+            return prompt_id
+    return None
 
 
 def extract_sdk_session_id(event: dict[str, object]) -> str | None:
@@ -42,6 +72,14 @@ def extract_sdk_session_id(event: dict[str, object]) -> str | None:
             return message_session_id
 
     return None
+
+
+def _event_uuid(event: dict[str, object]) -> str | None:
+    return _string_value(event.get("uuid")) or _string_value(event.get("id"))
+
+
+def _string_value(value: object) -> str | None:
+    return value if isinstance(value, str) and value else None
 
 
 def _unwrap_stream_event(event: dict[str, object]) -> dict[str, object]:

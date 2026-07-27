@@ -373,12 +373,14 @@ async def _run_agent_detail_refresh_assertions(monkeypatch: MonkeyPatch) -> None
             SimpleNamespace(
                 type="user",
                 uuid="sdk_user_1",
+                promptId="sdk_prompt_1",
                 session_id=session_id,
                 message={"role": "user", "content": "刷新后也要看到我"},
             ),
             SimpleNamespace(
                 type="assistant",
                 uuid="sdk_assistant_1",
+                parentUuid="sdk_user_1",
                 session_id=session_id,
                 message={
                     "role": "assistant",
@@ -420,6 +422,10 @@ async def _run_agent_detail_refresh_assertions(monkeypatch: MonkeyPatch) -> None
     assert [envelope.sdk_event["type"] for envelope in detail.sdk_messages] == [
         "user_message",
         "assistant_message",
+    ]
+    assert [envelope.turn_id for envelope in detail.sdk_messages] == [
+        "sdk_prompt_1",
+        "sdk_prompt_1",
     ]
     assert detail.sdk_messages[0].sdk_event["content"] == "刷新后也要看到我"
     assert detail.sdk_messages[1].sdk_event["content"] == [

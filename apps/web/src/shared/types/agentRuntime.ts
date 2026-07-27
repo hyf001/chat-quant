@@ -11,6 +11,7 @@ export type SDKStreamEnvelope = {
   sequence: number;
   chat_session_id: string;
   sdk_session_id: string | null;
+  turn_id: string | null;
   received_at: string;
   sdk_event: SDKEvent;
 };

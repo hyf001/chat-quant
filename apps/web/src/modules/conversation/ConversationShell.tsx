@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 
 import type { AssetLink, ChatSession, SDKStreamEnvelope, SdkMessage } from "../../shared/api";
 import type { Components } from "react-markdown";
+import type { ReactNode } from "react";
 
 type ConversationShellProps = {
   session: ChatSession | null;
@@ -20,9 +21,11 @@ type UnknownRecord = Record<string, unknown>;
 
 type ToolCallView = {
   id: string;
+  groupId: string;
   name: string;
   command: string;
   status: "running" | "completed" | "failed";
+  turnId: string | null;
   startedAt: string;
   completedAt: string | null;
   detail: string | null;
@@ -31,6 +34,7 @@ type ToolCallView = {
 
 type ToolGroupView = {
   id: string;
+  turnId: string | null;
   calls: ToolCallView[];
   status: "running" | "completed" | "failed";
   startedAt: string;
@@ -41,6 +45,7 @@ type ToolGroupView = {
 type ThinkingProcessView = {
   id: string;
   text: string;
+  segmentCount: number;
   startedAt: string;
   completedAt: string;
   sequence: number;
@@ -67,6 +72,20 @@ type TimelineItem =
       timestamp: string;
       sequence: number;
       toolGroup: ToolGroupView;
+    };
+
+type TimelineStageTone = "thinking" | "tool" | "answer" | "error";
+
+type TimelineGroup =
+  | {
+      type: "user";
+      id: string;
+      item: Extract<TimelineItem, { type: "message" }>;
+    }
+  | {
+      type: "turn";
+      id: string;
+      items: TimelineItem[];
     };
 
 const markdownComponents: Components = {
@@ -110,6 +129,7 @@ export function ConversationShell({
     () => buildTimelineItems(textMessages, thinkingProcesses, toolGroups),
     [textMessages, thinkingProcesses, toolGroups],
   );
+  const timelineGroups = useMemo(() => buildTimelineGroups(timelineItems), [timelineItems]);
   const activityLabel = useMemo(
     () => currentActivityLabel(isStreaming, timelineItems),
     [isStreaming, timelineItems],
@@ -183,44 +203,73 @@ export function ConversationShell({
           </div>
         ) : null}
 
-        {timelineItems.map((item) => {
-          if (item.type === "message") {
-            return (
-              <div className="contents" key={item.id}>
-                <MessageEntry
-                  isStreaming={isStreaming}
-                  latestAssistantId={latestAssistantId}
-                  message={item.message}
-                />
-                {item.message.uuid === latestUserId && elapsedLabel ? (
-                  <TurnStatusEntry elapsedLabel={elapsedLabel} isStreaming={isStreaming} />
-                ) : null}
-              </div>
-            );
-          }
-          if (item.type === "thinking") {
-            return (
-              <ThinkingEntry
-                isActive={isStreaming && item.id === lastTimelineItemId(timelineItems)}
-                key={item.id}
-                thinking={item.thinking}
-              />
-            );
-          }
-          return (
-            <ToolGroupEntry
-              isActive={isStreaming && item.id === lastTimelineItemId(timelineItems)}
-              key={item.id}
-              toolGroup={item.toolGroup}
-            />
-          );
-        })}
+        {timelineGroups.length > 0 || (isStreaming && session) || activityLabel ? (
+          <div className="space-y-6">
+            {timelineGroups.map((group) => {
+              if (group.type === "user") {
+                const item = group.item;
+                return (
+                  <div className="space-y-1 pt-5 first:pt-0" key={group.id}>
+                    <MessageEntry
+                      isStreaming={isStreaming}
+                      latestAssistantId={latestAssistantId}
+                      message={item.message}
+                    />
+                    {item.message.uuid === latestUserId && elapsedLabel ? (
+                      <TurnStatusEntry elapsedLabel={elapsedLabel} isStreaming={isStreaming} />
+                    ) : null}
+                  </div>
+                );
+              }
+              return (
+                <TimelineRail key={group.id}>
+                  {group.items.map((item) => {
+                    if (item.type === "message") {
+                      const isActive = isStreaming && item.id === lastTimelineItemId(timelineItems);
+                      return (
+                        <TimelineStage isActive={isActive} key={item.id} tone="answer">
+                          <MessageEntry
+                            isStreaming={isStreaming}
+                            latestAssistantId={latestAssistantId}
+                            message={item.message}
+                          />
+                        </TimelineStage>
+                      );
+                    }
+                    if (item.type === "thinking") {
+                      const isActive = isStreaming && item.id === lastTimelineItemId(timelineItems);
+                      return (
+                        <TimelineStage isActive={isActive} key={item.id} tone="thinking">
+                          <ThinkingEntry isActive={isActive} thinking={item.thinking} />
+                        </TimelineStage>
+                      );
+                    }
+                    const isActive = isStreaming && item.id === lastTimelineItemId(timelineItems);
+                    return (
+                      <TimelineStage
+                        isActive={isActive}
+                        key={item.id}
+                        tone={item.toolGroup.status === "failed" ? "error" : "tool"}
+                      >
+                        <ToolGroupEntry isActive={isActive} toolGroup={item.toolGroup} />
+                      </TimelineStage>
+                    );
+                  })}
+                </TimelineRail>
+              );
+            })}
 
-        {isStreaming && session && thinkingProcesses.length === 0 ? (
-          <ThinkingEntry isActive thinking={null} />
+            {isStreaming && session && thinkingProcesses.length === 0 ? (
+              <TimelineRail>
+                <TimelineStage isActive tone="thinking">
+                  <ThinkingEntry isActive thinking={null} />
+                </TimelineStage>
+              </TimelineRail>
+            ) : null}
+
+            {activityLabel ? <ActivityHint label={activityLabel} /> : null}
+          </div>
         ) : null}
-
-        {activityLabel ? <ActivityHint label={activityLabel} /> : null}
 
         {assets.length > 0 ? (
           <div className="rounded-md border border-zinc-300 bg-white p-4">
@@ -245,6 +294,44 @@ export function ConversationShell({
   );
 }
 
+function TimelineRail({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative space-y-6 before:absolute before:bottom-0 before:left-0 before:top-0 before:w-px before:bg-zinc-200 before:content-['']">
+      {children}
+    </div>
+  );
+}
+
+function TimelineStage({
+  children,
+  isActive = false,
+  tone,
+}: {
+  children: ReactNode;
+  isActive?: boolean;
+  tone: TimelineStageTone;
+}) {
+  const toneClass =
+    tone === "error"
+      ? "bg-red-600 shadow-[0_0_0_1px_rgba(220,38,38,0.35)]"
+      : tone === "answer"
+        ? "bg-zinc-900 shadow-[0_0_0_1px_rgba(24,24,27,0.22)]"
+        : tone === "tool"
+          ? "bg-zinc-500 shadow-[0_0_0_1px_rgba(113,113,122,0.28)]"
+          : "bg-white shadow-[0_0_0_1px_rgba(113,113,122,0.32)]";
+  const activeClass = isActive ? "ring-4 ring-zinc-200/80" : "";
+
+  return (
+    <div className="relative pl-6">
+      <span
+        aria-hidden="true"
+        className={`absolute left-0 top-3 z-10 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-white ${toneClass} ${activeClass}`}
+      />
+      {children}
+    </div>
+  );
+}
+
 function ActivityHint({ label }: { label: string }) {
   return (
     <div className="pl-6 text-xs text-zinc-500">
@@ -264,7 +351,7 @@ function TurnStatusEntry({
   isStreaming: boolean;
 }) {
   return (
-    <div className="border-l-2 border-zinc-200 pl-6 text-xs text-zinc-500">
+    <div className="flex justify-end text-xs text-zinc-500">
       <span className="inline-flex items-center gap-1">
         {isStreaming ? "处理中" : "已处理"} {elapsedLabel}
         <ChevronDown className="h-3.5 w-3.5" />
@@ -287,22 +374,18 @@ function MessageEntry({
   const isLatestAssistant = message.uuid === latestAssistantId;
   if (isUser) {
     return (
-      <article className="relative border-l-2 border-zinc-900 pl-6">
-        <div className="absolute -left-[9px] top-0 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-zinc-900">
-          <div className="h-1.5 w-1.5 rounded-full bg-white" />
-        </div>
-        <div className="mb-1 font-mono text-[11px] font-bold uppercase text-zinc-400">
-          PROMPT
-        </div>
-        <div className="whitespace-pre-wrap break-words text-base font-semibold text-zinc-900">
-          {blockText(message)}
+      <article className="flex justify-end">
+        <div className="max-w-[min(78%,42rem)] rounded-md border border-zinc-900 bg-zinc-900 px-4 py-3 text-left shadow-sm">
+          <p className="whitespace-pre-wrap break-words text-sm font-semibold leading-relaxed text-white">
+            {blockText(message)}
+          </p>
         </div>
       </article>
     );
   }
 
   return (
-    <article className="border-l-2 border-zinc-200 pl-6">
+    <article>
       <div className="min-w-0 text-sm leading-relaxed text-zinc-800">
         {isAssistant ? (
           <div>
@@ -335,7 +418,7 @@ function ThinkingEntry({
   isActive: boolean;
 }) {
   return (
-    <div className="border-l-2 border-zinc-200 pl-6">
+    <div>
       <details className="group overflow-hidden rounded-md border border-zinc-300 bg-zinc-50/50" open={isActive}>
         <summary className="flex cursor-pointer list-none items-center justify-between px-3.5 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-100">
           <span className="inline-flex min-w-0 items-center gap-2">
@@ -348,7 +431,7 @@ function ThinkingEntry({
             ) : (
               <Brain className="h-4 w-4 text-zinc-500" />
             )}
-            思考逻辑 (Task Decomposition)
+            {thinkingSummary(thinking)}
           </span>
           <span className="flex shrink-0 items-center gap-2 text-xs text-zinc-400">
             {thinking ? formatElapsed(thinking.startedAt, thinking.completedAt) : "进行中"}
@@ -366,20 +449,23 @@ function ThinkingEntry({
 
 function ToolGroupEntry({
   toolGroup,
-  isActive,
 }: {
   toolGroup: ToolGroupView;
   isActive: boolean;
 }) {
+  const firstToolCall = toolGroup.calls[0];
+  if (!firstToolCall) {
+    return null;
+  }
+
   return (
-    <div className="border-l-2 border-zinc-200 pl-6" aria-label="工具调用">
+    <div aria-label="工具调用">
       <details
-        className={`group overflow-hidden rounded-md bg-white ${
+        className={`group/tool-group overflow-hidden rounded-md bg-white ${
           toolGroup.status === "failed"
             ? "border-2 border-red-500 bg-red-50/20"
             : "border border-zinc-300"
         }`}
-        open={isActive}
       >
         <summary
           className={`flex cursor-pointer list-none items-center gap-2.5 px-3.5 py-2 font-mono text-xs transition-colors ${
@@ -403,70 +489,120 @@ function ToolGroupEntry({
             >
               {toolSummary(toolGroup)}
             </span>
-            <span
-              className={`truncate ${
-                toolGroup.status === "failed" ? "text-red-900/80" : "text-zinc-500"
-              }`}
-            >
-              {toolGroup.calls[0]?.command ?? ""}
-            </span>
+            {toolGroup.calls.length === 1 ? (
+              <span
+                className={`truncate ${
+                  toolGroup.status === "failed" ? "text-red-900/80" : "text-zinc-500"
+                }`}
+              >
+                {firstToolCall.command}
+              </span>
+            ) : null}
           </span>
           <span className="ml-auto flex shrink-0 items-center gap-2">
             <span
-              className={`rounded px-2 py-0.5 font-sans text-[10px] font-bold ${
-                toolGroup.status === "failed"
-                  ? "bg-red-600 text-white"
-                  : toolGroup.status === "running"
-                    ? "bg-zinc-900 text-white"
-                    : "bg-zinc-200 text-zinc-800"
-              }`}
+              className={`rounded px-2 py-0.5 font-sans text-[10px] font-bold ${toolStatusBadgeClass(
+                toolGroup.status,
+              )}`}
             >
-              {toolGroup.status === "failed" ? "FAILED" : toolGroup.status === "running" ? "RUNNING" : "SUCCESS"}
+              {toolStatusLabel(toolGroup.status)}
             </span>
             <ChevronDown
-              className={`h-4 w-4 transition-transform group-open:rotate-180 ${
+              className={`h-4 w-4 transition-transform group-open/tool-group:rotate-180 ${
                 toolGroup.status === "failed" ? "text-red-400" : "text-zinc-400"
               }`}
             />
           </span>
         </summary>
-        <div className="grid gap-3 border-t border-zinc-300 bg-zinc-950 p-3 font-mono text-xs text-zinc-200">
-          {toolGroup.calls.map((toolCall) => (
-            <div className="space-y-2" key={toolCall.id}>
-              <div>
-                <span className="font-bold uppercase text-zinc-500 text-[10px]">Input</span>
-                <pre className="mt-0.5 whitespace-pre-wrap break-words text-zinc-300">
-                  {toolCall.command}
-                </pre>
-              </div>
-              <div>
-                <span
-                  className={`font-bold uppercase text-[10px] ${
-                    toolCall.status === "failed" ? "text-red-400" : "text-zinc-500"
-                  }`}
-                >
-                  {toolCall.status === "failed" ? "Stderr Output" : "Output"}
-                </span>
-                {toolCall.detail ? (
-                  <pre
-                    className={`mt-0.5 max-h-64 overflow-auto whitespace-pre-wrap break-words ${
-                      toolCall.status === "failed" ? "text-red-400" : "text-emerald-400"
-                    }`}
-                  >
-                    {toolCall.detail}
-                  </pre>
-                ) : (
-                  <pre className="mt-0.5 text-zinc-500">
-                    {toolCall.status === "running" ? "Running..." : "No output"}
-                  </pre>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        {toolGroup.calls.length > 1 ? (
+          <div className="grid gap-2 border-t border-zinc-300 bg-zinc-50 p-2">
+            {toolGroup.calls.map((toolCall) => (
+              <ToolCallDisclosure key={toolCall.id} toolCall={toolCall} />
+            ))}
+          </div>
+        ) : (
+          <ToolCallDetail toolCall={firstToolCall} />
+        )}
       </details>
     </div>
   );
+}
+
+function ToolCallDisclosure({ toolCall }: { toolCall: ToolCallView }) {
+  return (
+    <details className="group/tool-call overflow-hidden rounded border border-zinc-300 bg-white">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 font-mono text-xs transition-colors hover:bg-zinc-100">
+        <span className="min-w-0 truncate font-bold text-zinc-900">{toolCall.name}</span>
+        <span className="min-w-0 truncate text-zinc-500">{toolCall.command}</span>
+        <span className="ml-auto flex shrink-0 items-center gap-2">
+          <span
+            className={`rounded px-2 py-0.5 font-sans text-[10px] font-bold ${toolStatusBadgeClass(
+              toolCall.status,
+            )}`}
+          >
+            {toolStatusLabel(toolCall.status)}
+          </span>
+          <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open/tool-call:rotate-180" />
+        </span>
+      </summary>
+      <ToolCallDetail toolCall={toolCall} />
+    </details>
+  );
+}
+
+function ToolCallDetail({ toolCall }: { toolCall: ToolCallView }) {
+  return (
+    <div className="grid gap-3 border-t border-zinc-300 bg-zinc-950 p-3 font-mono text-xs text-zinc-200">
+      <div>
+        <span className="text-[10px] font-bold uppercase text-zinc-500">Input</span>
+        <pre className="mt-0.5 whitespace-pre-wrap break-words text-zinc-300">
+          {toolCall.command}
+        </pre>
+      </div>
+      <div>
+        <span
+          className={`text-[10px] font-bold uppercase ${
+            toolCall.status === "failed" ? "text-red-400" : "text-zinc-500"
+          }`}
+        >
+          {toolCall.status === "failed" ? "Stderr Output" : "Output"}
+        </span>
+        {toolCall.detail ? (
+          <pre
+            className={`mt-0.5 max-h-64 overflow-auto whitespace-pre-wrap break-words ${
+              toolCall.status === "failed" ? "text-red-400" : "text-emerald-400"
+            }`}
+          >
+            {toolCall.detail}
+          </pre>
+        ) : (
+          <pre className="mt-0.5 text-zinc-500">
+            {toolCall.status === "running" ? "Running..." : "No output"}
+          </pre>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function toolStatusLabel(status: ToolCallView["status"]): string {
+  if (status === "failed") {
+    return "FAILED";
+  }
+  if (status === "running") {
+    return "RUNNING";
+  }
+  return "SUCCESS";
+}
+
+function toolStatusBadgeClass(status: ToolCallView["status"]): string {
+  if (status === "failed") {
+    return "bg-red-600 text-white";
+  }
+  if (status === "running") {
+    return "bg-zinc-900 text-white";
+  }
+  return "bg-zinc-200 text-zinc-800";
 }
 
 function buildTimelineItems(
@@ -496,7 +632,7 @@ function buildTimelineItems(
     toolGroup,
   }));
 
-  return [...messageItems, ...thinkingItems, ...toolItems].sort((left, right) => {
+  const sortedItems = [...messageItems, ...thinkingItems, ...toolItems].sort((left, right) => {
     if (left.sequence > 0 && right.sequence > 0 && left.sequence !== right.sequence) {
       return left.sequence - right.sequence;
     }
@@ -506,6 +642,107 @@ function buildTimelineItems(
     }
     return left.sequence - right.sequence;
   });
+
+  return mergeConsecutiveTimelineItems(sortedItems);
+}
+
+function mergeConsecutiveTimelineItems(items: TimelineItem[]): TimelineItem[] {
+  const mergedItems: TimelineItem[] = [];
+
+  items.forEach((item) => {
+    const previousItem = mergedItems[mergedItems.length - 1];
+    if (previousItem?.type === "tool" && item.type === "tool") {
+      mergedItems[mergedItems.length - 1] = mergeToolTimelineItems(previousItem, item);
+      return;
+    }
+    if (previousItem?.type === "thinking" && item.type === "thinking") {
+      mergedItems[mergedItems.length - 1] = mergeThinkingTimelineItems(previousItem, item);
+      return;
+    }
+    mergedItems.push(item);
+  });
+
+  return mergedItems;
+}
+
+function mergeToolTimelineItems(
+  left: Extract<TimelineItem, { type: "tool" }>,
+  right: Extract<TimelineItem, { type: "tool" }>,
+): Extract<TimelineItem, { type: "tool" }> {
+  const calls = [...left.toolGroup.calls, ...right.toolGroup.calls].sort(
+    (leftCall, rightCall) => leftCall.sequence - rightCall.sequence,
+  );
+  const firstCall = calls[0];
+  return {
+    type: "tool",
+    id: `${left.id}_${right.id}`,
+    timestamp: left.timestamp,
+    sequence: left.sequence,
+    toolGroup: {
+      id: `${left.toolGroup.id}_${right.toolGroup.id}`,
+      turnId: left.toolGroup.turnId ?? right.toolGroup.turnId,
+      calls,
+      status: toolGroupStatus(calls),
+      startedAt: firstCall?.startedAt ?? left.toolGroup.startedAt,
+      completedAt: latestCompletedAt(calls),
+      sequence: firstCall?.sequence ?? left.toolGroup.sequence,
+    },
+  };
+}
+
+function mergeThinkingTimelineItems(
+  left: Extract<TimelineItem, { type: "thinking" }>,
+  right: Extract<TimelineItem, { type: "thinking" }>,
+): Extract<TimelineItem, { type: "thinking" }> {
+  return {
+    type: "thinking",
+    id: `${left.id}_${right.id}`,
+    timestamp: left.timestamp,
+    sequence: left.sequence,
+    thinking: {
+      id: `${left.thinking.id}_${right.thinking.id}`,
+      text: appendThinkingText(`${left.thinking.text}\n\n`, right.thinking.text),
+      segmentCount: left.thinking.segmentCount + right.thinking.segmentCount,
+      startedAt: left.thinking.startedAt,
+      completedAt: right.thinking.completedAt,
+      sequence: left.thinking.sequence,
+    },
+  };
+}
+
+function buildTimelineGroups(items: TimelineItem[]): TimelineGroup[] {
+  const groups: TimelineGroup[] = [];
+  let activeTurnItems: TimelineItem[] = [];
+
+  const flushTurn = () => {
+    if (activeTurnItems.length === 0) {
+      return;
+    }
+    const firstItem = activeTurnItems[0];
+    const lastItem = activeTurnItems[activeTurnItems.length - 1];
+    groups.push({
+      type: "turn",
+      id: `turn_${firstItem.id}_${lastItem.id}`,
+      items: activeTurnItems,
+    });
+    activeTurnItems = [];
+  };
+
+  items.forEach((item) => {
+    if (item.type === "message" && item.message.role === "user") {
+      flushTurn();
+      groups.push({
+        type: "user",
+        id: `user_${item.id}`,
+        item,
+      });
+      return;
+    }
+    activeTurnItems.push(item);
+  });
+
+  flushTurn();
+  return groups;
 }
 
 function currentActivityLabel(isStreaming: boolean, items: TimelineItem[]): string | null {
@@ -547,6 +784,7 @@ function buildThinkingProcesses(envelopes: SDKStreamEnvelope[]): ThinkingProcess
         activeProcess = {
           id: `thinking_${envelope.sequence}`,
           text: "",
+          segmentCount: 1,
           startedAt: envelope.received_at,
           completedAt: envelope.received_at,
           sequence: envelope.sequence,
@@ -617,18 +855,56 @@ function isThinkingBoundaryEvent(event: UnknownRecord): boolean {
   return textFromEventContent(event).length > 0;
 }
 
+function promptIdFromEvent(event: UnknownRecord): string | null {
+  return asString(event.promptId) ?? asString(event.prompt_id);
+}
+
+function isHumanUserBoundaryEvent(event: UnknownRecord): boolean {
+  if (asString(event.type) !== "user_message") {
+    return false;
+  }
+  const content = event.content;
+  if (typeof content === "string") {
+    return true;
+  }
+  const message = asRecord(event.message);
+  return typeof message?.content === "string";
+}
+
 function buildToolCalls(envelopes: SDKStreamEnvelope[]): ToolCallView[] {
   const toolCalls = new Map<string, ToolCallView>();
   const sortedEnvelopes = [...envelopes].sort((left, right) => left.sequence - right.sequence);
+  let currentFallbackTurnId: string | null = null;
+  let currentToolGroupId: string | null = null;
+  let previousToolUseSequence: number | null = null;
 
   sortedEnvelopes.forEach((envelope) => {
     const event = unwrapEvent(envelope.sdk_event);
-    extractToolUses(event).forEach((toolUse) => {
+    const eventTurnId = envelope.turn_id ?? promptIdFromEvent(event);
+    if (eventTurnId) {
+      currentFallbackTurnId = eventTurnId;
+    } else if (isHumanUserBoundaryEvent(event)) {
+      currentFallbackTurnId = `fallback_turn_${envelope.sequence}`;
+    }
+    const turnId = eventTurnId ?? currentFallbackTurnId;
+    const toolUses = extractToolUses(event);
+    const toolResults = extractToolResults(event);
+
+    if (toolUses.length > 0) {
+      if (previousToolUseSequence === null || envelope.sequence > previousToolUseSequence + 1) {
+        currentToolGroupId = `tool_group_${envelope.sequence}`;
+      }
+      previousToolUseSequence = envelope.sequence;
+    }
+
+    toolUses.forEach((toolUse) => {
       toolCalls.set(toolUse.id, {
         id: toolUse.id,
+        groupId: currentToolGroupId ?? `tool_group_${envelope.sequence}`,
         name: toolUse.name,
         command: toolUse.command,
         status: "running",
+        turnId,
         startedAt: envelope.received_at,
         completedAt: null,
         detail: formatDetail(toolUse.input),
@@ -636,13 +912,15 @@ function buildToolCalls(envelopes: SDKStreamEnvelope[]): ToolCallView[] {
       });
     });
 
-    extractToolResults(event).forEach((toolResult) => {
+    toolResults.forEach((toolResult) => {
       const existing = toolCalls.get(toolResult.id);
       toolCalls.set(toolResult.id, {
         id: toolResult.id,
+        groupId: existing?.groupId ?? `tool_group_${envelope.sequence}`,
         name: existing?.name ?? "工具",
         command: existing?.command ?? "工具调用",
         status: toolResult.isError ? "failed" : "completed",
+        turnId: existing?.turnId ?? turnId,
         startedAt: existing?.startedAt ?? envelope.received_at,
         completedAt: envelope.received_at,
         detail: mergeDetail(existing?.detail ?? null, toolResult.content),
@@ -660,16 +938,21 @@ function buildToolGroups(toolCalls: ToolCallView[]): ToolGroupView[] {
     return [];
   }
 
-  return [
-    {
-      id: sortedToolCalls.map((toolCall) => toolCall.id).join("_"),
-      calls: sortedToolCalls,
-      status: toolGroupStatus(sortedToolCalls),
-      startedAt: sortedToolCalls[0].startedAt,
-      completedAt: latestCompletedAt(sortedToolCalls),
-      sequence: sortedToolCalls[0].sequence,
-    },
-  ];
+  const groups = new Map<string, ToolCallView[]>();
+  sortedToolCalls.forEach((toolCall) => {
+    const key = toolCall.groupId;
+    groups.set(key, [...(groups.get(key) ?? []), toolCall]);
+  });
+
+  return [...groups.entries()].map(([key, calls]) => ({
+    id: `${key}_${calls.map((toolCall) => toolCall.id).join("_")}`,
+    turnId: calls[0]?.turnId ?? null,
+    calls,
+    status: toolGroupStatus(calls),
+    startedAt: calls[0].startedAt,
+    completedAt: latestCompletedAt(calls),
+    sequence: calls[0].sequence,
+  }));
 }
 
 function toolGroupStatus(toolCalls: ToolCallView[]): ToolGroupView["status"] {
@@ -690,9 +973,16 @@ function latestCompletedAt(toolCalls: ToolCallView[]): string | null {
   return completedTimes[0] ?? null;
 }
 
+function thinkingSummary(thinking: ThinkingProcessView | null): string {
+  if (thinking && thinking.segmentCount > 1) {
+    return `多次思考 · ${thinking.segmentCount} 次`;
+  }
+  return "思考逻辑 (Task Decomposition)";
+}
+
 function toolSummary(toolGroup: ToolGroupView): string {
   if (toolGroup.calls.length > 1) {
-    return "tool:batch";
+    return `多个命令 · ${toolGroup.calls.length} 个`;
   }
   const name = toolGroup.calls[0]?.name ?? "command";
   return `tool:${name}`;

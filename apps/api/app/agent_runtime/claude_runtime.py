@@ -118,6 +118,7 @@ except ModuleNotFoundError:
 from app.agent_runtime.hooks import AgentRuntimeHooks
 from app.agent_runtime.prompts import build_system_prompt
 from app.agent_runtime.sdk_message_parser import (
+    SDKTurnTracker,
     enrich_sdk_event_with_artifacts,
     extract_sdk_session_id,
     parse_sdk_message,
@@ -200,6 +201,7 @@ class ClaudeAgentRuntime:
         saw_effective_event = False
         saw_terminal_event = False
         sequence = 0
+        turn_tracker = SDKTurnTracker()
 
         try:
             def collect_sdk_stderr(line: str) -> None:
@@ -239,11 +241,13 @@ class ClaudeAgentRuntime:
                     if event.get("type") == "result_message":
                         saw_terminal_event = True
 
+                    turn_id = turn_tracker.annotate(event)
                     sequence += 1
                     yield _make_envelope(
                         sequence=sequence,
                         chat_session_id=command.chat_session_id,
                         sdk_session_id=current_sdk_session_id,
+                        turn_id=turn_id,
                         sdk_event=event,
                     )
         except TimeoutError:
@@ -257,6 +261,7 @@ class ClaudeAgentRuntime:
                 sequence=sequence,
                 chat_session_id=command.chat_session_id,
                 sdk_session_id=current_sdk_session_id,
+                turn_id=None,
                 sdk_event={
                     "type": "runtime_error",
                     "code": timeout_code.value,
@@ -283,6 +288,7 @@ class ClaudeAgentRuntime:
                 sequence=sequence,
                 chat_session_id=command.chat_session_id,
                 sdk_session_id=current_sdk_session_id,
+                turn_id=None,
                 sdk_event={
                     "type": "runtime_error",
                     "code": RuntimeErrorCode.SDK_UNAVAILABLE.value,
@@ -297,6 +303,7 @@ class ClaudeAgentRuntime:
                     sequence=sequence,
                     chat_session_id=command.chat_session_id,
                     sdk_session_id=current_sdk_session_id,
+                    turn_id=None,
                     sdk_event={
                         "type": "runtime_error",
                         "code": RuntimeErrorCode.SDK_UNAVAILABLE.value,
@@ -369,11 +376,13 @@ def _make_envelope(
     chat_session_id: str,
     sdk_session_id: str | None,
     sdk_event: dict[str, object],
+    turn_id: str | None = None,
 ) -> SDKStreamEnvelope:
     return SDKStreamEnvelope(
         sequence=sequence,
         chat_session_id=chat_session_id,
         sdk_session_id=sdk_session_id,
+        turn_id=turn_id,
         received_at=datetime.now(UTC),
         sdk_event=sdk_event,
     )

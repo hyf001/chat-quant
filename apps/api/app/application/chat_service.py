@@ -9,7 +9,11 @@ from uuid import uuid4
 from claude_agent_sdk import get_session_messages as sdk_get_session_messages
 
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime
-from app.agent_runtime.sdk_message_parser import extract_sdk_session_id, parse_sdk_message
+from app.agent_runtime.sdk_message_parser import (
+    SDKTurnTracker,
+    extract_sdk_session_id,
+    parse_sdk_message,
+)
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.domain.chat_sessions.models import AssetLink
@@ -239,18 +243,18 @@ class ChatApplicationService:
                 sdk_session_id,
                 directory=f"{self.runtime.settings.agent_workdir_root}/{chat_session_id}",
             )
+            parsed_events = [parse_sdk_message(message) for message in messages]
+            turn_tracker = SDKTurnTracker()
             return [
                 SDKStreamEnvelope(
                     sequence=index,
                     chat_session_id=chat_session_id,
                     sdk_session_id=extract_sdk_session_id(event) or sdk_session_id,
+                    turn_id=turn_tracker.annotate(event),
                     received_at=_now(),
                     sdk_event=event,
                 )
-                for index, event in enumerate(
-                    (parse_sdk_message(message) for message in messages),
-                    start=1,
-                )
+                for index, event in enumerate(parsed_events, start=1)
             ]
         except FileNotFoundError:
             return []

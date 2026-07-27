@@ -149,6 +149,15 @@ export function WorkbenchPage() {
       }
 
       const accepted = await sendAgentChatMessage({ chatSessionId: sessionId, message: content });
+      setConversationEnvelopes((current) =>
+        appendOptimisticUserMessage({
+          envelopes: current,
+          chatSessionId: sessionId,
+          sdkSessionId: accepted.sdk_session_id,
+          userMessageId: accepted.user_message_id,
+          content,
+        }),
+      );
       await readChatStream(accepted.stream_url, (envelope) => {
         setConversationEnvelopes((current) => appendStreamEnvelope(current, envelope));
       });
@@ -220,6 +229,7 @@ function agentDetailEnvelopes(agentDetail: AgentChatSessionDetail): SDKStreamEnv
 
 function messagesFromEnvelopes(envelopes: SDKStreamEnvelope[]): SdkMessage[] {
   const messages: SdkMessage[] = [];
+  const seenUserMessageIds = new Set<string>();
   let activeAssistant: {
     id: string;
     text: string;
@@ -253,10 +263,12 @@ function messagesFromEnvelopes(envelopes: SDKStreamEnvelope[]): SdkMessage[] {
       if (type === "user_message") {
         flushAssistant();
         const text = textFromUserEvent(event);
-        if (text) {
+        const id = userEventId(event) ?? `sdk_user_${envelope.sequence}`;
+        if (text && isDisplayableUserMessage(event) && !seenUserMessageIds.has(id)) {
+          seenUserMessageIds.add(id);
           messages.push(
             makeTextMessage({
-              id: asString(event.id) ?? asString(event.uuid) ?? `sdk_user_${envelope.sequence}`,
+              id,
               role: "user",
               text,
               createdAt: envelope.received_at,
@@ -431,6 +443,14 @@ function textFromUserEvent(event: Record<string, unknown>): string | null {
   return typeof messageContent === "string" ? messageContent : textFromContentBlocks(messageContent);
 }
 
+function isDisplayableUserMessage(event: Record<string, unknown>): boolean {
+  if (typeof event.content === "string") {
+    return true;
+  }
+  const message = asRecord(event.message);
+  return typeof message?.content === "string";
+}
+
 function appendStreamEnvelope(
   envelopes: SDKStreamEnvelope[],
   nextEnvelope: SDKStreamEnvelope,
@@ -439,6 +459,45 @@ function appendStreamEnvelope(
   const sequence =
     nextEnvelope.sequence > lastSequence ? nextEnvelope.sequence : lastSequence + 1;
   return [...envelopes, { ...nextEnvelope, sequence }];
+}
+
+function appendOptimisticUserMessage({
+  envelopes,
+  chatSessionId,
+  sdkSessionId,
+  userMessageId,
+  content,
+}: {
+  envelopes: SDKStreamEnvelope[];
+  chatSessionId: string;
+  sdkSessionId: string | null;
+  userMessageId: string;
+  content: string;
+}): SDKStreamEnvelope[] {
+  if (envelopes.some((envelope) => userEventId(unwrapEvent(envelope.sdk_event)) === userMessageId)) {
+    return envelopes;
+  }
+  const lastSequence = envelopes.at(-1)?.sequence ?? 0;
+  return [
+    ...envelopes,
+    {
+      sequence: lastSequence + 1,
+      chat_session_id: chatSessionId,
+      sdk_session_id: sdkSessionId,
+      turn_id: null,
+      received_at: new Date().toISOString(),
+      sdk_event: {
+        type: "user_message",
+        id: userMessageId,
+        content,
+      },
+    },
+  ];
+}
+
+function userEventId(event: Record<string, unknown>): string | null {
+  const message = asRecord(event.message);
+  return asString(event.id) ?? asString(event.uuid) ?? asString(message?.id) ?? asString(message?.uuid);
 }
 
 function unwrapEvent(event: Record<string, unknown>): Record<string, unknown> {
