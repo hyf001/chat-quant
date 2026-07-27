@@ -123,7 +123,6 @@ from app.agent_runtime.sdk_message_parser import (
     parse_sdk_message,
 )
 from app.agent_runtime.sdk_skill_plugin import SDKSkillPlugin
-from app.agent_runtime.sdk_skills import select_available_sdk_skills
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.schemas.contracts.agent_runtime import (
@@ -191,15 +190,9 @@ class ClaudeAgentRuntime:
             )
             return
 
-        available_skills = self.skill_plugin.list_skill_names()
-        skill_selection = select_available_sdk_skills(
-            command.scenario,
-            command.sdk_skill_names,
-            available_skills,
-        )
         options = self.build_agent_options(
             command,
-            self.skill_plugin.qualify_skill_names(skill_selection.names),
+            self.skill_plugin.qualify_skill_names(self.skill_plugin.list_skill_names()),
         )
 
         current_sdk_session_id = command.sdk_session_id

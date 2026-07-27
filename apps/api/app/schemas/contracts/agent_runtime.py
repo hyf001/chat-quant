@@ -56,7 +56,6 @@ class AgentExecutionCommand(BaseModel):
     scenario: AgentScenario = AgentScenario.CHAT_ANALYSIS
     context: ChatSessionContext = Field(default_factory=ChatSessionContext)
     system_prompt_key: str = "base:v1"
-    sdk_skill_names: list[str] = Field(default_factory=list)
     allowed_tools: list[str] = Field(default_factory=list)
     working_dir: str
     sdk_session_id: str | None = None

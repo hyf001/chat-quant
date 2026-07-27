@@ -4,7 +4,6 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime, serialize_sdk_message
-from app.agent_runtime.sdk_skills import select_available_sdk_skills
 from app.core.config import Settings
 from app.schemas.contracts.agent_runtime import (
     AgentExecutionCommand,
@@ -71,6 +70,9 @@ def test_runtime_uses_plugin_namespaced_skills_without_copying_into_cwd(tmp_path
     skill_dir = plugin_dir / "skills" / "financial_data_query"
     skill_dir.mkdir(parents=True)
     (skill_dir / "SKILL.md").write_text("# Financial Data Query\n", encoding="utf-8")
+    custom_skill_dir = plugin_dir / "skills" / "custom_local_skill"
+    custom_skill_dir.mkdir()
+    (custom_skill_dir / "SKILL.md").write_text("# Custom Local Skill\n", encoding="utf-8")
     working_dir = tmp_path / "user-project"
     working_dir.mkdir()
     runtime = ClaudeAgentRuntime(
@@ -91,20 +93,17 @@ def test_runtime_uses_plugin_namespaced_skills_without_copying_into_cwd(tmp_path
 
     options = runtime.build_agent_options(
         command,
-        runtime.skill_plugin.qualify_skill_names(
-            select_available_sdk_skills(
-                command.scenario,
-                command.sdk_skill_names,
-                runtime.skill_plugin.list_skill_names(),
-            ).names
-        ),
+        runtime.skill_plugin.qualify_skill_names(runtime.skill_plugin.list_skill_names()),
     )
     sdk_options = runtime.build_sdk_options(command, options)
 
     assert sdk_options.cwd == str(working_dir)
     assert sdk_options.plugins == [{"type": "local", "path": str(plugin_dir)}]
     assert sdk_options.tools == ["Bash", "Skill"]
-    assert sdk_options.skills == ["chat-quant:financial_data_query"]
+    assert sdk_options.skills == [
+        "chat-quant:custom_local_skill",
+        "chat-quant:financial_data_query",
+    ]
     assert not (working_dir / ".claude" / "skills").exists()
 
 
