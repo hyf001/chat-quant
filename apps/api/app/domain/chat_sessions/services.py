@@ -6,6 +6,7 @@ from uuid import uuid4
 from claude_agent_sdk import get_session_info as sdk_get_session_info
 from claude_agent_sdk import get_session_messages as sdk_get_session_messages
 
+from app.core.project_dirs import project_dir
 from app.domain.chat_sessions.models import (
     AssetLink,
     AssetRelationType,
@@ -70,12 +71,12 @@ class ChatSessionService:
         asset_repository: AssetLinkRepository,
         *,
         claude_agent_cwd: str | None = None,
-        agent_workdir_root: str | None = None,
+        project_home: str | None = None,
     ) -> None:
         self._sessions = session_repository
         self._assets = asset_repository
         self._claude_agent_cwd = claude_agent_cwd
-        self._agent_workdir_root = agent_workdir_root
+        self._project_home = project_home
 
     async def create_chat_session(
         self,
@@ -179,6 +180,7 @@ class ChatSessionService:
         self,
         *,
         user_id: str,
+        project_id: str | None = None,
         query: str | None = None,
         kind: str | None = None,
         task_type: str | None = None,
@@ -188,6 +190,7 @@ class ChatSessionService:
     ) -> tuple[list[ChatSession], int]:
         return await self._sessions.list_for_user(
             user_id=user_id,
+            project_id=project_id,
             query=query,
             kind=kind,
             task_type=task_type,
@@ -243,13 +246,14 @@ class ChatSessionService:
         self,
         chat_session_id: str,
         *,
+        project_id: str,
         initial_prompt: str,
         sdk_session_id: str | None,
     ) -> str:
         return (
-            self._sdk_session_title(chat_session_id, sdk_session_id)
+            self._sdk_session_title(project_id, sdk_session_id)
             or _initial_answer_title(
-                self._sdk_first_user_prompt(chat_session_id, sdk_session_id) or initial_prompt
+                self._sdk_first_user_prompt(project_id, sdk_session_id) or initial_prompt
             )
         )
 
@@ -262,7 +266,7 @@ class ChatSessionService:
             try:
                 messages = sdk_get_session_messages(
                     session.sdk_session_id,
-                    directory=self._sdk_message_directory(session.id),
+                    directory=self._sdk_message_directory(session.project_id),
                     limit=message_limit,
                 )
             except Exception as exc:  # pragma: no cover - exact SDK exceptions vary by version.
@@ -290,20 +294,20 @@ class ChatSessionService:
             raise ChatSessionAccessError(chat_session_id)
         return session
 
-    def _sdk_message_directory(self, chat_session_id: str) -> str | None:
+    def _sdk_message_directory(self, project_id: str) -> str | None:
         if self._claude_agent_cwd:
             return self._claude_agent_cwd
-        if self._agent_workdir_root:
-            return f"{self._agent_workdir_root.rstrip('/')}/{chat_session_id}"
+        if self._project_home:
+            return project_dir(self._project_home, project_id)
         return None
 
-    def _sdk_session_title(self, chat_session_id: str, sdk_session_id: str | None) -> str | None:
+    def _sdk_session_title(self, project_id: str, sdk_session_id: str | None) -> str | None:
         if not sdk_session_id:
             return None
         try:
             info = sdk_get_session_info(
                 sdk_session_id,
-                directory=self._sdk_message_directory(chat_session_id),
+                directory=self._sdk_message_directory(project_id),
             )
         except Exception:  # pragma: no cover - SDK metadata failures should not break chat sync.
             return None
@@ -317,14 +321,14 @@ class ChatSessionService:
         return _valid_title(title)
 
     def _sdk_first_user_prompt(
-        self, chat_session_id: str, sdk_session_id: str | None
+        self, project_id: str, sdk_session_id: str | None
     ) -> str | None:
         if not sdk_session_id:
             return None
         try:
             messages = sdk_get_session_messages(
                 sdk_session_id,
-                directory=self._sdk_message_directory(chat_session_id),
+                directory=self._sdk_message_directory(project_id),
             )
         except Exception:  # pragma: no cover - SDK history failures fall back to request prompt.
             return None

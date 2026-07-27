@@ -7,6 +7,8 @@ export {
   apiGet,
   createBacktestRun,
   createChatSession,
+  createProject,
+  deleteProject,
   executePythonArtifact,
   getAgentChatSessionDetail,
   getBacktest,
@@ -14,10 +16,12 @@ export {
   getHealth,
   getRuntimeHealth,
   listChatSessions,
+  listProjects,
   readChatStream,
   runBacktest,
   sendAgentChatMessage,
   sendChatMessage,
+  updateProject,
 } from "./client";
 export type {
   ExecutionResult,
@@ -31,6 +35,10 @@ export type {
   ChatSession,
   ChatSessionDetail,
   ChatSessionKind,
+  CreateProjectPayload,
+  Project,
+  ProjectListResponse,
   SdkMessage,
   SendMessageResponse,
+  UpdateProjectPayload,
 } from "./types";

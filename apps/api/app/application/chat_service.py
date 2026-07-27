@@ -16,6 +16,7 @@ from app.agent_runtime.sdk_message_parser import (
 )
 from app.core.config import get_settings
 from app.core.logging import get_logger
+from app.core.project_dirs import project_dir
 from app.domain.chat_sessions.models import AssetLink
 from app.domain.chat_sessions.repositories import ChatSessionNotFoundError
 from app.domain.chat_sessions.services import ChatSessionAccessError, ChatSessionService
@@ -36,7 +37,8 @@ logger = get_logger(__name__)
 @dataclass
 class ChatExecutionState:
     title: str
-    working_dir: str
+    project_id: str
+    project_dir: str
     sdk_session_id: str | None = None
 
 
@@ -81,7 +83,10 @@ class ChatApplicationService:
             summary=indexed_session.summary if indexed_session is not None else None,
             related_assets=[_asset_reference_from_link(link) for link in asset_links],
         )
-        working_dir = f"{self.runtime.settings.agent_workdir_root}/{chat_session_id}"
+        target_project_dir = project_dir(
+            self.runtime.settings.project_home,
+            request.project_id,
+        )
         command = AgentExecutionCommand(
             user_id=request.user_id,
             project_id=request.project_id,
@@ -93,7 +98,7 @@ class ChatApplicationService:
                 has_history=sdk_session_id is not None,
             ),
             context=context,
-            working_dir=working_dir,
+            project_dir=target_project_dir,
             sdk_session_id=sdk_session_id,
             should_finalize_initial_title=indexed_session is not None
             and indexed_session.sdk_session_id is None,
@@ -101,11 +106,12 @@ class ChatApplicationService:
             deadline_seconds=self.runtime.settings.agent_turn_timeout_seconds,
             user_prompt=request.message,
         )
-        Path(command.working_dir).mkdir(parents=True, exist_ok=True)
+        Path(command.project_dir).mkdir(parents=True, exist_ok=True)
         self._pending_executions[chat_session_id] = command
         self._session_state[chat_session_id] = ChatExecutionState(
             title=title,
-            working_dir=working_dir,
+            project_id=request.project_id,
+            project_dir=target_project_dir,
             sdk_session_id=sdk_session_id,
         )
         return ChatMessageAccepted(
@@ -147,7 +153,14 @@ class ChatApplicationService:
             if state is not None
             else pending.sdk_session_id
         )
-        sdk_messages = self._read_sdk_messages(chat_session_id, sdk_session_id)
+        project_id = (
+            session.project_id
+            if session is not None
+            else state.project_id
+            if state is not None
+            else pending.project_id
+        )
+        sdk_messages = self._read_sdk_messages(chat_session_id, sdk_session_id, project_id)
         return ChatSessionDetail(
             chat_session_id=chat_session_id,
             sdk_session_id=sdk_session_id,
@@ -175,6 +188,7 @@ class ChatApplicationService:
         if command is None:
             state = self._session_state.get(chat_session_id)
             sdk_session_id = state.sdk_session_id if state is not None else None
+            project_id = state.project_id if state is not None else None
             if sdk_session_id is None and chat_sessions is not None and user_id is not None:
                 try:
                     session, _ = await chat_sessions.get_context(
@@ -182,11 +196,12 @@ class ChatApplicationService:
                         user_id=user_id,
                     )
                     sdk_session_id = session.sdk_session_id
+                    project_id = session.project_id
                 except Exception:
                     sdk_session_id = None
-            if sdk_session_id is None:
+            if sdk_session_id is None or project_id is None:
                 return
-            for envelope in self._read_sdk_messages(chat_session_id, sdk_session_id):
+            for envelope in self._read_sdk_messages(chat_session_id, sdk_session_id, project_id):
                 yield envelope
             return
 
@@ -235,13 +250,14 @@ class ChatApplicationService:
         self,
         chat_session_id: str,
         sdk_session_id: str | None,
+        project_id: str,
     ) -> list[SDKStreamEnvelope]:
         if sdk_session_id is None:
             return []
         try:
             messages = sdk_get_session_messages(
                 sdk_session_id,
-                directory=f"{self.runtime.settings.agent_workdir_root}/{chat_session_id}",
+                directory=project_dir(self.runtime.settings.project_home, project_id),
             )
             parsed_events = [parse_sdk_message(message) for message in messages]
             turn_tracker = SDKTurnTracker()
@@ -298,6 +314,7 @@ async def _sync_chat_session_index(
         if command.should_finalize_initial_title:
             title = chat_sessions.initial_answer_title(
                 command.chat_session_id,
+                project_id=command.project_id,
                 initial_prompt=command.user_prompt,
                 sdk_session_id=sdk_session_id,
             )

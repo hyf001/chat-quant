@@ -7,6 +7,7 @@ from app.application.dependencies import (
     get_artifact_service,
     get_backtest_service,
     get_database_session_factory,
+    get_project_service,
     get_strategy_service,
 )
 from app.core.config import get_settings
@@ -33,6 +34,7 @@ def _clear_dependency_caches() -> None:
     get_settings.cache_clear()
     get_database_session_factory.cache_clear()
     get_artifact_service.cache_clear()
+    get_project_service.cache_clear()
     get_strategy_service.cache_clear()
     get_backtest_service.cache_clear()
     if hasattr(app.state, "m1_services"):

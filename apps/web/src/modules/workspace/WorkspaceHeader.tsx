@@ -1,9 +1,10 @@
 import { Cpu } from "lucide-react";
 
-import type { BacktestRunStatus, ChatSession, RuntimeHealth } from "../../shared/api";
+import type { BacktestRunStatus, ChatSession, Project, RuntimeHealth } from "../../shared/api";
 
 type WorkspaceHeaderProps = {
   session: ChatSession | null;
+  project: Project | null;
   isConnected: boolean;
   health?: RuntimeHealth | null;
   backtestStatus?: BacktestRunStatus;
@@ -11,6 +12,7 @@ type WorkspaceHeaderProps = {
 
 export function WorkspaceHeader({
   session,
+  project,
   isConnected,
   health,
   backtestStatus,
@@ -25,6 +27,8 @@ export function WorkspaceHeader({
           <Cpu className="h-4 w-4 text-zinc-700" />
           Codex Execution Engine
         </span>
+        <span className="text-zinc-300">|</span>
+        <span className="max-w-48 truncate text-zinc-700">{project?.name ?? "未选择项目"}</span>
         <span className="text-zinc-300">|</span>
         <span className="truncate font-mono text-zinc-500">{taskLabel}</span>
       </div>

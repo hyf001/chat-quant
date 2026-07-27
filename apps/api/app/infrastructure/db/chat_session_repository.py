@@ -48,6 +48,7 @@ class SQLAlchemyChatSessionRepository(ChatSessionRepository):
         self,
         *,
         user_id: str,
+        project_id: str | None = None,
         query: str | None = None,
         kind: str | None = None,
         task_type: str | None = None,
@@ -59,6 +60,8 @@ class SQLAlchemyChatSessionRepository(ChatSessionRepository):
             ChatSessionRow.user_id == user_id,
             ChatSessionRow.deleted_at.is_(None),
         ]
+        if project_id is not None:
+            filters.append(ChatSessionRow.project_id == project_id)
         if not include_archived:
             filters.append(ChatSessionRow.archived_at.is_(None))
         if kind is not None:

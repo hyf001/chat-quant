@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import pytest
-from app.api.dependencies import get_m1_services, make_in_memory_m1_services
+from app.api.dependencies import get_m1_services
 from app.domain.chat_sessions import services as chat_session_services
 from app.main import app
 from claude_agent_sdk.types import AssistantMessage, TextBlock, UserMessage
 from fastapi.testclient import TestClient
+from m1_mocks import make_mock_m1_services
 
 client = TestClient(app)
 
@@ -35,7 +36,7 @@ def reset_m1_state(monkeypatch):
     monkeypatch.setattr(
         chat_session_services, "sdk_get_session_messages", fake_get_session_messages
     )
-    app.state.m1_services = make_in_memory_m1_services()
+    app.state.m1_services = make_mock_m1_services()
     app.dependency_overrides[get_m1_services] = lambda: app.state.m1_services
 
 
@@ -97,7 +98,7 @@ def test_list_sessions_filters_by_user_and_query():
 
     response = client.get(
         "/api/chat-sessions?query=均线&kind=strategy",
-        headers={"X-User-Id": "user_b"},
+        headers={"X-User-Id": "user_b", "X-Project-Id": "workspace_b"},
     )
 
     assert response.status_code == 200

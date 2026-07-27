@@ -57,7 +57,7 @@ class AgentExecutionCommand(BaseModel):
     context: ChatSessionContext = Field(default_factory=ChatSessionContext)
     system_prompt_key: str = "base:v1"
     allowed_tools: list[str] = Field(default_factory=list)
-    working_dir: str
+    project_dir: str
     sdk_session_id: str | None = None
     should_finalize_initial_title: bool = False
     request_id: str

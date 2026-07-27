@@ -4,7 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime
-from app.api.dependencies import get_m1_services, make_in_memory_m1_services
+from app.api.dependencies import get_m1_services
 from app.api.routes.chat import get_chat_application_service
 from app.application import chat_service as chat_service_module
 from app.application.chat_service import ChatApplicationService
@@ -13,7 +13,10 @@ from app.main import app
 from app.schemas.contracts.agent_runtime import ChatMessageRequest
 from claude_agent_sdk import AssistantMessage, ResultMessage, TextBlock
 from fastapi.testclient import TestClient
+from m1_mocks import make_mock_m1_services
 from pytest import MonkeyPatch
+
+TEST_PROJECT_HOME = "/tmp/chatq/test-projects"
 
 
 async def fake_sdk_query(*, prompt: str, options: object | None = None) -> AsyncIterator[object]:
@@ -38,12 +41,12 @@ async def fake_sdk_query(*, prompt: str, options: object | None = None) -> Async
 
 
 runtime = ClaudeAgentRuntime(
-    settings=Settings(),
+    settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
     sdk_query=fake_sdk_query,
 )
 test_service = ChatApplicationService(runtime)
 app.dependency_overrides[get_chat_application_service] = lambda: test_service
-app.dependency_overrides[get_m1_services] = lambda: make_in_memory_m1_services()
+app.dependency_overrides[get_m1_services] = lambda: make_mock_m1_services()
 client = TestClient(app)
 
 
@@ -136,33 +139,39 @@ def test_agent_detail_reads_sdk_messages_from_m1_index_after_refresh(
     asyncio.run(_run_agent_detail_refresh_assertions(monkeypatch))
 
 
-def test_chat_message_creates_agent_working_directory(tmp_path: Path) -> None:
-    asyncio.run(_run_working_directory_creation_assertions(tmp_path))
+def test_chat_message_creates_project_directory(tmp_path: Path) -> None:
+    asyncio.run(_run_project_directory_creation_assertions(tmp_path))
 
 
-async def _run_working_directory_creation_assertions(tmp_path: Path) -> None:
-    workdir_root = tmp_path / "sdk-sessions"
-    chat_session_id = "conv_workdir_creation"
+async def _run_project_directory_creation_assertions(tmp_path: Path) -> None:
+    project_home = tmp_path / "projects"
+    chat_session_id = "conv_project_dir_creation"
+    project_id = "project_dir_creation"
     isolated_runtime = ClaudeAgentRuntime(
-        settings=Settings(AGENT_WORKDIR_ROOT=str(workdir_root)),
+        settings=Settings(_env_file=None, PROJECT_HOME=str(project_home)),
         sdk_query=fake_sdk_query,
     )
     isolated_service = ChatApplicationService(isolated_runtime)
 
     await isolated_service.handle_user_message(
-        ChatMessageRequest(message="你好", chat_session_id=chat_session_id)
+        ChatMessageRequest(
+            message="你好",
+            chat_session_id=chat_session_id,
+            project_id=project_id,
+        )
     )
 
-    assert (workdir_root / chat_session_id).is_dir()
+    assert (project_home / project_id).is_dir()
+    assert not (project_home / chat_session_id).exists()
 
 
 async def _run_m1_index_sync_assertions() -> None:
     isolated_runtime = ClaudeAgentRuntime(
-        settings=Settings(),
+        settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
         sdk_query=fake_sdk_query,
     )
     isolated_service = ChatApplicationService(isolated_runtime)
-    m1_services = make_in_memory_m1_services()
+    m1_services = make_mock_m1_services()
 
     accepted = await isolated_service.handle_user_message(
         ChatMessageRequest(
@@ -204,9 +213,12 @@ async def _run_first_answer_sdk_title_assertions(monkeypatch: MonkeyPatch) -> No
         fake_get_session_info,
     )
     isolated_service = ChatApplicationService(
-        ClaudeAgentRuntime(settings=Settings(), sdk_query=fake_sdk_query)
+        ClaudeAgentRuntime(
+            settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
+            sdk_query=fake_sdk_query,
+        )
     )
-    m1_services = make_in_memory_m1_services()
+    m1_services = make_mock_m1_services()
 
     accepted = await isolated_service.handle_user_message(
         ChatMessageRequest(
@@ -250,9 +262,12 @@ async def _run_first_answer_fallback_title_follow_up_assertions(
         fake_get_session_info,
     )
     isolated_service = ChatApplicationService(
-        ClaudeAgentRuntime(settings=Settings(), sdk_query=fake_sdk_query)
+        ClaudeAgentRuntime(
+            settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
+            sdk_query=fake_sdk_query,
+        )
     )
-    m1_services = make_in_memory_m1_services()
+    m1_services = make_mock_m1_services()
 
     first = await isolated_service.handle_user_message(
         ChatMessageRequest(
@@ -326,9 +341,12 @@ async def _run_precreated_empty_session_title_assertions(monkeypatch: MonkeyPatc
         fake_get_session_messages,
     )
     isolated_service = ChatApplicationService(
-        ClaudeAgentRuntime(settings=Settings(), sdk_query=fake_sdk_query)
+        ClaudeAgentRuntime(
+            settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
+            sdk_query=fake_sdk_query,
+        )
     )
-    m1_services = make_in_memory_m1_services()
+    m1_services = make_mock_m1_services()
     await m1_services.chat_sessions.create_chat_session(
         user_id="local_user",
         project_id="project_1",
@@ -368,7 +386,7 @@ async def _run_agent_detail_refresh_assertions(monkeypatch: MonkeyPatch) -> None
     ) -> list[object]:
         del limit, offset
         assert session_id == "sdk_refresh_1"
-        assert directory.endswith("/conv_refresh_history")
+        assert directory.endswith("/project_1")
         return [
             SimpleNamespace(
                 type="user",
@@ -395,7 +413,7 @@ async def _run_agent_detail_refresh_assertions(monkeypatch: MonkeyPatch) -> None
         fake_get_session_messages,
     )
 
-    m1_services = make_in_memory_m1_services()
+    m1_services = make_mock_m1_services()
     await m1_services.chat_sessions.create_chat_session(
         user_id="local_user",
         project_id="project_1",
@@ -408,7 +426,10 @@ async def _run_agent_detail_refresh_assertions(monkeypatch: MonkeyPatch) -> None
         sdk_session_id="sdk_refresh_1",
     )
     fresh_service = ChatApplicationService(
-        ClaudeAgentRuntime(settings=Settings(), sdk_query=fake_sdk_query)
+        ClaudeAgentRuntime(
+            settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
+            sdk_query=fake_sdk_query,
+        )
     )
 
     detail = await fresh_service.get_session_detail(
@@ -448,7 +469,7 @@ async def _run_no_placeholder_resume_assertions() -> None:
         yield {"type": "result_message", "result": "完成。", "uuid": "sdk_result_no_session"}
 
     isolated_runtime = ClaudeAgentRuntime(
-        settings=Settings(),
+        settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
         sdk_query=sdk_query_without_session_id,
     )
     isolated_service = ChatApplicationService(isolated_runtime)

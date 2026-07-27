@@ -22,7 +22,7 @@ async def runtime_health() -> RuntimeHealthResponse:
         status="ok",
         python_version=platform.python_version(),
         packages=_package_versions(_PACKAGE_NAMES),
-        runtime_root_writable=_is_runtime_root_writable(Path(settings.agent_workdir_root)),
+        project_home_writable=_is_project_home_writable(Path(settings.project_home)),
     )
 
 
@@ -36,10 +36,10 @@ def _package_versions(package_names: tuple[str, ...]) -> dict[str, str]:
     return versions
 
 
-def _is_runtime_root_writable(runtime_root: Path) -> bool:
+def _is_project_home_writable(project_home: Path) -> bool:
     try:
-        runtime_root.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryFile(dir=runtime_root):
+        project_home.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryFile(dir=project_home):
             return True
     except OSError:
         return False

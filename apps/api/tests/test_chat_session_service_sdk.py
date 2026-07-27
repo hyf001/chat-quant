@@ -2,13 +2,10 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from app.domain.chat_sessions.repositories import (
-    InMemoryAssetLinkRepository,
-    InMemoryChatSessionRepository,
-)
 from app.domain.chat_sessions.services import ChatSessionService
 from app.schemas.chat_sessions import sdk_messages_to_response
 from claude_agent_sdk.types import AssistantMessage, TextBlock, UserMessage
+from m1_mocks import MockAssetLinkRepository, MockChatSessionRepository
 
 
 def test_chat_session_service_directly_calls_claude_sdk_get_session_messages(monkeypatch):
@@ -17,7 +14,7 @@ def test_chat_session_service_directly_calls_claude_sdk_get_session_messages(mon
     asyncio.run(_run_direct_sdk_get_session_messages_test(monkeypatch))
 
 
-def test_chat_session_service_derives_sdk_directory_from_agent_workdir_root(monkeypatch):
+def test_chat_session_service_derives_sdk_directory_from_project_home(monkeypatch):
     import asyncio
 
     asyncio.run(_run_derived_sdk_directory_test(monkeypatch))
@@ -75,8 +72,8 @@ async def _run_direct_sdk_get_session_messages_test(monkeypatch):
     monkeypatch.setattr(service_module, "sdk_get_session_messages", fake_get_session_messages)
 
     service = ChatSessionService(
-        InMemoryChatSessionRepository(),
-        InMemoryAssetLinkRepository(),
+        MockChatSessionRepository(),
+        MockAssetLinkRepository(),
         claude_agent_cwd="/tmp/chatq",
     )
     session = await service.create_chat_session(
@@ -116,9 +113,9 @@ async def _run_derived_sdk_directory_test(monkeypatch):
     monkeypatch.setattr(service_module, "sdk_get_session_messages", fake_get_session_messages)
 
     service = ChatSessionService(
-        InMemoryChatSessionRepository(),
-        InMemoryAssetLinkRepository(),
-        agent_workdir_root="/tmp/chatq/sdk-sessions",
+        MockChatSessionRepository(),
+        MockAssetLinkRepository(),
+        project_home="/tmp/chatq/projects",
     )
     session = await service.create_chat_session(
         user_id="user_a",
@@ -133,4 +130,4 @@ async def _run_derived_sdk_directory_test(monkeypatch):
     )
     await service.get_chat_session_detail(session.id, user_id="user_a")
 
-    assert calls == ["/tmp/chatq/sdk-sessions/conv_real"]
+    assert calls == ["/tmp/chatq/projects/project_a"]

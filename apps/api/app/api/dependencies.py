@@ -9,8 +9,6 @@ from app.core.config import get_settings
 from app.domain.chat_sessions.repositories import (
     AssetLinkRepository,
     ChatSessionRepository,
-    InMemoryAssetLinkRepository,
-    InMemoryChatSessionRepository,
 )
 from app.domain.chat_sessions.services import AssetLinkService, ChatSessionService
 from app.infrastructure.db import SQLAlchemyAssetLinkRepository, SQLAlchemyChatSessionRepository
@@ -37,7 +35,7 @@ class M1Services:
             self.session_repository,
             self.asset_repository,
             claude_agent_cwd=settings.claude_agent_cwd,
-            agent_workdir_root=settings.agent_workdir_root if uses_default_repositories else None,
+            project_home=settings.project_home if uses_default_repositories else None,
         )
         self.asset_links = AssetLinkService(self.session_repository, self.asset_repository)
 
@@ -52,10 +50,6 @@ def get_m1_services(request: Request) -> M1Services:
 
 def reset_m1_services(request: Request) -> None:
     request.app.state.m1_services = M1Services()
-
-
-def make_in_memory_m1_services() -> M1Services:
-    return M1Services(InMemoryChatSessionRepository(), InMemoryAssetLinkRepository())
 
 
 def get_user_id(x_user_id: Annotated[str | None, Header(alias="X-User-Id")] = None) -> str:

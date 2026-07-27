@@ -5,4 +5,4 @@ class RuntimeHealthResponse(BaseModel):
     status: str
     python_version: str
     packages: dict[str, str]
-    runtime_root_writable: bool
+    project_home_writable: bool

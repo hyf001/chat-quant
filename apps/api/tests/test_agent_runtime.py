@@ -44,7 +44,7 @@ def test_sdk_options_omit_thinking_by_default_for_compatible_agent_api() -> None
         chat_session_id="chat_1",
         user_message_id="msg_1",
         scenario=AgentScenario.CHAT_ANALYSIS,
-        working_dir="/tmp/chatq/sdk-sessions/chat_1",
+        project_dir="/tmp/chatq/projects/chat_1",
         sdk_session_id=None,
         request_id="req_1",
         user_prompt="你好",
@@ -73,8 +73,8 @@ def test_runtime_uses_plugin_namespaced_skills_without_copying_into_cwd(tmp_path
     custom_skill_dir = plugin_dir / "skills" / "custom_local_skill"
     custom_skill_dir.mkdir()
     (custom_skill_dir / "SKILL.md").write_text("# Custom Local Skill\n", encoding="utf-8")
-    working_dir = tmp_path / "user-project"
-    working_dir.mkdir()
+    project_dir = tmp_path / "user-project"
+    project_dir.mkdir()
     runtime = ClaudeAgentRuntime(
         settings=Settings(_env_file=None, AGENT_SKILL_PLUGIN_DIR=str(plugin_dir)),
         sdk_query=fake_sdk_query,
@@ -85,7 +85,7 @@ def test_runtime_uses_plugin_namespaced_skills_without_copying_into_cwd(tmp_path
         chat_session_id="chat_1",
         user_message_id="msg_1",
         scenario=AgentScenario.CHAT_ANALYSIS,
-        working_dir=str(working_dir),
+        project_dir=str(project_dir),
         sdk_session_id=None,
         request_id="req_1",
         user_prompt="你好",
@@ -97,14 +97,14 @@ def test_runtime_uses_plugin_namespaced_skills_without_copying_into_cwd(tmp_path
     )
     sdk_options = runtime.build_sdk_options(command, options)
 
-    assert sdk_options.cwd == str(working_dir)
+    assert sdk_options.cwd == str(project_dir)
     assert sdk_options.plugins == [{"type": "local", "path": str(plugin_dir)}]
     assert sdk_options.tools == ["Bash", "Skill"]
     assert sdk_options.skills == [
         "chat-quant:custom_local_skill",
         "chat-quant:financial_data_query",
     ]
-    assert not (working_dir / ".claude" / "skills").exists()
+    assert not (project_dir / ".claude" / "skills").exists()
 
 
 def test_sdk_options_delegate_permissions_to_sdk_rules_without_hooks() -> None:
@@ -118,7 +118,7 @@ def test_sdk_options_delegate_permissions_to_sdk_rules_without_hooks() -> None:
         chat_session_id="chat_1",
         user_message_id="msg_1",
         scenario=AgentScenario.CHAT_ANALYSIS,
-        working_dir="/tmp/chatq/sdk-sessions/chat_1",
+        project_dir="/tmp/chatq/projects/chat_1",
         sdk_session_id=None,
         request_id="req_1",
         user_prompt="你好",
@@ -150,7 +150,7 @@ def test_sdk_env_maps_configured_token_to_claude_code_api_key() -> None:
         chat_session_id="chat_1",
         user_message_id="msg_1",
         scenario=AgentScenario.CHAT_ANALYSIS,
-        working_dir="/tmp/chatq/sdk-sessions/chat_1",
+        project_dir="/tmp/chatq/projects/chat_1",
         sdk_session_id=None,
         request_id="req_1",
         user_prompt="你好",
@@ -194,7 +194,7 @@ async def _run_runtime_stream_assertions() -> None:
             chat_session_id="chat_1",
             user_message_id="msg_1",
             scenario=AgentScenario.CHAT_ANALYSIS,
-            working_dir="/tmp/chatq/sdk-sessions/chat_1",
+            project_dir="/tmp/chatq/projects/chat_1",
             sdk_session_id=None,
             request_id="req_1",
             user_prompt="分析贵州茅台最近走势",
@@ -220,7 +220,7 @@ async def _run_stream_event_type_assertions() -> None:
             chat_session_id="chat_stream_1",
             user_message_id="msg_1",
             scenario=AgentScenario.CHAT_ANALYSIS,
-            working_dir="/tmp/chatq/sdk-sessions/chat_stream_1",
+            project_dir="/tmp/chatq/projects/chat_stream_1",
             sdk_session_id=None,
             request_id="req_1",
             user_prompt="你好",
@@ -253,7 +253,7 @@ async def _run_system_event_session_id_assertions() -> None:
             chat_session_id="chat_system_1",
             user_message_id="msg_1",
             scenario=AgentScenario.CHAT_ANALYSIS,
-            working_dir="/tmp/chatq/sdk-sessions/chat_system_1",
+            project_dir="/tmp/chatq/projects/chat_system_1",
             sdk_session_id=None,
             request_id="req_1",
             user_prompt="你好",
@@ -281,7 +281,7 @@ async def _run_first_token_timeout_assertions() -> None:
             chat_session_id="chat_timeout_1",
             user_message_id="msg_1",
             scenario=AgentScenario.CHAT_ANALYSIS,
-            working_dir="/tmp/chatq/sdk-sessions/chat_timeout_1",
+            project_dir="/tmp/chatq/projects/chat_timeout_1",
             sdk_session_id=None,
             request_id="req_1",
             user_prompt="你好",
@@ -308,7 +308,7 @@ async def _run_sdk_stderr_error_assertions() -> None:
             chat_session_id="chat_stderr_1",
             user_message_id="msg_1",
             scenario=AgentScenario.CHAT_ANALYSIS,
-            working_dir="/tmp/chatq/sdk-sessions/chat_stderr_1",
+            project_dir="/tmp/chatq/projects/chat_stderr_1",
             sdk_session_id=None,
             request_id="req_1",
             user_prompt="你好",

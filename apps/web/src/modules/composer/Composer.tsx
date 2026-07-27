@@ -2,10 +2,11 @@ import { FormEvent, useState } from "react";
 
 type ComposerProps = {
   disabled: boolean;
+  placeholder?: string;
   onSendMessage: (content: string) => Promise<void>;
 };
 
-export function Composer({ disabled, onSendMessage }: ComposerProps) {
+export function Composer({ disabled, placeholder = "向 Agent 追加指令...", onSendMessage }: ComposerProps) {
   const [content, setContent] = useState("");
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -29,7 +30,7 @@ export function Composer({ disabled, onSendMessage }: ComposerProps) {
           className="min-w-0 flex-1 bg-transparent text-xs text-zinc-900 outline-none placeholder:text-zinc-400"
           disabled={disabled}
           onChange={(event) => setContent(event.target.value)}
-          placeholder="向 Agent 追加指令..."
+          placeholder={placeholder}
           value={content}
         />
         <button

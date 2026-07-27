@@ -4,10 +4,12 @@ from app.application.artifact_service import CodeArtifactService
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.domain.backtests.service import BacktestService
+from app.domain.projects.services import ProjectService
 from app.domain.strategies.service import StrategyService
 from app.infrastructure.backtests import BacktraderStrategyBacktestEngine
 from app.infrastructure.db import (
     SQLAlchemyArtifactRepository,
+    SQLAlchemyProjectRepository,
     SQLAlchemyStrategyRepository,
 )
 from app.infrastructure.db.schema import ensure_database_schema
@@ -49,6 +51,11 @@ def get_strategy_service() -> StrategyService:
 @lru_cache
 def get_backtest_service() -> BacktestService:
     return BacktestService(SQLAlchemyStrategyRepository(get_database_session_factory()))
+
+
+@lru_cache
+def get_project_service() -> ProjectService:
+    return ProjectService(SQLAlchemyProjectRepository(get_database_session_factory()))
 
 
 @lru_cache

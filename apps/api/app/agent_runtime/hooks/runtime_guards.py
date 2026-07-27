@@ -14,16 +14,16 @@ class HookDecision:
 
 class AgentRuntimeHooks:
     def pre_run(self, command: AgentExecutionCommand) -> HookDecision:
-        if not command.working_dir.strip():
+        if not command.project_dir.strip():
             return HookDecision(
                 False,
                 RuntimeErrorCode.TOOL_PERMISSION_DENIED,
-                "working_dir is required",
+                "project_dir is required",
             )
-        if ".." in command.working_dir.split("/"):
+        if ".." in command.project_dir.split("/"):
             return HookDecision(
                 False,
                 RuntimeErrorCode.TOOL_PERMISSION_DENIED,
-                "working_dir cannot contain parent traversal",
+                "project_dir cannot contain parent traversal",
             )
         return HookDecision(True)

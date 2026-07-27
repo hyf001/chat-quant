@@ -9,8 +9,12 @@ import type {
   ChatSession,
   ChatSessionDetail,
   ChatSessionListResponse,
+  CreateProjectPayload,
   CreateChatSessionPayload,
+  Project,
+  ProjectListResponse,
   SendMessageResponse,
+  UpdateProjectPayload,
 } from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -23,11 +27,13 @@ export { API_PROJECT_ID, API_USER_ID };
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
+  projectId?: string;
 };
 
 type SendAgentChatMessageInput = {
   message: string;
   chatSessionId?: string | null;
+  projectId?: string;
   scenario?: AgentScenario;
 };
 
@@ -37,7 +43,7 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
     headers: {
       "Content-Type": "application/json",
       "X-User-Id": API_USER_ID,
-      "X-Project-Id": API_PROJECT_ID,
+      "X-Project-Id": options.projectId ?? API_PROJECT_ID,
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
@@ -45,6 +51,10 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
   if (!response.ok) {
     const message = await response.text();
     throw new Error(message || `Request failed: ${response.status}`);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json() as Promise<T>;
@@ -96,7 +106,7 @@ export type RuntimeHealth = {
   status: string;
   python_version: string;
   packages: Record<string, string>;
-  runtime_root_writable: boolean;
+  project_home_writable: boolean;
 };
 
 export type PythonExecutionRequest = {
@@ -114,21 +124,58 @@ export async function getHealth(): Promise<{ status: string; service?: string }>
   return requestJson<{ status: string; service?: string }>("/api/health");
 }
 
-export async function listChatSessions(query?: string): Promise<ChatSessionListResponse> {
+export async function listProjects(query?: string): Promise<ProjectListResponse> {
   const params = new URLSearchParams();
   if (query) {
     params.set("query", query);
   }
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  return requestJson<ChatSessionListResponse>(`/api/chat-sessions${suffix}`);
+  return requestJson<ProjectListResponse>(`/api/projects${suffix}`);
+}
+
+export async function createProject(payload: CreateProjectPayload): Promise<Project> {
+  return requestJson<Project>("/api/projects", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function updateProject(
+  projectId: string,
+  payload: UpdateProjectPayload,
+): Promise<Project> {
+  return requestJson<Project>(`/api/projects/${projectId}`, {
+    method: "PATCH",
+    body: payload,
+  });
+}
+
+export async function deleteProject(projectId: string): Promise<void> {
+  return requestJson<void>(`/api/projects/${projectId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function listChatSessions(
+  query?: string,
+  projectId?: string,
+): Promise<ChatSessionListResponse> {
+  const params = new URLSearchParams();
+  if (query) {
+    params.set("query", query);
+  }
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return requestJson<ChatSessionListResponse>(`/api/chat-sessions${suffix}`, { projectId });
 }
 
 export async function createChatSession(
   payload: CreateChatSessionPayload = {},
+  projectId?: string,
 ): Promise<ChatSession> {
   return requestJson<ChatSession>("/api/chat-sessions", {
     method: "POST",
     body: payload,
+    projectId,
   });
 }
 
@@ -156,8 +203,9 @@ export async function sendAgentChatMessage(
       chat_session_id: input.chatSessionId,
       scenario: input.scenario,
       user_id: API_USER_ID,
-      project_id: API_PROJECT_ID,
+      project_id: input.projectId ?? API_PROJECT_ID,
     },
+    projectId: input.projectId,
   });
 }
 
@@ -171,7 +219,11 @@ export async function readChatStream(
   streamUrl: string,
   onEnvelope: (envelope: SDKStreamEnvelope) => void,
 ): Promise<void> {
-  const response = await fetch(toApiUrl(streamUrl));
+  const response = await fetch(toApiUrl(streamUrl), {
+    headers: {
+      "X-User-Id": API_USER_ID,
+    },
+  });
   if (!response.ok || response.body === null) {
     throw new Error(`Chat stream failed: ${response.status}`);
   }

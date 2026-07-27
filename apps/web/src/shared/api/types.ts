@@ -99,3 +99,29 @@ export type SendMessageResponse = {
   stream_url: string;
   messages: SdkMessage[];
 };
+
+export type Project = {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectListResponse = {
+  items: Project[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export type CreateProjectPayload = {
+  name: string;
+  description?: string | null;
+};
+
+export type UpdateProjectPayload = {
+  name?: string;
+  description?: string | null;
+};

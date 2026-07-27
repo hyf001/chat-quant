@@ -65,6 +65,7 @@ async def create_chat_session(
 async def list_chat_sessions(
     services: ServicesDep,
     user_id: UserId,
+    project_id: ProjectId,
     query: str | None = Query(default=None, max_length=120),
     kind: str | None = Query(default=None, max_length=32),
     task_type: str | None = Query(default=None, max_length=32),
@@ -74,6 +75,7 @@ async def list_chat_sessions(
 ):
     items, total = await services.chat_sessions.list_chat_sessions(
         user_id=user_id,
+        project_id=project_id,
         query=query,
         kind=kind,
         task_type=task_type,

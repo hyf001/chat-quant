@@ -7,26 +7,36 @@ import { InsightPanel } from "../modules/insight";
 import { WorkspaceHeader, WorkspaceLayout } from "../modules/workspace";
 import {
   createChatSession,
+  createProject,
+  deleteProject,
   getAgentChatSessionDetail,
   getChatSessionDetail,
   getRuntimeHealth,
   listChatSessions,
+  listProjects,
   readChatStream,
   sendAgentChatMessage,
+  updateProject,
   type AgentChatSessionDetail,
   type ChatSession,
   type ChatSessionDetail,
+  type Project,
   type RuntimeHealth,
   type SDKStreamEnvelope,
   type SdkMessage,
 } from "../shared/api";
 
+const ACTIVE_PROJECT_STORAGE_KEY = "chatq.activeProjectId";
+
 export function WorkbenchPage() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [detail, setDetail] = useState<ChatSessionDetail | null>(null);
   const [conversationEnvelopes, setConversationEnvelopes] = useState<SDKStreamEnvelope[]>([]);
   const [historyQuery, setHistoryQuery] = useState("");
+  const [isProjectLoading, setIsProjectLoading] = useState(true);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -39,29 +49,68 @@ export function WorkbenchPage() {
     () => detail?.session ?? sessions.find((session) => session.id === activeSessionId) ?? null,
     [activeSessionId, detail?.session, sessions],
   );
+  const activeProject = useMemo(
+    () => projects.find((project) => project.id === activeProjectId) ?? null,
+    [activeProjectId, projects],
+  );
   const conversationMessages = useMemo(
     () => messagesFromEnvelopes(conversationEnvelopes),
     [conversationEnvelopes],
   );
   const conversationRuntimeEnvelopes = conversationEnvelopes;
 
+  const refreshProjects = useCallback(async () => {
+    setIsProjectLoading(true);
+    setError(null);
+    try {
+      const data = await listProjects();
+      setProjects(data.items);
+      setActiveProjectId((currentProjectId) => {
+        const storedProjectId = localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY);
+        const nextProjectId =
+          data.items.find((project) => project.id === currentProjectId)?.id ??
+          data.items.find((project) => project.id === storedProjectId)?.id ??
+          data.items[0]?.id ??
+          null;
+        if (nextProjectId) {
+          localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, nextProjectId);
+        } else {
+          localStorage.removeItem(ACTIVE_PROJECT_STORAGE_KEY);
+        }
+        return nextProjectId;
+      });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "项目列表加载失败");
+    } finally {
+      setIsProjectLoading(false);
+    }
+  }, []);
+
   const refreshSessions = useCallback(
-    async (query = historyQuery) => {
+    async (query: string, projectId: string | null) => {
+      if (!projectId) {
+        setSessions([]);
+        setActiveSessionId(null);
+        setIsHistoryLoading(false);
+        return;
+      }
       setIsHistoryLoading(true);
       setError(null);
       try {
-        const data = await listChatSessions(query.trim() || undefined);
+        const data = await listChatSessions(query.trim() || undefined, projectId);
         setSessions(data.items);
-        if (!activeSessionId && data.items.length > 0) {
-          setActiveSessionId(data.items[0].id);
-        }
+        setActiveSessionId((currentSessionId) =>
+          data.items.some((session) => session.id === currentSessionId)
+            ? currentSessionId
+            : data.items[0]?.id ?? null,
+        );
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "会话列表加载失败");
       } finally {
         setIsHistoryLoading(false);
       }
     },
-    [activeSessionId, historyQuery],
+    [],
   );
 
   const loadDetail = useCallback(async (chatSessionId: string) => {
@@ -98,14 +147,22 @@ export function WorkbenchPage() {
   }, []);
 
   useEffect(() => {
-    void refreshSessions("");
-  }, [refreshSessions]);
+    void refreshProjects();
+  }, [refreshProjects]);
 
   useEffect(() => {
     getRuntimeHealth()
       .then(setRuntimeHealth)
       .catch(() => setRuntimeHealth(null));
   }, []);
+
+  useEffect(() => {
+    setHistoryQuery("");
+    setActiveSessionId(null);
+    setDetail(null);
+    setConversationEnvelopes([]);
+    void refreshSessions("", activeProjectId);
+  }, [activeProjectId, refreshSessions]);
 
   useEffect(() => {
     if (activeSessionId) {
@@ -119,13 +176,65 @@ export function WorkbenchPage() {
 
   const handleSearchChange = (query: string) => {
     setHistoryQuery(query);
-    void refreshSessions(query);
+    void refreshSessions(query, activeProjectId);
+  };
+
+  const handleSelectProject = (projectId: string) => {
+    localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, projectId);
+    setActiveProjectId(projectId);
+  };
+
+  const handleCreateProject = async (name: string) => {
+    setError(null);
+    try {
+      const project = await createProject({ name });
+      setProjects((current) => [project, ...current]);
+      handleSelectProject(project.id);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "新建项目失败");
+    }
+  };
+
+  const handleRenameProject = async (projectId: string, name: string) => {
+    setError(null);
+    try {
+      const project = await updateProject(projectId, { name });
+      setProjects((current) => current.map((item) => (item.id === project.id ? project : item)));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "编辑项目失败");
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    setError(null);
+    try {
+      await deleteProject(projectId);
+      setProjects((current) => {
+        const nextProjects = current.filter((project) => project.id !== projectId);
+        if (projectId === activeProjectId) {
+          const nextProjectId = nextProjects[0]?.id ?? null;
+          setActiveProjectId(nextProjectId);
+          if (nextProjectId) {
+            localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, nextProjectId);
+          } else {
+            localStorage.removeItem(ACTIVE_PROJECT_STORAGE_KEY);
+          }
+        }
+        return nextProjects;
+      });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "删除项目失败");
+    }
   };
 
   const handleCreateSession = async () => {
+    if (!activeProjectId) {
+      setError("请先创建或选择项目");
+      return;
+    }
     setError(null);
     try {
-      const session = await createChatSession({ title: "新的量化会话" });
+      const session = await createChatSession({ title: "新的量化会话" }, activeProjectId);
       setSessions((current) => [session, ...current]);
       setActiveSessionId(session.id);
     } catch (caught) {
@@ -134,21 +243,25 @@ export function WorkbenchPage() {
   };
 
   const handleSendMessage = async (content: string) => {
+    if (!activeProjectId) {
+      setError("请先创建或选择项目");
+      return;
+    }
+    if (!activeSessionId) {
+      setError("请先在当前项目中新建或选择会话");
+      return;
+    }
     setIsSending(true);
     setError(null);
     try {
-      let sessionId = activeSessionId;
-      if (!sessionId) {
-        const created = await createChatSession({ initial_prompt: content });
-        setSessions((current) => [created, ...current]);
-        streamingSessionIdRef.current = created.id;
-        setActiveSessionId(created.id);
-        sessionId = created.id;
-      } else {
-        streamingSessionIdRef.current = sessionId;
-      }
+      const sessionId = activeSessionId;
+      streamingSessionIdRef.current = sessionId;
 
-      const accepted = await sendAgentChatMessage({ chatSessionId: sessionId, message: content });
+      const accepted = await sendAgentChatMessage({
+        chatSessionId: sessionId,
+        projectId: activeProjectId,
+        message: content,
+      });
       setConversationEnvelopes((current) =>
         appendOptimisticUserMessage({
           envelopes: current,
@@ -173,10 +286,17 @@ export function WorkbenchPage() {
     <WorkspaceLayout
       history={
         <HistoryPanel
+          projects={projects}
+          activeProjectId={activeProjectId}
           sessions={sessions}
           activeSessionId={activeSessionId}
           query={historyQuery}
+          isProjectLoading={isProjectLoading}
           isLoading={isHistoryLoading}
+          onCreateProject={handleCreateProject}
+          onRenameProject={handleRenameProject}
+          onDeleteProject={handleDeleteProject}
+          onSelectProject={handleSelectProject}
           onCreateSession={handleCreateSession}
           onQueryChange={handleSearchChange}
           onSelectSession={setActiveSessionId}
@@ -184,6 +304,7 @@ export function WorkbenchPage() {
       }
       header={
         <WorkspaceHeader
+          project={activeProject}
           session={activeSession}
           isConnected={!error}
           health={runtimeHealth}
@@ -200,7 +321,19 @@ export function WorkbenchPage() {
           error={error}
         />
       }
-      composer={<Composer disabled={isSending} onSendMessage={handleSendMessage} />}
+      composer={
+        <Composer
+          disabled={isSending || !activeProjectId || !activeSessionId}
+          placeholder={
+            activeProjectId
+              ? activeSessionId
+                ? "向 Agent 追加指令..."
+                : "先新建或选择会话"
+              : "先创建或选择项目"
+          }
+          onSendMessage={handleSendMessage}
+        />
+      }
       insight={
         <InsightPanel
           session={activeSession}

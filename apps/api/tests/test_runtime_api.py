@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 def test_runtime_health_returns_runtime_probe(monkeypatch, tmp_path: Path) -> None:
     get_settings.cache_clear()
-    monkeypatch.setenv("AGENT_WORKDIR_ROOT", str(tmp_path / "sdk-sessions"))
+    monkeypatch.setenv("PROJECT_HOME", str(tmp_path / "projects"))
     app = create_app()
 
     try:
@@ -21,4 +21,4 @@ def test_runtime_health_returns_runtime_probe(monkeypatch, tmp_path: Path) -> No
     assert data["status"] == "ok"
     assert data["python_version"]
     assert isinstance(data["packages"], dict)
-    assert data["runtime_root_writable"] is True
+    assert data["project_home_writable"] is True

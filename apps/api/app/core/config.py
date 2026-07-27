@@ -52,10 +52,7 @@ class Settings(BaseSettings):
         default=15,
         alias="AGENT_FIRST_TOKEN_TIMEOUT_SECONDS",
     )
-    agent_workdir_root: str = Field(
-        default="/tmp/chatq/sdk-sessions",
-        alias="AGENT_WORKDIR_ROOT",
-    )
+    project_home: str = Field(default="data/projects", alias="PROJECT_HOME")
     agent_skill_plugin_dir: str = Field(
         default="plugin",
         alias="AGENT_SKILL_PLUGIN_DIR",

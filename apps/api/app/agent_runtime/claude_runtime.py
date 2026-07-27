@@ -328,7 +328,7 @@ class ClaudeAgentRuntime:
         return ClaudeAgentOptionsSnapshot(
             model=self.settings.agent_model,
             max_turns=self.settings.agent_max_turns,
-            cwd=command.working_dir,
+            cwd=command.project_dir,
             system_prompt={
                 "type": "preset",
                 "preset": "claude_code",
