@@ -1,10 +1,13 @@
 import {
   Check,
+  ChevronsUpDown,
+  CircleHelp,
   Code2,
   Folder,
   FolderOpen,
   Pencil,
   Plus,
+  Search,
   Settings,
   Terminal,
   Trash2,
@@ -51,8 +54,9 @@ export function HistoryPanel({
   const [newProjectName, setNewProjectName] = useState("");
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isProjectManagementOpen, setIsProjectManagementOpen] = useState(false);
   const [isProjectSwitcherOpen, setIsProjectSwitcherOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const hasActiveProject = activeProjectId !== null;
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
 
@@ -104,18 +108,33 @@ export function HistoryPanel({
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-2">
           <div>
-            <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-              历史执行记录
+            <div className="flex items-center justify-between px-2 py-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                最近
+              </span>
+              <button
+                className="grid h-6 w-6 place-items-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+                type="button"
+                aria-label="搜索历史执行记录"
+                aria-expanded={isSearchOpen}
+                title="搜索"
+                onClick={() => setIsSearchOpen(true)}
+              >
+                <Search className="h-3.5 w-3.5" />
+              </button>
             </div>
-            <div className="px-2 pb-2">
-              <input
-                className="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-900 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400"
-                disabled={!hasActiveProject}
-                onChange={(event) => onQueryChange(event.target.value)}
-                placeholder="搜索当前项目会话"
-                value={query}
-              />
-            </div>
+            {isSearchOpen ? (
+              <div className="px-2 pb-2">
+                <input
+                  className="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-900 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400"
+                  autoFocus
+                  disabled={!hasActiveProject}
+                  onChange={(event) => onQueryChange(event.target.value)}
+                  placeholder="搜索当前项目会话"
+                  value={query}
+                />
+              </div>
+            ) : null}
             <div className="mt-1 space-y-1">
               {!hasActiveProject ? <Notice text="请先创建或选择项目" /> : null}
               {hasActiveProject && isLoading ? <Notice text="加载中" /> : null}
@@ -148,17 +167,21 @@ export function HistoryPanel({
           </div>
         </div>
 
-        <div className="relative flex items-center justify-between border-t border-zinc-200 p-3 text-xs text-zinc-500">
+        <div className="relative flex items-center gap-2 border-t border-zinc-200 p-2 text-xs text-zinc-500">
           <button
-            className="min-w-0 truncate rounded px-1 py-0.5 text-left font-mono text-[11px] transition-colors hover:bg-zinc-200 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+            className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-left transition-colors hover:bg-zinc-200 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
             type="button"
             aria-label="切换项目"
+            aria-expanded={isProjectSwitcherOpen}
             onClick={() => setIsProjectSwitcherOpen((isOpen) => !isOpen)}
           >
-            {activeProject?.name ?? "none"}
+            <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+            <span className="block min-w-0 flex-1 truncate font-mono text-[11px] font-semibold text-zinc-700">
+              {activeProject?.name ?? "none"}
+            </span>
           </button>
           {isProjectSwitcherOpen ? (
-            <div className="absolute bottom-11 left-3 z-40 w-64 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl">
+            <div className="absolute bottom-11 left-2 z-40 w-64 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl">
               <div className="border-b border-zinc-100 px-3 py-2 text-[11px] font-semibold text-zinc-900">
                 切换项目
               </div>
@@ -168,11 +191,7 @@ export function HistoryPanel({
                   const isActive = project.id === activeProjectId;
                   return (
                     <button
-                      className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900/20 ${
-                        isActive
-                          ? "bg-zinc-900 font-medium text-white"
-                          : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
-                      }`}
+                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
                       key={project.id}
                       type="button"
                       onClick={() => {
@@ -181,45 +200,65 @@ export function HistoryPanel({
                       }}
                     >
                       {isActive ? (
-                        <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+                        <Check className="h-3.5 w-3.5 shrink-0 text-zinc-900" />
                       ) : (
-                        <Folder className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+                        <span className="h-3.5 w-3.5 shrink-0" />
                       )}
                       <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                      {isActive ? <Check className="h-3.5 w-3.5 shrink-0" /> : null}
                     </button>
                   );
                 })}
               </div>
+              <div className="border-t border-zinc-100 p-1">
+                <button
+                  className="flex w-full items-center rounded-md bg-zinc-900 px-2.5 py-2 text-left text-xs font-medium text-white transition-colors hover:bg-black focus:outline-none focus:ring-2 focus:ring-zinc-900/25"
+                  type="button"
+                  onClick={() => {
+                    setIsProjectSwitcherOpen(false);
+                    setIsProjectManagementOpen(true);
+                  }}
+                >
+                  管理项目...
+                </button>
+              </div>
             </div>
           ) : null}
           <button
-            className="grid h-6 w-6 shrink-0 place-items-center rounded text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+            type="button"
+            aria-label="帮助文档"
+            title="帮助文档"
+          >
+            <CircleHelp className="h-4 w-4" />
+          </button>
+          <button
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-zinc-400 disabled:cursor-default"
             type="button"
             aria-label="设置"
-            onClick={() => setIsSettingsOpen(true)}
+            title="设置"
+            disabled
           >
             <Settings className="h-4 w-4" />
           </button>
         </div>
       </aside>
 
-      {isSettingsOpen ? (
+      {isProjectManagementOpen ? (
         <div
           className="fixed inset-0 z-50 grid place-items-center bg-black/45 px-4"
           role="dialog"
           aria-modal="true"
-          aria-label="设置"
+          aria-label="项目管理"
         >
           <div className="flex h-[min(680px,calc(100vh-48px))] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-2xl">
             <nav className="w-48 shrink-0 border-r border-zinc-200 bg-zinc-50 p-3">
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-sm font-semibold text-zinc-900">设置</span>
+                <span className="text-sm font-semibold text-zinc-900">项目管理</span>
                 <button
                   className="grid h-7 w-7 place-items-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
                   type="button"
-                  aria-label="关闭设置"
-                  onClick={() => setIsSettingsOpen(false)}
+                  aria-label="关闭项目管理"
+                  onClick={() => setIsProjectManagementOpen(false)}
                 >
                   <X className="h-4 w-4" />
                 </button>
