@@ -13,7 +13,7 @@ export function RuntimeResultPanel({
   result,
   error,
 }: RuntimeResultPanelProps) {
-  const statusTone = result?.status === "succeeded" ? "text-emerald-700" : "text-rose-700";
+  const statusTone = result?.status === "succeeded" ? "text-emerald-700" : "text-risk";
 
   return (
     <section className="rounded-lg border border-line bg-panel shadow-panel" aria-label="M4 运行结果">
@@ -33,7 +33,7 @@ export function RuntimeResultPanel({
       </div>
 
       {error ? (
-        <div className="mx-4 mb-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+        <div className="mx-4 mb-4 rounded-lg border border-risk/25 bg-risk/5 p-3 text-sm text-risk">
           {error}
         </div>
       ) : null}

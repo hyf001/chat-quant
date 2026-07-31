@@ -5,17 +5,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        app: "#f5f7fb",
-        ink: "#17201b",
-        muted: "#667085",
+        app: "#f4f4f5",
+        ink: "#18181b",
+        muted: "#52525b",
         panel: "#ffffff",
-        soft: "#f8fafc",
-        line: "#d9ded4",
-        strong: "#c5d0df",
+        soft: "#fafafa",
+        line: "#e4e4e7",
+        strong: "#d4d4d8",
         brand: "#1f7a6d",
-        brandBlue: "#2451a6",
-        signal: "#e3b341",
-        risk: "#b9574f",
+        brandBlue: "#3f3f46",
+        signal: "#d97706",
+        risk: "#dc2626",
       },
       boxShadow: {
         panel: "0 18px 48px rgba(23, 32, 27, 0.08)",

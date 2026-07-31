@@ -34,7 +34,7 @@ export function Composer({ disabled, placeholder = "向 Agent 追加指令...", 
           value={content}
         />
         <button
-          className="shrink-0 rounded bg-zinc-900 px-3.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-black focus:outline-none focus:ring-2 focus:ring-zinc-900/25 disabled:cursor-not-allowed disabled:bg-zinc-900"
+          className="shrink-0 rounded bg-zinc-900 px-3.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-black focus:outline-none focus:ring-2 focus:ring-zinc-900/25 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-500"
           disabled={disabled || content.trim().length === 0}
           type="submit"
         >

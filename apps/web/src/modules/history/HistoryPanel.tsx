@@ -386,6 +386,7 @@ export function HistoryPanel({
                               </IconAction>
                               <IconAction
                                 label="删除项目"
+                                tone="danger"
                                 onClick={() => void handleDeleteProject(project)}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -425,14 +426,21 @@ function IconAction({
   label,
   onClick,
   children,
+  tone = "default",
 }: {
   label: string;
   onClick: () => void;
   children: ReactNode;
+  tone?: "default" | "danger";
 }) {
+  const toneClass =
+    tone === "danger"
+      ? "text-zinc-500 hover:bg-red-50 hover:text-red-600 focus:ring-red-600/20"
+      : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 focus:ring-zinc-900/20";
+
   return (
     <button
-      className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+      className={`grid h-7 w-7 shrink-0 place-items-center rounded-md transition-colors focus:outline-none focus:ring-2 ${toneClass}`}
       type="button"
       aria-label={label}
       title={label}
