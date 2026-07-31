@@ -16,10 +16,8 @@ class ChatSessionKind(StrEnum):
 
 
 class AssetType(StrEnum):
-    CODE_ARTIFACT = "code_artifact"
     STRATEGY_VERSION = "strategy_version"
     BACKTEST_RUN = "backtest_run"
-    ARTIFACT_FILE = "artifact_file"
 
 
 class AssetRelationType(StrEnum):

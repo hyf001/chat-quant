@@ -29,6 +29,8 @@ export function Composer({ disabled, placeholder = "向 Agent 追加指令...", 
         <input
           className="min-w-0 flex-1 bg-transparent text-xs text-zinc-900 outline-none placeholder:text-zinc-400"
           disabled={disabled}
+          id="agent-message-input"
+          name="message"
           onChange={(event) => setContent(event.target.value)}
           placeholder={placeholder}
           value={content}

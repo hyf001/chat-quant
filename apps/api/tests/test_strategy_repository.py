@@ -22,7 +22,6 @@ async def test_sqlalchemy_repository_persists_strategy_across_instances(
     created = await service.create_strategy(
         user_id="user_a",
         project_id="project_a",
-        chat_session_id="conv_persisted",
         package=StrategyPackage.model_validate(strategy_package()),
     )
 
@@ -30,7 +29,6 @@ async def test_sqlalchemy_repository_persists_strategy_across_instances(
     detail = await restored_service.get_strategy(created.strategy_id)
     versions = await restored_service.repository.list_versions(created.strategy_id)
 
-    assert detail.strategy.chat_session_id == "conv_persisted"
     assert detail.strategy.current_version_id == versions[0].id
     assert versions[0].default_params["fast_period"] == 20
     assert versions[0].code_checksum

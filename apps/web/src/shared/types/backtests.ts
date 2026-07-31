@@ -51,14 +51,11 @@ export type BacktestRun = {
   id: string;
   user_id: string;
   project_id: string;
-  chat_session_id: string;
   strategy_id: string;
   strategy_version_id: string;
-  code_artifact_id: string;
   parent_backtest_run_id: string | null;
   status: BacktestRunStatus;
   config: BacktestConfig;
-  config_hash: string;
   result_id: string | null;
   failure_code: string | null;
   failure_message: string | null;
@@ -75,7 +72,6 @@ export type BacktestResult = {
   metrics: BacktestMetrics;
   warnings: string[];
   config_snapshot: BacktestConfig;
-  artifact_refs: Record<string, string>;
   created_at: string;
 };
 
@@ -101,7 +97,7 @@ export type CurvePoint = {
   benchmark_value: string | null;
 };
 
-export type CurveArtifact = {
+export type BacktestCurve = {
   id: string;
   curve_type: "equity" | "drawdown" | "benchmark_equity" | "benchmark_drawdown";
   point_count: number;
@@ -115,11 +111,10 @@ export type BacktestDetail = {
   run: BacktestRun;
   result: BacktestResult | null;
   trades: TradeRecord[];
-  curves: CurveArtifact[];
+  curves: BacktestCurve[];
 };
 
 export type CreateBacktestRunPayload = {
-  chat_session_id: string;
   strategy_version_id: string;
   symbols: string[];
   market: string;

@@ -172,7 +172,7 @@ def test_user_cannot_read_or_link_another_users_session():
     link = client.post(
         f"/api/chat-sessions/{created['id']}/assets",
         headers={"X-User-Id": "intruder"},
-        json={"asset_type": "code_artifact", "asset_id": "code_1", "relation_type": "created"},
+        json={"asset_type": "strategy_version", "asset_id": "stv_1", "relation_type": "created"},
     )
 
     assert detail.status_code == 403

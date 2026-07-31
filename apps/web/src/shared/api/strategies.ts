@@ -22,11 +22,8 @@ export type StrategySummary = {
   strategy_version_id: string;
   version: number;
   name: string;
-  strategy_type: string;
   status: "active" | "archived" | "deleted";
-  version_status: "draft" | "validating" | "validated" | "invalid" | "archived";
   tags: string[];
-  logic_summary?: string | null;
   default_params: Record<string, StrategyParamValue>;
   updated_at: string;
 };
@@ -35,38 +32,31 @@ export type StrategyVersion = {
   id: string;
   strategy_id: string;
   version: number;
-  version_name?: string | null;
-  parent_version_id?: string | null;
-  code_artifact_id: string;
   entrypoint: string;
+  python_file: StrategyPythonFile;
   params_schema: Record<string, StrategyParameterSchema>;
   default_params: Record<string, StrategyParamValue>;
-  logic_summary?: string | null;
-  change_summary?: string | null;
   code_checksum: string;
-  status: StrategySummary["version_status"];
-  validation_error?: string | null;
-  validated_at?: string | null;
   created_at: string;
+};
+
+export type StrategyPythonFile = {
+  path: string;
+  content: string;
 };
 
 export type StrategyPackage = {
   name: string;
   description: string;
-  strategy_type: string;
   entrypoint: string;
-  code_artifact_id: string;
+  python_file: StrategyPythonFile;
   params_schema: Record<string, StrategyParameterSchema>;
   default_params: Record<string, StrategyParamValue>;
-  logic_summary: string;
   risk_notes: string[];
 };
 
 export type StrategyCreateResult = {
   strategy_id: string;
-  strategy_version_id: string;
-  version: number;
-  status: StrategySummary["version_status"];
   entrypoint: string;
 };
 
@@ -78,26 +68,22 @@ export type StrategyCopySummary = {
   copy_record_id: string;
 };
 
-export async function listStrategies(): Promise<StrategySummary[]> {
-  const params = new URLSearchParams({
-    user_id: API_USER_ID,
-    project_id: API_PROJECT_ID,
-  });
-  return apiFetch<StrategySummary[]>(`/api/strategies?${params.toString()}`);
+type ApiFetchOptions = RequestInit & {
+  projectId?: string;
+};
+
+export async function listStrategies(projectId?: string): Promise<StrategySummary[]> {
+  return apiFetch<StrategySummary[]>("/api/strategies", { projectId });
 }
 
 export async function getStrategyVersion(versionId: string): Promise<StrategyVersion> {
   return apiFetch<StrategyVersion>(`/api/strategy-versions/${versionId}`);
 }
 
-export async function createStrategy(
-  chatSessionId: string,
-  strategyPackage: StrategyPackage,
-): Promise<StrategyCreateResult> {
+export async function createStrategy(strategyPackage: StrategyPackage): Promise<StrategyCreateResult> {
   return apiFetch<StrategyCreateResult>("/api/strategies", {
     method: "POST",
     body: JSON.stringify({
-      chat_session_id: chatSessionId,
       package: strategyPackage,
       user_id: API_USER_ID,
       project_id: API_PROJECT_ID,
@@ -122,12 +108,15 @@ export async function copyStrategySummary(versionId: string): Promise<StrategyCo
   });
 }
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function apiFetch<T>(path: string, init?: ApiFetchOptions): Promise<T> {
+  const { projectId, headers, ...requestInit } = init ?? {};
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
+    ...requestInit,
     headers: {
       "Content-Type": "application/json",
-      ...init?.headers,
+      "X-User-Id": API_USER_ID,
+      "X-Project-Id": projectId ?? API_PROJECT_ID,
+      ...headers,
     },
   });
 

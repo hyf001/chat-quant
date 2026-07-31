@@ -109,17 +109,6 @@ export type RuntimeHealth = {
   project_home_writable: boolean;
 };
 
-export type PythonExecutionRequest = {
-  chat_session_id: string;
-  code_artifact_id: string;
-  entrypoint: string;
-  stdin_json?: Record<string, unknown>;
-  timeout_seconds?: number;
-  expected_outputs?: string[];
-  purpose?: "query_analysis" | "stock_screening" | "chart_generation" | "strategy_smoke_test" | "utility";
-  code_files: Array<{ path: string; content: string }>;
-};
-
 export async function getHealth(): Promise<{ status: string; service?: string }> {
   return requestJson<{ status: string; service?: string }>("/api/health");
 }
@@ -252,16 +241,6 @@ export async function readChatStream(
 
 export async function getRuntimeHealth(): Promise<RuntimeHealth> {
   return requestJson<RuntimeHealth>("/api/runtime/health");
-}
-
-export async function executePythonArtifact(
-  payload: PythonExecutionRequest,
-): Promise<ExecutionResult> {
-  const data = await requestJson<{ execution_result: ExecutionResult }>("/api/runtime/execute", {
-    method: "POST",
-    body: payload,
-  });
-  return data.execution_result;
 }
 
 export async function createBacktestRun(payload: CreateBacktestRunPayload): Promise<BacktestRun> {

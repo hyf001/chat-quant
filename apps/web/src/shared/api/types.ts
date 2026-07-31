@@ -8,7 +8,7 @@ export type JsonValue =
 
 export type ChatSessionKind = "normal" | "strategy" | "screening";
 
-export type AssetType = "code_artifact" | "strategy_version" | "backtest_run" | "artifact_file";
+export type AssetType = "strategy_version" | "backtest_run";
 
 export type AssetRelationType = "created" | "used" | "displayed" | "result" | "reused";
 

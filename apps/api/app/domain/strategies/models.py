@@ -21,19 +21,14 @@ class StrategyStatus(StrEnum):
     DELETED = "deleted"
 
 
-class StrategyVersionStatus(StrEnum):
-    DRAFT = "draft"
-    ARCHIVED = "archived"
-
-
-class StrategyCodeFile(BaseModel):
+class StrategyPythonFile(BaseModel):
     path: str = Field(min_length=1, max_length=256)
     content: str = Field(min_length=1)
 
     model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
-    def validate_code_path(self) -> StrategyCodeFile:
+    def validate_code_path(self) -> StrategyPythonFile:
         validate_relative_python_path(self.path)
         return self
 
@@ -67,15 +62,11 @@ class StrategyParameterSchema(BaseModel):
 class StrategyPackage(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     description: str | None = None
-    strategy_type: str = Field(min_length=1, max_length=64)
     entrypoint: str = Field(min_length=3, max_length=256)
-    code_artifact_id: str = Field(min_length=1, max_length=128)
-    code_files: list[StrategyCodeFile] = Field(default_factory=list)
+    python_file: StrategyPythonFile
     params_schema: dict[str, StrategyParameterSchema]
     default_params: dict[str, StrategyParamValue]
-    logic_summary: str | None = None
     risk_notes: list[str] = Field(default_factory=list)
-    version_name: str | None = Field(default=None, max_length=128)
 
     model_config = ConfigDict(extra="forbid")
 
@@ -104,11 +95,8 @@ class StrategyPackage(BaseModel):
         validate_relative_python_path(module_path)
         if not class_name.isidentifier():
             raise ValueError("entrypoint class must be a Python identifier")
-
-        if self.code_files:
-            code_paths = {code_file.path for code_file in self.code_files}
-            if module_path not in code_paths:
-                raise ValueError("entrypoint module must exist in code_files")
+        if module_path != self.python_file.path:
+            raise ValueError("entrypoint module must match python_file.path")
 
         return self
 
@@ -117,11 +105,8 @@ class StrategyRecord(BaseModel):
     id: str
     user_id: str
     project_id: str
-    chat_session_id: str
-    source_sdk_message_uuid: str | None = None
     name: str
     description: str | None = None
-    strategy_type: str
     tags: list[str] = Field(default_factory=list)
     current_version_id: str | None = None
     status: StrategyStatus = StrategyStatus.ACTIVE
@@ -133,20 +118,11 @@ class StrategyVersionRecord(BaseModel):
     id: str
     strategy_id: str
     version: int
-    version_name: str | None = None
-    parent_version_id: str | None = None
-    code_artifact_id: str
     entrypoint: str
-    code_files: list[StrategyCodeFile] = Field(default_factory=list)
+    python_file: StrategyPythonFile
     params_schema: dict[str, StrategyParameterSchema]
     default_params: dict[str, StrategyParamValue]
-    logic_summary: str | None = None
-    change_summary: str | None = None
-    source_sdk_session_id: str | None = None
-    source_sdk_message_uuid: str | None = None
-    source_sdk_tool_use_id: str | None = None
     code_checksum: str
-    status: StrategyVersionStatus = StrategyVersionStatus.DRAFT
     created_at: datetime = Field(default_factory=utc_now)
 
 
@@ -155,11 +131,8 @@ class StrategySummary(BaseModel):
     strategy_version_id: str
     version: int
     name: str
-    strategy_type: str
     status: StrategyStatus
-    version_status: StrategyVersionStatus
     tags: list[str]
-    logic_summary: str | None = None
     default_params: dict[str, StrategyParamValue]
     updated_at: datetime
 

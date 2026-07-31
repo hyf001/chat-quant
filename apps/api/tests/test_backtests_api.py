@@ -7,7 +7,7 @@ from tests.test_strategy_api import strategy_package
 def create_strategy(client: TestClient) -> dict[str, object]:
     response = client.post(
         "/api/strategies",
-        json={"chat_session_id": "conv_demo", "package": strategy_package()},
+        json={"package": strategy_package()},
     )
     assert response.status_code == 201
     return response.json()
@@ -15,7 +15,6 @@ def create_strategy(client: TestClient) -> dict[str, object]:
 
 def create_backtest_payload() -> dict[str, object]:
     return {
-        "chat_session_id": "conv_demo",
         "config": {
             "symbols": ["000300.SH"],
             "market": "CN",
@@ -53,7 +52,6 @@ def test_backtest_strategy_returns_backtest_result(client: TestClient) -> None:
     assert data["backtest"]["status"] == "succeeded"
     assert data["backtest"]["id"].startswith("sbt_")
     assert data["backtest"]["execution_engine"] == "backtrader"
-    assert data["backtest"]["config_hash"].startswith("sha256:")
     assert data["backtest"]["config"]["symbols"] == ["000300.SH"]
     assert data["result"]["protocol"] == "chatq_backtrader_strategy_v1"
     assert data["result"]["engine"] == "backtrader"
@@ -70,12 +68,13 @@ def test_backtest_strategy_returns_backtest_result(client: TestClient) -> None:
 
 def test_execute_rejects_non_backtrader_strategy(client: TestClient) -> None:
     package = strategy_package()
-    package["code_files"] = [
-        {"path": "strategy.py", "content": "class GeneratedStrategy:\n    pass\n"}
-    ]
+    package["python_file"] = {
+        "path": "strategy.py",
+        "content": "class GeneratedStrategy:\n    pass\n",
+    }
     created = client.post(
         "/api/strategies",
-        json={"chat_session_id": "conv_demo", "package": package},
+        json={"package": package},
     ).json()
     response = client.post(
         f"/api/strategies/{created['strategy_id']}/backtest",

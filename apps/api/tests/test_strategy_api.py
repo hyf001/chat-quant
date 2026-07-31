@@ -5,7 +5,6 @@ def test_create_strategy_returns_draft_first_version(client: TestClient) -> None
     response = client.post(
         "/api/strategies",
         json={
-            "chat_session_id": "conv_demo",
             "package": strategy_package(),
         },
     )
@@ -22,7 +21,7 @@ def test_create_strategy_rejects_default_param_outside_schema(client: TestClient
 
     response = client.post(
         "/api/strategies",
-        json={"chat_session_id": "conv_demo", "package": package},
+        json={"package": package},
     )
 
     assert response.status_code == 422
@@ -31,7 +30,7 @@ def test_create_strategy_rejects_default_param_outside_schema(client: TestClient
 def test_update_metadata_does_not_create_new_version(client: TestClient) -> None:
     created = client.post(
         "/api/strategies",
-        json={"chat_session_id": "conv_demo", "package": strategy_package()},
+        json={"package": strategy_package()},
     ).json()
 
     response = client.patch(
@@ -54,7 +53,7 @@ def test_update_metadata_does_not_create_new_version(client: TestClient) -> None
 def test_deleted_strategy_is_hidden_from_list(client: TestClient) -> None:
     created = client.post(
         "/api/strategies",
-        json={"chat_session_id": "conv_demo", "package": strategy_package()},
+        json={"package": strategy_package()},
     ).json()
 
     response = client.delete(f"/api/strategies/{created['strategy_id']}")
@@ -65,7 +64,6 @@ def test_deleted_strategy_is_hidden_from_list(client: TestClient) -> None:
 
 def strategy_package(
     *,
-    logic_summary: str = "MA 20/60 突破并使用中等波动过滤",
     fast_period: int = 20,
     slow_period: int = 60,
     volatility_filter: str = "medium",
@@ -73,37 +71,33 @@ def strategy_package(
     return {
         "name": "均线突破策略",
         "description": "短期均线上穿长期均线买入，下穿卖出",
-        "strategy_type": "ma_cross",
         "entrypoint": "strategy.py:GeneratedStrategy",
-        "code_artifact_id": "code_demo",
-        "code_files": [
-            {
-                "path": "strategy.py",
-                "content": "\n".join(
-                    [
-                        "import backtrader as bt",
-                        "",
-                        "class GeneratedStrategy(bt.Strategy):",
-                        "    params = (",
-                        "        ('fast_period', 20),",
-                        "        ('slow_period', 60),",
-                        "        ('volatility_filter', 'medium'),",
-                        "    )",
-                        "",
-                        "    def __init__(self):",
-                        "        close = self.datas[0].close",
-                        "        self.fast_ma = bt.ind.SMA(close, period=self.p.fast_period)",
-                        "        self.slow_ma = bt.ind.SMA(close, period=self.p.slow_period)",
-                        "",
-                        "    def next(self):",
-                        "        if not self.position and self.fast_ma[0] > self.slow_ma[0]:",
-                        "            self.order_target_percent(target=0.95)",
-                        "        elif self.position and self.fast_ma[0] < self.slow_ma[0]:",
-                        "            self.order_target_percent(target=0)",
-                    ]
-                ),
-            }
-        ],
+        "python_file": {
+            "path": "strategy.py",
+            "content": "\n".join(
+                [
+                    "import backtrader as bt",
+                    "",
+                    "class GeneratedStrategy(bt.Strategy):",
+                    "    params = (",
+                    "        ('fast_period', 20),",
+                    "        ('slow_period', 60),",
+                    "        ('volatility_filter', 'medium'),",
+                    "    )",
+                    "",
+                    "    def __init__(self):",
+                    "        close = self.datas[0].close",
+                    "        self.fast_ma = bt.ind.SMA(close, period=self.p.fast_period)",
+                    "        self.slow_ma = bt.ind.SMA(close, period=self.p.slow_period)",
+                    "",
+                    "    def next(self):",
+                    "        if not self.position and self.fast_ma[0] > self.slow_ma[0]:",
+                    "            self.order_target_percent(target=0.95)",
+                    "        elif self.position and self.fast_ma[0] < self.slow_ma[0]:",
+                    "            self.order_target_percent(target=0)",
+                ]
+            ),
+        },
         "params_schema": {
             "fast_period": {
                 "type": "integer",
@@ -134,6 +128,5 @@ def strategy_package(
             "slow_period": slow_period,
             "volatility_filter": volatility_filter,
         },
-        "logic_summary": logic_summary,
         "risk_notes": ["历史回测不代表未来收益，不构成投资建议"],
     }

@@ -12,12 +12,12 @@ from app.domain.strategies.models import (
     StrategyStatus,
     StrategyVersionRecord,
 )
-from app.infrastructure.db.models import (
-    StrategyBacktestResultRow,
+from app.infrastructure.db.models.strategy import (
     StrategyBacktestRow,
     StrategyRow,
     StrategyVersionRow,
 )
+from app.infrastructure.db.payloads import StrategyBacktestPayload
 
 
 class SQLAlchemyStrategyRepository:
@@ -26,7 +26,6 @@ class SQLAlchemyStrategyRepository:
 
     async def clear(self) -> None:
         async with self._session_factory() as db:
-            await db.execute(delete(StrategyBacktestResultRow))
             await db.execute(delete(StrategyBacktestRow))
             await db.execute(delete(StrategyVersionRow))
             await db.execute(delete(StrategyRow))
@@ -94,7 +93,11 @@ class SQLAlchemyStrategyRepository:
 
     async def save_backtest(self, backtest: StrategyBacktestRecord) -> None:
         async with self._session_factory() as db:
-            await db.merge(_backtest_to_row(backtest))
+            row = await db.get(StrategyBacktestRow, backtest.id)
+            if row is None:
+                db.add(_backtest_to_row(backtest))
+            else:
+                _apply_backtest(row, backtest)
             await db.commit()
 
     async def get_backtest(self, backtest_id: str) -> StrategyBacktestRecord | None:
@@ -122,7 +125,11 @@ class SQLAlchemyStrategyRepository:
 
     async def save_backtest_result(self, result: StrategyBacktestResultRecord) -> None:
         async with self._session_factory() as db:
-            await db.merge(_backtest_result_to_row(result))
+            row = await db.get(StrategyBacktestRow, result.strategy_backtest_id)
+            if row is None:
+                raise KeyError(result.strategy_backtest_id)
+            payload = _payload_from_json(row.payload_json)
+            row.payload_json = _backtest_payload(payload.backtest, result)
             await db.commit()
 
     async def get_backtest_result(
@@ -130,12 +137,8 @@ class SQLAlchemyStrategyRepository:
         backtest_id: str,
     ) -> StrategyBacktestResultRecord | None:
         async with self._session_factory() as db:
-            row = await db.scalar(
-                select(StrategyBacktestResultRow).where(
-                    StrategyBacktestResultRow.strategy_backtest_id == backtest_id
-                )
-            )
-            return _backtest_result_from_row(row) if row is not None else None
+            row = await db.get(StrategyBacktestRow, backtest_id)
+            return _backtest_result_from_row(row.payload_json) if row is not None else None
 
 
 def _strategy_to_row(strategy: StrategyRecord) -> StrategyRow:
@@ -143,11 +146,8 @@ def _strategy_to_row(strategy: StrategyRecord) -> StrategyRow:
         id=strategy.id,
         user_id=strategy.user_id,
         project_id=strategy.project_id,
-        chat_session_id=strategy.chat_session_id,
-        source_sdk_message_uuid=strategy.source_sdk_message_uuid,
         name=strategy.name,
         description=strategy.description,
-        strategy_type=strategy.strategy_type,
         tags_json=list(strategy.tags),
         current_version_id=strategy.current_version_id,
         status=strategy.status.value,
@@ -166,62 +166,96 @@ def _version_to_row(version: StrategyVersionRecord) -> StrategyVersionRow:
         id=version.id,
         strategy_id=version.strategy_id,
         version=version.version,
-        version_name=version.version_name,
-        parent_version_id=version.parent_version_id,
-        code_artifact_id=version.code_artifact_id,
         entrypoint=version.entrypoint,
         params_schema_json={
             key: value.model_dump(mode="json") for key, value in version.params_schema.items()
         },
         default_params_json=dict(version.default_params),
-        logic_summary=version.logic_summary,
-        change_summary=version.change_summary,
-        source_sdk_session_id=version.source_sdk_session_id,
-        source_sdk_message_uuid=version.source_sdk_message_uuid,
-        source_sdk_tool_use_id=version.source_sdk_tool_use_id,
         code_checksum=version.code_checksum,
-        status=version.status.value,
         created_at=version.created_at,
         payload_json=version.model_dump(mode="json"),
     )
 
 
 def _version_from_row(row: StrategyVersionRow) -> StrategyVersionRecord:
-    return StrategyVersionRecord.model_validate(row.payload_json)
+    return StrategyVersionRecord.model_validate(_strategy_version_payload(row.payload_json))
+
+
+def _strategy_version_payload(payload: object) -> object:
+    if not isinstance(payload, dict) or "python_file" in payload:
+        return payload
+
+    migrated = dict(payload)
+    code_files = migrated.pop("code_files", None)
+    migrated.pop("code_artifact_id", None)
+    entrypoint = migrated.get("entrypoint")
+    entrypoint_path = entrypoint.split(":", 1)[0] if isinstance(entrypoint, str) else None
+    if isinstance(code_files, list) and code_files:
+        selected = next(
+            (
+                code_file
+                for code_file in code_files
+                if isinstance(code_file, dict) and code_file.get("path") == entrypoint_path
+            ),
+            None,
+        )
+        if selected is None:
+            selected = next(
+                (code_file for code_file in code_files if isinstance(code_file, dict)),
+                None,
+            )
+        if selected is not None:
+            migrated["python_file"] = selected
+    return migrated
 
 
 def _backtest_to_row(backtest: StrategyBacktestRecord) -> StrategyBacktestRow:
-    return StrategyBacktestRow(
-        id=backtest.id,
-        user_id=backtest.user_id,
-        project_id=backtest.project_id,
-        chat_session_id=backtest.chat_session_id,
-        strategy_id=backtest.strategy_id,
-        strategy_version_id=backtest.strategy_version_id,
-        run_type="backtest",
-        status=backtest.status.value,
-        config_hash=backtest.config_hash,
-        result_id=backtest.result_id,
-        started_at=backtest.started_at,
-        completed_at=backtest.completed_at,
-        created_at=backtest.created_at,
-        updated_at=backtest.updated_at,
-        payload_json=backtest.model_dump(mode="json"),
+    row = StrategyBacktestRow()
+    _apply_backtest(row, backtest)
+    return row
+
+
+def _apply_backtest(row: StrategyBacktestRow, backtest: StrategyBacktestRecord) -> None:
+    result = _result_from_json(row.payload_json)
+    row.id = backtest.id
+    row.user_id = backtest.user_id
+    row.project_id = backtest.project_id
+    row.strategy_id = backtest.strategy_id
+    row.strategy_version_id = backtest.strategy_version_id
+    row.status = backtest.status.value
+    row.result_id = backtest.result_id
+    row.started_at = backtest.started_at
+    row.completed_at = backtest.completed_at
+    row.created_at = backtest.created_at
+    row.updated_at = backtest.updated_at
+    row.payload_json = _backtest_payload(backtest, result)
+
+
+def _backtest_payload(
+    backtest: StrategyBacktestRecord,
+    result: StrategyBacktestResultRecord | None,
+) -> dict[str, object]:
+    return StrategyBacktestPayload(backtest=backtest, result=result).model_dump(
+        mode="json",
+        exclude_none=True,
     )
+
+
+def _payload_from_json(payload: object) -> StrategyBacktestPayload:
+    if isinstance(payload, dict) and "backtest" in payload:
+        return StrategyBacktestPayload.model_validate(payload)
+    return StrategyBacktestPayload(backtest=StrategyBacktestRecord.model_validate(payload))
+
+
+def _result_from_json(payload: object | None) -> StrategyBacktestResultRecord | None:
+    if payload is not None:
+        return _payload_from_json(payload).result
+    return None
 
 
 def _backtest_from_row(row: StrategyBacktestRow) -> StrategyBacktestRecord:
-    return StrategyBacktestRecord.model_validate(row.payload_json)
+    return _payload_from_json(row.payload_json).backtest
 
 
-def _backtest_result_to_row(result: StrategyBacktestResultRecord) -> StrategyBacktestResultRow:
-    return StrategyBacktestResultRow(
-        id=result.id,
-        strategy_backtest_id=result.strategy_backtest_id,
-        created_at=result.created_at,
-        payload_json=result.model_dump(mode="json"),
-    )
-
-
-def _backtest_result_from_row(row: StrategyBacktestResultRow) -> StrategyBacktestResultRecord:
-    return StrategyBacktestResultRecord.model_validate(row.payload_json)
+def _backtest_result_from_row(payload: object) -> StrategyBacktestResultRecord | None:
+    return _payload_from_json(payload).result

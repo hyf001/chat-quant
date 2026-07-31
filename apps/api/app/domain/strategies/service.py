@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from hashlib import sha256
 from uuid import uuid4
 
@@ -49,32 +48,20 @@ class StrategyService:
         *,
         user_id: str,
         project_id: str,
-        chat_session_id: str,
         package: StrategyPackage,
-        source_sdk_session_id: str | None = None,
-        source_sdk_message_uuid: str | None = None,
-        source_sdk_tool_use_id: str | None = None,
     ) -> StrategyCreateResult:
         strategy = StrategyRecord(
             id=_new_id("str"),
             user_id=user_id,
             project_id=project_id,
-            chat_session_id=chat_session_id,
-            source_sdk_message_uuid=source_sdk_message_uuid,
             name=package.name,
             description=package.description,
-            strategy_type=package.strategy_type,
             tags=_default_tags(package),
         )
         version = self._build_version(
             strategy_id=strategy.id,
             version_number=1,
             package=package,
-            parent_version_id=None,
-            change_summary=None,
-            source_sdk_session_id=source_sdk_session_id,
-            source_sdk_message_uuid=source_sdk_message_uuid,
-            source_sdk_tool_use_id=source_sdk_tool_use_id,
         )
         strategy.current_version_id = version.id
 
@@ -122,28 +109,15 @@ class StrategyService:
         strategy_id: str,
         version_number: int,
         package: StrategyPackage,
-        parent_version_id: str | None,
-        change_summary: str | None,
-        source_sdk_session_id: str | None,
-        source_sdk_message_uuid: str | None,
-        source_sdk_tool_use_id: str | None,
     ) -> StrategyVersionRecord:
         return StrategyVersionRecord(
             id=_new_id("stv"),
             strategy_id=strategy_id,
             version=version_number,
-            version_name=package.version_name,
-            parent_version_id=parent_version_id,
-            code_artifact_id=package.code_artifact_id,
             entrypoint=package.entrypoint,
-            code_files=package.code_files,
+            python_file=package.python_file,
             params_schema=package.params_schema,
             default_params=package.default_params,
-            logic_summary=package.logic_summary,
-            change_summary=change_summary,
-            source_sdk_session_id=source_sdk_session_id,
-            source_sdk_message_uuid=source_sdk_message_uuid,
-            source_sdk_tool_use_id=source_sdk_tool_use_id,
             code_checksum=_checksum(package),
         )
 
@@ -154,11 +128,8 @@ class StrategyService:
             strategy_version_id=version.id,
             version=version.version,
             name=strategy.name,
-            strategy_type=strategy.strategy_type,
             status=strategy.status,
-            version_status=version.status,
             tags=strategy.tags,
-            logic_summary=version.logic_summary,
             default_params=version.default_params,
             updated_at=strategy.updated_at,
         )
@@ -169,7 +140,6 @@ class StrategyService:
         strategy_id: str,
         user_id: str,
         project_id: str,
-        chat_session_id: str,
         config: StrategyBacktestConfig,
         engine: StrategyBacktestEngine,
     ) -> StrategyBacktestDetail:
@@ -177,7 +147,6 @@ class StrategyService:
             strategy_id=strategy_id,
             user_id=user_id,
             project_id=project_id,
-            chat_session_id=chat_session_id,
             config=config,
         )
         return await self._execute_backtest(backtest.id, engine=engine)
@@ -188,7 +157,6 @@ class StrategyService:
         strategy_id: str,
         user_id: str,
         project_id: str,
-        chat_session_id: str,
         config: StrategyBacktestConfig,
     ) -> StrategyBacktestRecord:
         strategy = await self._require_strategy(strategy_id)
@@ -210,12 +178,10 @@ class StrategyService:
             id=_new_id("sbt"),
             user_id=user_id,
             project_id=project_id,
-            chat_session_id=chat_session_id,
             strategy_id=strategy.id,
             strategy_version_id=version.id,
             status=StrategyBacktestStatus.PENDING,
             config=config,
-            config_hash=_hash_backtest_config(config),
         )
         await self.repository.add_backtest(backtest)
         return backtest
@@ -332,22 +298,8 @@ def _checksum(package: StrategyPackage) -> str:
     return sha256(payload.encode("utf-8")).hexdigest()
 
 
-def _hash_backtest_config(config: StrategyBacktestConfig) -> str:
-    payload = config.model_dump(mode="json")
-    encoded = json.dumps(_normalize_json(payload), sort_keys=True, separators=(",", ":"))
-    return f"sha256:{sha256(encoded.encode('utf-8')).hexdigest()}"
-
-
-def _normalize_json(value: JsonValue) -> JsonValue:
-    if isinstance(value, dict):
-        return {key: _normalize_json(value[key]) for key in sorted(value)}
-    if isinstance(value, list):
-        return [_normalize_json(item) for item in value]
-    return value
-
-
 def _default_tags(package: StrategyPackage) -> list[str]:
-    return _normalize_tags(["策略创建", package.strategy_type, *package.risk_notes[:1]])
+    return _normalize_tags(["策略创建", *package.risk_notes[:1]])
 
 
 def _normalize_tags(tags: list[str]) -> list[str]:
@@ -357,4 +309,3 @@ def _normalize_tags(tags: list[str]) -> list[str]:
         if stripped and stripped not in normalized:
             normalized.append(stripped[:32])
     return normalized
-

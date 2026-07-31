@@ -357,8 +357,7 @@ async def fake_sdk_query(*, prompt: str, options: object | None = None) -> Async
     session_id = "sdk_query_1"
     tool_use_id = "toolu_1"
     command = (
-        "chatq artifact save-code --chat-session-id chat_1 --project-id project_1 "
-        "--request-id req_1 --json"
+        "chatq strategy create --project-id project_1 --request-id req_1 --json"
     )
     yield AssistantMessage(
         content=[TextBlock(text=f"我已收到你的问题：{prompt}")],

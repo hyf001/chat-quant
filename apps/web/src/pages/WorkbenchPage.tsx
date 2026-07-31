@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Composer } from "../modules/composer";
 import { ConversationShell } from "../modules/conversation";
-import { HistoryPanel } from "../modules/history";
+import { HistoryPanel, type PrimaryRoute } from "../modules/history";
 import { InsightPanel } from "../modules/insight";
+import { StrategyList } from "../modules/strategy";
 import { WorkspaceHeader, WorkspaceLayout } from "../modules/workspace";
 import {
-  createChatSession,
   createProject,
   deleteProject,
   getAgentChatSessionDetail,
@@ -27,8 +27,15 @@ import {
 } from "../shared/api";
 
 const ACTIVE_PROJECT_STORAGE_KEY = "chatq.activeProjectId";
+const routePaths: Record<PrimaryRoute, string> = {
+  "new-task": "/tasks/new",
+  strategies: "/strategies",
+};
 
 export function WorkbenchPage() {
+  const [activeRoute, setActiveRoute] = useState<PrimaryRoute>(() =>
+    routeFromPath(window.location.pathname),
+  );
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -100,9 +107,7 @@ export function WorkbenchPage() {
         const data = await listChatSessions(query.trim() || undefined, projectId);
         setSessions(data.items);
         setActiveSessionId((currentSessionId) =>
-          data.items.some((session) => session.id === currentSessionId)
-            ? currentSessionId
-            : data.items[0]?.id ?? null,
+          data.items.some((session) => session.id === currentSessionId) ? currentSessionId : null,
         );
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "会话列表加载失败");
@@ -151,6 +156,14 @@ export function WorkbenchPage() {
   }, [refreshProjects]);
 
   useEffect(() => {
+    const handlePopState = () => {
+      setActiveRoute(routeFromPath(window.location.pathname));
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
     getRuntimeHealth()
       .then(setRuntimeHealth)
       .catch(() => setRuntimeHealth(null));
@@ -182,6 +195,26 @@ export function WorkbenchPage() {
   const handleSelectProject = (projectId: string) => {
     localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, projectId);
     setActiveProjectId(projectId);
+  };
+
+  const handleNavigateRoute = (route: PrimaryRoute) => {
+    setActiveRoute(route);
+    if (window.location.pathname !== routePaths[route]) {
+      window.history.pushState({}, "", routePaths[route]);
+    }
+    if (route === "new-task") {
+      setActiveSessionId(null);
+      setDetail(null);
+      setConversationEnvelopes([]);
+    }
+  };
+
+  const handleSelectSession = (chatSessionId: string) => {
+    setActiveRoute("new-task");
+    if (window.location.pathname !== routePaths["new-task"]) {
+      window.history.pushState({}, "", routePaths["new-task"]);
+    }
+    setActiveSessionId(chatSessionId);
   };
 
   const handleCreateProject = async (name: string) => {
@@ -227,41 +260,27 @@ export function WorkbenchPage() {
     }
   };
 
-  const handleCreateSession = async () => {
-    if (!activeProjectId) {
-      setError("请先创建或选择项目");
-      return;
-    }
-    setError(null);
-    try {
-      const session = await createChatSession({ title: "新的量化会话" }, activeProjectId);
-      setSessions((current) => [session, ...current]);
-      setActiveSessionId(session.id);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "新建会话失败");
-    }
-  };
-
   const handleSendMessage = async (content: string) => {
     if (!activeProjectId) {
       setError("请先创建或选择项目");
       return;
     }
-    if (!activeSessionId) {
-      setError("请先在当前项目中新建或选择会话");
-      return;
-    }
     setIsSending(true);
     setError(null);
     try {
-      const sessionId = activeSessionId;
-      streamingSessionIdRef.current = sessionId;
+      const currentSessionId = activeSessionId;
 
       const accepted = await sendAgentChatMessage({
-        chatSessionId: sessionId,
+        chatSessionId: currentSessionId,
         projectId: activeProjectId,
         message: content,
       });
+      const sessionId = accepted.chat_session_id;
+      streamingSessionIdRef.current = sessionId;
+      if (!currentSessionId) {
+        setActiveSessionId(sessionId);
+        void refreshSessions(historyQuery, activeProjectId);
+      }
       setConversationEnvelopes((current) =>
         appendOptimisticUserMessage({
           envelopes: current,
@@ -279,6 +298,7 @@ export function WorkbenchPage() {
     } finally {
       streamingSessionIdRef.current = null;
       setIsSending(false);
+      void refreshSessions(historyQuery, activeProjectId);
     }
   };
 
@@ -290,6 +310,7 @@ export function WorkbenchPage() {
           activeProjectId={activeProjectId}
           sessions={sessions}
           activeSessionId={activeSessionId}
+          activeRoute={activeRoute}
           query={historyQuery}
           isProjectLoading={isProjectLoading}
           isLoading={isHistoryLoading}
@@ -297,48 +318,48 @@ export function WorkbenchPage() {
           onRenameProject={handleRenameProject}
           onDeleteProject={handleDeleteProject}
           onSelectProject={handleSelectProject}
-          onCreateSession={handleCreateSession}
+          onNavigateRoute={handleNavigateRoute}
           onQueryChange={handleSearchChange}
-          onSelectSession={setActiveSessionId}
+          onSelectSession={handleSelectSession}
         />
       }
       header={
         <WorkspaceHeader
           project={activeProject}
-          session={activeSession}
+          session={activeRoute === "new-task" ? activeSession : null}
           isConnected={!error}
           health={runtimeHealth}
         />
       }
       conversation={
-        <ConversationShell
-          session={activeSession}
-          messages={conversationMessages}
-          envelopes={conversationRuntimeEnvelopes}
-          assets={detail?.assets ?? []}
-          isLoading={isDetailLoading}
-          isStreaming={isSending}
-          error={error}
-        />
+        activeRoute === "new-task" ? (
+          <ConversationShell
+            session={activeSession}
+            messages={conversationMessages}
+            envelopes={conversationRuntimeEnvelopes}
+            assets={detail?.assets ?? []}
+            isLoading={isDetailLoading}
+            isStreaming={isSending}
+            error={error}
+            onPromptSelect={handleSendMessage}
+          />
+        ) : (
+          <StrategyList project={activeProject} />
+        )
       }
       composer={
-        <Composer
-          disabled={isSending || !activeProjectId || !activeSessionId}
-          placeholder={
-            activeProjectId
-              ? activeSessionId
-                ? "向 Agent 追加指令..."
-                : "先新建或选择会话"
-              : "先创建或选择项目"
-          }
-          onSendMessage={handleSendMessage}
-        />
+        activeRoute === "new-task" ? (
+          <Composer
+            disabled={isSending || !activeProjectId}
+            placeholder={activeProjectId ? "随心输入" : "先创建或选择项目"}
+            onSendMessage={handleSendMessage}
+          />
+        ) : null
       }
       insight={
         <InsightPanel
           session={activeSession}
           assets={detail?.assets ?? []}
-          artifact={null}
           health={runtimeHealth}
           result={null}
           backtestDetail={null}
@@ -346,6 +367,10 @@ export function WorkbenchPage() {
       }
     />
   );
+}
+
+function routeFromPath(pathname: string): PrimaryRoute {
+  return pathname.endsWith(routePaths.strategies) ? "strategies" : "new-task";
 }
 
 async function getAgentDetailOrNull(chatSessionId: string): Promise<AgentChatSessionDetail | null> {

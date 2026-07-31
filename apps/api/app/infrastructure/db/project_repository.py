@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.projects.models import Project
 from app.domain.projects.repositories import ProjectNotFoundError, ProjectRepository
-from app.infrastructure.db.models import ProjectRow
+from app.infrastructure.db.models.project import ProjectRow
 
 
 class SQLAlchemyProjectRepository(ProjectRepository):

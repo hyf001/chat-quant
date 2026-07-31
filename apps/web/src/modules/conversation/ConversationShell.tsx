@@ -1,4 +1,14 @@
-import { AlertCircle, Brain, ChevronDown, FileText, Loader2 } from "lucide-react";
+import {
+  Activity,
+  AlertCircle,
+  BarChart3,
+  Brain,
+  ChevronDown,
+  FileCode2,
+  FileText,
+  Loader2,
+  Search,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -15,6 +25,7 @@ type ConversationShellProps = {
   isLoading: boolean;
   isStreaming: boolean;
   error: string | null;
+  onPromptSelect?: (content: string) => void | Promise<void>;
 };
 
 type UnknownRecord = Record<string, unknown>;
@@ -119,6 +130,7 @@ export function ConversationShell({
   isLoading,
   isStreaming,
   error,
+  onPromptSelect,
 }: ConversationShellProps) {
   const [now, setNow] = useState(() => Date.now());
   const textMessages = useMemo(() => messages.filter(hasTextContent), [messages]);
@@ -184,17 +196,7 @@ export function ConversationShell({
         ) : null}
 
         {!isLoading && !session ? (
-          <div className="relative border-l-2 border-zinc-900 pl-6">
-            <div className="absolute -left-[9px] top-0 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-zinc-900">
-              <div className="h-1.5 w-1.5 rounded-full bg-white" />
-            </div>
-            <div className="mb-1 font-mono text-[11px] font-bold uppercase text-zinc-400">
-              PROMPT
-            </div>
-            <p className="text-base font-semibold text-zinc-900">
-              输入股票问题、选股条件或策略想法后，系统会创建历史入口并保存会话上下文。
-            </p>
-          </div>
+          <NewTaskHome isDisabled={isStreaming} onPromptSelect={onPromptSelect} />
         ) : null}
 
         {session && timelineItems.length === 0 && !isStreaming ? (
@@ -291,6 +293,80 @@ export function ConversationShell({
 
       </div>
     </section>
+  );
+}
+
+const starterPrompts = [
+  {
+    label: "选股",
+    description: "按条件筛候选，比如强势、低估、低回撤。",
+    prompt: "帮我筛选近期强势、估值合理且风险可控的股票候选，并说明筛选逻辑。",
+    icon: Search,
+    iconClass: "text-sky-500",
+  },
+  {
+    label: "诊股",
+    description: "拆解个股表现，看看机会、压力位和风险。",
+    prompt: "帮我诊断一只股票的基本面、技术面和风险点，并给出后续关注指标。",
+    icon: Activity,
+    iconClass: "text-emerald-600",
+  },
+  {
+    label: "策略",
+    description: "把交易想法变成规则、参数和风控条件。",
+    prompt: "帮我设计一个可回测的量化交易策略，包含交易逻辑、参数和风险控制。",
+    icon: FileCode2,
+    iconClass: "text-violet-500",
+  },
+  {
+    label: "回测",
+    description: "验证策略收益、回撤、胜率和基准对比。",
+    prompt: "帮我对当前策略做回测，分析收益、回撤、胜率和相对基准表现。",
+    icon: BarChart3,
+    iconClass: "text-orange-600",
+  },
+];
+
+function NewTaskHome({
+  isDisabled,
+  onPromptSelect,
+}: {
+  isDisabled: boolean;
+  onPromptSelect?: (content: string) => void | Promise<void>;
+}) {
+  return (
+    <div className="flex min-h-[calc(100vh-15rem)] items-center justify-center py-12">
+      <div className="w-full">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-zinc-200 bg-zinc-50 text-zinc-400">
+          <Brain className="h-6 w-6" />
+        </div>
+        <h1 className="mt-5 text-center text-2xl font-semibold text-zinc-900">
+          我能帮助你什么
+        </h1>
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {starterPrompts.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                className="flex min-h-32 flex-col items-start justify-between rounded-lg border border-zinc-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isDisabled || !onPromptSelect}
+                key={item.label}
+                type="button"
+                onClick={() => void onPromptSelect?.(item.prompt)}
+              >
+                <Icon className={`h-4 w-4 ${item.iconClass}`} />
+                <span className="grid gap-1.5">
+                  <span className="text-sm font-semibold leading-5 text-zinc-900">
+                    {item.label}
+                  </span>
+                  <span className="text-xs leading-5 text-zinc-500">{item.description}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 

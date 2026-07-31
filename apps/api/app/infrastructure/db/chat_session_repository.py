@@ -17,7 +17,10 @@ from app.domain.chat_sessions.repositories import (
     ChatSessionNotFoundError,
     ChatSessionRepository,
 )
-from app.infrastructure.db.models import ChatSessionAssetLinkRow, ChatSessionRow
+from app.infrastructure.db.models.chat_session import (
+    ChatSessionAssetLinkRow,
+    ChatSessionRow,
+)
 
 
 class SQLAlchemyChatSessionRepository(ChatSessionRepository):

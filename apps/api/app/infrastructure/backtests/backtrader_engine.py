@@ -37,12 +37,6 @@ class BacktraderStrategyBacktestEngine:
         backtest: StrategyBacktestRecord,
         version: StrategyVersionRecord,
     ) -> StrategyBacktestResultRecord:
-        if not version.code_files:
-            raise StrategyBacktestError(
-                "STRATEGY_CODE_MISSING",
-                "Strategy version does not contain executable code_files",
-            )
-
         module_name = f"chatq_strategy_{uuid4().hex}"
         try:
             with tempfile.TemporaryDirectory(prefix="chatq_strategy_") as tmp_dir_text:
@@ -139,10 +133,9 @@ class BacktraderStrategyBacktestEngine:
         module_name: str,
     ) -> type[bt.Strategy]:
         module_path_text, class_name = version.entrypoint.split(":", maxsplit=1)
-        for code_file in version.code_files:
-            destination = tmp_dir / code_file.path
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            destination.write_text(code_file.content, encoding="utf-8")
+        destination = tmp_dir / version.python_file.path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(version.python_file.content, encoding="utf-8")
 
         source_path = tmp_dir / module_path_text
         if not source_path.is_file():

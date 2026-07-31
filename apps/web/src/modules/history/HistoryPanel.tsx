@@ -3,6 +3,7 @@ import {
   ChevronsUpDown,
   CircleHelp,
   Code2,
+  FileText,
   Folder,
   FolderOpen,
   Pencil,
@@ -18,11 +19,14 @@ import type { ReactNode } from "react";
 
 import type { ChatSession, Project } from "../../shared/api";
 
+export type PrimaryRoute = "new-task" | "strategies";
+
 type HistoryPanelProps = {
   projects: Project[];
   activeProjectId: string | null;
   sessions: ChatSession[];
   activeSessionId: string | null;
+  activeRoute: PrimaryRoute;
   query: string;
   isProjectLoading: boolean;
   isLoading: boolean;
@@ -30,7 +34,7 @@ type HistoryPanelProps = {
   onRenameProject: (projectId: string, name: string) => Promise<void>;
   onDeleteProject: (projectId: string) => Promise<void>;
   onSelectProject: (projectId: string) => void;
-  onCreateSession: () => void;
+  onNavigateRoute: (route: PrimaryRoute) => void;
   onQueryChange: (query: string) => void;
   onSelectSession: (chatSessionId: string) => void;
 };
@@ -40,6 +44,7 @@ export function HistoryPanel({
   activeProjectId,
   sessions,
   activeSessionId,
+  activeRoute,
   query,
   isProjectLoading,
   isLoading,
@@ -47,7 +52,7 @@ export function HistoryPanel({
   onRenameProject,
   onDeleteProject,
   onSelectProject,
-  onCreateSession,
+  onNavigateRoute,
   onQueryChange,
   onSelectSession,
 }: HistoryPanelProps) {
@@ -94,15 +99,30 @@ export function HistoryPanel({
         className="flex h-full w-72 shrink-0 flex-col border-r border-zinc-200 bg-zinc-50 text-zinc-900"
         aria-label="历史会话"
       >
-        <div className="border-b border-zinc-200 p-3">
+        <div className="border-b border-zinc-200 p-2">
           <button
-            className="flex w-full items-center justify-center gap-2 rounded-md bg-zinc-900 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-black focus:outline-none focus:ring-2 focus:ring-zinc-900/25 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-500"
-            disabled={!hasActiveProject}
+            className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900/20 ${
+              activeRoute === "new-task"
+                ? "bg-zinc-900 text-white"
+                : "text-zinc-700 hover:bg-zinc-200 hover:text-zinc-900"
+            }`}
             type="button"
-            onClick={onCreateSession}
+            onClick={() => onNavigateRoute("new-task")}
           >
             <Plus className="h-4 w-4" />
-            <span>新建 Agent 任务</span>
+            <span>新建任务</span>
+          </button>
+          <button
+            className={`mt-1 flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900/20 ${
+              activeRoute === "strategies"
+                ? "bg-zinc-900 text-white"
+                : "text-zinc-700 hover:bg-zinc-200 hover:text-zinc-900"
+            }`}
+            type="button"
+            onClick={() => onNavigateRoute("strategies")}
+          >
+            <FileText className="h-4 w-4" />
+            <span>策略</span>
           </button>
         </div>
 

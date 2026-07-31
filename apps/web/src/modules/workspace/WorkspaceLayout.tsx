@@ -5,8 +5,8 @@ type WorkspaceLayoutProps = {
   header: ReactNode;
   conversation: ReactNode;
   result?: ReactNode;
-  composer: ReactNode;
-  insight: ReactNode;
+  composer?: ReactNode;
+  insight?: ReactNode;
 };
 
 export function WorkspaceLayout({
@@ -31,7 +31,7 @@ export function WorkspaceLayout({
               </div>
             ) : null}
           </div>
-          {composer}
+          {composer ?? null}
         </section>
       </div>
     </main>

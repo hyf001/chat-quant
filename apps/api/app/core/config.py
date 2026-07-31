@@ -26,7 +26,6 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("CHATQ_DEFAULT_PROJECT_ID", "DEFAULT_PROJECT_ID"),
     )
     claude_agent_cwd: str | None = Field(default=None, alias="CHATQ_CLAUDE_AGENT_CWD")
-    artifact_root: Path = Field(default=Path("data/artifacts"), alias="CHATQ_ARTIFACT_ROOT")
     database_path: Path = Field(default=Path("data/chat-quant.db"), alias="CHATQ_DATABASE_PATH")
     cors_origins: list[str] = Field(
         default=[

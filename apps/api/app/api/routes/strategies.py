@@ -27,13 +27,9 @@ StrategyServiceDep = Annotated[StrategyService, Depends(get_strategy_service)]
 
 
 class CreateStrategyRequest(BaseModel):
-    chat_session_id: str = Field(min_length=1)
     package: StrategyPackage
     user_id: str | None = None
     project_id: str | None = None
-    source_sdk_session_id: str | None = None
-    source_sdk_message_uuid: str | None = None
-    source_sdk_tool_use_id: str | None = None
 
     model_config = ConfigDict(extra="forbid")
 
@@ -48,7 +44,6 @@ class UpdateStrategyRequest(BaseModel):
 
 
 class StrategyBacktestRequest(BaseModel):
-    chat_session_id: str = Field(min_length=1)
     config: StrategyBacktestConfig
     user_id: str | None = None
     project_id: str | None = None
@@ -76,11 +71,7 @@ async def create_strategy(
         return await service.create_strategy(
             user_id=request.user_id or user_id,
             project_id=request.project_id or project_id,
-            chat_session_id=request.chat_session_id,
             package=request.package,
-            source_sdk_session_id=request.source_sdk_session_id,
-            source_sdk_message_uuid=request.source_sdk_message_uuid,
-            source_sdk_tool_use_id=request.source_sdk_tool_use_id,
         )
     except StrategyError as error:
         raise _http_error(error) from error
@@ -141,7 +132,6 @@ async def backtest_strategy(
             strategy_id=strategy_id,
             user_id=request.user_id or user_id,
             project_id=request.project_id or project_id,
-            chat_session_id=request.chat_session_id,
             config=request.config,
             engine=get_strategy_backtest_engine(),
         )

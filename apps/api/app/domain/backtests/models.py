@@ -74,12 +74,10 @@ class StrategyBacktestRecord(BaseModel):
     id: str
     user_id: str
     project_id: str
-    chat_session_id: str
     strategy_id: str
     strategy_version_id: str
     status: StrategyBacktestStatus = StrategyBacktestStatus.PENDING
     config: StrategyBacktestConfig
-    config_hash: str
     execution_engine: str | None = None
     result_id: str | None = None
     failure_code: str | None = None
