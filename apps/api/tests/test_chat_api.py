@@ -4,16 +4,16 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime
-from app.api.dependencies import get_m1_services
-from app.api.routes.chat import get_chat_application_service
-from app.application import chat_service as chat_service_module
-from app.application.chat_service import ChatApplicationService
+from app.api.v1 import chat_api as chat_api_module
 from app.core.config import Settings
+from app.db.session import get_session_factory
 from app.main import app
-from app.schemas.contracts.agent_runtime import ChatMessageRequest
+from app.schema.agent_runtime import ChatMessageRequest
+from app.service.chat import ChatApplicationService
+from app.service.chat import service as chat_service
+from app.service.chat_session import chat_session_service
 from claude_agent_sdk import AssistantMessage, ResultMessage, TextBlock
 from fastapi.testclient import TestClient
-from m1_mocks import make_mock_m1_services
 from pytest import MonkeyPatch
 
 TEST_PROJECT_HOME = "/tmp/chatq/test-projects"
@@ -45,8 +45,7 @@ runtime = ClaudeAgentRuntime(
     sdk_query=fake_sdk_query,
 )
 test_service = ChatApplicationService(runtime)
-app.dependency_overrides[get_chat_application_service] = lambda: test_service
-app.dependency_overrides[get_m1_services] = lambda: make_mock_m1_services()
+chat_api_module.chat_application_service = test_service
 client = TestClient(app)
 
 
@@ -171,35 +170,35 @@ async def _run_m1_index_sync_assertions() -> None:
         sdk_query=fake_sdk_query,
     )
     isolated_service = ChatApplicationService(isolated_runtime)
-    m1_services = make_mock_m1_services()
-
-    accepted = await isolated_service.handle_user_message(
-        ChatMessageRequest(
-            chat_session_id="conv_index_sync",
-            message="同步 SDK session",
-            project_id="project_1",
-        ),
-        m1_services.chat_sessions,
-    )
-    _ = [
-        envelope
-        async for envelope in isolated_service.stream_chat_session(
-            accepted.chat_session_id,
-            m1_services.chat_sessions,
+    async with get_session_factory()() as db:
+        chat_sessions = chat_session_service(db)
+        accepted = await isolated_service.handle_user_message(
+            ChatMessageRequest(
+                chat_session_id="conv_index_sync",
+                message="同步 SDK session",
+                project_id="project_1",
+            ),
+            chat_sessions,
         )
-    ]
+        _ = [
+            envelope
+            async for envelope in isolated_service.stream_chat_session(
+                accepted.chat_session_id,
+                chat_sessions,
+            )
+        ]
 
-    session, _ = await m1_services.chat_sessions.get_context(
-        "conv_index_sync",
-        user_id="local_user",
-    )
+        session, _ = await chat_sessions.get_context(
+            "conv_index_sync",
+            user_id="local_user",
+        )
 
     assert session.sdk_session_id == "sdk_api_1"
     assert session.snippet == "同步 SDK session"
 
 
 async def _run_first_answer_sdk_title_assertions(monkeypatch: MonkeyPatch) -> None:
-    from app.domain.chat_sessions import services as chat_session_service_module
+    from app.service.chat_session import service as chat_session_sdk_service
 
     calls: list[tuple[str, str | None]] = []
 
@@ -208,7 +207,7 @@ async def _run_first_answer_sdk_title_assertions(monkeypatch: MonkeyPatch) -> No
         return SimpleNamespace(custom_title="SDK 生成的会话名称", summary="SDK 摘要")
 
     monkeypatch.setattr(
-        chat_session_service_module,
+        chat_session_sdk_service,
         "sdk_get_session_info",
         fake_get_session_info,
     )
@@ -218,36 +217,36 @@ async def _run_first_answer_sdk_title_assertions(monkeypatch: MonkeyPatch) -> No
             sdk_query=fake_sdk_query,
         )
     )
-    m1_services = make_mock_m1_services()
-
-    accepted = await isolated_service.handle_user_message(
-        ChatMessageRequest(
-            chat_session_id="conv_sdk_title_sync",
-            message="帮我分析一下贵州茅台最近走势",
-            project_id="project_1",
-        ),
-        m1_services.chat_sessions,
-    )
-    _ = [
-        envelope
-        async for envelope in isolated_service.stream_chat_session(
-            accepted.chat_session_id,
-            m1_services.chat_sessions,
+    async with get_session_factory()() as db:
+        chat_sessions = chat_session_service(db)
+        accepted = await isolated_service.handle_user_message(
+            ChatMessageRequest(
+                chat_session_id="conv_sdk_title_sync",
+                message="帮我分析一下贵州茅台最近走势",
+                project_id="project_1",
+            ),
+            chat_sessions,
         )
-    ]
-    session, _ = await m1_services.chat_sessions.get_context(
-        "conv_sdk_title_sync",
-        user_id="local_user",
-    )
+        _ = [
+            envelope
+            async for envelope in isolated_service.stream_chat_session(
+                accepted.chat_session_id,
+                chat_sessions,
+            )
+        ]
+        session, _ = await chat_sessions.get_context(
+            "conv_sdk_title_sync",
+            user_id="local_user",
+        )
 
-    assert calls == [("sdk_api_1", None)]
+    assert calls == [("sdk_api_1", "data/projects/project_1")]
     assert session.title == "SDK 生成的会话名称"
 
 
 async def _run_first_answer_fallback_title_follow_up_assertions(
     monkeypatch: MonkeyPatch,
 ) -> None:
-    from app.domain.chat_sessions import services as chat_session_service_module
+    from app.service.chat_session import service as chat_session_sdk_service
 
     calls: list[str] = []
 
@@ -257,7 +256,7 @@ async def _run_first_answer_fallback_title_follow_up_assertions(
         return None
 
     monkeypatch.setattr(
-        chat_session_service_module,
+        chat_session_sdk_service,
         "sdk_get_session_info",
         fake_get_session_info,
     )
@@ -267,49 +266,49 @@ async def _run_first_answer_fallback_title_follow_up_assertions(
             sdk_query=fake_sdk_query,
         )
     )
-    m1_services = make_mock_m1_services()
-
-    first = await isolated_service.handle_user_message(
-        ChatMessageRequest(
-            chat_session_id="conv_first_title_fallback",
-            message="请帮我筛选最近成交量持续放大的科技股并说明原因",
-            project_id="project_1",
-        ),
-        m1_services.chat_sessions,
-    )
-    _ = [
-        envelope
-        async for envelope in isolated_service.stream_chat_session(
-            first.chat_session_id,
-            m1_services.chat_sessions,
+    async with get_session_factory()() as db:
+        chat_sessions = chat_session_service(db)
+        first = await isolated_service.handle_user_message(
+            ChatMessageRequest(
+                chat_session_id="conv_first_title_fallback",
+                message="请帮我筛选最近成交量持续放大的科技股并说明原因",
+                project_id="project_1",
+            ),
+            chat_sessions,
         )
-    ]
-    second = await isolated_service.handle_user_message(
-        ChatMessageRequest(
-            chat_session_id=first.chat_session_id,
-            message="继续分析估值和风险",
-            project_id="project_1",
-        ),
-        m1_services.chat_sessions,
-    )
-    _ = [
-        envelope
-        async for envelope in isolated_service.stream_chat_session(
-            second.chat_session_id,
-            m1_services.chat_sessions,
+        _ = [
+            envelope
+            async for envelope in isolated_service.stream_chat_session(
+                first.chat_session_id,
+                chat_sessions,
+            )
+        ]
+        second = await isolated_service.handle_user_message(
+            ChatMessageRequest(
+                chat_session_id=first.chat_session_id,
+                message="继续分析估值和风险",
+                project_id="project_1",
+            ),
+            chat_sessions,
         )
-    ]
-    session, _ = await m1_services.chat_sessions.get_context(
-        "conv_first_title_fallback",
-        user_id="local_user",
-    )
+        _ = [
+            envelope
+            async for envelope in isolated_service.stream_chat_session(
+                second.chat_session_id,
+                chat_sessions,
+            )
+        ]
+        session, _ = await chat_sessions.get_context(
+            "conv_first_title_fallback",
+            user_id="local_user",
+        )
 
     assert calls == ["sdk_api_1"]
     assert session.title == "请帮我筛选最近成交量持续放大的科技股并说"
 
 
 async def _run_precreated_empty_session_title_assertions(monkeypatch: MonkeyPatch) -> None:
-    from app.domain.chat_sessions import services as chat_session_service_module
+    from app.service.chat_session import service as chat_session_sdk_service
 
     def fake_get_session_info(session_id: str, directory: str | None = None) -> None:
         del session_id, directory
@@ -331,12 +330,12 @@ async def _run_precreated_empty_session_title_assertions(monkeypatch: MonkeyPatc
         ]
 
     monkeypatch.setattr(
-        chat_session_service_module,
+        chat_session_sdk_service,
         "sdk_get_session_info",
         fake_get_session_info,
     )
     monkeypatch.setattr(
-        chat_session_service_module,
+        chat_session_sdk_service,
         "sdk_get_session_messages",
         fake_get_session_messages,
     )
@@ -346,33 +345,34 @@ async def _run_precreated_empty_session_title_assertions(monkeypatch: MonkeyPatc
             sdk_query=fake_sdk_query,
         )
     )
-    m1_services = make_mock_m1_services()
-    await m1_services.chat_sessions.create_chat_session(
-        user_id="local_user",
-        project_id="project_1",
-        chat_session_id="conv_precreated_empty",
-        title="新的量化会话",
-    )
-
-    accepted = await isolated_service.handle_user_message(
-        ChatMessageRequest(
-            chat_session_id="conv_precreated_empty",
-            message="查看当前路径",
+    async with get_session_factory()() as db:
+        chat_sessions = chat_session_service(db)
+        await chat_sessions.create_chat_session(
+            user_id="local_user",
             project_id="project_1",
-        ),
-        m1_services.chat_sessions,
-    )
-    _ = [
-        envelope
-        async for envelope in isolated_service.stream_chat_session(
-            accepted.chat_session_id,
-            m1_services.chat_sessions,
+            chat_session_id="conv_precreated_empty",
+            title="新的量化会话",
         )
-    ]
-    session, _ = await m1_services.chat_sessions.get_context(
-        "conv_precreated_empty",
-        user_id="local_user",
-    )
+
+        accepted = await isolated_service.handle_user_message(
+            ChatMessageRequest(
+                chat_session_id="conv_precreated_empty",
+                message="查看当前路径",
+                project_id="project_1",
+            ),
+            chat_sessions,
+        )
+        _ = [
+            envelope
+            async for envelope in isolated_service.stream_chat_session(
+                accepted.chat_session_id,
+                chat_sessions,
+            )
+        ]
+        session, _ = await chat_sessions.get_context(
+            "conv_precreated_empty",
+            user_id="local_user",
+        )
 
     assert session.title == "查看当前路径"
 
@@ -408,52 +408,53 @@ async def _run_agent_detail_refresh_assertions(monkeypatch: MonkeyPatch) -> None
         ]
 
     monkeypatch.setattr(
-        chat_service_module,
+        chat_service,
         "sdk_get_session_messages",
         fake_get_session_messages,
     )
 
-    m1_services = make_mock_m1_services()
-    await m1_services.chat_sessions.create_chat_session(
-        user_id="local_user",
-        project_id="project_1",
-        chat_session_id="conv_refresh_history",
-        title="刷新历史",
-    )
-    await m1_services.chat_sessions.update_chat_session(
-        "conv_refresh_history",
-        user_id="local_user",
-        sdk_session_id="sdk_refresh_1",
-    )
-    fresh_service = ChatApplicationService(
-        ClaudeAgentRuntime(
-            settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
-            sdk_query=fake_sdk_query,
+    async with get_session_factory()() as db:
+        chat_sessions = chat_session_service(db)
+        await chat_sessions.create_chat_session(
+            user_id="local_user",
+            project_id="project_1",
+            chat_session_id="conv_refresh_history",
+            title="刷新历史",
         )
-    )
+        await chat_sessions.update_chat_session(
+            "conv_refresh_history",
+            user_id="local_user",
+            sdk_session_id="sdk_refresh_1",
+        )
+        fresh_service = ChatApplicationService(
+            ClaudeAgentRuntime(
+                settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
+                sdk_query=fake_sdk_query,
+            )
+        )
 
-    detail = await fresh_service.get_session_detail(
-        "conv_refresh_history",
-        m1_services.chat_sessions,
-        user_id="local_user",
-    )
+        detail = await fresh_service.get_session_detail(
+            "conv_refresh_history",
+            chat_sessions,
+            user_id="local_user",
+        )
 
-    assert detail is not None
-    assert detail.sdk_session_id == "sdk_refresh_1"
-    assert [envelope.sdk_event["type"] for envelope in detail.sdk_messages] == [
-        "user_message",
-        "assistant_message",
-    ]
-    assert [envelope.turn_id for envelope in detail.sdk_messages] == [
-        "sdk_prompt_1",
-        "sdk_prompt_1",
-    ]
-    assert detail.sdk_messages[0].sdk_event["content"] == "刷新后也要看到我"
-    assert detail.sdk_messages[1].sdk_event["content"] == [
-        {"type": "text", "text": "这是 SDK session store 里的回复。"}
-    ]
-    assert detail.messages == []
-    assert detail.envelopes == []
+        assert detail is not None
+        assert detail.sdk_session_id == "sdk_refresh_1"
+        assert [envelope.sdk_event["type"] for envelope in detail.sdk_messages] == [
+            "user_message",
+            "assistant_message",
+        ]
+        assert [envelope.turn_id for envelope in detail.sdk_messages] == [
+            "sdk_prompt_1",
+            "sdk_prompt_1",
+        ]
+        assert detail.sdk_messages[0].sdk_event["content"] == "刷新后也要看到我"
+        assert detail.sdk_messages[1].sdk_event["content"] == [
+            {"type": "text", "text": "这是 SDK session store 里的回复。"}
+        ]
+        assert detail.messages == []
+        assert detail.envelopes == []
 
 
 async def _run_no_placeholder_resume_assertions() -> None:

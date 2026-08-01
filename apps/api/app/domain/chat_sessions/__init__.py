@@ -1,1 +1,0 @@
-"""Chat session domain package."""

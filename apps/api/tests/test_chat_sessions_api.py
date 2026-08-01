@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import pytest
-from app.api.dependencies import get_m1_services
-from app.domain.chat_sessions import services as chat_session_services
 from app.main import app
+from app.service.chat_session import service as chat_session_service
 from claude_agent_sdk.types import AssistantMessage, TextBlock, UserMessage
 from fastapi.testclient import TestClient
-from m1_mocks import make_mock_m1_services
 
 client = TestClient(app)
 
@@ -28,16 +26,15 @@ def reset_m1_state(monkeypatch):
     def fake_get_session_messages(
         session_id: str, directory: str | None = None, limit: int | None = None, offset: int = 0
     ) -> list[object]:
-        assert directory is None
+        assert directory is not None
+        assert directory.endswith("/workspace_a")
         assert offset == 0
         messages = transcripts.get(session_id, [])
         return messages[-limit:] if limit else messages
 
     monkeypatch.setattr(
-        chat_session_services, "sdk_get_session_messages", fake_get_session_messages
+        chat_session_service, "sdk_get_session_messages", fake_get_session_messages
     )
-    app.state.m1_services = make_mock_m1_services()
-    app.dependency_overrides[get_m1_services] = lambda: app.state.m1_services
 
 
 def test_create_session_with_initial_prompt_only_creates_chat_session():

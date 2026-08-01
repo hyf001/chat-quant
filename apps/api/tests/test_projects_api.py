@@ -1,6 +1,5 @@
 from app.main import app
 from fastapi.testclient import TestClient
-from m1_mocks import make_mock_m1_services
 
 client = TestClient(app)
 
@@ -56,8 +55,6 @@ def test_project_access_is_user_scoped() -> None:
 
 
 def test_chat_sessions_are_filtered_by_project_header() -> None:
-    app.state.m1_services = make_mock_m1_services()
-
     client.post(
         "/api/chat-sessions",
         headers={"X-User-Id": "project_filter_user", "X-Project-Id": "project_a"},

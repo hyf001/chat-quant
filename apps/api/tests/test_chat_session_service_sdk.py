@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from app.domain.chat_sessions.services import ChatSessionService
-from app.schemas.chat_sessions import sdk_messages_to_response
+from app.db.session import get_session_factory
+from app.schema.chat_session import sdk_messages_to_response
+from app.service.chat_session import ChatSessionService
 from claude_agent_sdk.types import AssistantMessage, TextBlock, UserMessage
-from m1_mocks import MockAssetLinkRepository, MockChatSessionRepository
 
 
 def test_chat_session_service_directly_calls_claude_sdk_get_session_messages(monkeypatch):
@@ -67,30 +67,29 @@ async def _run_direct_sdk_get_session_messages_test(monkeypatch):
             ),
         ]
 
-    from app.domain.chat_sessions import services as service_module
+    from app.service.chat_session import service as chat_session_sdk_service
 
-    monkeypatch.setattr(service_module, "sdk_get_session_messages", fake_get_session_messages)
+    monkeypatch.setattr(
+        chat_session_sdk_service, "sdk_get_session_messages", fake_get_session_messages
+    )
 
-    service = ChatSessionService(
-        MockChatSessionRepository(),
-        MockAssetLinkRepository(),
-        claude_agent_cwd="/tmp/chatq",
-    )
-    session = await service.create_chat_session(
-        user_id="user_a",
-        project_id="project_a",
-        title="SDK 直连",
-    )
-    updated_session = await service.update_chat_session(
-        session.id,
-        user_id="user_a",
-        sdk_session_id="sdk_real",
-    )
-    _, history_messages, _ = await service.get_chat_session_detail(
-        session.id,
-        user_id="user_a",
-        message_limit=10,
-    )
+    async with get_session_factory()() as db:
+        chat_session_service = ChatSessionService(db, claude_agent_cwd="/tmp/chatq")
+        session = await chat_session_service.create_chat_session(
+            user_id="user_a",
+            project_id="project_a",
+            title="SDK 直连",
+        )
+        updated_session = await chat_session_service.update_chat_session(
+            session.id,
+            user_id="user_a",
+            sdk_session_id="sdk_real",
+        )
+        _, history_messages, _ = await chat_session_service.get_chat_session_detail(
+            session.id,
+            user_id="user_a",
+            message_limit=10,
+        )
 
     assert calls == ["get_session_messages"]
     assert updated_session.sdk_session_id == "sdk_real"
@@ -108,26 +107,25 @@ async def _run_derived_sdk_directory_test(monkeypatch):
         assert session_id == "sdk_real"
         return []
 
-    from app.domain.chat_sessions import services as service_module
+    from app.service.chat_session import service as chat_session_sdk_service
 
-    monkeypatch.setattr(service_module, "sdk_get_session_messages", fake_get_session_messages)
+    monkeypatch.setattr(
+        chat_session_sdk_service, "sdk_get_session_messages", fake_get_session_messages
+    )
 
-    service = ChatSessionService(
-        MockChatSessionRepository(),
-        MockAssetLinkRepository(),
-        project_home="/tmp/chatq/projects",
-    )
-    session = await service.create_chat_session(
-        user_id="user_a",
-        project_id="project_a",
-        chat_session_id="conv_real",
-        title="SDK 目录",
-    )
-    await service.update_chat_session(
-        session.id,
-        user_id="user_a",
-        sdk_session_id="sdk_real",
-    )
-    await service.get_chat_session_detail(session.id, user_id="user_a")
+    async with get_session_factory()() as db:
+        chat_session_service = ChatSessionService(db, project_home="/tmp/chatq/projects")
+        session = await chat_session_service.create_chat_session(
+            user_id="user_a",
+            project_id="project_a",
+            chat_session_id="conv_real",
+            title="SDK 目录",
+        )
+        await chat_session_service.update_chat_session(
+            session.id,
+            user_id="user_a",
+            sdk_session_id="sdk_real",
+        )
+        await chat_session_service.get_chat_session_detail(session.id, user_id="user_a")
 
     assert calls == ["/tmp/chatq/projects/project_a"]

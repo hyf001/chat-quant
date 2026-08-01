@@ -1,16 +1,16 @@
 from pathlib import Path
 
 import pytest
-from app.application.artifact_service import CodeArtifactService
-from app.domain.artifacts.errors import (
+from app.service.artifact import CodeArtifactService
+from app.model.artifact_errors import (
     ArtifactChecksumMismatchError,
     ArtifactNotFoundError,
     ArtifactPathEscapeError,
 )
-from app.domain.artifacts.models import ArtifactFileRole, ArtifactType
-from app.domain.artifacts.repository import InMemoryArtifactRepository
-from app.infrastructure.storage import FilesystemArtifactStore
-from app.schemas.artifacts import (
+from app.model.artifacts import ArtifactFileRole, ArtifactType
+from app.model.artifact_repository import InMemoryArtifactRepository
+from app.model.storage import FilesystemArtifactStore
+from app.schema.artifacts import (
     CodeArtifactFileCreate,
     GeneratedFileCreate,
     SaveCodeArtifactRequest,

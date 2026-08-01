@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.schemas.contracts.agent_runtime import AgentScenario, ChatSessionContext
+from app.schema.agent_runtime import AgentScenario, ChatSessionContext
 
 BASE_PROMPT_VERSION = "base:v1"
 OUTPUT_PROMPT_VERSION = "output:v1"

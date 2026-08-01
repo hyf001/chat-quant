@@ -1,1 +1,0 @@
-"""Stable contract schemas package."""

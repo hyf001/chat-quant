@@ -4,24 +4,22 @@ from fastapi.testclient import TestClient
 def test_create_strategy_returns_draft_first_version(client: TestClient) -> None:
     response = client.post(
         "/api/strategies",
-        json={
-            "package": strategy_package(),
-        },
+        json=strategy_create_payload(),
     )
 
     assert response.status_code == 201
     data = response.json()
     assert data["strategy_id"].startswith("str_")
-    assert data["entrypoint"] == "strategy.py:GeneratedStrategy"
+    assert set(data) == {"strategy_id"}
 
 
-def test_create_strategy_rejects_default_param_outside_schema(client: TestClient) -> None:
-    package = strategy_package()
-    package["default_params"]["fast_period"] = 1
+def test_create_strategy_rejects_custom_param_default_type_mismatch(client: TestClient) -> None:
+    payload = strategy_create_payload()
+    payload["custom_params"][0]["default"] = "20"
 
     response = client.post(
         "/api/strategies",
-        json={"package": package},
+        json=payload,
     )
 
     assert response.status_code == 422
@@ -30,7 +28,7 @@ def test_create_strategy_rejects_default_param_outside_schema(client: TestClient
 def test_update_metadata_does_not_create_new_version(client: TestClient) -> None:
     created = client.post(
         "/api/strategies",
-        json={"package": strategy_package()},
+        json=strategy_create_payload(),
     ).json()
 
     response = client.patch(
@@ -50,10 +48,107 @@ def test_update_metadata_does_not_create_new_version(client: TestClient) -> None
     assert detail["strategy"]["name"] == "稳健均线策略"
 
 
+def test_create_strategy_version_switches_current_version(client: TestClient) -> None:
+    created = client.post(
+        "/api/strategies",
+        json=strategy_create_payload(),
+    ).json()
+
+    response = client.post(
+        f"/api/strategies/{created['strategy_id']}/versions",
+        json=strategy_version_payload(fast_period=30, slow_period=90, strategy_mode="multi_symbol"),
+    )
+
+    assert response.status_code == 201
+    version = response.json()
+    assert version["strategy_id"] == created["strategy_id"]
+    assert version["version"] == 2
+    assert version["strategy_mode"] == "multi_symbol"
+    assert version["custom_params"][0]["default"] == 30
+    assert version["custom_params"][1]["default"] == 90
+
+    detail = client.get(f"/api/strategies/{created['strategy_id']}").json()
+    assert detail["strategy"]["current_version_id"] == version["id"]
+
+    strategies = client.get("/api/strategies").json()
+    assert strategies[0]["strategy_version_id"] == version["id"]
+    assert strategies[0]["version"] == 2
+    assert strategies[0]["strategy_mode"] == "multi_symbol"
+    assert "strategy_config" not in strategies[0]
+    assert strategies[0]["custom_params"][0]["default"] == 30
+
+
+def test_switch_current_version_can_select_existing_version(client: TestClient) -> None:
+    created = client.post(
+        "/api/strategies",
+        json=strategy_create_payload(),
+    ).json()
+    first_version = client.get(f"/api/strategies/{created['strategy_id']}/versions").json()[0]
+    second_version = client.post(
+        f"/api/strategies/{created['strategy_id']}/versions",
+        json=strategy_version_payload(fast_period=30, slow_period=90, strategy_mode="multi_symbol"),
+    ).json()
+
+    response = client.patch(
+        f"/api/strategies/{created['strategy_id']}/current-version",
+        json={"strategy_version_id": first_version["id"]},
+    )
+
+    assert response.status_code == 200
+    summary = response.json()
+    assert summary["strategy_version_id"] == first_version["id"]
+    assert summary["version"] == 1
+    assert summary["strategy_mode"] == "single_symbol"
+
+    detail = client.get(f"/api/strategies/{created['strategy_id']}").json()
+    assert detail["strategy"]["current_version_id"] == first_version["id"]
+
+    strategies = client.get("/api/strategies").json()
+    assert strategies[0]["strategy_version_id"] == first_version["id"]
+    assert strategies[0]["version"] == 1
+    assert strategies[0]["strategy_version_id"] != second_version["id"]
+
+
+def test_list_strategy_versions_returns_all_versions(client: TestClient) -> None:
+    created = client.post(
+        "/api/strategies",
+        json=strategy_create_payload(),
+    ).json()
+    client.post(
+        f"/api/strategies/{created['strategy_id']}/versions",
+        json=strategy_version_payload(fast_period=30, slow_period=90),
+    )
+
+    response = client.get(f"/api/strategies/{created['strategy_id']}/versions")
+
+    assert response.status_code == 200
+    versions = response.json()
+    assert [version["version"] for version in versions] == [1, 2]
+    assert [version["strategy_mode"] for version in versions] == ["single_symbol", "single_symbol"]
+    assert versions[0]["source_code"]
+    assert "strategy_config" not in versions[0]
+
+
+def test_create_strategy_version_rejects_deleted_strategy(client: TestClient) -> None:
+    created = client.post(
+        "/api/strategies",
+        json=strategy_create_payload(),
+    ).json()
+    client.delete(f"/api/strategies/{created['strategy_id']}")
+
+    response = client.post(
+        f"/api/strategies/{created['strategy_id']}/versions",
+        json=strategy_version_payload(fast_period=30, slow_period=90),
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["error_code"] == "STRATEGY_DELETED"
+
+
 def test_deleted_strategy_is_hidden_from_list(client: TestClient) -> None:
     created = client.post(
         "/api/strategies",
-        json={"package": strategy_package()},
+        json=strategy_create_payload(),
     ).json()
 
     response = client.delete(f"/api/strategies/{created['strategy_id']}")
@@ -62,71 +157,80 @@ def test_deleted_strategy_is_hidden_from_list(client: TestClient) -> None:
     assert client.get("/api/strategies").json() == []
 
 
-def strategy_package(
+def strategy_create_payload(
     *,
     fast_period: int = 20,
     slow_period: int = 60,
     volatility_filter: str = "medium",
+    strategy_mode: str = "single_symbol",
 ) -> dict[str, object]:
     return {
         "name": "均线突破策略",
         "description": "短期均线上穿长期均线买入，下穿卖出",
-        "entrypoint": "strategy.py:GeneratedStrategy",
-        "python_file": {
-            "path": "strategy.py",
-            "content": "\n".join(
-                [
-                    "import backtrader as bt",
-                    "",
-                    "class GeneratedStrategy(bt.Strategy):",
-                    "    params = (",
-                    "        ('fast_period', 20),",
-                    "        ('slow_period', 60),",
-                    "        ('volatility_filter', 'medium'),",
-                    "    )",
-                    "",
-                    "    def __init__(self):",
-                    "        close = self.datas[0].close",
-                    "        self.fast_ma = bt.ind.SMA(close, period=self.p.fast_period)",
-                    "        self.slow_ma = bt.ind.SMA(close, period=self.p.slow_period)",
-                    "",
-                    "    def next(self):",
-                    "        if not self.position and self.fast_ma[0] > self.slow_ma[0]:",
-                    "            self.order_target_percent(target=0.95)",
-                    "        elif self.position and self.fast_ma[0] < self.slow_ma[0]:",
-                    "            self.order_target_percent(target=0)",
-                ]
-            ),
-        },
-        "params_schema": {
-            "fast_period": {
+        "source_code": "\n".join(
+            [
+                "import backtrader as bt",
+                "",
+                "class GeneratedStrategy(bt.Strategy):",
+                "    params = (",
+                "        ('fast_period', 20),",
+                "        ('slow_period', 60),",
+                "        ('volatility_filter', 'medium'),",
+                "    )",
+                "",
+                "    def __init__(self):",
+                "        close = self.datas[0].close",
+                "        self.fast_ma = bt.ind.SMA(close, period=self.p.fast_period)",
+                "        self.slow_ma = bt.ind.SMA(close, period=self.p.slow_period)",
+                "",
+                "    def next(self):",
+                "        if not self.position and self.fast_ma[0] > self.slow_ma[0]:",
+                "            self.order_target_percent(target=0.95)",
+                "        elif self.position and self.fast_ma[0] < self.slow_ma[0]:",
+                "            self.order_target_percent(target=0)",
+            ]
+        ),
+        "strategy_mode": strategy_mode,
+        "custom_params": [
+            {
+                "name_cn": "短期均线周期",
+                "name_en": "fast_period",
                 "type": "integer",
-                "title": "短期均线周期",
                 "default": fast_period,
-                "minimum": 2,
-                "maximum": 250,
-                "ui": {"control": "number", "unit": "日"},
+                "required": True,
             },
-            "slow_period": {
+            {
+                "name_cn": "长期均线周期",
+                "name_en": "slow_period",
                 "type": "integer",
-                "title": "长期均线周期",
                 "default": slow_period,
-                "minimum": 5,
-                "maximum": 500,
-                "ui": {"control": "number", "unit": "日"},
+                "required": True,
             },
-            "volatility_filter": {
+            {
+                "name_cn": "波动过滤",
+                "name_en": "volatility_filter",
                 "type": "string",
-                "title": "波动过滤",
-                "enum": ["off", "medium", "strong"],
                 "default": volatility_filter,
-                "ui": {"control": "select"},
+                "required": True,
             },
-        },
-        "default_params": {
-            "fast_period": fast_period,
-            "slow_period": slow_period,
-            "volatility_filter": volatility_filter,
-        },
+        ],
         "risk_notes": ["历史回测不代表未来收益，不构成投资建议"],
     }
+
+
+def strategy_version_payload(
+    *,
+    fast_period: int = 20,
+    slow_period: int = 60,
+    volatility_filter: str = "medium",
+    strategy_mode: str = "single_symbol",
+) -> dict[str, object]:
+    payload = strategy_create_payload(
+        fast_period=fast_period,
+        slow_period=slow_period,
+        volatility_filter=volatility_filter,
+        strategy_mode=strategy_mode,
+    )
+    payload.pop("name")
+    payload.pop("description")
+    return payload

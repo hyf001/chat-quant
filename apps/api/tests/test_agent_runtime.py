@@ -5,7 +5,7 @@ from pathlib import Path
 
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime, serialize_sdk_message
 from app.core.config import Settings
-from app.schemas.contracts.agent_runtime import (
+from app.schema.agent_runtime import (
     AgentExecutionCommand,
     AgentScenario,
     RuntimeErrorCode,

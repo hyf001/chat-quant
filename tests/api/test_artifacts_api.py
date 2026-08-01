@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from app.application.artifact_service import CodeArtifactService
-from app.application.dependencies import get_artifact_service
-from app.domain.artifacts.repository import InMemoryArtifactRepository
-from app.infrastructure.storage import FilesystemArtifactStore
+from app.service.artifact import CodeArtifactService
+from app.service.dependencies import get_artifact_service
+from app.model.artifact_repository import InMemoryArtifactRepository
+from app.model.storage import FilesystemArtifactStore
 from app.main import create_app
 from fastapi.testclient import TestClient
 

@@ -126,7 +126,7 @@ from app.agent_runtime.sdk_message_parser import (
 from app.agent_runtime.sdk_skill_plugin import SDKSkillPlugin
 from app.core.config import Settings
 from app.core.logging import get_logger
-from app.schemas.contracts.agent_runtime import (
+from app.schema.agent_runtime import (
     AgentExecutionCommand,
     RuntimeErrorCode,
     SDKStreamEnvelope,
