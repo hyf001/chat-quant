@@ -5,7 +5,6 @@ import sys
 from collections.abc import Callable
 from datetime import date, datetime, time
 from decimal import ROUND_HALF_UP, Decimal
-from types import ModuleType
 from uuid import uuid4
 
 import backtrader as bt
@@ -30,11 +29,16 @@ from app.schema.backtest import (
 )
 from app.schema.strategy import StrategyVersionRecord
 from app.service.backtest.execution import StrategyBacktestError
+from app.service.strategy.protocol import (
+    StrategyProtocolError,
+    load_strategy_class,
+    with_backtrader_params,
+)
 
 
 class BacktraderStrategyBacktestEngine:
     name = "backtrader"
-    protocol_name = "chatq_backtrader_strategy_v1"
+    protocol_name = "chatq_backtrader_strategy_v2"
 
     def execute(
         self,
@@ -45,6 +49,7 @@ class BacktraderStrategyBacktestEngine:
         module_name = f"chatq_strategy_{uuid4().hex}"
         try:
             strategy_cls = self._load_strategy_class(version, module_name)
+            strategy_cls = with_backtrader_params(strategy_cls, version.custom_params)
             cerebro = bt.Cerebro(stdstats=False)
             cerebro.broker.setcash(float(backtest.config.initial_cash))
             cerebro.broker.setcommission(commission=float(backtest.config.commission))
@@ -159,41 +164,10 @@ class BacktraderStrategyBacktestEngine:
         version: StrategyVersionRecord,
         module_name: str,
     ) -> type[bt.Strategy]:
-        module = ModuleType(module_name)
-        module.__file__ = f"<{module_name}>"
-        sys.modules[module_name] = module
         try:
-            compiled = compile(version.source_code, module.__file__, "exec")
-            exec(compiled, module.__dict__)
-        except StrategyBacktestError:
-            raise
-        except Exception as exc:
-            raise StrategyBacktestError(
-                "STRATEGY_IMPORT_FAILED",
-                str(exc),
-                detail={"exception_type": type(exc).__name__},
-            ) from exc
-
-        strategy_classes = [
-            value
-            for value in module.__dict__.values()
-            if (
-                isinstance(value, type)
-                and issubclass(value, bt.Strategy)
-                and value is not bt.Strategy
-            )
-        ]
-        if not strategy_classes:
-            raise StrategyBacktestError(
-                "STRATEGY_PROTOCOL_INVALID",
-                "Source code must define a backtrader.Strategy subclass",
-            )
-        if len(strategy_classes) > 1:
-            raise StrategyBacktestError(
-                "STRATEGY_PROTOCOL_INVALID",
-                "Source code must define exactly one backtrader.Strategy subclass",
-            )
-        return strategy_classes[0]
+            return load_strategy_class(version.source_code, module_name=module_name)
+        except StrategyProtocolError as exc:
+            raise StrategyBacktestError(exc.error_code, exc.message) from exc
 
 
 class _EquityCurveAnalyzer(bt.Analyzer):

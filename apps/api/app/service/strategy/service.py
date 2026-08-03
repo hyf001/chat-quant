@@ -19,6 +19,7 @@ from app.schema.strategy import (
     StrategyVersionRecord,
     utc_now,
 )
+from app.service.strategy.protocol import StrategyProtocolError, parse_strategy_source
 
 
 class StrategyError(Exception):
@@ -160,13 +161,14 @@ class StrategyService:
         version_number: int,
         version_input: StrategyVersionCreate,
     ) -> StrategyVersionRecord:
+        custom_params = _extract_version_custom_params(version_input)
         return StrategyVersionRecord(
             id=_new_id("stv"),
             strategy_id=strategy_id,
             version=version_number,
             source_code=version_input.source_code,
             strategy_mode=version_input.strategy_mode,
-            custom_params=version_input.custom_params,
+            custom_params=custom_params,
         )
 
     async def _to_summary(self, strategy: StrategyRecord) -> StrategySummary:
@@ -253,6 +255,18 @@ class StrategyService:
 
 def _new_id(prefix: str) -> str:
     return f"{prefix}_{uuid4().hex[:12]}"
+
+
+def _extract_version_custom_params(
+    version_input: StrategyVersionCreate,
+) -> list[StrategyCustomParameter]:
+    try:
+        spec = parse_strategy_source(version_input.source_code)
+    except StrategyProtocolError as exc:
+        raise StrategyError(exc.error_code, exc.message, 422) from exc
+    if spec.param_source != "none":
+        return spec.custom_params
+    return version_input.custom_params
 
 
 def _default_tags(strategy: StrategyCreate) -> list[str]:

@@ -59,7 +59,6 @@ type StrategyForm = {
   description: string;
   tags: string;
   strategyMode: StrategyMode;
-  customParams: StrategyCustomParamForm[];
   code: string;
   riskNote: string;
 };
@@ -93,14 +92,6 @@ type BacktestForm = {
 };
 
 type SelectOption = string | { value: string; label: string };
-
-type StrategyCustomParamForm = {
-  nameCn: string;
-  nameEn: string;
-  type: StrategyCustomParameter["type"];
-  defaultValue: string;
-  required: boolean;
-};
 
 type DialogState =
   | { kind: "create" }
@@ -239,10 +230,12 @@ const defaultCode = [
   "import backtrader as bt",
   "",
   "class GeneratedStrategy(bt.Strategy):",
-  "    params = (",
-  "        ('fast_period', 20),",
-  "        ('slow_period', 60),",
-  "    )",
+  "    @classmethod",
+  "    def chatq_params(cls):",
+  "        return [",
+  '            {"name": "fast_period", "type": "integer", "default": 20, "label": "短期均线周期"},',
+  '            {"name": "slow_period", "type": "integer", "default": 60, "label": "长期均线周期"},',
+  "        ]",
   "",
   "    def __init__(self):",
   "        close = self.datas[0].close",
@@ -347,7 +340,6 @@ export function StrategyList({ project }: StrategyListProps) {
     setForm({
       ...newStrategyForm(strategy.name),
       strategyMode: strategy.strategy_mode,
-      customParams: strategy.custom_params.map(customParamToForm),
     });
     setDialog({ kind: "version", strategy });
     setError(null);
@@ -2145,14 +2137,6 @@ function StrategyFormFields({
   const setField = <Key extends keyof StrategyForm>(field: Key, value: StrategyForm[Key]) => {
     onChange({ ...form, [field]: value });
   };
-  const setCustomParam = (index: number, update: Partial<StrategyCustomParamForm>) => {
-    onChange({
-      ...form,
-      customParams: form.customParams.map((param, currentIndex) =>
-        currentIndex === index ? { ...param, ...update } : param,
-      ),
-    });
-  };
 
   return (
     <div className="grid gap-4">
@@ -2174,49 +2158,6 @@ function StrategyFormFields({
           options={strategyModeOptions}
           onChange={(value) => setField("strategyMode", value as StrategyMode)}
         />
-      </section>
-
-      <section className="grid gap-3 rounded-md border border-zinc-200 p-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-xs font-semibold text-zinc-700">自定义参数</div>
-          <SmallButton
-            icon={<Plus className="h-3.5 w-3.5" />}
-            label="参数"
-            disabled={disabled}
-            onClick={() =>
-              onChange({
-                ...form,
-                customParams: [
-                  ...form.customParams,
-                  { nameCn: "新参数", nameEn: `param_${form.customParams.length + 1}`, type: "number", defaultValue: "0", required: true },
-                ],
-              })
-            }
-          />
-        </div>
-        <div className="grid gap-3">
-          {form.customParams.map((param, index) => (
-            <div className="grid grid-cols-[1fr_1fr_120px_1fr_auto_auto] gap-2 max-lg:grid-cols-2" key={`${param.nameEn}-${index}`}>
-              <Input label="中文名" value={param.nameCn} disabled={disabled} onChange={(value) => setCustomParam(index, { nameCn: value })} />
-              <Input label="英文名" value={param.nameEn} disabled={disabled} onChange={(value) => setCustomParam(index, { nameEn: value })} />
-              <Select label="类型" value={param.type} disabled={disabled} options={["integer", "number", "string", "boolean"]} onChange={(value) => setCustomParam(index, { type: value as StrategyCustomParameter["type"] })} />
-              <Input label="默认值" value={param.defaultValue} disabled={disabled} onChange={(value) => setCustomParam(index, { defaultValue: value })} />
-              <Checkbox label="必填" checked={param.required} disabled={disabled} onChange={(checked) => setCustomParam(index, { required: checked })} />
-              <IconButton
-                icon={<Trash2 className="h-3.5 w-3.5" />}
-                label="删除参数"
-                danger
-                disabled={disabled}
-                onClick={() =>
-                  onChange({
-                    ...form,
-                    customParams: form.customParams.filter((_, currentIndex) => currentIndex !== index),
-                  })
-                }
-              />
-            </div>
-          ))}
-        </div>
       </section>
 
       <>
@@ -2550,10 +2491,6 @@ function newStrategyForm(name = "均线突破策略"): StrategyForm {
     description: "短期均线上穿长期均线买入，下穿卖出",
     tags: "",
     strategyMode: "single_symbol",
-    customParams: [
-      { nameCn: "短期均线周期", nameEn: "fast_period", type: "integer", defaultValue: "20", required: true },
-      { nameCn: "长期均线周期", nameEn: "slow_period", type: "integer", defaultValue: "60", required: true },
-    ],
     code: defaultCode,
     riskNote: "历史回测不代表未来收益，不构成投资建议",
   };
@@ -2739,76 +2676,7 @@ function versionToForm(version: StrategyVersion | null, name = "均线突破策�
     ...newStrategyForm(name),
     code: version?.source_code ?? defaultCode,
     strategyMode: version?.strategy_mode ?? "single_symbol",
-    customParams: version?.custom_params.map(customParamToForm) ?? newStrategyForm(name).customParams,
   };
-}
-
-function customParamToForm(param: StrategyCustomParameter): StrategyCustomParamForm {
-  return {
-    nameCn: param.name_cn,
-    nameEn: param.name_en,
-    type: param.type,
-    defaultValue: String(param.default),
-    required: param.required,
-  };
-}
-
-function buildCustomParams(
-  params: StrategyCustomParamForm[],
-): { ok: true; value: StrategyCustomParameter[] } | { ok: false; message: string } {
-  const names = new Set<string>();
-  const built: StrategyCustomParameter[] = [];
-  for (const param of params) {
-    const nameCn = param.nameCn.trim();
-    const nameEn = param.nameEn.trim();
-    if (!nameCn || !nameEn) {
-      return { ok: false, message: "自定义参数的中文名和英文名不能为空" };
-    }
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(nameEn)) {
-      return { ok: false, message: `英文名必须是 Python 标识符：${nameEn}` };
-    }
-    if (names.has(nameEn)) {
-      return { ok: false, message: `自定义参数英文名重复：${nameEn}` };
-    }
-    names.add(nameEn);
-    const defaultValue = parseCustomParamDefault(param);
-    if (!defaultValue.ok) {
-      return defaultValue;
-    }
-    built.push({
-      name_cn: nameCn,
-      name_en: nameEn,
-      type: param.type,
-      default: defaultValue.value,
-      required: param.required,
-    });
-  }
-  return { ok: true, value: built };
-}
-
-function parseCustomParamDefault(
-  param: StrategyCustomParamForm,
-): { ok: true; value: string | number | boolean } | { ok: false; message: string } {
-  const value = param.defaultValue.trim();
-  if (param.type === "integer") {
-    const parsed = Number(value);
-    return Number.isInteger(parsed)
-      ? { ok: true, value: parsed }
-      : { ok: false, message: `${param.nameEn} 默认值必须是整数` };
-  }
-  if (param.type === "number") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed)
-      ? { ok: true, value: parsed }
-      : { ok: false, message: `${param.nameEn} 默认值必须是数字` };
-  }
-  if (param.type === "boolean") {
-    if (value === "true" || value === "false") {
-      return { ok: true, value: value === "true" };
-    }
-    return { ok: false, message: `${param.nameEn} 默认值必须是 true 或 false` };
-  }
-  return { ok: true, value };
 }
 
 function parseCustomParamValue(
@@ -2906,16 +2774,11 @@ function buildVersionPayload(form: StrategyForm): { ok: true; value: StrategyVer
   if (!code) {
     return { ok: false, message: "策略代码不能为空" };
   }
-  const customParams = buildCustomParams(form.customParams);
-  if (!customParams.ok) {
-    return customParams;
-  }
   return {
     ok: true,
     value: {
       source_code: code,
       strategy_mode: form.strategyMode,
-      custom_params: customParams.value,
       risk_notes: form.riskNote.split("\n").map((note) => note.trim()).filter(Boolean),
     },
   };
@@ -2930,8 +2793,7 @@ function hasVersionChanges(
   }
   return (
     normalizeCode(currentVersion.source_code) !== normalizeCode(nextPayload.source_code) ||
-    currentVersion.strategy_mode !== nextPayload.strategy_mode ||
-    stableJson(currentVersion.custom_params) !== stableJson(nextPayload.custom_params)
+    currentVersion.strategy_mode !== nextPayload.strategy_mode
   );
 }
 

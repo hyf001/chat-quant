@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from app.schema.agent_runtime import AgentScenario, ChatSessionContext
 
-BASE_PROMPT_VERSION = "base:v1"
+BASE_PROMPT_VERSION = "base:v2"
 OUTPUT_PROMPT_VERSION = "output:v1"
 
 SCENARIO_GUIDANCE: dict[AgentScenario, str] = {
     AgentScenario.CHAT_ANALYSIS: "聚焦股票查询、行情解释、指标口径和可复现分析代码。",
     AgentScenario.SCREENING: "聚焦选股条件拆解、候选列表生成和筛选依据说明。",
     AgentScenario.STRATEGY_BUILD: (
-        "聚焦策略逻辑、参数 schema、可验证 Python/backtrader 入口和版本化保存。"
+        "聚焦策略逻辑、chatq_params 参数协议、可验证 Python/backtrader 入口和版本化保存。"
     ),
     AgentScenario.BACKTEST: "聚焦回测配置、风险指标、收益/回撤曲线和历史局限说明。",
     AgentScenario.FOLLOW_UP: "基于已有上下文和资产引用回答追问，必要时复用策略或回测记录。",
@@ -35,6 +35,9 @@ def build_system_prompt(
 4. 平台能力通过 Claude Agent SDK 的工具、Skill 和插件提供；遵守 SDK 权限配置。
 5. 不要尝试真实交易、下单、读取系统敏感文件或绕过平台授权边界。
 6. 生成会影响结果的代码或资产时，优先使用平台已提供的 Skill、插件或 SDK 工具完成。
+7. 生成 Backtrader 策略时，只提交完整策略代码；如需参数，在唯一的
+   backtrader.Strategy 子类上定义 class-level chatq_params()，返回 name/type/default/label。
+   策略内部通过 self.p.xxx 使用参数，不要再让用户额外维护 custom_params。
 
 场景指导：
 {SCENARIO_GUIDANCE[scenario]}

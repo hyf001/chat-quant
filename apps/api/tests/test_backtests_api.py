@@ -69,7 +69,7 @@ def test_strategy_backtest_protocol_is_documented(client: TestClient) -> None:
 
     assert response.status_code == 200
     data = response.json()
-    assert data["name"] == "chatq_backtrader_strategy_v1"
+    assert data["name"] == "chatq_backtrader_strategy_v2"
     assert data["base_class"] == "backtrader.Strategy"
     assert data["source_format"] == (
         "A single Python source string defining one backtrader.Strategy subclass"
@@ -91,7 +91,7 @@ def test_backtest_strategy_returns_backtest_result(client: TestClient) -> None:
     assert data["backtest"]["execution_engine"] == "backtrader"
     assert data["backtest"]["config"]["strategy_mode"] == "single_symbol"
     assert data["backtest"]["config"]["symbols"] == ["600519.SH"]
-    assert data["result"]["protocol"] == "chatq_backtrader_strategy_v1"
+    assert data["result"]["protocol"] == "chatq_backtrader_strategy_v2"
     assert data["result"]["engine"] == "backtrader"
     assert data["result"]["data_source"]["mode"] == "akshare_ohlcv"
     assert data["result"]["market_data"][0]["symbol"] == "600519.SH"
@@ -113,22 +113,17 @@ def test_backtest_strategy_returns_backtest_result(client: TestClient) -> None:
     assert detail["result"]["id"] == data["result"]["id"]
 
 
-def test_execute_rejects_non_backtrader_strategy(client: TestClient) -> None:
+def test_create_rejects_non_backtrader_strategy(client: TestClient) -> None:
     payload = strategy_create_payload()
     payload["source_code"] = "class GeneratedStrategy:\n    pass\n"
-    created = client.post(
+
+    response = client.post(
         "/api/strategies",
         json=payload,
-    ).json()
-    response = client.post(
-        f"/api/strategies/{created['strategy_id']}/backtest",
-        json=create_backtest_payload(),
     )
 
-    assert response.status_code == 200
-    data = response.json()
-    assert data["backtest"]["status"] == "failed"
-    assert data["backtest"]["failure_code"] == "STRATEGY_PROTOCOL_INVALID"
+    assert response.status_code == 422
+    assert response.json()["detail"]["error_code"] == "STRATEGY_PROTOCOL_INVALID"
 
 
 def test_backtest_can_target_specific_strategy_version(client: TestClient) -> None:

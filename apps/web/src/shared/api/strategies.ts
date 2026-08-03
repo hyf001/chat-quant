@@ -58,7 +58,7 @@ export type StrategyCreatePayload = {
   description: string;
   source_code: string;
   strategy_mode: StrategyMode;
-  custom_params: StrategyCustomParameter[];
+  custom_params?: StrategyCustomParameter[];
   risk_notes: string[];
 };
 

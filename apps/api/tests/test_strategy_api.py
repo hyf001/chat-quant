@@ -13,9 +13,13 @@ def test_create_strategy_returns_draft_first_version(client: TestClient) -> None
     assert set(data) == {"strategy_id"}
 
 
-def test_create_strategy_rejects_custom_param_default_type_mismatch(client: TestClient) -> None:
+def test_create_strategy_rejects_chatq_param_default_type_mismatch(client: TestClient) -> None:
     payload = strategy_create_payload()
-    payload["custom_params"][0]["default"] = "20"
+    payload["source_code"] = payload["source_code"].replace(
+        '"default": 20',
+        '"default": "20"',
+        1,
+    )
 
     response = client.post(
         "/api/strategies",
@@ -172,11 +176,18 @@ def strategy_create_payload(
                 "import backtrader as bt",
                 "",
                 "class GeneratedStrategy(bt.Strategy):",
-                "    params = (",
-                "        ('fast_period', 20),",
-                "        ('slow_period', 60),",
-                "        ('volatility_filter', 'medium'),",
-                "    )",
+                "    @classmethod",
+                "    def chatq_params(cls):",
+                "        return [",
+                chatq_param_source("fast_period", "integer", fast_period, "短期均线周期"),
+                chatq_param_source("slow_period", "integer", slow_period, "长期均线周期"),
+                chatq_param_source(
+                    "volatility_filter",
+                    "string",
+                    volatility_filter,
+                    "波动过滤",
+                ),
+                "        ]",
                 "",
                 "    def __init__(self):",
                 "        close = self.datas[0].close",
@@ -191,29 +202,6 @@ def strategy_create_payload(
             ]
         ),
         "strategy_mode": strategy_mode,
-        "custom_params": [
-            {
-                "name_cn": "短期均线周期",
-                "name_en": "fast_period",
-                "type": "integer",
-                "default": fast_period,
-                "required": True,
-            },
-            {
-                "name_cn": "长期均线周期",
-                "name_en": "slow_period",
-                "type": "integer",
-                "default": slow_period,
-                "required": True,
-            },
-            {
-                "name_cn": "波动过滤",
-                "name_en": "volatility_filter",
-                "type": "string",
-                "default": volatility_filter,
-                "required": True,
-            },
-        ],
         "risk_notes": ["历史回测不代表未来收益，不构成投资建议"],
     }
 
@@ -234,3 +222,16 @@ def strategy_version_payload(
     payload.pop("name")
     payload.pop("description")
     return payload
+
+
+def chatq_param_source(
+    name: str,
+    param_type: str,
+    default: object,
+    label: str,
+) -> str:
+    return (
+        "            "
+        f'{{"name": {name!r}, "type": {param_type!r}, '
+        f'"default": {default!r}, "label": {label!r}}},'
+    )

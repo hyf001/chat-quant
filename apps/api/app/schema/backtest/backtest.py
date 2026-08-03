@@ -230,15 +230,20 @@ class StrategyBacktestDetail(BaseModel):
 
 
 class StrategyBacktestProtocol(BaseModel):
-    name: str = "chatq_backtrader_strategy_v1"
+    name: str = "chatq_backtrader_strategy_v2"
     source_format: str = "A single Python source string defining one backtrader.Strategy subclass"
     base_class: str = "backtrader.Strategy"
     required_contract: list[str] = Field(
         default_factory=lambda: [
             "The source code must define exactly one backtrader.Strategy subclass.",
             (
-                "Strategy parameters must be declared through params and are injected "
-                "from StrategyBacktestConfig.params."
+                "Strategy parameters should be declared through a class-level chatq_params() "
+                "method; Chat-Quant stores the returned schema as the strategy version "
+                "custom_params snapshot."
+            ),
+            (
+                "Chat-Quant injects custom_params into Backtrader params before execution, "
+                "then passes StrategyBacktestConfig.params as runtime overrides."
             ),
             (
                 "Trading logic should use Backtrader lifecycle methods such as __init__, "
