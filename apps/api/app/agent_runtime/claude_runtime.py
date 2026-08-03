@@ -320,6 +320,8 @@ class ClaudeAgentRuntime:
         system_prompt = build_system_prompt(
             command.scenario,
             command.context,
+            user_id=command.user_id,
+            project_id=command.project_id,
         )
         tools = _sdk_tools(
             tuple(command.allowed_tools or self.settings.agent_allowed_tools_default),

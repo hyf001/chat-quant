@@ -48,19 +48,9 @@ class StrategyCustomParameter(BaseModel):
 class StrategyVersionCreate(BaseModel):
     source_code: str = Field(min_length=1)
     strategy_mode: StrategyMode = StrategyMode.SINGLE_SYMBOL
-    custom_params: list[StrategyCustomParameter] = Field(default_factory=list)
     risk_notes: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(extra="forbid")
-
-    @model_validator(mode="after")
-    def validate_params_contract(self) -> StrategyVersionCreate:
-        names: set[str] = set()
-        for param in self.custom_params:
-            if param.name_en in names:
-                raise ValueError(f"duplicate custom parameter name_en: {param.name_en}")
-            names.add(param.name_en)
-        return self
 
 
 class StrategyCreate(StrategyVersionCreate):
@@ -109,6 +99,13 @@ class StrategyDetail(BaseModel):
 
 class StrategyCreateResult(BaseModel):
     strategy_id: str
+
+
+class StrategyValidationIssue(BaseModel):
+    code: str
+    message: str
+    severity: Literal["error", "warning"] = "error"
+    detail: dict[str, JsonValue] = Field(default_factory=dict)
 
 
 def validate_param_value(

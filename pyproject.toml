@@ -15,6 +15,6 @@ target-version = "py312"
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
-pythonpath = ["apps/api"]
+pythonpath = [".", "apps/api"]
 testpaths = ["tests"]
 asyncio_mode = "auto"

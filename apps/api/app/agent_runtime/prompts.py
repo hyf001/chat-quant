@@ -19,6 +19,9 @@ SCENARIO_GUIDANCE: dict[AgentScenario, str] = {
 def build_system_prompt(
     scenario: AgentScenario,
     context: ChatSessionContext,
+    *,
+    user_id: str,
+    project_id: str,
 ) -> str:
     summary = context.summary or "暂无会话摘要。"
     assets = "\n".join(
@@ -41,6 +44,10 @@ def build_system_prompt(
 
 场景指导：
 {SCENARIO_GUIDANCE[scenario]}
+
+当前身份上下文：
+- user_id: {user_id}
+- project_id: {project_id}
 
 当前会话摘要：
 {summary}

@@ -17,6 +17,18 @@ def utc_now() -> datetime:
     return datetime.now(UTC)
 
 
+def default_backtest_end_date() -> date:
+    return date.today()
+
+
+def default_backtest_start_date() -> date:
+    end_date = default_backtest_end_date()
+    try:
+        return end_date.replace(year=end_date.year - 1)
+    except ValueError:
+        return end_date.replace(year=end_date.year - 1, day=28)
+
+
 class StrategyBacktestStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
@@ -50,9 +62,9 @@ class StrategyBacktestConfig(BaseModel):
     symbols: list[str] = Field(default_factory=lambda: ["600519.SH"])
     symbol_source: Literal["manual", "strategy_fixed", "universe"] = "manual"
     universe: str | None = None
-    benchmark_symbol: str | None = "000300.SH"
-    start_date: date = date(2024, 1, 1)
-    end_date: date = date(2024, 4, 30)
+    benchmark_symbol: str | None = "000016.SH"
+    start_date: date = Field(default_factory=default_backtest_start_date)
+    end_date: date = Field(default_factory=default_backtest_end_date)
     timeframe: Literal["1d"] = "1d"
     initial_cash: Decimal = Field(default=Decimal("100000"), gt=0)
     commission: Decimal = Field(default=Decimal("0.001"), ge=0)

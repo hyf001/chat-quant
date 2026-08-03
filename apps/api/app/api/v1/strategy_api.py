@@ -216,7 +216,10 @@ async def backtest_strategy(
 
 
 def _http_error(error: StrategyError) -> HTTPException:
+    detail = {"error_code": error.error_code, "message": error.message}
+    if getattr(error, "detail", None):
+        detail.update(error.detail)
     return HTTPException(
         status_code=error.status_code,
-        detail={"error_code": error.error_code, "message": error.message},
+        detail=detail,
     )

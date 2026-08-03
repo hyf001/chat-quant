@@ -65,6 +65,32 @@ def test_sdk_options_omit_thinking_by_default_for_compatible_agent_api() -> None
     ]
 
 
+def test_runtime_injects_user_and_project_id_into_system_prompt() -> None:
+    runtime = ClaudeAgentRuntime(
+        settings=Settings(),
+        sdk_query=fake_sdk_query,
+    )
+    command = AgentExecutionCommand(
+        user_id="user_prompt_1",
+        project_id="project_prompt_1",
+        chat_session_id="chat_1",
+        user_message_id="msg_1",
+        scenario=AgentScenario.CHAT_ANALYSIS,
+        project_dir="/tmp/chatq/projects/chat_1",
+        sdk_session_id=None,
+        request_id="req_1",
+        user_prompt="你好",
+    )
+
+    options = runtime.build_agent_options(command, ())
+
+    assert isinstance(options.system_prompt, dict)
+    system_prompt = options.system_prompt["append"]
+    assert "当前身份上下文：" in system_prompt
+    assert "- user_id: user_prompt_1" in system_prompt
+    assert "- project_id: project_prompt_1" in system_prompt
+
+
 def test_runtime_uses_plugin_namespaced_skills_without_copying_into_cwd(tmp_path) -> None:
     plugin_dir = tmp_path / "plugin"
     skill_dir = plugin_dir / "skills" / "financial_data_query"

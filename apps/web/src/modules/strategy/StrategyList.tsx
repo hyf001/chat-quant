@@ -163,6 +163,7 @@ const customBenchmarkValue = "__custom__";
 
 const benchmarkOptionsByMarket: Record<StrategyBacktestConfig["market"], SelectOption[]> = {
   CN: [
+    { value: "000016.SH", label: "上证50 (000016.SH)" },
     { value: "000300.SH", label: "沪深300 (000300.SH)" },
     { value: "000905.SH", label: "中证500 (000905.SH)" },
     { value: "000852.SH", label: "中证1000 (000852.SH)" },
@@ -2500,6 +2501,8 @@ function newBacktestForm(
   params: StrategyCustomParameter[],
   strategyMode: StrategyMode = "single_symbol",
 ): BacktestForm {
+  const defaultDateRange = defaultBacktestDateRange();
+  const benchmarkSymbol = defaultBenchmarkFor("CN");
   const form: BacktestForm = {
     strategyMode,
     assetClass: "stock",
@@ -2507,12 +2510,12 @@ function newBacktestForm(
     symbols: strategyMode === "single_symbol" ? "600519.SH" : "600519.SH, 000001.SZ",
     symbolSource: strategyMode === "universe_selection" ? "universe" : "manual",
     universe: "",
-    benchmarkPreset: "000300.SH",
-    benchmarkSymbol: "000300.SH",
+    benchmarkPreset: benchmarkSymbol,
+    benchmarkSymbol,
     dataAdjust: "qfq",
     currency: "CNY",
-    startDate: "2024-01-01",
-    endDate: "2024-04-30",
+    startDate: defaultDateRange.startDate,
+    endDate: defaultDateRange.endDate,
     initialCash: "100000",
     commission: "0.001",
     slippage: "0.0002",
@@ -2533,6 +2536,27 @@ function newBacktestForm(
     form.universe = "沪深300";
   }
   return form;
+}
+
+function defaultBacktestDateRange(): { startDate: string; endDate: string } {
+  const end = new Date();
+  const start = new Date(end);
+  const endMonth = end.getMonth();
+  start.setFullYear(end.getFullYear() - 1);
+  if (start.getMonth() !== endMonth) {
+    start.setDate(0);
+  }
+  return {
+    startDate: formatDateInput(start),
+    endDate: formatDateInput(end),
+  };
+}
+
+function formatDateInput(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function applyBacktestFieldUpdate<Key extends keyof BacktestForm>(
@@ -2655,7 +2679,7 @@ function defaultBenchmarkFor(market: BacktestForm["market"]): string {
   if (market === "US") {
     return "SPX.US";
   }
-  return "000300.SH";
+  return "000016.SH";
 }
 
 function isDefaultBacktestSymbol(value: string): boolean {

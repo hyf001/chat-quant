@@ -29,6 +29,62 @@ def test_create_strategy_rejects_chatq_param_default_type_mismatch(client: TestC
     assert response.status_code == 422
 
 
+def test_create_strategy_rejects_request_custom_params(client: TestClient) -> None:
+    payload = strategy_create_payload()
+    payload["custom_params"] = [
+        {
+            "name_cn": "短期均线周期",
+            "name_en": "fast_period",
+            "type": "integer",
+            "default": 20,
+            "required": True,
+        }
+    ]
+
+    response = client.post(
+        "/api/strategies",
+        json=payload,
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_strategy_rejects_external_data_access(client: TestClient) -> None:
+    payload = strategy_create_payload()
+    payload["source_code"] = f"import akshare as ak\n{payload['source_code']}"
+
+    response = client.post(
+        "/api/strategies",
+        json=payload,
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["error_code"] == "STRATEGY_EXTERNAL_DATA_ACCESS"
+    assert detail["issues"][0]["detail"]["module"] == "akshare"
+
+
+def test_create_strategy_rejects_missing_trading_method(client: TestClient) -> None:
+    payload = strategy_create_payload()
+    payload["source_code"] = "\n".join(
+        [
+            "import backtrader as bt",
+            "",
+            "class GeneratedStrategy(bt.Strategy):",
+            "    def __init__(self):",
+            "        self.close = self.datas[0].close",
+        ]
+    )
+
+    response = client.post(
+        "/api/strategies",
+        json=payload,
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["error_code"] == "STRATEGY_NO_TRADING_METHOD"
+
+
 def test_update_metadata_does_not_create_new_version(client: TestClient) -> None:
     created = client.post(
         "/api/strategies",
@@ -80,6 +136,62 @@ def test_create_strategy_version_switches_current_version(client: TestClient) ->
     assert strategies[0]["strategy_mode"] == "multi_symbol"
     assert "strategy_config" not in strategies[0]
     assert strategies[0]["custom_params"][0]["default"] == 30
+
+
+def test_create_strategy_version_rejects_request_custom_params(client: TestClient) -> None:
+    created = client.post(
+        "/api/strategies",
+        json=strategy_create_payload(),
+    ).json()
+    payload = strategy_version_payload(fast_period=30, slow_period=90)
+    payload["custom_params"] = [
+        {
+            "name_cn": "短期均线周期",
+            "name_en": "fast_period",
+            "type": "integer",
+            "default": 30,
+            "required": True,
+        }
+    ]
+
+    response = client.post(
+        f"/api/strategies/{created['strategy_id']}/versions",
+        json=payload,
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_strategy_version_smoke_failure_is_blocked_without_switching(
+    client: TestClient,
+) -> None:
+    created = client.post(
+        "/api/strategies",
+        json=strategy_create_payload(),
+    ).json()
+    first_version = client.get(f"/api/strategies/{created['strategy_id']}/versions").json()[0]
+    payload = strategy_version_payload()
+    payload["source_code"] = "\n".join(
+        [
+            "import backtrader as bt",
+            "",
+            "class GeneratedStrategy(bt.Strategy):",
+            "    def next(self):",
+            "        raise RuntimeError('boom')",
+        ]
+    )
+
+    response = client.post(
+        f"/api/strategies/{created['strategy_id']}/versions",
+        json=payload,
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["error_code"] == "STRATEGY_SMOKE_RUN_FAILED"
+    versions = client.get(f"/api/strategies/{created['strategy_id']}/versions").json()
+    assert [version["id"] for version in versions] == [first_version["id"]]
+    detail = client.get(f"/api/strategies/{created['strategy_id']}").json()
+    assert detail["strategy"]["current_version_id"] == first_version["id"]
 
 
 def test_switch_current_version_can_select_existing_version(client: TestClient) -> None:

@@ -1,7 +1,9 @@
+from datetime import date
 from decimal import Decimal
 
 import pandas as pd
 import pytest
+from app.schema.backtest import StrategyBacktestConfig
 from fastapi.testclient import TestClient
 from tests.test_strategy_api import strategy_create_payload, strategy_version_payload
 
@@ -62,6 +64,15 @@ def create_backtest_payload() -> dict[str, object]:
             "params": {"fast_period": 20, "slow_period": 60, "volatility_filter": "medium"},
         },
     }
+
+
+def test_backtest_config_defaults_to_sse50_and_past_year() -> None:
+    today = date.today()
+    config = StrategyBacktestConfig()
+
+    assert config.benchmark_symbol == "000016.SH"
+    assert today <= config.end_date <= date.today()
+    assert config.start_date == _one_year_before(config.end_date)
 
 
 def test_strategy_backtest_protocol_is_documented(client: TestClient) -> None:
@@ -175,3 +186,10 @@ def test_list_backtest_records(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert [item["id"] for item in response.json()] == [backtest["id"]]
+
+
+def _one_year_before(value: date) -> date:
+    try:
+        return value.replace(year=value.year - 1)
+    except ValueError:
+        return value.replace(year=value.year - 1, day=28)

@@ -19,15 +19,26 @@ from app.schema.strategy import (
     StrategyVersionRecord,
     utc_now,
 )
-from app.service.strategy.protocol import StrategyProtocolError, parse_strategy_source
+from app.service.strategy.validation import (
+    StrategyAvailabilityError,
+    validate_strategy_availability,
+)
 
 
 class StrategyError(Exception):
-    def __init__(self, error_code: str, message: str, status_code: int = 400) -> None:
+    def __init__(
+        self,
+        error_code: str,
+        message: str,
+        status_code: int = 400,
+        *,
+        detail: dict[str, object] | None = None,
+    ) -> None:
         super().__init__(message)
         self.error_code = error_code
         self.message = message
         self.status_code = status_code
+        self.detail = detail or {}
 
 
 class StrategyService:
@@ -161,7 +172,7 @@ class StrategyService:
         version_number: int,
         version_input: StrategyVersionCreate,
     ) -> StrategyVersionRecord:
-        custom_params = _extract_version_custom_params(version_input)
+        custom_params = _validate_version_source(version_input)
         return StrategyVersionRecord(
             id=_new_id("stv"),
             strategy_id=strategy_id,
@@ -257,16 +268,30 @@ def _new_id(prefix: str) -> str:
     return f"{prefix}_{uuid4().hex[:12]}"
 
 
-def _extract_version_custom_params(
+def _validate_version_source(
     version_input: StrategyVersionCreate,
 ) -> list[StrategyCustomParameter]:
     try:
-        spec = parse_strategy_source(version_input.source_code)
-    except StrategyProtocolError as exc:
-        raise StrategyError(exc.error_code, exc.message, 422) from exc
+        spec = validate_strategy_availability(
+            version_input.source_code,
+            strategy_mode=version_input.strategy_mode,
+        )
+    except StrategyAvailabilityError as exc:
+        raise StrategyError(
+            _availability_error_code(exc),
+            exc.message,
+            422,
+            detail={"issues": [issue.model_dump(mode="json") for issue in exc.issues]},
+        ) from exc
     if spec.param_source != "none":
         return spec.custom_params
-    return version_input.custom_params
+    return []
+
+
+def _availability_error_code(error: StrategyAvailabilityError) -> str:
+    if len(error.issues) == 1:
+        return error.issues[0].code
+    return "STRATEGY_AVAILABILITY_CHECK_FAILED"
 
 
 def _default_tags(strategy: StrategyCreate) -> list[str]:
