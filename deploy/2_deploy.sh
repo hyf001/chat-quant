@@ -38,6 +38,13 @@ if ! grep -q '^DOMAIN=' "$APP_DIR/.env"; then
     echo "DOMAIN=${DOMAIN}" >> "$APP_DIR/.env"
 fi
 
+CORS_ORIGINS="CHATQ_API_CORS_ORIGINS=[\"https://${DOMAIN}\"]"
+if grep -q '^CHATQ_API_CORS_ORIGINS=' "$APP_DIR/.env"; then
+    sed -i "s|^CHATQ_API_CORS_ORIGINS=.*|${CORS_ORIGINS}|" "$APP_DIR/.env"
+else
+    echo "$CORS_ORIGINS" >> "$APP_DIR/.env"
+fi
+
 info "Installing Python dependencies"
 if [[ ! -d "$VENV_DIR" ]]; then
     python3.12 -m venv "$VENV_DIR"
@@ -162,7 +169,11 @@ systemctl reload nginx || systemctl restart nginx
 log "Nginx HTTPS config active"
 
 if command -v crontab >/dev/null 2>&1; then
-    (crontab -l 2>/dev/null | grep -v 'certbot renew --quiet'; echo "0 2 * * * certbot renew --quiet && systemctl reload nginx") | crontab -
+    CRON_TMP="$(mktemp)"
+    crontab -l 2>/dev/null | grep -v 'certbot renew --quiet' > "$CRON_TMP" || true
+    echo "0 2 * * * certbot renew --quiet && systemctl reload nginx" >> "$CRON_TMP"
+    crontab "$CRON_TMP"
+    rm -f "$CRON_TMP"
     log "Certbot auto-renew cron installed"
 fi
 
@@ -176,4 +187,3 @@ echo "  Logs:    journalctl -u ${SERVICE_NAME} -f"
 echo "  Restart: systemctl restart ${SERVICE_NAME}"
 echo "  Nginx:   systemctl reload nginx"
 echo "=============================================="
-

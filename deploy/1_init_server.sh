@@ -41,6 +41,7 @@ install_base_packages() {
         apt-get update
         DEBIAN_FRONTEND=noninteractive apt-get install -y \
             ca-certificates curl wget git vim tar xz-utils \
+            python3.12-venv \
             build-essential make pkg-config \
             libssl-dev zlib1g-dev libbz2-dev libreadline-dev \
             libsqlite3-dev libffi-dev liblzma-dev
@@ -49,7 +50,7 @@ install_base_packages() {
         "$PKG_MANAGER" install -y \
             ca-certificates curl wget git vim tar xz \
             gcc gcc-c++ make pkgconfig \
-            openssl-devel bzip2-devel libffi-devel \
+            openssl-devel openssl11 openssl11-devel bzip2-devel libffi-devel \
             zlib-devel readline-devel sqlite-devel xz-devel
     fi
     log "Base tools installed"
@@ -71,11 +72,33 @@ install_python() {
     fi
 
     cd "$src_dir"
+
+    if [[ -f Makefile ]]; then
+        make distclean || true
+    fi
+
+    local cppflags=""
+    local ldflags="-Wl,-rpath /usr/local/lib"
+    local pkg_config_path="${PKG_CONFIG_PATH:-}"
+    local openssl_cflags=""
+    local openssl_libs=""
+
+    if [[ -d /usr/include/openssl11 && -d /usr/lib64/openssl11 ]]; then
+        cppflags="-I/usr/include/openssl11"
+        ldflags="-L/usr/lib64/openssl11 -Wl,-rpath /usr/lib64/openssl11 ${ldflags}"
+        pkg_config_path="/usr/lib64/pkgconfig${pkg_config_path:+:${pkg_config_path}}"
+        openssl_cflags="-I/usr/include/openssl11"
+        openssl_libs="-L/usr/lib64/openssl11 -lssl -lcrypto"
+    fi
+
+    CPPFLAGS="$cppflags" \
+    LDFLAGS="$ldflags" \
+    PKG_CONFIG_PATH="$pkg_config_path" \
+    OPENSSL_CFLAGS="$openssl_cflags" \
+    OPENSSL_LIBS="$openssl_libs" \
     ./configure \
         --prefix=/usr/local \
-        --enable-optimizations \
-        --enable-shared \
-        LDFLAGS="-Wl,-rpath /usr/local/lib"
+        --enable-shared
     make -j"$(nproc)"
     make altinstall
     ln -sf /usr/local/bin/python3.12 /usr/local/bin/python3
@@ -145,4 +168,3 @@ create_app_user
 echo "=============================================="
 echo "  Server initialization complete"
 echo "=============================================="
-
