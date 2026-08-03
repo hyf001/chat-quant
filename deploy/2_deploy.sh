@@ -38,12 +38,7 @@ if ! grep -q '^DOMAIN=' "$APP_DIR/.env"; then
     echo "DOMAIN=${DOMAIN}" >> "$APP_DIR/.env"
 fi
 
-CORS_ORIGINS="CHATQ_API_CORS_ORIGINS=[\"https://${DOMAIN}\"]"
-if grep -q '^CHATQ_API_CORS_ORIGINS=' "$APP_DIR/.env"; then
-    sed -i "s|^CHATQ_API_CORS_ORIGINS=.*|${CORS_ORIGINS}|" "$APP_DIR/.env"
-else
-    echo "$CORS_ORIGINS" >> "$APP_DIR/.env"
-fi
+sed -i '/^CHATQ_API_CORS_ORIGINS=/d' "$APP_DIR/.env"
 
 info "Installing Python dependencies"
 if [[ ! -d "$VENV_DIR" ]]; then
@@ -59,7 +54,7 @@ log "Python dependencies installed"
 
 info "Building web frontend"
 cat > "$APP_DIR/apps/web/.env.production" <<EOF
-VITE_API_BASE_URL=/api
+VITE_API_BASE_URL=
 VITE_CHATQ_USER_ID=local_user
 VITE_CHATQ_PROJECT_ID=local_project
 EOF
