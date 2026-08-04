@@ -37,10 +37,18 @@ export function InsightPanel({
 }: InsightPanelProps) {
   return (
     <aside
-      className="hidden min-h-0 overflow-auto border-l border-line bg-panel/70 px-4 py-5 xl:block"
+      className="glass-panel hidden w-[336px] shrink-0 overflow-auto border-l border-line px-4 py-5 xl:block"
       aria-label="对象详情"
     >
-      <div className="mb-3 text-sm font-semibold">对象详情</div>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <div className="font-mono text-[10px] font-bold uppercase text-muted">Context dock</div>
+          <div className="mt-1 text-sm font-semibold text-ink">对象详情</div>
+        </div>
+        <span className="rounded-full border border-brand/30 bg-gainSoft px-2 py-1 font-mono text-[10px] font-bold text-brand">
+          SYNCED
+        </span>
+      </div>
       {result ? (
         <RuntimeDetail health={health} result={result} />
       ) : backtestDetail ? (
@@ -78,9 +86,11 @@ function BacktestDetailCard({ detail }: { detail: BacktestDetail }) {
 function SessionDetail({ session, assets }: { session: ChatSession | null; assets: AssetLink[] }) {
   return (
     <div className="grid gap-3">
-      <section className="rounded-lg border border-line bg-soft p-4">
+      <section className="rounded-lg border border-line bg-panel p-4 shadow-sm">
         <div className="text-xs font-semibold text-muted">当前会话</div>
-        <div className="mt-2 truncate text-sm font-semibold">{session?.title ?? "未选择会话"}</div>
+        <div className="mt-2 truncate text-sm font-semibold text-ink">
+          {session?.title ?? "未选择会话"}
+        </div>
         <div className="mt-2 grid gap-1 text-xs text-muted">
           <div>SDK Session: {session?.sdk_session_id ?? "未建立"}</div>
           <div>策略版本: {session?.current_strategy_version_id ?? "无"}</div>
@@ -88,15 +98,18 @@ function SessionDetail({ session, assets }: { session: ChatSession | null; asset
         </div>
       </section>
 
-      <section className="rounded-lg border border-line bg-soft p-4">
+      <section className="rounded-lg border border-line bg-panel p-4 shadow-sm">
         <div className="text-xs font-semibold text-muted">关联资产</div>
         <div className="mt-3 grid gap-2">
           {assets.length === 0 ? (
             <div className="text-sm text-muted">暂无资产</div>
           ) : (
             assets.map((asset) => (
-              <div className="rounded-lg border border-line bg-panel p-3" key={asset.id}>
-                <div className="truncate text-sm font-medium">
+              <div
+                className="rounded-md border border-l-[3px] border-line border-l-brandBlue bg-compareSoft p-3"
+                key={asset.id}
+              >
+                <div className="truncate text-sm font-medium text-ink">
                   {snapshotTitle(asset.display_snapshot) ?? asset.asset_id}
                 </div>
                 <div className="mt-1 text-xs text-muted">
@@ -122,9 +135,9 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 function DetailCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-lg border border-line bg-soft p-3">
+    <div className="min-w-0 rounded-lg border border-line bg-panel p-3 shadow-sm">
       <div className="text-xs text-muted">{label}</div>
-      <div className="mt-1 truncate text-xs font-semibold">{value}</div>
+      <div className="mt-1 truncate font-mono text-xs font-semibold text-ink">{value}</div>
     </div>
   );
 }

@@ -694,11 +694,11 @@ export function StrategyList({ project }: StrategyListProps) {
 
   return (
     <section className="mx-auto flex w-full max-w-6xl flex-col gap-5" aria-label="策略列表">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-panel/85 p-4 shadow-sm">
         <div className="min-w-0">
-          <div className="font-mono text-[10px] font-bold uppercase text-zinc-400">Strategies</div>
-          <h1 className="mt-1 truncate text-xl font-semibold text-zinc-900">策略</h1>
-          <p className="mt-1 truncate text-xs text-zinc-500">
+          <div className="font-mono text-[10px] font-bold uppercase text-signal">Strategies</div>
+          <h1 className="mt-1 truncate text-xl font-black text-ink">策略档案</h1>
+          <p className="mt-1 truncate text-xs text-muted">
             当前项目：{project?.name ?? "未选择项目"}
           </p>
         </div>
@@ -716,9 +716,9 @@ export function StrategyList({ project }: StrategyListProps) {
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative min-w-64 flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
           <input
-            className="h-9 w-full rounded-md border border-zinc-300 bg-white pl-8 pr-3 text-xs text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-900 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400"
+            className="h-9 w-full rounded-md border border-line bg-panel pl-8 pr-3 text-xs text-ink outline-none placeholder:text-muted/70 focus:border-signal disabled:cursor-not-allowed disabled:bg-soft disabled:text-muted"
             disabled={!project}
             placeholder="搜索策略或标签"
             value={query}
@@ -826,15 +826,15 @@ export function StrategyList({ project }: StrategyListProps) {
 function NewStrategyCard({ onClick }: { onClick: () => void }) {
   return (
     <button
-      className="flex min-h-[230px] flex-col items-center justify-center rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-4 text-center text-zinc-600 transition-colors hover:border-zinc-400 hover:bg-white hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+      className="flex min-h-[230px] flex-col items-center justify-center rounded-lg border border-dashed border-strong bg-soft p-4 text-center text-muted transition-all hover:-translate-y-0.5 hover:border-signal hover:bg-panel hover:text-ink hover:shadow-lift focus:outline-none focus:ring-2 focus:ring-signal/20"
       type="button"
       onClick={onClick}
     >
-      <span className="grid h-10 w-10 place-items-center rounded-md border border-zinc-300 bg-white text-zinc-700">
+      <span className="grid h-10 w-10 place-items-center rounded-md border border-line bg-panel text-signal">
         <Plus className="h-5 w-5" />
       </span>
       <span className="mt-3 text-sm font-semibold">新建策略</span>
-      <span className="mt-1 text-xs text-zinc-500">创建一个可回测的策略卡片</span>
+      <span className="mt-1 text-xs text-muted">创建一个可回测的策略卡片</span>
     </button>
   );
 }
@@ -859,15 +859,15 @@ function StrategyCard({
   onDelete: () => void;
 }) {
   return (
-    <article className="flex min-h-[230px] flex-col rounded-md border border-zinc-200 bg-white p-4 shadow-sm transition-colors hover:border-zinc-300">
+    <article className="flex min-h-[230px] flex-col rounded-lg border border-line bg-panel p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-strong hover:shadow-lift">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-zinc-200 bg-zinc-50 text-zinc-600">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-line bg-soft text-brandBlue">
             <FileCode2 className="h-4 w-4" />
           </span>
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-zinc-900">{strategy.name}</h2>
-            <div className="mt-0.5 text-[11px] text-zinc-500">
+            <h2 className="truncate text-sm font-semibold text-ink">{strategy.name}</h2>
+            <div className="mt-0.5 text-[11px] text-muted">
               V{strategy.version} · {strategyModeLabel(strategy.strategy_mode)}
             </div>
           </div>
@@ -879,7 +879,7 @@ function StrategyCard({
         {strategy.tags.length > 0 ? (
           strategy.tags.slice(0, 4).map((tag) => (
             <span
-              className="inline-flex max-w-28 items-center gap-1 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-600"
+              className="inline-flex max-w-28 items-center gap-1 rounded bg-compareSoft px-1.5 py-0.5 text-[10px] text-brandBlue"
               key={tag}
             >
               <Tag className="h-2.5 w-2.5 shrink-0" />
@@ -887,7 +887,7 @@ function StrategyCard({
             </span>
           ))
         ) : (
-          <span className="font-mono text-[11px] text-zinc-400">无标签</span>
+          <span className="font-mono text-[11px] text-muted">无标签</span>
         )}
       </div>
 
@@ -896,8 +896,8 @@ function StrategyCard({
           .slice(0, 3)
           .map((param) => (
             <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 text-[11px]" key={param.name_en}>
-              <span className="truncate font-mono text-zinc-500">{param.name_en}</span>
-              <span className="max-w-28 truncate font-mono font-semibold text-zinc-800">
+              <span className="truncate font-mono text-muted">{param.name_en}</span>
+              <span className="max-w-28 truncate font-mono font-semibold text-ink">
                 {String(param.default)}
               </span>
             </div>
@@ -905,7 +905,7 @@ function StrategyCard({
       </div>
 
       <div className="mt-auto pt-4">
-        <div className="mb-3 font-mono text-[10px] text-zinc-400">
+        <div className="mb-3 font-mono text-[10px] text-muted">
           {formatDate(strategy.updated_at)}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -965,9 +965,9 @@ function VersionPanel({
   const diffItems = selectedVersion ? summarizeVersionDiff(previousVersion, selectedVersion) : [];
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-zinc-950/30 p-4">
-      <section className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-md border border-zinc-200 bg-white shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/35 p-4">
+      <section className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-zinc-900">
               {panel.strategy.name} 版本
@@ -988,7 +988,7 @@ function VersionPanel({
         </div>
 
         <div className="grid min-h-0 flex-1 grid-cols-[260px_minmax(0,1fr)] max-md:grid-cols-1">
-          <aside className="min-h-0 overflow-y-auto border-r border-zinc-200 bg-zinc-50 p-3 max-md:border-b max-md:border-r-0">
+          <aside className="min-h-0 overflow-y-auto border-r border-line bg-soft p-3 max-md:border-b max-md:border-r-0">
             {panel.isLoading && panel.versions.length === 0 ? <Notice text="版本加载中" /> : null}
             <div className="grid gap-2">
               {panel.versions.map((version) => {
@@ -1118,9 +1118,9 @@ function BacktestRecordsPanel({
   onViewResult: (backtestId: string) => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-zinc-950/30 p-4">
-      <section className="flex max-h-[86vh] w-full max-w-4xl flex-col overflow-hidden rounded-md border border-zinc-200 bg-white shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/35 p-4">
+      <section className="flex max-h-[86vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-zinc-900">
               {panel.strategy.name} 回测记录
@@ -1232,9 +1232,9 @@ function BacktestRunDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-center bg-zinc-950/30 p-4">
-      <section className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-md border border-zinc-200 bg-white shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3">
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-ink/35 p-4">
+      <section className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-zinc-900">回测参数</h2>
             <p className="mt-0.5 truncate font-mono text-[11px] text-zinc-500">
@@ -1314,9 +1314,9 @@ function BacktestRunDialog({
             </section>
           </div>
         </div>
-        <div className="flex justify-end gap-2 border-t border-zinc-200 bg-zinc-50 px-4 py-3">
+        <div className="flex justify-end gap-2 border-t border-line bg-soft px-4 py-3">
           <button
-            className="h-9 rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 disabled:cursor-not-allowed disabled:text-zinc-300"
+            className="h-9 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:bg-soft focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:text-muted/50"
             type="button"
             disabled={disabled}
             onClick={onClose}
@@ -1324,7 +1324,7 @@ function BacktestRunDialog({
             取消
           </button>
           <button
-            className="inline-flex h-9 items-center gap-2 rounded-md bg-zinc-900 px-3 text-xs font-semibold text-white transition-colors hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 disabled:cursor-not-allowed disabled:bg-zinc-300"
+            className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:bg-strong"
             type="button"
             disabled={disabled}
             onClick={onSubmit}
@@ -1367,9 +1367,9 @@ function BacktestResultDialog({
     : null;
 
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-center bg-zinc-950/30 p-4">
-      <section className="flex max-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-md border border-zinc-200 bg-white shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3">
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-ink/35 p-4">
+      <section className="flex max-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-zinc-900">回测结果</h2>
             <p className="mt-0.5 truncate font-mono text-[11px] text-zinc-500">
@@ -2187,16 +2187,16 @@ function Dialog({
   onSubmit: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-zinc-950/30 p-4">
-      <section className="flex max-h-[86vh] w-full max-w-2xl flex-col overflow-hidden rounded-md border border-zinc-200 bg-white shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/35 p-4">
+      <section className="flex max-h-[86vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <h2 className="truncate text-sm font-semibold text-zinc-900">{title}</h2>
           <IconButton label="关闭" icon={<X className="h-4 w-4" />} disabled={isSubmitting} onClick={onClose} />
         </div>
         <div className="min-h-0 overflow-y-auto p-4">{children}</div>
-        <div className="flex justify-end gap-2 border-t border-zinc-200 bg-zinc-50 px-4 py-3">
+        <div className="flex justify-end gap-2 border-t border-line bg-soft px-4 py-3">
           <button
-            className="h-9 rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 disabled:cursor-not-allowed disabled:text-zinc-300"
+            className="h-9 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:bg-soft focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:text-muted/50"
             type="button"
             disabled={isSubmitting}
             onClick={onClose}
@@ -2204,7 +2204,7 @@ function Dialog({
             取消
           </button>
           <button
-            className="inline-flex h-9 items-center gap-2 rounded-md bg-zinc-900 px-3 text-xs font-semibold text-white transition-colors hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 disabled:cursor-not-allowed disabled:bg-zinc-300"
+            className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:bg-strong"
             type="button"
             disabled={isSubmitting}
             onClick={onSubmit}
@@ -2220,10 +2220,10 @@ function Dialog({
 
 function StatusFilterControl({ value, onChange }: { value: StatusFilter; onChange: (value: StatusFilter) => void }) {
   return (
-    <div className="grid h-9 grid-cols-2 overflow-hidden rounded-md border border-zinc-300 bg-white text-[11px] font-semibold">
+    <div className="grid h-9 grid-cols-2 overflow-hidden rounded-md border border-line bg-panel text-[11px] font-semibold">
       {statusFilters.map((filter) => (
         <button
-          className={`min-w-12 px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-zinc-900/20 ${value === filter.value ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"}`}
+          className={`min-w-12 px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-signal/20 ${value === filter.value ? "bg-ink text-panel" : "text-muted hover:bg-soft hover:text-ink"}`}
           key={filter.value}
           type="button"
           onClick={() => onChange(filter.value)}
@@ -2237,9 +2237,9 @@ function StatusFilterControl({ value, onChange }: { value: StatusFilter; onChang
 
 function FieldLabel({ label, required }: { label: string; required?: boolean }) {
   return (
-    <span className="font-semibold text-zinc-600">
+    <span className="font-semibold text-muted">
       {label}
-      {required ? <span className="ml-0.5 text-red-600">*</span> : null}
+      {required ? <span className="ml-0.5 text-risk">*</span> : null}
     </span>
   );
 }
@@ -2249,7 +2249,7 @@ function Input({ label, value, required, disabled, onChange }: { label: string; 
     <label className="grid gap-1 text-xs">
       <FieldLabel label={label} required={required} />
       <input
-        className="h-9 rounded-md border border-zinc-300 bg-white px-3 text-xs text-zinc-900 outline-none focus:border-zinc-900 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400"
+        className="h-9 rounded-md border border-line bg-panel px-3 text-xs text-ink outline-none focus:border-signal disabled:cursor-not-allowed disabled:bg-soft disabled:text-muted"
         disabled={disabled}
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -2262,7 +2262,7 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-1 text-xs">
       <FieldLabel label={label} />
-      <div className="flex h-9 items-center rounded-md border border-zinc-200 bg-zinc-50 px-3 text-xs font-semibold text-zinc-700">
+      <div className="flex h-9 items-center rounded-md border border-line bg-soft px-3 text-xs font-semibold text-graphite">
         {value}
       </div>
     </div>
@@ -2288,7 +2288,7 @@ function Select({
     <label className="grid gap-1 text-xs">
       <FieldLabel label={label} required={required} />
       <select
-        className="h-9 rounded-md border border-zinc-300 bg-white px-3 text-xs text-zinc-900 outline-none focus:border-zinc-900 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400"
+        className="h-9 rounded-md border border-line bg-panel px-3 text-xs text-ink outline-none focus:border-signal disabled:cursor-not-allowed disabled:bg-soft disabled:text-muted"
         disabled={disabled}
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -2318,7 +2318,7 @@ function Checkbox({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex h-9 items-center gap-2 rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-600">
+    <label className="flex h-9 items-center gap-2 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-muted">
       <input
         type="checkbox"
         checked={checked}
@@ -2335,7 +2335,7 @@ function Textarea({ label, value, rows, monospace, required, disabled, onChange 
     <label className="grid gap-1 text-xs">
       <FieldLabel label={label} required={required} />
       <textarea
-        className={`w-full resize-y rounded-md border border-zinc-300 bg-white p-3 text-xs leading-5 text-zinc-900 outline-none focus:border-zinc-900 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400 ${monospace ? "font-mono text-[11px]" : ""}`}
+        className={`w-full resize-y rounded-md border border-line bg-panel p-3 text-xs leading-5 text-ink outline-none focus:border-signal disabled:cursor-not-allowed disabled:bg-soft disabled:text-muted ${monospace ? "font-mono text-[11px]" : ""}`}
         disabled={disabled}
         rows={rows}
         spellCheck={!monospace}
@@ -2349,7 +2349,7 @@ function Textarea({ label, value, rows, monospace, required, disabled, onChange 
 function SmallButton({ icon, label, disabled, onClick }: { icon: ReactNode; label: string; disabled?: boolean; onClick: () => void }) {
   return (
     <button
-      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-2.5 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:text-zinc-300"
+      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-graphite transition-colors hover:border-strong hover:bg-soft hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:border-line disabled:text-muted/50"
       type="button"
       disabled={disabled}
       onClick={onClick}
@@ -2363,7 +2363,7 @@ function SmallButton({ icon, label, disabled, onClick }: { icon: ReactNode; labe
 function IconButton({ icon, label, danger, disabled, onClick }: { icon: ReactNode; label: string; danger?: boolean; disabled?: boolean; onClick: () => void }) {
   return (
     <button
-      className={`grid h-9 w-9 place-items-center rounded-md border bg-white transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed ${danger ? "border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50 focus:ring-red-900/10 disabled:border-red-100 disabled:text-red-300" : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-900 focus:ring-zinc-900/20 disabled:border-zinc-200 disabled:text-zinc-300"}`}
+      className={`grid h-9 w-9 place-items-center rounded-md border bg-panel transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed ${danger ? "border-risk/25 text-risk hover:border-risk/40 hover:bg-riskSoft focus:ring-risk/10 disabled:border-risk/10 disabled:text-risk/30" : "border-line text-graphite hover:border-strong hover:bg-soft hover:text-ink focus:ring-signal/20 disabled:border-line disabled:text-muted/50"}`}
       type="button"
       aria-label={label}
       title={label}
@@ -2378,44 +2378,44 @@ function IconButton({ icon, label, danger, disabled, onClick }: { icon: ReactNod
 function StatusBadge({ status }: { status: StrategySummary["status"] }) {
   const className =
     status === "active"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      ? "border-brand/30 bg-gainSoft text-brand"
       : status === "deleted"
-        ? "border-red-200 bg-red-50 text-red-700"
-        : "border-zinc-200 bg-zinc-50 text-zinc-600";
+        ? "border-risk/30 bg-riskSoft text-risk"
+        : "border-line bg-soft text-muted";
   return <span className={`inline-flex rounded border px-2 py-0.5 font-mono text-[10px] ${className}`}>{status}</span>;
 }
 
 function Feedback({ tone, text }: { tone: "error" | "success"; text: string }) {
   const isError = tone === "error";
   return (
-    <div className={`flex items-start gap-3 rounded-md border px-3 py-2 text-xs ${isError ? "border-red-200 bg-red-50 text-red-800" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}>
-      {isError ? <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" /> : <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />}
+    <div className={`flex items-start gap-3 rounded-md border px-3 py-2 text-xs ${isError ? "border-risk/30 bg-riskSoft text-risk" : "border-brand/30 bg-gainSoft text-brand"}`}>
+      {isError ? <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-risk" /> : <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand" />}
       <span className="min-w-0 break-words">{text}</span>
     </div>
   );
 }
 
 function Notice({ text }: { text: string }) {
-  return <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-3 py-3 text-xs text-zinc-500">{text}</div>;
+  return <div className="rounded-md border border-dashed border-line bg-panel px-3 py-3 text-xs text-muted">{text}</div>;
 }
 
 function StatusText({ status }: { status: StrategyBacktestRecord["status"] }) {
   const className =
     status === "succeeded"
-      ? "text-emerald-700"
+      ? "text-brand"
       : status === "failed"
-        ? "text-red-700"
+        ? "text-risk"
         : status === "running"
-          ? "text-blue-700"
-          : "text-zinc-600";
+          ? "text-brandBlue"
+          : "text-muted";
   return <span className={`font-mono text-[11px] font-semibold ${className}`}>{status}</span>;
 }
 
 function MetricBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-      <div className="text-[11px] font-semibold text-zinc-500">{label}</div>
-      <div className="mt-1 truncate font-mono text-sm font-semibold text-zinc-900">{value}</div>
+    <div className="rounded-md border border-line bg-soft p-3">
+      <div className="text-[11px] font-semibold text-muted">{label}</div>
+      <div className="mt-1 truncate font-mono text-sm font-semibold text-ink">{value}</div>
     </div>
   );
 }
@@ -2423,8 +2423,8 @@ function MetricBox({ label, value }: { label: string; value: string }) {
 function InfoLine({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid grid-cols-[80px_minmax(0,1fr)] gap-2">
-      <span className="text-zinc-500">{label}</span>
-      <span className="min-w-0 break-words font-mono text-zinc-800">{value}</span>
+      <span className="text-muted">{label}</span>
+      <span className="min-w-0 break-words font-mono text-graphite">{value}</span>
     </div>
   );
 }

@@ -8,8 +8,14 @@
 
 body {
   margin: 0;
+  background:
+    linear-gradient(90deg, rgba(23, 26, 22, 0.035) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(23, 26, 22, 0.028) 1px, transparent 1px),
+    #f6f7f3;
+  background-size: 28px 28px;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #171a16;
 }
 
 button,
@@ -20,6 +26,111 @@ textarea {
 
 details > summary::-webkit-details-marker {
   display: none;
+}
+
+.cq-brand-mark {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  border: 1px solid #343941;
+  background: #171a16;
+  padding: 5px;
+}
+
+.cq-brand-mark span {
+  background: #fffdf8;
+}
+
+.cq-brand-mark span:nth-child(2),
+.cq-brand-mark span:nth-child(4),
+.cq-brand-mark span:nth-child(9) {
+  background: #c9851a;
+}
+
+.workbench-surface {
+  background:
+    linear-gradient(90deg, rgba(23, 26, 22, 0.035) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(23, 26, 22, 0.028) 1px, transparent 1px),
+    #f6f7f3;
+  background-size: 28px 28px;
+}
+
+.glass-panel {
+  background: rgba(255, 253, 248, 0.82);
+  backdrop-filter: blur(14px);
+}
+
+.research-briefing {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(115deg, rgba(255, 253, 248, 0.94), rgba(240, 243, 238, 0.88)),
+    repeating-linear-gradient(90deg, transparent 0, transparent 42px, rgba(49, 106, 158, 0.08) 43px);
+}
+
+.execution-tape {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.execution-tape::before {
+  content: "";
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  left: 33px;
+  width: 2px;
+  background: linear-gradient(#316a9e, #c9851a, #16845f);
+  opacity: 0.34;
+}
+
+.timeline-event {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+}
+
+.execution-node {
+  z-index: 1;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 2px solid #fffdf8;
+  border-radius: 999px;
+  background: #171a16;
+  color: #fffdf8;
+  box-shadow: 0 0 0 1px #b7c0b6;
+  font-family:
+    "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.execution-node.is-thinking {
+  background: #c9851a;
+}
+
+.execution-node.is-tool {
+  background: #316a9e;
+}
+
+.execution-node.is-answer {
+  background: #16845f;
+}
+
+.execution-node.is-error {
+  background: #d4483b;
+}
+
+.status-breathe {
+  animation: activity-breathe 1.8s ease-in-out infinite;
 }
 
 .thinking-rings {
@@ -107,7 +218,7 @@ details > summary::-webkit-details-marker {
 
 .markdown-content :not(pre) > code {
   border-radius: 4px;
-  background: rgba(15, 23, 42, 0.06);
+  background: rgba(49, 106, 158, 0.1);
   padding: 0.08rem 0.28rem;
   font-family:
     "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
@@ -117,14 +228,14 @@ details > summary::-webkit-details-marker {
 .markdown-content pre {
   position: relative;
   overflow: auto;
-  border-left: 2px solid rgba(100, 116, 139, 0.35);
-  background: rgba(248, 250, 252, 0.72);
+  border-left: 2px solid rgba(201, 133, 26, 0.85);
+  background: #171a16;
   padding: 0.8rem 0.9rem;
   font-family:
     "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 0.78rem;
   line-height: 1.65;
-  color: #334155;
+  color: #dbe7df;
 }
 
 .markdown-content pre code {
@@ -132,9 +243,9 @@ details > summary::-webkit-details-marker {
 }
 
 .markdown-content blockquote {
-  border-left: 2px solid rgba(100, 116, 139, 0.35);
+  border-left: 2px solid rgba(49, 106, 158, 0.45);
   padding-left: 0.85rem;
-  color: #64748b;
+  color: #6d746f;
 }
 
 .markdown-table-scroll {
@@ -151,19 +262,19 @@ details > summary::-webkit-details-marker {
 }
 
 .markdown-content :where(th, td) {
-  border: 1px solid rgba(203, 213, 225, 0.9);
+  border: 1px solid rgba(217, 222, 214, 0.95);
   padding: 0.45rem 0.55rem;
   text-align: left;
   vertical-align: top;
 }
 
 .markdown-content th {
-  background: rgba(248, 250, 252, 0.95);
+  background: rgba(240, 243, 238, 0.95);
   font-weight: 700;
 }
 
 .markdown-content tr:nth-child(even) td {
-  background: rgba(248, 250, 252, 0.45);
+  background: rgba(240, 243, 238, 0.45);
 }
 
 @keyframes thinking-pulse {

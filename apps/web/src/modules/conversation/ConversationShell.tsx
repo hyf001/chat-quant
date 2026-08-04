@@ -181,16 +181,16 @@ export function ConversationShell({
 
   return (
     <section aria-label="对话线程">
-      <div className="mx-auto w-full max-w-3xl space-y-6">
+      <div className="mx-auto w-full max-w-5xl space-y-6">
         {error ? (
-          <div className="flex items-start gap-3 rounded-md border-2 border-red-500 bg-red-50/20 p-4 text-xs font-medium text-red-950 shadow-md">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+          <div className="flex items-start gap-3 rounded-md border-2 border-risk bg-riskSoft p-4 text-xs font-medium text-risk shadow-md">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-risk" />
             <span className="min-w-0 break-words">{error}</span>
           </div>
         ) : null}
 
         {isLoading ? (
-          <div className="rounded-md border border-zinc-300 bg-zinc-50/50 p-4 text-xs text-zinc-600">
+          <div className="rounded-md border border-line bg-panel/80 p-4 text-xs text-muted">
             加载中
           </div>
         ) : null}
@@ -200,7 +200,7 @@ export function ConversationShell({
         ) : null}
 
         {session && timelineItems.length === 0 && !isStreaming ? (
-          <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50/50 p-5 text-xs leading-6 text-zinc-500">
+          <div className="rounded-md border border-dashed border-line bg-panel/80 p-5 text-xs leading-6 text-muted">
             当前会话还没有消息。
           </div>
         ) : null}
@@ -274,15 +274,15 @@ export function ConversationShell({
         ) : null}
 
         {assets.length > 0 ? (
-          <div className="rounded-md border border-zinc-300 bg-white p-4">
-            <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+          <div className="rounded-md border border-line bg-panel p-4 shadow-sm">
+            <div className="font-mono text-[10px] font-bold uppercase text-muted">
               会话资产
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {assets.slice(0, 4).map((asset) => (
-                <div className="rounded border border-zinc-200 bg-zinc-50 p-3" key={asset.id}>
-                  <div className="truncate text-xs font-bold text-zinc-900">{asset.asset_id}</div>
-                  <div className="mt-1 text-xs text-zinc-500">
+                <div className="rounded border border-line bg-soft p-3" key={asset.id}>
+                  <div className="truncate text-xs font-bold text-ink">{asset.asset_id}</div>
+                  <div className="mt-1 text-xs text-muted">
                     {asset.asset_type} · {asset.relation_type}
                   </div>
                 </div>
@@ -302,28 +302,28 @@ const starterPrompts = [
     description: "按条件筛候选，比如强势、低估、低回撤。",
     prompt: "帮我筛选近期强势、估值合理且风险可控的股票候选，并说明筛选逻辑。",
     icon: Search,
-    iconClass: "text-sky-500",
+    iconClass: "text-brandBlue",
   },
   {
     label: "诊股",
     description: "拆解个股表现，看看机会、压力位和风险。",
     prompt: "帮我诊断一只股票的基本面、技术面和风险点，并给出后续关注指标。",
     icon: Activity,
-    iconClass: "text-emerald-600",
+    iconClass: "text-brand",
   },
   {
     label: "策略",
     description: "把交易想法变成规则、参数和风控条件。",
     prompt: "帮我设计一个可回测的量化交易策略，包含交易逻辑、参数和风险控制。",
     icon: FileCode2,
-    iconClass: "text-violet-500",
+    iconClass: "text-signal",
   },
   {
     label: "回测",
     description: "验证策略收益、回撤、胜率和基准对比。",
     prompt: "帮我对当前策略做回测，分析收益、回撤、胜率和相对基准表现。",
     icon: BarChart3,
-    iconClass: "text-orange-600",
+    iconClass: "text-risk",
   },
 ];
 
@@ -335,31 +335,38 @@ function NewTaskHome({
   onPromptSelect?: (content: string) => void | Promise<void>;
 }) {
   return (
-    <div className="flex min-h-[calc(100vh-15rem)] items-center justify-center py-12">
-      <div className="w-full">
-        <div className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-zinc-200 bg-zinc-50 text-zinc-400">
-          <Brain className="h-6 w-6" />
-        </div>
-        <h1 className="mt-5 text-center text-2xl font-semibold text-zinc-900">
-          我能帮助你什么
-        </h1>
-        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid min-h-[calc(100vh-15rem)] items-center py-6">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(280px,0.95fr)]">
+        <section className="research-briefing flex min-h-72 items-center justify-center overflow-hidden rounded-lg border border-strong p-0 shadow-panel lg:min-h-[22rem]">
+          <img
+            alt="交易策略验证流程插画"
+            className="pointer-events-none h-80 w-auto max-w-none select-none object-contain sm:h-[22rem] lg:h-[25rem]"
+            src="/trading-validation-illustration.png"
+          />
+        </section>
+
+        <div className="grid gap-3 sm:grid-cols-2">
           {starterPrompts.map((item) => {
             const Icon = item.icon;
             return (
               <button
-                className="flex min-h-32 flex-col items-start justify-between rounded-lg border border-zinc-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex min-h-32 flex-col items-start justify-between rounded-lg border border-line bg-panel p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-strong hover:shadow-lift focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={isDisabled || !onPromptSelect}
                 key={item.label}
                 type="button"
                 onClick={() => void onPromptSelect?.(item.prompt)}
               >
-                <Icon className={`h-4 w-4 ${item.iconClass}`} />
-                <span className="grid gap-1.5">
-                  <span className="text-sm font-semibold leading-5 text-zinc-900">
-                    {item.label}
+                <span className="flex w-full items-center justify-between">
+                  <span className="grid h-8 w-8 place-items-center rounded-md border border-line bg-soft">
+                    <Icon className={`h-4 w-4 ${item.iconClass}`} />
                   </span>
-                  <span className="text-xs leading-5 text-zinc-500">{item.description}</span>
+                  <span className="font-mono text-[10px] font-bold uppercase text-muted">
+                    Start
+                  </span>
+                </span>
+                <span className="grid gap-1.5">
+                  <span className="text-sm font-semibold leading-5 text-ink">{item.label}</span>
+                  <span className="text-xs leading-5 text-muted">{item.description}</span>
                 </span>
               </button>
             );
@@ -372,7 +379,7 @@ function NewTaskHome({
 
 function TimelineRail({ children }: { children: ReactNode }) {
   return (
-    <div className="relative space-y-6 before:absolute before:bottom-0 before:left-0 before:top-0 before:w-px before:bg-zinc-200 before:content-['']">
+    <div className="execution-tape relative rounded-lg border border-line bg-panel/80 shadow-sm">
       {children}
     </div>
   );
@@ -389,28 +396,43 @@ function TimelineStage({
 }) {
   const toneClass =
     tone === "error"
-      ? "bg-red-600 shadow-[0_0_0_1px_rgba(220,38,38,0.35)]"
+      ? "is-error"
       : tone === "answer"
-        ? "bg-zinc-900 shadow-[0_0_0_1px_rgba(24,24,27,0.22)]"
+        ? "is-answer"
         : tone === "tool"
-          ? "bg-zinc-500 shadow-[0_0_0_1px_rgba(113,113,122,0.28)]"
-          : "bg-white shadow-[0_0_0_1px_rgba(113,113,122,0.32)]";
-  const activeClass = isActive ? "ring-4 ring-zinc-200/80" : "";
+          ? "is-tool"
+          : "is-thinking";
+  const activeClass = isActive ? "ring-4 ring-signalSoft" : "";
 
   return (
-    <div className="relative pl-6">
+    <div className="timeline-event relative">
       <span
         aria-hidden="true"
-        className={`absolute left-0 top-3 z-10 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-white ${toneClass} ${activeClass}`}
-      />
+        className={`execution-node ${toneClass} ${activeClass}`}
+      >
+        {timelineStageLabel(tone)}
+      </span>
       {children}
     </div>
   );
 }
 
+function timelineStageLabel(tone: TimelineStageTone): string {
+  if (tone === "thinking") {
+    return "AI";
+  }
+  if (tone === "tool") {
+    return "RUN";
+  }
+  if (tone === "error") {
+    return "ERR";
+  }
+  return "OUT";
+}
+
 function ActivityHint({ label }: { label: string }) {
   return (
-    <div className="pl-6 text-xs text-zinc-500">
+    <div className="pl-6 text-xs text-muted">
       <span className="inline-flex items-center gap-2">
         <span className="activity-dot" aria-hidden="true" />
         {label}
@@ -427,7 +449,7 @@ function TurnStatusEntry({
   isStreaming: boolean;
 }) {
   return (
-    <div className="flex justify-end text-xs text-zinc-500">
+    <div className="flex justify-end text-xs text-muted">
       <span className="inline-flex items-center gap-1">
         {isStreaming ? "处理中" : "已处理"} {elapsedLabel}
         <ChevronDown className="h-3.5 w-3.5" />
@@ -451,7 +473,7 @@ function MessageEntry({
   if (isUser) {
     return (
       <article className="flex justify-end">
-        <div className="max-w-[min(78%,42rem)] rounded-md border border-zinc-900 bg-zinc-900 px-4 py-3 text-left shadow-sm">
+        <div className="max-w-[min(78%,42rem)] rounded-md border border-ink bg-ink px-4 py-3 text-left shadow-sm">
           <p className="whitespace-pre-wrap break-words text-sm font-semibold leading-relaxed text-white">
             {blockText(message)}
           </p>
@@ -462,7 +484,7 @@ function MessageEntry({
 
   return (
     <article>
-      <div className="min-w-0 text-sm leading-relaxed text-zinc-800">
+      <div className="min-w-0 text-sm leading-relaxed text-graphite">
         {isAssistant ? (
           <div>
             <MarkdownContent text={blockText(message)} />
@@ -495,26 +517,26 @@ function ThinkingEntry({
 }) {
   return (
     <div>
-      <details className="group overflow-hidden rounded-md border border-zinc-300 bg-zinc-50/50" open={isActive}>
-        <summary className="flex cursor-pointer list-none items-center justify-between px-3.5 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-100">
+      <details className="group overflow-hidden rounded-md border border-line bg-panel" open={isActive}>
+        <summary className="flex cursor-pointer list-none items-center justify-between px-3.5 py-2 text-xs font-semibold text-graphite transition-colors hover:bg-soft">
           <span className="inline-flex min-w-0 items-center gap-2">
             {isActive ? (
-              <span className="thinking-rings text-zinc-500" aria-hidden="true">
+              <span className="thinking-rings text-signal" aria-hidden="true">
                 <span />
                 <span />
                 <span />
               </span>
             ) : (
-              <Brain className="h-4 w-4 text-zinc-500" />
+              <Brain className="h-4 w-4 text-signal" />
             )}
             {thinkingSummary(thinking)}
           </span>
-          <span className="flex shrink-0 items-center gap-2 text-xs text-zinc-400">
+          <span className="flex shrink-0 items-center gap-2 text-xs text-muted">
             {thinking ? formatElapsed(thinking.startedAt, thinking.completedAt) : "进行中"}
             <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
           </span>
         </summary>
-        <p className="whitespace-pre-wrap break-words border-t border-zinc-200 bg-white p-3.5 font-mono text-xs leading-relaxed text-zinc-600">
+        <p className="whitespace-pre-wrap break-words border-t border-line bg-soft p-3.5 font-mono text-xs leading-relaxed text-graphite">
           {thinking?.text || "正在组织思路"}
           {isActive ? <span className="streaming-caret" /> : null}
         </p>
@@ -537,30 +559,30 @@ function ToolGroupEntry({
   return (
     <div aria-label="工具调用">
       <details
-        className={`group/tool-group overflow-hidden rounded-md bg-white ${
+        className={`group/tool-group overflow-hidden rounded-md bg-panel ${
           toolGroup.status === "failed"
-            ? "border-2 border-red-500 bg-red-50/20"
-            : "border border-zinc-300"
+            ? "border-2 border-risk bg-riskSoft"
+            : "border border-line"
         }`}
       >
         <summary
           className={`flex cursor-pointer list-none items-center gap-2.5 px-3.5 py-2 font-mono text-xs transition-colors ${
             toolGroup.status === "failed"
-              ? "bg-red-50 hover:bg-red-100/60"
-              : "bg-zinc-50 hover:bg-zinc-100"
+              ? "bg-riskSoft hover:bg-riskSoft/70"
+              : "bg-soft hover:bg-compareSoft"
           }`}
         >
           <span className="flex min-w-0 items-center gap-2.5">
             {toolGroup.status === "running" ? (
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-zinc-700" />
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-signal" />
             ) : toolGroup.status === "failed" ? (
-              <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+              <AlertCircle className="h-4 w-4 shrink-0 text-risk" />
             ) : (
-              <FileText className="h-4 w-4 shrink-0 text-zinc-700" />
+              <FileText className="h-4 w-4 shrink-0 text-brandBlue" />
             )}
             <span
               className={`truncate font-bold ${
-                toolGroup.status === "failed" ? "text-red-950" : "text-zinc-900"
+                toolGroup.status === "failed" ? "text-risk" : "text-ink"
               }`}
             >
               {toolSummary(toolGroup)}
@@ -568,7 +590,7 @@ function ToolGroupEntry({
             {toolGroup.calls.length === 1 ? (
               <span
                 className={`truncate ${
-                  toolGroup.status === "failed" ? "text-red-900/80" : "text-zinc-500"
+                  toolGroup.status === "failed" ? "text-risk" : "text-muted"
                 }`}
               >
                 {firstToolCall.command}
@@ -585,13 +607,13 @@ function ToolGroupEntry({
             </span>
             <ChevronDown
               className={`h-4 w-4 transition-transform group-open/tool-group:rotate-180 ${
-                toolGroup.status === "failed" ? "text-red-400" : "text-zinc-400"
+                toolGroup.status === "failed" ? "text-risk" : "text-muted"
               }`}
             />
           </span>
         </summary>
         {toolGroup.calls.length > 1 ? (
-          <div className="grid gap-2 border-t border-zinc-300 bg-zinc-50 p-2">
+          <div className="grid gap-2 border-t border-line bg-soft p-2">
             {toolGroup.calls.map((toolCall) => (
               <ToolCallDisclosure key={toolCall.id} toolCall={toolCall} />
             ))}
@@ -606,10 +628,10 @@ function ToolGroupEntry({
 
 function ToolCallDisclosure({ toolCall }: { toolCall: ToolCallView }) {
   return (
-    <details className="group/tool-call overflow-hidden rounded border border-zinc-300 bg-white">
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 font-mono text-xs transition-colors hover:bg-zinc-100">
-        <span className="min-w-0 truncate font-bold text-zinc-900">{toolCall.name}</span>
-        <span className="min-w-0 truncate text-zinc-500">{toolCall.command}</span>
+    <details className="group/tool-call overflow-hidden rounded border border-line bg-panel">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 font-mono text-xs transition-colors hover:bg-soft">
+        <span className="min-w-0 truncate font-bold text-ink">{toolCall.name}</span>
+        <span className="min-w-0 truncate text-muted">{toolCall.command}</span>
         <span className="ml-auto flex shrink-0 items-center gap-2">
           <span
             className={`rounded px-2 py-0.5 font-sans text-[10px] font-bold ${toolStatusBadgeClass(
@@ -618,7 +640,7 @@ function ToolCallDisclosure({ toolCall }: { toolCall: ToolCallView }) {
           >
             {toolStatusLabel(toolCall.status)}
           </span>
-          <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open/tool-call:rotate-180" />
+          <ChevronDown className="h-4 w-4 text-muted transition-transform group-open/tool-call:rotate-180" />
         </span>
       </summary>
       <ToolCallDetail toolCall={toolCall} />
@@ -628,17 +650,17 @@ function ToolCallDisclosure({ toolCall }: { toolCall: ToolCallView }) {
 
 function ToolCallDetail({ toolCall }: { toolCall: ToolCallView }) {
   return (
-    <div className="grid gap-3 border-t border-zinc-300 bg-zinc-950 p-3 font-mono text-xs text-zinc-200">
+    <div className="grid gap-3 border-t border-line bg-ink p-3 font-mono text-xs text-panel">
       <div>
-        <span className="text-[10px] font-bold uppercase text-zinc-500">Input</span>
-        <pre className="mt-0.5 whitespace-pre-wrap break-words text-zinc-300">
+        <span className="text-[10px] font-bold uppercase text-muted">Input</span>
+        <pre className="mt-0.5 whitespace-pre-wrap break-words text-panel/80">
           {toolCall.command}
         </pre>
       </div>
       <div>
         <span
           className={`text-[10px] font-bold uppercase ${
-            toolCall.status === "failed" ? "text-red-400" : "text-zinc-500"
+            toolCall.status === "failed" ? "text-risk" : "text-muted"
           }`}
         >
           {toolCall.status === "failed" ? "Stderr Output" : "Output"}
@@ -646,13 +668,13 @@ function ToolCallDetail({ toolCall }: { toolCall: ToolCallView }) {
         {toolCall.detail ? (
           <pre
             className={`mt-0.5 max-h-64 overflow-auto whitespace-pre-wrap break-words ${
-              toolCall.status === "failed" ? "text-red-400" : "text-emerald-400"
+              toolCall.status === "failed" ? "text-risk" : "text-brand"
             }`}
           >
             {toolCall.detail}
           </pre>
         ) : (
-          <pre className="mt-0.5 text-zinc-500">
+          <pre className="mt-0.5 text-muted">
             {toolCall.status === "running" ? "Running..." : "No output"}
           </pre>
         )}
@@ -673,12 +695,12 @@ function toolStatusLabel(status: ToolCallView["status"]): string {
 
 function toolStatusBadgeClass(status: ToolCallView["status"]): string {
   if (status === "failed") {
-    return "bg-red-600 text-white";
+    return "bg-risk text-panel";
   }
   if (status === "running") {
-    return "bg-zinc-900 text-white";
+    return "bg-signal text-panel";
   }
-  return "bg-zinc-200 text-zinc-800";
+  return "bg-gainSoft text-brand";
 }
 
 function buildTimelineItems(

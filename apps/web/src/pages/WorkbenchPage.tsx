@@ -314,6 +314,7 @@ export function WorkbenchPage() {
           query={historyQuery}
           isProjectLoading={isProjectLoading}
           isLoading={isHistoryLoading}
+          isStreaming={isSending}
           onCreateProject={handleCreateProject}
           onRenameProject={handleRenameProject}
           onDeleteProject={handleDeleteProject}

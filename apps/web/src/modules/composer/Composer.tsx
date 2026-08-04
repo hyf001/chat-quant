@@ -20,14 +20,14 @@ export function Composer({ disabled, placeholder = "向 Agent 追加指令...", 
   };
 
   return (
-    <footer className="shrink-0 border-t border-zinc-200 bg-white p-4">
+    <footer className="glass-panel shrink-0 border-t border-line p-4">
       <form
-        className="mx-auto flex max-w-3xl items-center gap-2 rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2.5 transition-all focus-within:border-zinc-900 focus-within:bg-white"
+        className="mx-auto flex max-w-5xl items-center gap-3 rounded-lg border border-strong bg-panel px-4 py-3 shadow-lift transition-all focus-within:border-signal focus-within:bg-panel"
         onSubmit={handleSubmit}
       >
-        <span className="select-none font-mono text-xs font-bold text-zinc-500">&gt;</span>
+        <span className="select-none font-mono text-lg font-black text-signal">&gt;</span>
         <input
-          className="min-w-0 flex-1 bg-transparent text-xs text-zinc-900 outline-none placeholder:text-zinc-400"
+          className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted/70"
           disabled={disabled}
           id="agent-message-input"
           name="message"
@@ -36,7 +36,7 @@ export function Composer({ disabled, placeholder = "向 Agent 追加指令...", 
           value={content}
         />
         <button
-          className="shrink-0 rounded bg-zinc-900 px-3.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-black focus:outline-none focus:ring-2 focus:ring-zinc-900/25 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-500"
+          className="h-9 shrink-0 rounded-md bg-ink px-4 text-xs font-bold text-panel transition-colors hover:bg-graphite focus:outline-none focus:ring-2 focus:ring-signal/25 disabled:cursor-not-allowed disabled:bg-strong disabled:text-muted"
           disabled={disabled || content.trim().length === 0}
           type="submit"
         >

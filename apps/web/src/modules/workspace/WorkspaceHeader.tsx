@@ -21,26 +21,31 @@ export function WorkspaceHeader({
   const isActive = Boolean(backtestStatus) || health?.status === "ok" || isConnected;
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-zinc-200 bg-white px-6">
+    <header className="glass-panel flex h-14 shrink-0 items-center justify-between gap-4 border-b border-line px-5 lg:px-6">
       <div className="flex min-w-0 items-center gap-3 text-xs">
-        <span className="flex shrink-0 items-center gap-1.5 font-bold text-zinc-900">
-          <Cpu className="h-4 w-4 text-zinc-700" />
-          Codex Execution Engine
+        <span className="flex shrink-0 items-center gap-2 font-bold text-ink">
+          <span
+            className={`h-2.5 w-2.5 rounded-full shadow-[0_0_0_6px_rgba(22,132,95,0.12)] ${
+              isActive ? "status-breathe bg-brand" : "bg-risk"
+            }`}
+          />
+          <Cpu className="h-4 w-4 text-graphite" />
+          Quant Execution Engine
         </span>
-        <span className="text-zinc-300">|</span>
-        <span className="max-w-48 truncate text-zinc-700">{project?.name ?? "未选择项目"}</span>
-        <span className="text-zinc-300">|</span>
-        <span className="truncate font-mono text-zinc-500">{taskLabel}</span>
+        <span className="text-line">/</span>
+        <span className="max-w-48 truncate text-muted">{project?.name ?? "未选择项目"}</span>
+        <span className="text-line">/</span>
+        <span className="truncate font-mono text-muted">{taskLabel}</span>
       </div>
       <span
-        className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 font-mono text-[10px] ${
+        className={`inline-flex h-7 items-center gap-1 rounded-full border px-2.5 font-mono text-[10px] font-bold ${
           isActive
-            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-            : "border-red-200 bg-red-50 text-red-700"
+            ? "border-brand/30 bg-gainSoft text-brand"
+            : "border-risk/30 bg-riskSoft text-risk"
         }`}
       >
         <span
-          className={`h-1.5 w-1.5 rounded-full ${isActive ? "animate-pulse bg-emerald-500" : "bg-red-500"}`}
+          className={`h-1.5 w-1.5 rounded-full ${isActive ? "animate-pulse bg-brand" : "bg-risk"}`}
         />
         {isActive ? "ACTIVE" : "OFFLINE"}
       </span>
