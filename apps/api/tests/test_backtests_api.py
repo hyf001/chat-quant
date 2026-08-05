@@ -7,6 +7,8 @@ from app.schema.backtest import StrategyBacktestConfig
 from fastapi.testclient import TestClient
 from tests.test_strategy_api import strategy_create_payload, strategy_version_payload
 
+pytestmark = pytest.mark.usefixtures("project_test")
+
 
 @pytest.fixture(autouse=True)
 def fake_akshare_market_data(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -45,6 +47,7 @@ def create_strategy(client: TestClient) -> dict[str, object]:
 
 def create_backtest_payload() -> dict[str, object]:
     return {
+        "project_id": "project_test",
         "config": {
             "strategy_mode": "single_symbol",
             "asset_class": "stock",

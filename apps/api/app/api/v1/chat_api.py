@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.dependencies import UserId
 from app.db.session import get_db
 from app.schema.agent_runtime import (
     CancelSessionRequest,
@@ -19,7 +18,6 @@ from app.schema.agent_runtime import (
 )
 from app.service import chat_session as chat_session_service
 from app.service.chat import ChatApplicationService, chat_application_service
-from app.service.chat_session import ChatSessionAccessError
 
 router = APIRouter()
 
@@ -31,37 +29,25 @@ StreamAfterQuery = Annotated[int, Query(ge=0)]
 async def post_chat_message(
     request: ChatMessageRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
-    user_id: UserId,
 ) -> ChatMessageAccepted:
-    try:
-        return await chat_application_service.handle_user_message(
-            request.model_copy(update={"user_id": user_id}),
-            chat_session_service.chat_session_service(db),
-        )
-    except ChatSessionAccessError:
-        raise HTTPException(status_code=403, detail="chat session access denied") from None
+    return await chat_application_service.handle_user_message(
+        request,
+        chat_session_service.chat_session_service(db),
+    )
 
 
 @router.get("/sessions/{chat_session_id}/stream")
 async def stream_chat_session(
     chat_session_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    user_id: UserId,
     after: StreamAfterQuery = 0,
 ) -> StreamingResponse:
     chat_sessions = chat_session_service.chat_session_service(db)
-    try:
-        detail = await chat_application_service.get_session_detail(
-            chat_session_id,
-            chat_sessions,
-            user_id=user_id,
-        )
-        if detail is None:
-            raise HTTPException(status_code=404, detail="chat session not found")
-    except ChatSessionAccessError:
-        raise HTTPException(status_code=403, detail="chat session access denied") from None
+    detail = await chat_application_service.get_session_detail(chat_session_id, chat_sessions)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="chat session not found")
     return StreamingResponse(
-        _sse_events(chat_application_service, chat_session_id, chat_sessions, user_id, after),
+        _sse_events(chat_application_service, chat_session_id, chat_sessions, after),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache"},
     )
@@ -82,19 +68,11 @@ async def cancel_chat_session(
 async def get_chat_session(
     chat_session_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    user_id: UserId,
 ) -> ChatSessionDetail:
     chat_sessions = chat_session_service.chat_session_service(db)
-    try:
-        detail = await chat_application_service.get_session_detail(
-            chat_session_id,
-            chat_sessions,
-            user_id=user_id,
-        )
-        if detail is None:
-            raise HTTPException(status_code=404, detail="chat session not found")
-    except ChatSessionAccessError:
-        raise HTTPException(status_code=403, detail="chat session access denied") from None
+    detail = await chat_application_service.get_session_detail(chat_session_id, chat_sessions)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="chat session not found")
     return detail
 
 
@@ -102,14 +80,12 @@ async def _sse_events(
     chat_service: ChatApplicationService,
     chat_session_id: str,
     chat_sessions: object,
-    user_id: str,
     after: int,
 ) -> AsyncIterator[str]:
     del after
     async for envelope in chat_service.stream_chat_session(
         chat_session_id,
         chat_sessions,
-        user_id=user_id,
     ):
         payload = envelope.model_dump(mode="json")
         yield f"event: sdk\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"

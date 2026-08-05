@@ -33,7 +33,13 @@ export function WorkspaceHeader({
           Quant Execution Engine
         </span>
         <span className="text-line">/</span>
-        <span className="max-w-48 truncate text-muted">{project?.name ?? "未选择项目"}</span>
+        <span className="max-w-56 truncate text-muted">{project?.name ?? "未选择项目"}</span>
+        {project ? (
+          <>
+            <span className="text-line">/</span>
+            <span className="max-w-80 truncate font-mono text-muted">{project.local_path}</span>
+          </>
+        ) : null}
         <span className="text-line">/</span>
         <span className="truncate font-mono text-muted">{taskLabel}</span>
       </div>

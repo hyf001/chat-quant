@@ -80,31 +80,6 @@ APP_CONFIG_DEFINITIONS: tuple[ConfigDefinition, ...] = (
         "超过该毫秒数的请求会被标记为慢请求。",
     ),
     ConfigDefinition(
-        "default_user_id",
-        "默认用户",
-        "identity",
-        "string",
-        "local_user",
-        "未提供请求头时使用的用户 ID。",
-    ),
-    ConfigDefinition(
-        "default_project_id",
-        "默认项目",
-        "identity",
-        "string",
-        "local_project",
-        "未提供请求头时使用的项目 ID。",
-    ),
-    ConfigDefinition(
-        "claude_agent_cwd",
-        "Agent 工作目录",
-        "paths",
-        "string",
-        None,
-        "读取 Claude SDK 历史会话时使用的工作目录；留空使用项目目录。",
-        nullable=True,
-    ),
-    ConfigDefinition(
         "cors_origins",
         "CORS 来源",
         "system",
@@ -157,15 +132,6 @@ APP_CONFIG_DEFINITIONS: tuple[ConfigDefinition, ...] = (
         "integer",
         15,
         "等待 Agent 首个有效输出的秒数。",
-    ),
-    ConfigDefinition(
-        "project_home",
-        "项目目录",
-        "paths",
-        "string",
-        None,
-        "项目文件、运行产物和会话工作目录位置；默认跟随数据库目录。",
-        nullable=True,
     ),
     ConfigDefinition(
         "agent_skill_plugin_dir",
@@ -248,9 +214,6 @@ class Settings(BaseModel):
     log_format: Literal["text", "json"] = "text"
     access_log_enabled: bool = True
     access_log_slow_threshold_ms: int = 1000
-    default_user_id: str = "local_user"
-    default_project_id: str = "local_project"
-    claude_agent_cwd: str | None = None
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
@@ -275,10 +238,6 @@ class Settings(BaseModel):
     agent_max_turns: int = 8
     agent_turn_timeout_seconds: int = 300
     agent_first_token_timeout_seconds: int = 15
-    project_home: str = Field(
-        default="data/projects",
-        validation_alias=AliasChoices("project_home", "PROJECT_HOME"),
-    )
     agent_skill_plugin_dir: str = Field(
         default="plugin",
         validation_alias=AliasChoices("agent_skill_plugin_dir", "AGENT_SKILL_PLUGIN_DIR"),
@@ -310,8 +269,8 @@ def config_file_path() -> Path:
 
 
 def default_app_config_values(database_path: Path) -> dict[str, ConfigValue]:
+    del database_path
     values = {definition.key: definition.default for definition in APP_CONFIG_DEFINITIONS}
-    values["project_home"] = str(database_path.parent / "projects")
     return values
 
 

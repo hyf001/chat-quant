@@ -12,7 +12,6 @@ class StrategyRow(Base):
     __tablename__ = "strategies"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(128), nullable=False)
     project_id: Mapped[str] = mapped_column(String(128), nullable=False)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
@@ -23,7 +22,7 @@ class StrategyRow(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (
-        Index("idx_strategies_user_project_updated", "user_id", "project_id", "updated_at"),
+        Index("idx_strategies_project_updated", "project_id", "updated_at"),
     )
 
 
@@ -52,7 +51,6 @@ class StrategyBacktestRow(Base):
     __tablename__ = "strategy_backtests"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(128), nullable=False)
     project_id: Mapped[str] = mapped_column(String(128), nullable=False)
     strategy_id: Mapped[str] = mapped_column(
         String(64),

@@ -1,27 +1,13 @@
 from __future__ import annotations
 
-from app.schema.agent_runtime import AgentScenario, ChatSessionContext
+from app.schema.agent_runtime import ChatSessionContext
 
 BASE_PROMPT_VERSION = "base:v2"
 OUTPUT_PROMPT_VERSION = "output:v1"
 
-SCENARIO_GUIDANCE: dict[AgentScenario, str] = {
-    AgentScenario.CHAT_ANALYSIS: "聚焦股票查询、行情解释、指标口径和可复现分析代码。",
-    AgentScenario.SCREENING: "聚焦选股条件拆解、候选列表生成和筛选依据说明。",
-    AgentScenario.STRATEGY_BUILD: (
-        "聚焦策略逻辑、chatq_params 参数协议、可验证 Python/backtrader 入口和版本化保存。"
-    ),
-    AgentScenario.BACKTEST: "聚焦回测配置、风险指标、收益/回撤曲线和历史局限说明。",
-    AgentScenario.FOLLOW_UP: "基于已有上下文和资产引用回答追问，必要时复用策略或回测记录。",
-}
-
 
 def build_system_prompt(
-    scenario: AgentScenario,
     context: ChatSessionContext,
-    *,
-    user_id: str,
-    project_id: str,
 ) -> str:
     summary = context.summary or "暂无会话摘要。"
     assets = "\n".join(
@@ -42,12 +28,9 @@ def build_system_prompt(
    backtrader.Strategy 子类上定义 class-level chatq_params()，返回 name/type/default/label。
    策略内部通过 self.p.xxx 使用参数，不要再让用户额外维护 custom_params。
 
-场景指导：
-{SCENARIO_GUIDANCE[scenario]}
-
-当前身份上下文：
-- user_id: {user_id}
-- project_id: {project_id}
+当前项目上下文：
+- 当前工作目录就是本地项目目录。
+- 所有生成文件、策略源码和回测产物都应放在当前项目目录或平台指定输出目录内。
 
 当前会话摘要：
 {summary}

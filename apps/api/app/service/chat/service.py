@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from pathlib import Path
 from uuid import uuid4
 
 from claude_agent_sdk import get_session_messages as sdk_get_session_messages
@@ -16,10 +15,8 @@ from app.agent_runtime.sdk_message_parser import (
 )
 from app.core.config import get_settings
 from app.core.logging import get_logger
-from app.core.project_dirs import project_dir
 from app.schema.agent_runtime import (
     AgentExecutionCommand,
-    AgentScenario,
     AssetReference,
     ChatMessageAccepted,
     ChatMessageRequest,
@@ -27,11 +24,7 @@ from app.schema.agent_runtime import (
     ChatSessionDetail,
     SDKStreamEnvelope,
 )
-from app.service.chat_session import (
-    ChatSessionAccessError,
-    ChatSessionNotFoundError,
-    ChatSessionService,
-)
+from app.service.chat_session import ChatSessionNotFoundError, ChatSessionService
 from app.service.chat_session.types import AssetLink
 
 logger = get_logger(__name__)
@@ -69,7 +62,6 @@ class ChatApplicationService:
         ensured_session = (
             await chat_sessions.ensure_chat_session_with_status(
                 chat_session_id=chat_session_id,
-                user_id=request.user_id,
                 project_id=request.project_id,
                 title=title,
                 initial_prompt=request.message,
@@ -85,28 +77,18 @@ class ChatApplicationService:
             sdk_session_id = state.sdk_session_id if state is not None else None
         asset_links: list[AssetLink] = []
         if chat_sessions is not None and indexed_session is not None:
-            _, asset_links = await chat_sessions.get_context(
-                indexed_session.id,
-                user_id=request.user_id,
-            )
+            _, asset_links = await chat_sessions.get_context(indexed_session.id)
         context = ChatSessionContext(
             summary=indexed_session.summary if indexed_session is not None else None,
             related_assets=[_asset_reference_from_link(link) for link in asset_links],
         )
-        target_project_dir = project_dir(
-            self.runtime.settings.project_home,
-            request.project_id,
-        )
+        if chat_sessions is None:
+            raise ValueError("chat session service is required to resolve project directory")
+        target_project_dir = await chat_sessions.project_directory(request.project_id)
         command = AgentExecutionCommand(
-            user_id=request.user_id,
             project_id=request.project_id,
             chat_session_id=chat_session_id,
             user_message_id=user_message_id,
-            scenario=request.scenario
-            or infer_scenario(
-                request.message,
-                has_history=sdk_session_id is not None,
-            ),
             context=context,
             project_dir=target_project_dir,
             sdk_session_id=sdk_session_id,
@@ -116,7 +98,6 @@ class ChatApplicationService:
             deadline_seconds=self.runtime.settings.agent_turn_timeout_seconds,
             user_prompt=request.message,
         )
-        Path(command.project_dir).mkdir(parents=True, exist_ok=True)
         self._pending_executions[chat_session_id] = command
         self._session_state[chat_session_id] = ChatExecutionState(
             title=title,
@@ -135,24 +116,17 @@ class ChatApplicationService:
         self,
         chat_session_id: str,
         chat_sessions: ChatSessionService | None = None,
-        *,
-        user_id: str | None = None,
     ) -> ChatSessionDetail | None:
         state = self._session_state.get(chat_session_id)
         pending = self._pending_executions.get(chat_session_id)
         session = None
         assets: list[AssetLink] = []
-        if chat_sessions is not None and user_id is not None:
+        if chat_sessions is not None:
             try:
-                session, assets = await chat_sessions.get_context(
-                    chat_session_id,
-                    user_id=user_id,
-                )
+                session, assets = await chat_sessions.get_context(chat_session_id)
             except ChatSessionNotFoundError:
                 if state is None and pending is None:
                     return None
-            except ChatSessionAccessError:
-                raise
         if state is None and pending is None and session is None:
             return None
 
@@ -170,7 +144,14 @@ class ChatApplicationService:
             if state is not None
             else pending.project_id
         )
-        sdk_messages = self._read_sdk_messages(chat_session_id, sdk_session_id, project_id)
+        project_dir = (
+            await chat_sessions.project_directory(project_id)
+            if chat_sessions is not None
+            else state.project_dir
+            if state is not None
+            else pending.project_dir
+        )
+        sdk_messages = self._read_sdk_messages(chat_session_id, sdk_session_id, project_dir)
         return ChatSessionDetail(
             chat_session_id=chat_session_id,
             sdk_session_id=sdk_session_id,
@@ -191,27 +172,24 @@ class ChatApplicationService:
         self,
         chat_session_id: str,
         chat_sessions: ChatSessionService | None = None,
-        *,
-        user_id: str | None = None,
     ) -> AsyncIterator[SDKStreamEnvelope]:
         command = self._pending_executions.pop(chat_session_id, None)
         if command is None:
             state = self._session_state.get(chat_session_id)
             sdk_session_id = state.sdk_session_id if state is not None else None
             project_id = state.project_id if state is not None else None
-            if sdk_session_id is None and chat_sessions is not None and user_id is not None:
+            project_dir = state.project_dir if state is not None else None
+            if sdk_session_id is None and chat_sessions is not None:
                 try:
-                    session, _ = await chat_sessions.get_context(
-                        chat_session_id,
-                        user_id=user_id,
-                    )
+                    session, _ = await chat_sessions.get_context(chat_session_id)
                     sdk_session_id = session.sdk_session_id
                     project_id = session.project_id
+                    project_dir = await chat_sessions.project_directory(session.project_id)
                 except Exception:
                     sdk_session_id = None
-            if sdk_session_id is None or project_id is None:
+            if sdk_session_id is None or project_id is None or project_dir is None:
                 return
-            for envelope in self._read_sdk_messages(chat_session_id, sdk_session_id, project_id):
+            for envelope in self._read_sdk_messages(chat_session_id, sdk_session_id, project_dir):
                 yield envelope
             return
 
@@ -260,7 +238,7 @@ class ChatApplicationService:
         self,
         chat_session_id: str,
         sdk_session_id: str | None,
-        project_id: str,
+        project_dir: str,
     ) -> list[SDKStreamEnvelope]:
         self._refresh_runtime_settings()
         if sdk_session_id is None:
@@ -268,7 +246,7 @@ class ChatApplicationService:
         try:
             messages = sdk_get_session_messages(
                 sdk_session_id,
-                directory=project_dir(self.runtime.settings.project_home, project_id),
+                directory=project_dir,
             )
             parsed_events = [parse_sdk_message(message) for message in messages]
             turn_tracker = SDKTurnTracker()
@@ -300,19 +278,6 @@ class ChatApplicationService:
             self.runtime = ClaudeAgentRuntime(settings=settings)
 
 
-def infer_scenario(message: str, has_history: bool = False) -> AgentScenario:
-    lowered = message.lower()
-    if has_history and any(word in lowered for word in ("再", "继续", "优化", "follow", "again")):
-        return AgentScenario.FOLLOW_UP
-    if any(word in lowered for word in ("回测", "backtest", "收益", "回撤")):
-        return AgentScenario.BACKTEST
-    if any(word in lowered for word in ("策略", "strategy", "均线", "买入", "卖出")):
-        return AgentScenario.STRATEGY_BUILD
-    if any(word in lowered for word in ("选股", "筛选", "screen")):
-        return AgentScenario.SCREENING
-    return AgentScenario.CHAT_ANALYSIS
-
-
 def _title_from_prompt(prompt: str) -> str:
     stripped = prompt.strip()
     if not stripped:
@@ -330,15 +295,14 @@ async def _sync_chat_session_index(
         title: str | None = None
         del terminal_event
         if command.should_finalize_initial_title:
-            title = chat_sessions.initial_answer_title(
+            title = await chat_sessions.initial_answer_title(
                 command.chat_session_id,
-                project_id=command.project_id,
+                project_dir=command.project_dir,
                 initial_prompt=command.user_prompt,
                 sdk_session_id=sdk_session_id,
             )
         await chat_sessions.update_chat_session(
             command.chat_session_id,
-            user_id=command.user_id,
             title=title,
             snippet=command.user_prompt[:160],
             summary=_summary_from_prompt(command.user_prompt),

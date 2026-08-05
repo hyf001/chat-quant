@@ -1,19 +1,21 @@
-import { app, BrowserWindow, dialog } from "electron";
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
-import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const API_HOST = "127.0.0.1";
+const DEFAULT_API_PORT = 12345;
+const API_RUNTIME_FILE_NAME = "api-runtime.json";
 
 let apiProcess = null;
 let mainWindow = null;
 
 async function main() {
   await app.whenReady();
+  registerDesktopIpc();
 
   const port = await resolveApiPort();
   const apiBaseUrl = `http://${API_HOST}:${port}`;
@@ -26,6 +28,7 @@ async function main() {
 
   try {
     await waitForHealth(`${apiBaseUrl}/api/health`, 120_000);
+    writeApiRuntimeFile(apiBaseUrl, port, configFilePath);
     console.log(`Chat Quant API ready at ${apiBaseUrl}`);
     await mainWindow.loadFile(webIndexPath());
   } catch (error) {
@@ -40,6 +43,31 @@ async function main() {
       `data:text/html;charset=utf-8,${encodeURIComponent(errorHtml(message))}`,
     );
   }
+}
+
+function registerDesktopIpc() {
+  ipcMain.handle("chatq:select-project-directory", async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ["openDirectory", "createDirectory"],
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+    return result.filePaths[0];
+  });
+
+  ipcMain.handle("chatq:create-project-directory", async () => {
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: "Create Chat Quant Project",
+      buttonLabel: "Create",
+      properties: ["createDirectory"],
+    });
+    if (result.canceled || !result.filePath) {
+      return null;
+    }
+    mkdirSync(result.filePath, { recursive: true });
+    return result.filePath;
+  });
 }
 
 function createWindow(apiBaseUrl) {
@@ -122,6 +150,7 @@ function packagedSidecarPath() {
 }
 
 function stopApiSidecar() {
+  removeApiRuntimeFile();
   if (!apiProcess || apiProcess.killed) {
     return;
   }
@@ -164,30 +193,12 @@ function waitForHealth(url, timeoutMs) {
   });
 }
 
-function getFreePort() {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.unref();
-    server.on("error", reject);
-    server.listen(0, API_HOST, () => {
-      const address = server.address();
-      server.close(() => {
-        if (typeof address === "object" && address) {
-          resolve(address.port);
-        } else {
-          reject(new Error("Could not allocate a local API port"));
-        }
-      });
-    });
-  });
-}
-
 async function resolveApiPort() {
   const configuredPort = Number.parseInt(process.env.CHATQ_DESKTOP_API_PORT ?? "", 10);
   if (Number.isInteger(configuredPort) && configuredPort > 0) {
     return configuredPort;
   }
-  return getFreePort();
+  return DEFAULT_API_PORT;
 }
 
 function ensureDesktopConfigFile() {
@@ -199,6 +210,39 @@ function ensureDesktopConfigFile() {
     writeFileSync(configFilePath, `CHATQ_DATABASE_PATH=${databasePath}\n`, "utf8");
   }
   return configFilePath;
+}
+
+function apiRuntimeFilePath() {
+  return path.join(app.getPath("userData"), API_RUNTIME_FILE_NAME);
+}
+
+function writeApiRuntimeFile(apiBaseUrl, port, configFilePath) {
+  const userDataPath = app.getPath("userData");
+  mkdirSync(userDataPath, { recursive: true });
+  writeFileSync(
+    apiRuntimeFilePath(),
+    `${JSON.stringify(
+      {
+        host: API_HOST,
+        port,
+        base_url: apiBaseUrl,
+        api_base_url: `${apiBaseUrl}/api`,
+        pid: apiProcess?.pid ?? null,
+        config_file_path: configFilePath,
+        updated_at: new Date().toISOString(),
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+}
+
+function removeApiRuntimeFile() {
+  const runtimeFilePath = apiRuntimeFilePath();
+  if (existsSync(runtimeFilePath)) {
+    rmSync(runtimeFilePath, { force: true });
+  }
 }
 
 function errorHtml(message) {

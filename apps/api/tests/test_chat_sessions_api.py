@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from app.main import app
 from app.service.chat_session import service as chat_session_service
@@ -7,6 +9,17 @@ from claude_agent_sdk.types import AssistantMessage, TextBlock, UserMessage
 from fastapi.testclient import TestClient
 
 client = TestClient(app)
+_project_counter = 0
+
+
+def _create_project(name: str = "workspace") -> dict[str, object]:
+    global _project_counter
+    _project_counter += 1
+    local_path = Path("/tmp/chatq/test-chat-sessions") / f"{name}-{_project_counter}"
+    local_path.mkdir(parents=True, exist_ok=True)
+    response = client.post("/api/projects/open", json={"local_path": str(local_path)})
+    assert response.status_code == 200
+    return response.json()
 
 
 @pytest.fixture(autouse=True)
@@ -27,7 +40,6 @@ def reset_m1_state(monkeypatch):
         session_id: str, directory: str | None = None, limit: int | None = None, offset: int = 0
     ) -> list[object]:
         assert directory is not None
-        assert directory.endswith("/workspace_a")
         assert offset == 0
         messages = transcripts.get(session_id, [])
         return messages[-limit:] if limit else messages
@@ -38,10 +50,11 @@ def reset_m1_state(monkeypatch):
 
 
 def test_create_session_with_initial_prompt_only_creates_chat_session():
+    project = _create_project("workspace-a")
     response = client.post(
         "/api/chat-sessions",
-        headers={"X-User-Id": "user_a", "X-Project-Id": "workspace_a"},
         json={
+            "project_id": project["id"],
             "initial_prompt": "帮我分析 600519 最近走势",
             "symbols": ["600519"],
             "tags": ["白酒"],
@@ -57,45 +70,45 @@ def test_create_session_with_initial_prompt_only_creates_chat_session():
 
 
 def test_detail_reads_messages_from_claude_agent_sdk_get_session_messages():
+    project = _create_project("workspace-a")
     created = client.post(
         "/api/chat-sessions",
-        headers={"X-User-Id": "user_a", "X-Project-Id": "workspace_a"},
-        json={"title": "已有 SDK 会话"},
+        json={"project_id": project["id"], "title": "已有 SDK 会话"},
     ).json()
     patched = client.patch(
         f"/api/chat-sessions/{created['id']}",
-        headers={"X-User-Id": "user_a"},
         json={"sdk_session_id": "sdk_001"},
     )
     assert patched.status_code == 200
 
-    detail = client.get(
-        f"/api/chat-sessions/{created['id']}",
-        headers={"X-User-Id": "user_a"},
-    )
+    detail = client.get(f"/api/chat-sessions/{created['id']}")
     assert detail.status_code == 200
     detail_data = detail.json()
     assert len(detail_data["messages"]) == 2
     assert detail_data["messages"][0]["role"] == "user"
 
 
-def test_list_sessions_filters_by_user_and_query():
+def test_list_sessions_filters_by_project_and_query():
+    project_b = _create_project("workspace-b")
+    project_c = _create_project("workspace-c")
     first = client.post(
         "/api/chat-sessions",
-        headers={"X-User-Id": "user_b", "X-Project-Id": "workspace_b"},
-        json={"title": "均线策略复盘", "kind": "strategy", "tags": ["ma"]},
+        json={
+            "project_id": project_b["id"],
+            "title": "均线策略复盘",
+            "kind": "strategy",
+            "tags": ["ma"],
+        },
     )
     assert first.status_code == 201
     second = client.post(
         "/api/chat-sessions",
-        headers={"X-User-Id": "user_c", "X-Project-Id": "workspace_c"},
-        json={"title": "均线策略复盘"},
+        json={"project_id": project_c["id"], "title": "均线策略复盘"},
     )
     assert second.status_code == 201
 
     response = client.get(
-        "/api/chat-sessions?query=均线&kind=strategy",
-        headers={"X-User-Id": "user_b", "X-Project-Id": "workspace_b"},
+        f"/api/chat-sessions?project_id={project_b['id']}&query=均线&kind=strategy",
     )
 
     assert response.status_code == 200
@@ -105,15 +118,14 @@ def test_list_sessions_filters_by_user_and_query():
 
 
 def test_send_message_is_owned_by_m2_runtime():
+    project = _create_project("workspace-d")
     created = client.post(
         "/api/chat-sessions",
-        headers={"X-User-Id": "user_d", "X-Project-Id": "workspace_d"},
-        json={"title": "追问测试"},
+        json={"project_id": project["id"], "title": "追问测试"},
     ).json()
 
     response = client.post(
         f"/api/chat-sessions/{created['id']}/messages",
-        headers={"X-User-Id": "user_d"},
         json={"content": "更稳一点，回撤小一些"},
     )
 
@@ -122,15 +134,14 @@ def test_send_message_is_owned_by_m2_runtime():
 
 
 def test_link_asset_is_idempotent_and_updates_snapshot():
+    project = _create_project("workspace-e")
     created = client.post(
         "/api/chat-sessions",
-        headers={"X-User-Id": "user_e", "X-Project-Id": "workspace_e"},
-        json={"title": "回测资产"},
+        json={"project_id": project["id"], "title": "回测资产"},
     ).json()
 
     first = client.post(
         f"/api/chat-sessions/{created['id']}/assets",
-        headers={"X-User-Id": "user_e"},
         json={
             "asset_type": "backtest_run",
             "asset_id": "bt_001",
@@ -140,7 +151,6 @@ def test_link_asset_is_idempotent_and_updates_snapshot():
     )
     second = client.post(
         f"/api/chat-sessions/{created['id']}/assets",
-        headers={"X-User-Id": "user_e"},
         json={
             "asset_type": "backtest_run",
             "asset_id": "bt_001",
@@ -155,22 +165,18 @@ def test_link_asset_is_idempotent_and_updates_snapshot():
     assert second.json()["display_snapshot"]["annual_return_pct"] == 13.2
 
 
-def test_user_cannot_read_or_link_another_users_session():
+def test_session_detail_and_asset_link_are_not_user_scoped():
+    project = _create_project("workspace-local")
     created = client.post(
         "/api/chat-sessions",
-        headers={"X-User-Id": "owner", "X-Project-Id": "workspace_owner"},
-        json={"title": "私有会话"},
+        json={"project_id": project["id"], "title": "本地会话"},
     ).json()
 
-    detail = client.get(
-        f"/api/chat-sessions/{created['id']}",
-        headers={"X-User-Id": "intruder"},
-    )
+    detail = client.get(f"/api/chat-sessions/{created['id']}")
     link = client.post(
         f"/api/chat-sessions/{created['id']}/assets",
-        headers={"X-User-Id": "intruder"},
         json={"asset_type": "strategy_version", "asset_id": "stv_1", "relation_type": "created"},
     )
 
-    assert detail.status_code == 403
-    assert link.status_code == 403
+    assert detail.status_code == 200
+    assert link.status_code == 201

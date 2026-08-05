@@ -11,7 +11,7 @@ def utc_now() -> datetime:
 @dataclass(slots=True)
 class Project:
     id: str
-    user_id: str
+    local_path: str
     name: str
     description: str | None = None
     created_at: datetime = field(default_factory=utc_now)

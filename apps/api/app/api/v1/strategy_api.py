@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.dependencies import ProjectId, UserId
 from app.db.session import get_db
 from app.schema.backtest import (
     StrategyBacktestConfig,
@@ -32,8 +31,7 @@ router = APIRouter()
 
 
 class CreateStrategyRequest(StrategyCreate):
-    user_id: str | None = None
-    project_id: str | None = None
+    project_id: str = Field(min_length=1)
 
     model_config = ConfigDict(extra="forbid")
 
@@ -60,35 +58,30 @@ class SwitchCurrentVersionRequest(BaseModel):
 class StrategyBacktestRequest(BaseModel):
     config: StrategyBacktestConfig
     strategy_version_id: str | None = None
-    user_id: str | None = None
-    project_id: str | None = None
+    project_id: str = Field(min_length=1)
 
     model_config = ConfigDict(extra="forbid")
 
 
 @router.get("/strategies", response_model=list[StrategySummary])
 async def list_strategies(
-    user_id: UserId,
-    project_id: ProjectId,
     db: Annotated[AsyncSession, Depends(get_db)],
+    project_id: Annotated[str, Query(min_length=1)],
 ) -> list[StrategySummary]:
-    return await strategy_service.list_strategies(db, user_id=user_id, project_id=project_id)
+    return await strategy_service.list_strategies(db, project_id=project_id)
 
 
 @router.post("/strategies", response_model=StrategyCreateResult, status_code=201)
 async def create_strategy(
     request: CreateStrategyRequest,
-    user_id: UserId,
-    project_id: ProjectId,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> StrategyCreateResult:
     try:
         return await strategy_service.create_strategy(
             db,
-            user_id=request.user_id or user_id,
-            project_id=request.project_id or project_id,
+            project_id=request.project_id,
             strategy_input=StrategyCreate.model_validate(
-                request.model_dump(exclude={"user_id", "project_id"})
+                request.model_dump(exclude={"project_id"})
             ),
         )
     except StrategyError as error:
@@ -196,16 +189,13 @@ async def get_strategy_backtest_protocol() -> StrategyBacktestProtocol:
 async def backtest_strategy(
     strategy_id: str,
     request: StrategyBacktestRequest,
-    user_id: UserId,
-    project_id: ProjectId,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> StrategyBacktestDetail:
     try:
         return await backtest_service.backtest_strategy(
             db,
             strategy_id=strategy_id,
-            user_id=request.user_id or user_id,
-            project_id=request.project_id or project_id,
+            project_id=request.project_id,
             config=request.config,
             strategy_version_id=request.strategy_version_id,
         )

@@ -5,11 +5,11 @@ from types import SimpleNamespace
 
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime
 from app.api.v1 import chat_api as chat_api_module
-from app.core.config import Settings, get_settings
-from app.core.project_dirs import project_dir
+from app.core.config import Settings
 from app.db.session import get_session_factory
 from app.main import app
 from app.schema.agent_runtime import ChatMessageRequest
+from app.service import project as project_service
 from app.service.chat import ChatApplicationService
 from app.service.chat import service as chat_service
 from app.service.chat_session import chat_session_service
@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
 TEST_PROJECT_HOME = "/tmp/chatq/test-projects"
+_project_counter = 0
 
 
 async def fake_sdk_query(*, prompt: str, options: object | None = None) -> AsyncIterator[object]:
@@ -50,10 +51,29 @@ chat_api_module.chat_application_service = test_service
 client = TestClient(app)
 
 
+def _create_api_project() -> dict[str, object]:
+    global _project_counter
+    _project_counter += 1
+    local_path = Path(TEST_PROJECT_HOME) / f"api-{_project_counter}"
+    local_path.mkdir(parents=True, exist_ok=True)
+    response = client.post("/api/projects/open", json={"local_path": str(local_path)})
+    assert response.status_code == 200
+    return response.json()
+
+
+async def _create_service_project(db, name: str = "service") -> object:
+    global _project_counter
+    _project_counter += 1
+    local_path = Path(TEST_PROJECT_HOME) / f"{name}-{_project_counter}"
+    local_path.mkdir(parents=True, exist_ok=True)
+    return await project_service.resolve_project(db, local_path=str(local_path))
+
+
 def test_chat_message_returns_stream_url_and_sse_events() -> None:
+    project = _create_api_project()
     response = client.post(
         "/api/chat/messages",
-        json={"message": "帮我用均线策略做一个简单回测", "project_id": "project_1"},
+        json={"message": "帮我用均线策略做一个简单回测", "project_id": project["id"]},
     )
 
     assert response.status_code == 200
@@ -72,9 +92,10 @@ def test_chat_message_returns_stream_url_and_sse_events() -> None:
 
 
 def test_chat_session_detail_does_not_use_live_envelope_cache() -> None:
+    project = _create_api_project()
     response = client.post(
         "/api/chat/messages",
-        json={"message": "筛选最近成交活跃的股票", "project_id": "project_1"},
+        json={"message": "筛选最近成交活跃的股票", "project_id": project["id"]},
     )
     chat_session_id = response.json()["chat_session_id"]
 
@@ -88,9 +109,10 @@ def test_chat_session_detail_does_not_use_live_envelope_cache() -> None:
 
 
 def test_follow_up_message_reuses_sdk_session_after_streaming() -> None:
+    project = _create_api_project()
     first_response = client.post(
         "/api/chat/messages",
-        json={"message": "先分析一下", "project_id": "project_1"},
+        json={"message": "先分析一下", "project_id": project["id"]},
     )
     chat_session_id = first_response.json()["chat_session_id"]
     first_stream_response = client.get(first_response.json()["stream_url"])
@@ -101,7 +123,7 @@ def test_follow_up_message_reuses_sdk_session_after_streaming() -> None:
         json={
             "chat_session_id": chat_session_id,
             "message": "继续",
-            "project_id": "project_1",
+            "project_id": project["id"],
         },
     )
 
@@ -144,25 +166,29 @@ def test_chat_message_creates_project_directory(tmp_path: Path) -> None:
 
 
 async def _run_project_directory_creation_assertions(tmp_path: Path) -> None:
-    project_home = tmp_path / "projects"
+    project_path = tmp_path / "chosen-project"
+    project_path.mkdir()
     chat_session_id = "conv_project_dir_creation"
-    project_id = "project_dir_creation"
     isolated_runtime = ClaudeAgentRuntime(
-        settings=Settings(_env_file=None, PROJECT_HOME=str(project_home)),
+        settings=Settings(_env_file=None),
         sdk_query=fake_sdk_query,
     )
     isolated_service = ChatApplicationService(isolated_runtime)
 
-    await isolated_service.handle_user_message(
-        ChatMessageRequest(
-            message="你好",
-            chat_session_id=chat_session_id,
-            project_id=project_id,
+    async with get_session_factory()() as db:
+        project = await project_service.resolve_project(db, local_path=str(project_path))
+        chat_sessions = chat_session_service(db)
+        await isolated_service.handle_user_message(
+            ChatMessageRequest(
+                message="你好",
+                chat_session_id=chat_session_id,
+                project_id=project.id,
+            ),
+            chat_sessions,
         )
-    )
 
-    assert (project_home / project_id).is_dir()
-    assert not (project_home / chat_session_id).exists()
+    assert project_path.is_dir()
+    assert not (tmp_path / chat_session_id).exists()
 
 
 async def _run_m1_index_sync_assertions() -> None:
@@ -173,11 +199,12 @@ async def _run_m1_index_sync_assertions() -> None:
     isolated_service = ChatApplicationService(isolated_runtime)
     async with get_session_factory()() as db:
         chat_sessions = chat_session_service(db)
+        project = await _create_service_project(db, "index-sync")
         accepted = await isolated_service.handle_user_message(
             ChatMessageRequest(
                 chat_session_id="conv_index_sync",
                 message="同步 SDK session",
-                project_id="project_1",
+                project_id=project.id,
             ),
             chat_sessions,
         )
@@ -189,10 +216,7 @@ async def _run_m1_index_sync_assertions() -> None:
             )
         ]
 
-        session, _ = await chat_sessions.get_context(
-            "conv_index_sync",
-            user_id="local_user",
-        )
+        session, _ = await chat_sessions.get_context("conv_index_sync")
 
     assert session.sdk_session_id == "sdk_api_1"
     assert session.snippet == "同步 SDK session"
@@ -220,11 +244,12 @@ async def _run_first_answer_sdk_title_assertions(monkeypatch: MonkeyPatch) -> No
     )
     async with get_session_factory()() as db:
         chat_sessions = chat_session_service(db)
+        project = await _create_service_project(db, "sdk-title")
         accepted = await isolated_service.handle_user_message(
             ChatMessageRequest(
                 chat_session_id="conv_sdk_title_sync",
                 message="帮我分析一下贵州茅台最近走势",
-                project_id="project_1",
+                project_id=project.id,
             ),
             chat_sessions,
         )
@@ -235,12 +260,9 @@ async def _run_first_answer_sdk_title_assertions(monkeypatch: MonkeyPatch) -> No
                 chat_sessions,
             )
         ]
-        session, _ = await chat_sessions.get_context(
-            "conv_sdk_title_sync",
-            user_id="local_user",
-        )
+        session, _ = await chat_sessions.get_context("conv_sdk_title_sync")
 
-    assert calls == [("sdk_api_1", project_dir(get_settings().project_home, "project_1"))]
+    assert calls == [("sdk_api_1", project.local_path)]
     assert session.title == "SDK 生成的会话名称"
 
 
@@ -269,11 +291,12 @@ async def _run_first_answer_fallback_title_follow_up_assertions(
     )
     async with get_session_factory()() as db:
         chat_sessions = chat_session_service(db)
+        project = await _create_service_project(db, "fallback-title")
         first = await isolated_service.handle_user_message(
             ChatMessageRequest(
                 chat_session_id="conv_first_title_fallback",
                 message="请帮我筛选最近成交量持续放大的科技股并说明原因",
-                project_id="project_1",
+                project_id=project.id,
             ),
             chat_sessions,
         )
@@ -288,7 +311,7 @@ async def _run_first_answer_fallback_title_follow_up_assertions(
             ChatMessageRequest(
                 chat_session_id=first.chat_session_id,
                 message="继续分析估值和风险",
-                project_id="project_1",
+                project_id=project.id,
             ),
             chat_sessions,
         )
@@ -299,10 +322,7 @@ async def _run_first_answer_fallback_title_follow_up_assertions(
                 chat_sessions,
             )
         ]
-        session, _ = await chat_sessions.get_context(
-            "conv_first_title_fallback",
-            user_id="local_user",
-        )
+        session, _ = await chat_sessions.get_context("conv_first_title_fallback")
 
     assert calls == ["sdk_api_1"]
     assert session.title == "请帮我筛选最近成交量持续放大的科技股并说"
@@ -348,9 +368,9 @@ async def _run_precreated_empty_session_title_assertions(monkeypatch: MonkeyPatc
     )
     async with get_session_factory()() as db:
         chat_sessions = chat_session_service(db)
+        project = await _create_service_project(db, "precreated")
         await chat_sessions.create_chat_session(
-            user_id="local_user",
-            project_id="project_1",
+            project_id=project.id,
             chat_session_id="conv_precreated_empty",
             title="新的量化会话",
         )
@@ -359,7 +379,7 @@ async def _run_precreated_empty_session_title_assertions(monkeypatch: MonkeyPatc
             ChatMessageRequest(
                 chat_session_id="conv_precreated_empty",
                 message="查看当前路径",
-                project_id="project_1",
+                project_id=project.id,
             ),
             chat_sessions,
         )
@@ -370,10 +390,7 @@ async def _run_precreated_empty_session_title_assertions(monkeypatch: MonkeyPatc
                 chat_sessions,
             )
         ]
-        session, _ = await chat_sessions.get_context(
-            "conv_precreated_empty",
-            user_id="local_user",
-        )
+        session, _ = await chat_sessions.get_context("conv_precreated_empty")
 
     assert session.title == "查看当前路径"
 
@@ -387,7 +404,7 @@ async def _run_agent_detail_refresh_assertions(monkeypatch: MonkeyPatch) -> None
     ) -> list[object]:
         del limit, offset
         assert session_id == "sdk_refresh_1"
-        assert directory.endswith("/project_1")
+        assert directory is not None
         return [
             SimpleNamespace(
                 type="user",
@@ -416,15 +433,14 @@ async def _run_agent_detail_refresh_assertions(monkeypatch: MonkeyPatch) -> None
 
     async with get_session_factory()() as db:
         chat_sessions = chat_session_service(db)
+        project = await _create_service_project(db, "refresh")
         await chat_sessions.create_chat_session(
-            user_id="local_user",
-            project_id="project_1",
+            project_id=project.id,
             chat_session_id="conv_refresh_history",
             title="刷新历史",
         )
         await chat_sessions.update_chat_session(
             "conv_refresh_history",
-            user_id="local_user",
             sdk_session_id="sdk_refresh_1",
         )
         fresh_service = ChatApplicationService(
@@ -437,7 +453,6 @@ async def _run_agent_detail_refresh_assertions(monkeypatch: MonkeyPatch) -> None
         detail = await fresh_service.get_session_detail(
             "conv_refresh_history",
             chat_sessions,
-            user_id="local_user",
         )
 
         assert detail is not None
@@ -476,16 +491,38 @@ async def _run_no_placeholder_resume_assertions() -> None:
     )
     isolated_service = ChatApplicationService(isolated_runtime)
 
-    first = await isolated_service.handle_user_message(
-        ChatMessageRequest(message="第一轮", chat_session_id="conv_without_sdk_session")
-    )
-    _ = [envelope async for envelope in isolated_service.stream_chat_session(first.chat_session_id)]
-    second = await isolated_service.handle_user_message(
-        ChatMessageRequest(message="第二轮", chat_session_id=first.chat_session_id)
-    )
-    _ = [
-        envelope
-        async for envelope in isolated_service.stream_chat_session(second.chat_session_id)
-    ]
+    async with get_session_factory()() as db:
+        chat_sessions = chat_session_service(db)
+        project = await _create_service_project(db, "no-placeholder")
+        first = await isolated_service.handle_user_message(
+            ChatMessageRequest(
+                message="第一轮",
+                chat_session_id="conv_without_sdk_session",
+                project_id=project.id,
+            ),
+            chat_sessions,
+        )
+        _ = [
+            envelope
+            async for envelope in isolated_service.stream_chat_session(
+                first.chat_session_id,
+                chat_sessions,
+            )
+        ]
+        second = await isolated_service.handle_user_message(
+            ChatMessageRequest(
+                message="第二轮",
+                chat_session_id=first.chat_session_id,
+                project_id=project.id,
+            ),
+            chat_sessions,
+        )
+        _ = [
+            envelope
+            async for envelope in isolated_service.stream_chat_session(
+                second.chat_session_id,
+                chat_sessions,
+            )
+        ]
 
     assert captured_resume_values == [None, None]

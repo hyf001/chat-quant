@@ -63,7 +63,6 @@ class AssetLink:
 @dataclass(slots=True)
 class ChatSession:
     id: str
-    user_id: str
     project_id: str
     title: str
     kind: ChatSessionKind = ChatSessionKind.NORMAL

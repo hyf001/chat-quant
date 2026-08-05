@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.dependencies import ProjectId, UserId
 from app.db.session import get_db
 from app.schema.chat_session import (
     AssetLinkResponse,
@@ -24,7 +23,6 @@ from app.schema.chat_session import (
 )
 from app.service import chat_session as chat_session_service
 from app.service.chat_session import (
-    ChatSessionAccessError,
     ChatSessionNotFoundError,
     SDKSessionReadError,
 )
@@ -34,10 +32,6 @@ router = APIRouter()
 
 def _raise_not_found() -> None:
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat session not found")
-
-
-def _raise_forbidden() -> None:
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chat session access denied")
 
 
 def _raise_sdk_unavailable(error: SDKSessionReadError) -> None:
@@ -50,13 +44,10 @@ def _raise_sdk_unavailable(error: SDKSessionReadError) -> None:
 @router.post("", response_model=ChatSessionResponse, status_code=status.HTTP_201_CREATED)
 async def create_chat_session(
     payload: ChatSessionCreateRequest,
-    user_id: UserId,
-    project_id: ProjectId,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     return await chat_session_service.chat_session_service(db).create_chat_session(
-        user_id=user_id,
-        project_id=project_id,
+        project_id=payload.project_id,
         title=payload.title,
         initial_prompt=payload.initial_prompt,
         kind=payload.kind,
@@ -71,9 +62,8 @@ async def create_chat_session(
 
 @router.get("", response_model=ChatSessionListResponse)
 async def list_chat_sessions(
-    user_id: UserId,
-    project_id: ProjectId,
     db: Annotated[AsyncSession, Depends(get_db)],
+    project_id: str = Query(min_length=1),
     query: str | None = Query(default=None, max_length=120),
     kind: str | None = Query(default=None, max_length=32),
     task_type: str | None = Query(default=None, max_length=32),
@@ -82,7 +72,6 @@ async def list_chat_sessions(
     offset: int = Query(default=0, ge=0),
 ):
     items, total = await chat_session_service.chat_session_service(db).list_chat_sessions(
-        user_id=user_id,
         project_id=project_id,
         query=query,
         kind=kind,
@@ -97,18 +86,13 @@ async def list_chat_sessions(
 @router.get("/{chat_session_id}", response_model=ChatSessionDetailResponse)
 async def get_chat_session_detail(
     chat_session_id: str,
-    user_id: UserId,
     db: Annotated[AsyncSession, Depends(get_db)],
     message_limit: int | None = Query(default=None, ge=1, le=200),
 ):
     try:
         session, messages, assets = await chat_session_service.chat_session_service(
             db
-        ).get_chat_session_detail(
-            chat_session_id, user_id=user_id, message_limit=message_limit
-        )
-    except ChatSessionAccessError:
-        _raise_forbidden()
+        ).get_chat_session_detail(chat_session_id, message_limit=message_limit)
     except ChatSessionNotFoundError:
         _raise_not_found()
     except SDKSessionReadError as exc:
@@ -124,13 +108,11 @@ async def get_chat_session_detail(
 async def update_chat_session(
     chat_session_id: str,
     payload: ChatSessionUpdateRequest,
-    user_id: UserId,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
         return await chat_session_service.chat_session_service(db).update_chat_session(
             chat_session_id,
-            user_id=user_id,
             title=payload.title,
             snippet=payload.snippet,
             summary=payload.summary,
@@ -146,8 +128,6 @@ async def update_chat_session(
             sdk_project_key=payload.sdk_project_key,
             archived=payload.archived,
         )
-    except ChatSessionAccessError:
-        _raise_forbidden()
     except ChatSessionNotFoundError:
         _raise_not_found()
 
@@ -155,15 +135,12 @@ async def update_chat_session(
 @router.delete("/{chat_session_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_chat_session(
     chat_session_id: str,
-    user_id: UserId,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
         await chat_session_service.chat_session_service(db).soft_delete_chat_session(
-            chat_session_id, user_id=user_id
+            chat_session_id
         )
-    except ChatSessionAccessError:
-        _raise_forbidden()
     except ChatSessionNotFoundError:
         _raise_not_found()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -173,16 +150,13 @@ async def delete_chat_session(
 async def send_message(
     chat_session_id: str,
     payload: SendMessageRequest,
-    user_id: UserId,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     del payload
     try:
         await chat_session_service.chat_session_service(db).get_context(
-            chat_session_id, user_id=user_id
+            chat_session_id
         )
-    except ChatSessionAccessError:
-        _raise_forbidden()
     except ChatSessionNotFoundError:
         _raise_not_found()
     raise HTTPException(
@@ -197,18 +171,13 @@ async def send_message(
 @router.get("/{chat_session_id}/messages", response_model=list[SDKMessageResponse])
 async def get_messages(
     chat_session_id: str,
-    user_id: UserId,
     db: Annotated[AsyncSession, Depends(get_db)],
     limit: int | None = Query(default=None, ge=1, le=200),
 ):
     try:
         _, messages, _ = await chat_session_service.chat_session_service(
             db
-        ).get_chat_session_detail(
-            chat_session_id, user_id=user_id, message_limit=limit
-        )
-    except ChatSessionAccessError:
-        _raise_forbidden()
+        ).get_chat_session_detail(chat_session_id, message_limit=limit)
     except ChatSessionNotFoundError:
         _raise_not_found()
     except SDKSessionReadError as exc:
@@ -219,17 +188,12 @@ async def get_messages(
 @router.get("/{chat_session_id}/stream")
 async def stream_messages(
     chat_session_id: str,
-    user_id: UserId,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
         _, messages, _ = await chat_session_service.chat_session_service(
             db
-        ).get_chat_session_detail(
-            chat_session_id, user_id=user_id
-        )
-    except ChatSessionAccessError:
-        _raise_forbidden()
+        ).get_chat_session_detail(chat_session_id)
     except ChatSessionNotFoundError:
         _raise_not_found()
     except SDKSessionReadError as exc:
@@ -247,13 +211,11 @@ async def stream_messages(
 async def link_asset(
     chat_session_id: str,
     payload: LinkAssetRequest,
-    user_id: UserId,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
         return await chat_session_service.asset_link_service(db).link_asset(
             chat_session_id=chat_session_id,
-            user_id=user_id,
             sdk_session_id=payload.sdk_session_id,
             sdk_message_uuid=payload.sdk_message_uuid,
             sdk_tool_use_id=payload.sdk_tool_use_id,
@@ -262,8 +224,6 @@ async def link_asset(
             relation_type=payload.relation_type,
             display_snapshot=payload.display_snapshot,
         )
-    except ChatSessionAccessError:
-        _raise_forbidden()
     except ChatSessionNotFoundError:
         _raise_not_found()
 
@@ -271,15 +231,12 @@ async def link_asset(
 @router.get("/{chat_session_id}/context", response_model=ChatSessionContextResponse)
 async def get_context(
     chat_session_id: str,
-    user_id: UserId,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
         session, assets = await chat_session_service.chat_session_service(db).get_context(
-            chat_session_id, user_id=user_id
+            chat_session_id
         )
-    except ChatSessionAccessError:
-        _raise_forbidden()
     except ChatSessionNotFoundError:
         _raise_not_found()
     return ChatSessionContextResponse(

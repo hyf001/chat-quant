@@ -44,7 +44,6 @@ class BacktestService:
         self,
         *,
         strategy_id: str,
-        user_id: str,
         project_id: str,
         config: StrategyBacktestConfig,
         engine: StrategyBacktestEngine | None = None,
@@ -52,7 +51,6 @@ class BacktestService:
     ) -> StrategyBacktestDetail:
         backtest = await self._create_backtest(
             strategy_id=strategy_id,
-            user_id=user_id,
             project_id=project_id,
             config=config,
             strategy_version_id=strategy_version_id,
@@ -90,7 +88,6 @@ class BacktestService:
         self,
         *,
         strategy_id: str,
-        user_id: str,
         project_id: str,
         config: StrategyBacktestConfig,
         strategy_version_id: str | None = None,
@@ -130,7 +127,6 @@ class BacktestService:
         config = config.model_copy(update={"params": merged_params})
         backtest = StrategyBacktestRecord(
             id=_new_id("sbt"),
-            user_id=user_id,
             project_id=project_id,
             strategy_id=strategy.id,
             strategy_version_id=version.id,
@@ -245,7 +241,6 @@ async def backtest_strategy(
     db: AsyncSession,
     *,
     strategy_id: str,
-    user_id: str,
     project_id: str,
     config: StrategyBacktestConfig,
     engine: StrategyBacktestEngine | None = None,
@@ -253,7 +248,6 @@ async def backtest_strategy(
 ) -> StrategyBacktestDetail:
     return await _service(db).backtest_strategy(
         strategy_id=strategy_id,
-        user_id=user_id,
         project_id=project_id,
         config=config,
         engine=engine,
@@ -314,7 +308,6 @@ def _backtest_to_row(backtest: StrategyBacktestRecord) -> StrategyBacktestRow:
 def _apply_backtest(row: StrategyBacktestRow, backtest: StrategyBacktestRecord) -> None:
     result = _result_from_json(row.payload_json)
     row.id = backtest.id
-    row.user_id = backtest.user_id
     row.project_id = backtest.project_id
     row.strategy_id = backtest.strategy_id
     row.strategy_version_id = backtest.strategy_version_id

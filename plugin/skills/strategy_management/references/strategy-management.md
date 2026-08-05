@@ -2,7 +2,7 @@
 
 ## 执行入口
 
-所有命令从仓库根目录执行：
+所有命令在当前本地项目目录中执行：
 
 ```bash
 uv run python -m cli.chatq_strategy <command>
@@ -12,20 +12,15 @@ uv run python -m cli.chatq_strategy <command>
 
 ## 上下文
 
-只有策略列表和策略创建需要显式传归属：
+不要传 `--user-id` 或 `--project-id`。`list`、`create` 等项目级命令传 `--project-path "<当前项目路径>"`，CLI 会通过该本地路径解析 project，并在需要时把内部 `project_id` 写入 API payload。
 
-```bash
---user-id "$USER_ID" --project-id "$PROJECT_ID"
-```
-
-其他接收 `strategy_id` 的命令会自动读取策略归属。
+Claude Agent SDK 已由后端设置初始 `cwd = project.local_path`，因此 Agent 知道当前业务项目路径。即使命令为了使用 Python 环境需要在仓库根目录执行，也必须把该业务项目路径传给 `--project-path`，不要让 CLI 用仓库根目录推断项目。
 
 ## 列出策略
 
 ```bash
 uv run python -m cli.chatq_strategy list \
-  --user-id "$USER_ID" \
-  --project-id "$PROJECT_ID"
+  --project-path "<当前项目路径>"
 ```
 
 ## 创建策略
@@ -34,8 +29,7 @@ uv run python -m cli.chatq_strategy list \
 
 ```bash
 uv run python -m cli.chatq_strategy create \
-  --user-id "$USER_ID" \
-  --project-id "$PROJECT_ID" \
+  --project-path "<当前项目路径>" \
   --name "策略名称" \
   --description "策略说明" \
   --source-file ./strategy.py \

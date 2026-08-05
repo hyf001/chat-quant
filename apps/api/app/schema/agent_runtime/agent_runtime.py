@@ -6,14 +6,6 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 
-class AgentScenario(StrEnum):
-    CHAT_ANALYSIS = "chat_analysis"
-    SCREENING = "screening"
-    STRATEGY_BUILD = "strategy_build"
-    BACKTEST = "backtest"
-    FOLLOW_UP = "follow_up"
-
-
 class RuntimeErrorCode(StrEnum):
     SDK_UNAVAILABLE = "SDK_UNAVAILABLE"
     SDK_SESSION_EXPIRED = "SDK_SESSION_EXPIRED"
@@ -49,11 +41,9 @@ class ChatSessionContext(BaseModel):
 
 
 class AgentExecutionCommand(BaseModel):
-    user_id: str
     project_id: str
     chat_session_id: str
     user_message_id: str
-    scenario: AgentScenario = AgentScenario.CHAT_ANALYSIS
     context: ChatSessionContext = Field(default_factory=ChatSessionContext)
     system_prompt_key: str = "base:v1"
     allowed_tools: list[str] = Field(default_factory=list)
@@ -77,9 +67,7 @@ class SDKStreamEnvelope(BaseModel):
 class ChatMessageRequest(BaseModel):
     message: str = Field(min_length=1, max_length=12000)
     chat_session_id: str | None = None
-    scenario: AgentScenario | None = None
-    user_id: str = "local_user"
-    project_id: str = "local_project"
+    project_id: str = Field(min_length=1)
 
 
 class ChatMessageAccepted(BaseModel):

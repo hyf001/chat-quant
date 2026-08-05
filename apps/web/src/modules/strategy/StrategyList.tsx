@@ -281,19 +281,22 @@ export function StrategyList({ project }: StrategyListProps) {
     });
   }, [query, statusFilter, strategies]);
 
-  const loadStrategies = useCallback(async () => {
+  const loadStrategies = useCallback(async (): Promise<StrategySummary[]> => {
     if (!project) {
       setStrategies([]);
       setError(null);
-      return;
+      return [];
     }
 
     setIsLoading(true);
     setError(null);
     try {
-      setStrategies(await listStrategies(project.id));
+      const nextStrategies = await listStrategies(project.id);
+      setStrategies(nextStrategies);
+      return nextStrategies;
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "策略列表加载失败");
+      return [];
     } finally {
       setIsLoading(false);
     }
@@ -315,21 +318,25 @@ export function StrategyList({ project }: StrategyListProps) {
     setNotice(null);
     setPendingStrategyId(strategy.strategy_id);
     try {
+      const latestStrategies = await loadStrategies();
+      const latestStrategy =
+        latestStrategies.find((item) => item.strategy_id === strategy.strategy_id) ??
+        strategy;
       const [detail, versions] = await Promise.all([
-        getStrategy(strategy.strategy_id, project?.id),
-        listStrategyVersions(strategy.strategy_id, project?.id),
+        getStrategy(latestStrategy.strategy_id),
+        listStrategyVersions(latestStrategy.strategy_id),
       ]);
       const currentVersion =
-        versions.find((version) => version.id === strategy.strategy_version_id) ??
+        versions.find((version) => version.id === latestStrategy.strategy_version_id) ??
         versions.at(-1) ??
         null;
       setForm({
-        ...versionToForm(currentVersion, strategy.name),
-        name: strategy.name,
+        ...versionToForm(currentVersion, latestStrategy.name),
+        name: latestStrategy.name,
         description: detail.strategy.description ?? "",
         tags: detail.strategy.tags.join(", "),
       });
-      setDialog({ kind: "edit", strategy, currentVersion, record: detail.strategy });
+      setDialog({ kind: "edit", strategy: latestStrategy, currentVersion, record: detail.strategy });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "策略详情加载失败");
     } finally {
@@ -337,17 +344,24 @@ export function StrategyList({ project }: StrategyListProps) {
     }
   };
 
-  const openVersionDialog = (strategy: StrategySummary) => {
-    setForm({
-      ...newStrategyForm(strategy.name),
-      strategyMode: strategy.strategy_mode,
-    });
-    setDialog({ kind: "version", strategy });
+  const openVersionDialog = async (strategy: StrategySummary) => {
     setError(null);
     setNotice(null);
+    const latestStrategies = await loadStrategies();
+    const latestStrategy =
+      latestStrategies.find((item) => item.strategy_id === strategy.strategy_id) ??
+      strategy;
+    setForm({
+      ...newStrategyForm(latestStrategy.name),
+      strategyMode: latestStrategy.strategy_mode,
+    });
+    setDialog({ kind: "version", strategy: latestStrategy });
   };
 
-  const openVersionPanel = async (strategy: StrategySummary) => {
+  const openVersionPanel = async (
+    strategy: StrategySummary,
+    preferredVersionId?: string | null,
+  ) => {
     setVersionPanel({
       strategy,
       versions: [],
@@ -360,17 +374,22 @@ export function StrategyList({ project }: StrategyListProps) {
     setError(null);
     setNotice(null);
     try {
-      const versions = await listStrategyVersions(strategy.strategy_id, project?.id);
+      const latestStrategies = await loadStrategies();
+      const latestStrategy =
+        latestStrategies.find((item) => item.strategy_id === strategy.strategy_id) ??
+        strategy;
+      const versions = await listStrategyVersions(latestStrategy.strategy_id);
       const selectedVersionId =
-        versions.find((version) => version.id === strategy.strategy_version_id)?.id ??
+        versions.find((version) => version.id === preferredVersionId)?.id ??
+        versions.find((version) => version.id === latestStrategy.strategy_version_id)?.id ??
         versions.at(-1)?.id ??
         null;
       const selectedVersion = versions.find((version) => version.id === selectedVersionId) ?? null;
       const backtests = selectedVersion
-        ? await loadVersionBacktests(selectedVersion, project?.id)
+        ? await loadVersionBacktests(selectedVersion)
         : [];
       setVersionPanel({
-        strategy,
+        strategy: latestStrategy,
         versions,
         selectedVersionId,
         backtests,
@@ -401,10 +420,14 @@ export function StrategyList({ project }: StrategyListProps) {
     setError(null);
     setNotice(null);
     try {
-      const versions = await listStrategyVersions(strategy.strategy_id, project?.id);
-      const records = await loadStrategyBacktestRecords(versions, project?.id);
+      const latestStrategies = await loadStrategies();
+      const latestStrategy =
+        latestStrategies.find((item) => item.strategy_id === strategy.strategy_id) ??
+        strategy;
+      const versions = await listStrategyVersions(latestStrategy.strategy_id);
+      const records = await loadStrategyBacktestRecords(versions);
       setRecordsPanel({
-        strategy,
+        strategy: latestStrategy,
         records,
         isLoading: false,
         error: null,
@@ -478,13 +501,11 @@ export function StrategyList({ project }: StrategyListProps) {
           description: form.description.trim() || null,
           tags: parseTags(form.tags),
         },
-        project.id,
       );
       if (shouldCreateVersion) {
         const version = await createStrategyVersion(
           dialog.strategy.strategy_id,
           versionPayload.value,
-          project.id,
         );
         setNotice(metadataChanged ? `策略已保存，并发布 V${version.version}` : `已发布 V${version.version}`);
       } else {
@@ -512,7 +533,7 @@ export function StrategyList({ project }: StrategyListProps) {
     setIsSubmitting(true);
     setError(null);
     try {
-      const version = await createStrategyVersion(dialog.strategy.strategy_id, payload.value, project.id);
+      const version = await createStrategyVersion(dialog.strategy.strategy_id, payload.value);
       setDialog(null);
       setNotice(`已发布 V${version.version}`);
       await loadStrategies();
@@ -532,7 +553,7 @@ export function StrategyList({ project }: StrategyListProps) {
     setError(null);
     setNotice(null);
     try {
-      await deleteStrategy(strategy.strategy_id, project.id);
+      await deleteStrategy(strategy.strategy_id);
       setNotice("策略已删除");
       await loadStrategies();
     } catch (caught) {
@@ -542,13 +563,25 @@ export function StrategyList({ project }: StrategyListProps) {
     }
   };
 
-  const openBacktestDialog = (strategy: StrategySummary, version?: StrategyVersion) => {
-    const params = version?.custom_params ?? strategy.custom_params;
-    const strategyMode = version?.strategy_mode ?? strategy.strategy_mode;
-    setBacktestForm(newBacktestForm(params, strategyMode));
-    setBacktestDialog({ strategy, version: version ?? null });
+  const openBacktestDialog = async (strategy: StrategySummary, version?: StrategyVersion) => {
     setError(null);
     setNotice(null);
+    try {
+      const latestStrategies = await loadStrategies();
+      const latestStrategy =
+        latestStrategies.find((item) => item.strategy_id === strategy.strategy_id) ??
+        strategy;
+      const versions = version ? await listStrategyVersions(latestStrategy.strategy_id) : [];
+      const latestVersion = version
+        ? versions.find((item) => item.id === version.id) ?? version
+        : null;
+      const params = latestVersion?.custom_params ?? latestStrategy.custom_params;
+      const strategyMode = latestVersion?.strategy_mode ?? latestStrategy.strategy_mode;
+      setBacktestForm(newBacktestForm(params, strategyMode));
+      setBacktestDialog({ strategy: latestStrategy, version: latestVersion });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "回测配置加载失败");
+    }
   };
 
   const handleSubmitBacktest = async () => {
@@ -559,42 +592,54 @@ export function StrategyList({ project }: StrategyListProps) {
       return;
     }
 
-    const { strategy, version } = backtestDialog;
-    const config = buildBacktestConfig(backtestForm, version?.custom_params ?? strategy.custom_params);
-    if (!config.ok) {
-      setError(config.message);
-      return;
-    }
-
-    const backtestKey = version ? `version:${version.id}` : `strategy:${strategy.strategy_id}`;
-    setPendingStrategyId(strategy.strategy_id);
-    setRunningBacktestKey(backtestKey);
     setError(null);
     setNotice(null);
-    if (versionPanel) {
-      setVersionPanel({ ...versionPanel, isBacktesting: true, error: null });
-    }
     try {
-      const detail = await backtestStrategy(
-        strategy.strategy_id,
-        {
-          config: config.value,
-          strategy_version_id: version?.id,
-        },
-        project.id,
+      const { strategy, version } = backtestDialog;
+      const latestStrategies = await loadStrategies();
+      const latestStrategy =
+        latestStrategies.find((item) => item.strategy_id === strategy.strategy_id) ??
+        strategy;
+      const versions = version ? await listStrategyVersions(latestStrategy.strategy_id) : [];
+      const latestVersion = version
+        ? versions.find((item) => item.id === version.id) ?? version
+        : null;
+      const config = buildBacktestConfig(
+        backtestForm,
+        latestVersion?.custom_params ?? latestStrategy.custom_params,
       );
+      if (!config.ok) {
+        setError(config.message);
+        return;
+      }
+
+      const backtestKey = latestVersion
+        ? `version:${latestVersion.id}`
+        : `strategy:${latestStrategy.strategy_id}`;
+      setPendingStrategyId(latestStrategy.strategy_id);
+      setRunningBacktestKey(backtestKey);
+      if (versionPanel) {
+        setVersionPanel({ ...versionPanel, isBacktesting: true, error: null });
+      }
+      const detail = await backtestStrategy(
+        latestStrategy.strategy_id,
+        {
+          project_id: project.id,
+          config: config.value,
+          strategy_version_id: latestVersion?.id,
+        },
+      );
+      const freshDetail = await getStrategyBacktest(detail.backtest.id);
       setBacktestDialog(null);
-      setResultDetail(detail);
-      setNotice(`回测已完成：${detail.backtest.status}`);
-      if (version && versionPanel) {
-        const backtests = await loadVersionBacktests(version, project.id);
-        setVersionPanel({ ...versionPanel, backtests, isBacktesting: false, error: null });
+      setResultDetail(freshDetail);
+      await loadStrategies();
+      if (latestVersion && versionPanel) {
+        await openVersionPanel(versionPanel.strategy, latestVersion.id);
       }
       if (recordsPanel) {
-        const versions = await listStrategyVersions(recordsPanel.strategy.strategy_id, project.id);
-        const records = await loadStrategyBacktestRecords(versions, project.id);
-        setRecordsPanel({ ...recordsPanel, records, isLoading: false, error: null });
+        await openRecordsPanel(recordsPanel.strategy);
       }
+      setNotice(`回测已完成：${freshDetail.backtest.status}`);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "回测失败";
       if (versionPanel) {
@@ -620,10 +665,12 @@ export function StrategyList({ project }: StrategyListProps) {
       error: null,
     });
     try {
-      const version = versionPanel.versions.find((item) => item.id === versionId);
-      const backtests = version ? await loadVersionBacktests(version, project.id) : [];
+      const versions = await listStrategyVersions(versionPanel.strategy.strategy_id);
+      const version = versions.find((item) => item.id === versionId);
+      const backtests = version ? await loadVersionBacktests(version) : [];
       setVersionPanel({
         ...versionPanel,
+        versions,
         selectedVersionId: versionId,
         backtests,
         isLoading: false,
@@ -649,26 +696,12 @@ export function StrategyList({ project }: StrategyListProps) {
     setError(null);
     setNotice(null);
     try {
-      const summary = await switchStrategyCurrentVersion(
-        versionPanel.strategy.strategy_id,
-        version.id,
-        project.id,
-      );
-      setStrategies((current) =>
-        current.map((strategy) =>
-          strategy.strategy_id === summary.strategy_id ? summary : strategy,
-        ),
-      );
-      setVersionPanel((current) =>
-        current && current.strategy.strategy_id === summary.strategy_id
-          ? {
-              ...current,
-              strategy: summary,
-              selectedVersionId: version.id,
-              error: null,
-            }
-          : current,
-      );
+      const summary = await switchStrategyCurrentVersion(versionPanel.strategy.strategy_id, version.id);
+      const nextStrategies = await loadStrategies();
+      const nextSummary =
+        nextStrategies.find((strategy) => strategy.strategy_id === summary.strategy_id) ??
+        summary;
+      await openVersionPanel(nextSummary, version.id);
       setNotice(`已切换到 V${summary.version}`);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "版本切换失败";
@@ -686,7 +719,7 @@ export function StrategyList({ project }: StrategyListProps) {
     }
     setError(null);
     try {
-      setResultDetail(await getStrategyBacktest(backtestId, project.id));
+      setResultDetail(await getStrategyBacktest(backtestId));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "回测结果加载失败");
     }
@@ -745,7 +778,7 @@ export function StrategyList({ project }: StrategyListProps) {
               onEdit={() => void openEditDialog(strategy)}
               onVersions={() => void openVersionPanel(strategy)}
               onRecords={() => void openRecordsPanel(strategy)}
-              onBacktest={() => openBacktestDialog(strategy)}
+              onBacktest={() => void openBacktestDialog(strategy)}
               onDelete={() => void handleDelete(strategy)}
             />
           ))}
@@ -762,10 +795,10 @@ export function StrategyList({ project }: StrategyListProps) {
           onSelectVersion={(versionId) => void handleSelectVersion(versionId)}
           onSwitchVersion={(version) => void handleSwitchVersion(version)}
           onCreateVersion={() => {
-            openVersionDialog(versionPanel.strategy);
+            void openVersionDialog(versionPanel.strategy);
             setVersionPanel(null);
           }}
-          onBacktest={(version) => openBacktestDialog(versionPanel.strategy, version)}
+          onBacktest={(version) => void openBacktestDialog(versionPanel.strategy, version)}
           onViewResult={(backtestId) => void handleViewResult(backtestId)}
         />
       ) : null}
@@ -2931,20 +2964,14 @@ function buildBacktestConfig(
   };
 }
 
-async function loadVersionBacktests(
-  version: StrategyVersion,
-  projectId?: string,
-): Promise<BacktestRecordView[]> {
-  const backtests = await listStrategyBacktests(version.id, projectId);
+async function loadVersionBacktests(version: StrategyVersion): Promise<BacktestRecordView[]> {
+  const backtests = await listStrategyBacktests(version.id);
   return backtests.map((backtest) => ({ backtest, version }));
 }
 
-async function loadStrategyBacktestRecords(
-  versions: StrategyVersion[],
-  projectId?: string,
-): Promise<BacktestRecordView[]> {
+async function loadStrategyBacktestRecords(versions: StrategyVersion[]): Promise<BacktestRecordView[]> {
   const recordGroups = await Promise.all(
-    versions.map((version) => loadVersionBacktests(version, projectId)),
+    versions.map((version) => loadVersionBacktests(version)),
   );
   return recordGroups
     .flat()

@@ -49,7 +49,6 @@ export type BacktestMetrics = {
 
 export type BacktestRun = {
   id: string;
-  user_id: string;
   project_id: string;
   strategy_id: string;
   strategy_version_id: string;

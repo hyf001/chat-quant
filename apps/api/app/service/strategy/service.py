@@ -19,6 +19,8 @@ from app.schema.strategy import (
     StrategyVersionRecord,
     utc_now,
 )
+from app.service import project as project_service
+from app.service.project import ProjectNotFoundError
 from app.service.strategy.validation import (
     StrategyAvailabilityError,
     validate_strategy_availability,
@@ -45,22 +47,25 @@ class StrategyService:
     def __init__(self, db: AsyncSession) -> None:
         self._db = db
 
-    async def list_strategies(self, user_id: str, project_id: str) -> list[StrategySummary]:
+    async def list_strategies(self, project_id: str) -> list[StrategySummary]:
         return [
             await self._to_summary(strategy)
-            for strategy in await self._list_strategy_records(user_id, project_id)
+            for strategy in await self._list_strategy_records(project_id)
         ]
 
     async def create_strategy(
         self,
         *,
-        user_id: str,
         project_id: str,
         strategy_input: StrategyCreate,
     ) -> StrategyCreateResult:
+        try:
+            await project_service.require_project(self._db, project_id)
+        except ProjectNotFoundError as exc:
+            raise StrategyError("PROJECT_NOT_FOUND", "Project not found", 404) from exc
+
         strategy = StrategyRecord(
             id=_new_id("str"),
-            user_id=user_id,
             project_id=project_id,
             name=strategy_input.name,
             description=strategy_input.description,
@@ -224,15 +229,10 @@ class StrategyService:
         row = await self._db.get(StrategyRow, strategy_id)
         return _strategy_from_row(row) if row is not None else None
 
-    async def _list_strategy_records(
-        self,
-        user_id: str,
-        project_id: str,
-    ) -> list[StrategyRecord]:
+    async def _list_strategy_records(self, project_id: str) -> list[StrategyRecord]:
         result = await self._db.scalars(
             select(StrategyRow)
             .where(
-                StrategyRow.user_id == user_id,
                 StrategyRow.project_id == project_id,
                 StrategyRow.status != StrategyStatus.DELETED.value,
             )
@@ -310,7 +310,6 @@ def _normalize_tags(tags: list[str]) -> list[str]:
 def _strategy_to_row(strategy: StrategyRecord) -> StrategyRow:
     return StrategyRow(
         id=strategy.id,
-        user_id=strategy.user_id,
         project_id=strategy.project_id,
         name=strategy.name,
         description=strategy.description,
@@ -325,7 +324,6 @@ def _strategy_to_row(strategy: StrategyRecord) -> StrategyRow:
 def _strategy_from_row(row: StrategyRow) -> StrategyRecord:
     return StrategyRecord(
         id=row.id,
-        user_id=row.user_id,
         project_id=row.project_id,
         name=row.name,
         description=row.description,
@@ -375,21 +373,18 @@ def _service(db: AsyncSession) -> StrategyService:
 async def list_strategies(
     db: AsyncSession,
     *,
-    user_id: str,
     project_id: str,
 ) -> list[StrategySummary]:
-    return await _service(db).list_strategies(user_id=user_id, project_id=project_id)
+    return await _service(db).list_strategies(project_id=project_id)
 
 
 async def create_strategy(
     db: AsyncSession,
     *,
-    user_id: str,
     project_id: str,
     strategy_input: StrategyCreate,
 ) -> StrategyCreateResult:
     return await _service(db).create_strategy(
-        user_id=user_id,
         project_id=project_id,
         strategy_input=strategy_input,
     )

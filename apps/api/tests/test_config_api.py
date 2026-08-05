@@ -8,6 +8,8 @@ def test_config_api_returns_structured_settings(client: TestClient) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["bootstrap"]["database_path"].endswith("chat-quant.db")
+    assert "identity" not in payload["settings"]
+    assert "paths" not in payload["settings"]
     assert payload["settings"]["agent"]["provider_id"] == "provider_anthropic_default"
     assert payload["settings"]["agent"]["model"] == "claude-sonnet-4"
     assert payload["settings"]["agent"]["thinking"]["type"] == "disabled"
@@ -20,7 +22,6 @@ def test_config_api_updates_sqlite_backed_settings(client: TestClient) -> None:
     settings = current["settings"]
     settings["agent"]["model"] = "claude-test-model"
     settings["agent"]["max_turns"] = 3
-    settings["paths"]["project_home"] = "custom/projects"
 
     response = client.put("/api/config", json={"settings": settings})
 
@@ -28,9 +29,7 @@ def test_config_api_updates_sqlite_backed_settings(client: TestClient) -> None:
     updated = response.json()["settings"]
     assert updated["agent"]["model"] == "claude-test-model"
     assert updated["agent"]["max_turns"] == 3
-    assert updated["paths"]["project_home"] == "custom/projects"
     assert get_settings().agent_model == "claude-test-model"
-    assert get_settings().project_home == "custom/projects"
 
 
 def test_config_api_rejects_unknown_agent_provider(client: TestClient) -> None:

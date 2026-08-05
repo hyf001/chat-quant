@@ -22,9 +22,7 @@ from app.schema.config import (
     AppSettingsPayload,
     BootstrapConfigResponse,
     ConfigFieldDefinitionResponse,
-    IdentitySettingsPayload,
     LoggingSettingsPayload,
-    PathSettingsPayload,
     SystemSettingsPayload,
     UpdateAppConfigRequest,
 )
@@ -137,14 +135,6 @@ def _payload_from_settings(settings: Settings) -> AppSettingsPayload:
             level=settings.log_level,  # type: ignore[arg-type]
             format=settings.log_format,
         ),
-        identity=IdentitySettingsPayload(
-            default_user_id=settings.default_user_id,
-            default_project_id=settings.default_project_id,
-        ),
-        paths=PathSettingsPayload(
-            claude_agent_cwd=settings.claude_agent_cwd,
-            project_home=settings.project_home,
-        ),
         agent=AgentSettingsPayload(
             provider_id=settings.agent_provider_id,
             model=settings.agent_model,
@@ -172,10 +162,6 @@ def _flatten_payload(payload: AppSettingsPayload) -> dict[str, ConfigValue]:
         "cors_origins": payload.system.cors_origins,
         "log_level": payload.logging.level,
         "log_format": payload.logging.format,
-        "default_user_id": payload.identity.default_user_id,
-        "default_project_id": payload.identity.default_project_id,
-        "claude_agent_cwd": payload.paths.claude_agent_cwd,
-        "project_home": payload.paths.project_home,
         "agent_provider_id": payload.agent.provider_id,
         "agent_model": payload.agent.model,
         "agent_max_turns": payload.agent.max_turns,

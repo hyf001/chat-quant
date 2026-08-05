@@ -22,16 +22,6 @@ class LoggingSettingsPayload(BaseModel):
     format: Literal["text", "json"]
 
 
-class IdentitySettingsPayload(BaseModel):
-    default_user_id: str = Field(min_length=1)
-    default_project_id: str = Field(min_length=1)
-
-
-class PathSettingsPayload(BaseModel):
-    claude_agent_cwd: str | None = None
-    project_home: str | None = None
-
-
 class AgentThinkingSettingsPayload(BaseModel):
     type: Literal["disabled", "adaptive", "enabled"]
     budget_tokens: int = Field(ge=0)
@@ -54,8 +44,6 @@ class AgentSettingsPayload(BaseModel):
 class AppSettingsPayload(BaseModel):
     system: SystemSettingsPayload
     logging: LoggingSettingsPayload
-    identity: IdentitySettingsPayload
-    paths: PathSettingsPayload
     agent: AgentSettingsPayload
 
 

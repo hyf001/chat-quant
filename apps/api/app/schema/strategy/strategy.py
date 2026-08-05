@@ -60,7 +60,6 @@ class StrategyCreate(StrategyVersionCreate):
 
 class StrategyRecord(BaseModel):
     id: str
-    user_id: str
     project_id: str
     name: str
     description: str | None = None

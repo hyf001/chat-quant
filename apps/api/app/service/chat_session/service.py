@@ -8,9 +8,8 @@ from claude_agent_sdk import get_session_messages as sdk_get_session_messages
 from sqlalchemy import String, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
-from app.core.project_dirs import project_dir
 from app.model.chat_session import ChatSessionAssetLinkRow, ChatSessionRow
+from app.service import project as project_service
 from app.service.chat_session.types import (
     AssetLink,
     AssetRelationType,
@@ -55,10 +54,6 @@ class EnsuredChatSession:
     created: bool
 
 
-class ChatSessionAccessError(PermissionError):
-    pass
-
-
 class SDKSessionReadError(RuntimeError):
     pass
 
@@ -68,21 +63,12 @@ class ChatSessionNotFoundError(LookupError):
 
 
 class ChatSessionService:
-    def __init__(
-        self,
-        db: AsyncSession,
-        *,
-        claude_agent_cwd: str | None = None,
-        project_home: str | None = None,
-    ) -> None:
+    def __init__(self, db: AsyncSession) -> None:
         self._db = db
-        self._claude_agent_cwd = claude_agent_cwd
-        self._project_home = project_home
 
     async def create_chat_session(
         self,
         *,
-        user_id: str,
         project_id: str,
         chat_session_id: str | None = None,
         title: str | None = None,
@@ -96,9 +82,9 @@ class ChatSessionService:
         data_scope_label: str | None = None,
     ) -> ChatSession:
         now = utc_now()
+        await project_service.require_project(self._db, project_id)
         session = ChatSession(
             id=chat_session_id or _new_id("chat"),
-            user_id=user_id,
             project_id=project_id,
             title=title or _default_title(initial_prompt),
             snippet=initial_prompt[:160] if initial_prompt else None,
@@ -121,7 +107,6 @@ class ChatSessionService:
         self,
         chat_session_id: str,
         *,
-        user_id: str,
         title: str | None = None,
         snippet: str | None = None,
         summary: str | None = None,
@@ -137,7 +122,7 @@ class ChatSessionService:
         sdk_project_key: str | None = None,
         archived: bool | None = None,
     ) -> ChatSession:
-        session = await self._require_session(chat_session_id, user_id)
+        session = await self._require_session(chat_session_id)
         now = utc_now()
         archived_at = session.archived_at
         if archived is True and archived_at is None:
@@ -186,7 +171,6 @@ class ChatSessionService:
     async def list_chat_sessions(
         self,
         *,
-        user_id: str,
         project_id: str | None = None,
         query: str | None = None,
         kind: str | None = None,
@@ -197,7 +181,6 @@ class ChatSessionService:
     ) -> tuple[list[ChatSession], int]:
         return await _list_sessions(
             self._db,
-            user_id=user_id,
             project_id=project_id,
             query=query,
             kind=kind,
@@ -211,14 +194,12 @@ class ChatSessionService:
         self,
         *,
         chat_session_id: str,
-        user_id: str,
         project_id: str,
         title: str | None = None,
         initial_prompt: str | None = None,
     ) -> ChatSession:
         ensured = await self.ensure_chat_session_with_status(
             chat_session_id=chat_session_id,
-            user_id=user_id,
             project_id=project_id,
             title=title,
             initial_prompt=initial_prompt,
@@ -229,7 +210,6 @@ class ChatSessionService:
         self,
         *,
         chat_session_id: str,
-        user_id: str,
         project_id: str,
         title: str | None = None,
         initial_prompt: str | None = None,
@@ -238,7 +218,6 @@ class ChatSessionService:
         if session is None or session.deleted_at is not None:
             return EnsuredChatSession(
                 session=await self.create_chat_session(
-                    user_id=user_id,
                     project_id=project_id,
                     chat_session_id=chat_session_id,
                     title=title,
@@ -246,35 +225,34 @@ class ChatSessionService:
                 ),
                 created=True,
             )
-        if session.user_id != user_id:
-            raise ChatSessionAccessError(chat_session_id)
         return EnsuredChatSession(session=session, created=False)
 
-    def initial_answer_title(
+    async def initial_answer_title(
         self,
         chat_session_id: str,
         *,
-        project_id: str,
+        project_dir: str,
         initial_prompt: str,
         sdk_session_id: str | None,
     ) -> str:
+        del chat_session_id
         return (
-            self._sdk_session_title(project_id, sdk_session_id)
+            self._sdk_session_title(project_dir, sdk_session_id)
             or _initial_answer_title(
-                self._sdk_first_user_prompt(project_id, sdk_session_id) or initial_prompt
+                self._sdk_first_user_prompt(project_dir, sdk_session_id) or initial_prompt
             )
         )
 
     async def get_chat_session_detail(
-        self, chat_session_id: str, *, user_id: str, message_limit: int | None = None
+        self, chat_session_id: str, *, message_limit: int | None = None
     ) -> tuple[ChatSession, list[object], list[AssetLink]]:
-        session = await self._require_session(chat_session_id, user_id)
+        session = await self._require_session(chat_session_id)
         messages: list[object] = []
         if session.sdk_session_id:
             try:
                 messages = sdk_get_session_messages(
                     session.sdk_session_id,
-                    directory=self._sdk_message_directory(session.project_id),
+                    directory=await self.project_directory(session.project_id),
                     limit=message_limit,
                 )
             except Exception as exc:  # pragma: no cover - exact SDK exceptions vary by version.
@@ -282,15 +260,13 @@ class ChatSessionService:
         assets = await _list_links_for_chat_session(self._db, session.id)
         return session, messages, assets
 
-    async def get_context(
-        self, chat_session_id: str, *, user_id: str
-    ) -> tuple[ChatSession, list[AssetLink]]:
-        session = await self._require_session(chat_session_id, user_id)
+    async def get_context(self, chat_session_id: str) -> tuple[ChatSession, list[AssetLink]]:
+        session = await self._require_session(chat_session_id)
         assets = await _list_links_for_chat_session(self._db, chat_session_id)
         return session, assets[-20:]
 
-    async def soft_delete_chat_session(self, chat_session_id: str, *, user_id: str) -> None:
-        session = await self._require_session(chat_session_id, user_id)
+    async def soft_delete_chat_session(self, chat_session_id: str) -> None:
+        session = await self._require_session(chat_session_id)
         now = utc_now()
         deleted = replace(session, deleted_at=now, updated_at=now)
         row = await self._db.get(ChatSessionRow, deleted.id)
@@ -299,28 +275,23 @@ class ChatSessionService:
         _apply_session(row, deleted)
         await self._db.commit()
 
-    async def _require_session(self, chat_session_id: str, user_id: str) -> ChatSession:
+    async def _require_session(self, chat_session_id: str) -> ChatSession:
         session = await _get_session(self._db, chat_session_id)
         if session is None or session.deleted_at is not None:
             raise ChatSessionNotFoundError(chat_session_id)
-        if session.user_id != user_id:
-            raise ChatSessionAccessError(chat_session_id)
         return session
 
-    def _sdk_message_directory(self, project_id: str) -> str | None:
-        if self._claude_agent_cwd:
-            return self._claude_agent_cwd
-        if self._project_home:
-            return project_dir(self._project_home, project_id)
-        return None
+    async def project_directory(self, project_id: str) -> str:
+        project = await project_service.require_project(self._db, project_id)
+        return project.local_path
 
-    def _sdk_session_title(self, project_id: str, sdk_session_id: str | None) -> str | None:
+    def _sdk_session_title(self, project_dir: str, sdk_session_id: str | None) -> str | None:
         if not sdk_session_id:
             return None
         try:
             info = sdk_get_session_info(
                 sdk_session_id,
-                directory=self._sdk_message_directory(project_id),
+                directory=project_dir,
             )
         except Exception:  # pragma: no cover - SDK metadata failures should not break chat sync.
             return None
@@ -333,15 +304,13 @@ class ChatSessionService:
         )
         return _valid_title(title)
 
-    def _sdk_first_user_prompt(
-        self, project_id: str, sdk_session_id: str | None
-    ) -> str | None:
+    def _sdk_first_user_prompt(self, project_dir: str, sdk_session_id: str | None) -> str | None:
         if not sdk_session_id:
             return None
         try:
             messages = sdk_get_session_messages(
                 sdk_session_id,
-                directory=self._sdk_message_directory(project_id),
+                directory=project_dir,
             )
         except Exception:  # pragma: no cover - SDK history failures fall back to request prompt.
             return None
@@ -401,7 +370,6 @@ class AssetLinkService:
         self,
         *,
         chat_session_id: str,
-        user_id: str,
         asset_type: AssetType,
         asset_id: str,
         relation_type: AssetRelationType,
@@ -413,8 +381,6 @@ class AssetLinkService:
         session = await _get_session(self._db, chat_session_id)
         if session is None or session.deleted_at is not None:
             raise ChatSessionNotFoundError(chat_session_id)
-        if session.user_id != user_id:
-            raise ChatSessionAccessError(chat_session_id)
 
         now = utc_now()
         link = AssetLink(
@@ -433,27 +399,16 @@ class AssetLinkService:
         return await _upsert_link(self._db, link)
 
     async def list_assets_for_sdk_message(
-        self, *, sdk_session_id: str, sdk_message_uuid: str, user_id: str
+        self, *, sdk_session_id: str, sdk_message_uuid: str
     ) -> list[AssetLink]:
-        links = await _list_links_for_sdk_message(
+        return await _list_links_for_sdk_message(
             self._db,
             sdk_session_id=sdk_session_id, sdk_message_uuid=sdk_message_uuid
         )
-        visible_links: list[AssetLink] = []
-        for link in links:
-            session = await _get_session(self._db, link.chat_session_id)
-            if session and session.user_id == user_id and session.deleted_at is None:
-                visible_links.append(link)
-        return visible_links
 
 
 def chat_session_service(db: AsyncSession) -> ChatSessionService:
-    settings = get_settings()
-    return ChatSessionService(
-        db,
-        claude_agent_cwd=settings.claude_agent_cwd,
-        project_home=settings.project_home,
-    )
+    return ChatSessionService(db)
 
 
 def asset_link_service(db: AsyncSession) -> AssetLinkService:
@@ -468,7 +423,6 @@ async def _get_session(db: AsyncSession, chat_session_id: str) -> ChatSession | 
 async def _list_sessions(
     db: AsyncSession,
     *,
-    user_id: str,
     project_id: str | None = None,
     query: str | None = None,
     kind: str | None = None,
@@ -478,7 +432,6 @@ async def _list_sessions(
     offset: int = 0,
 ) -> tuple[list[ChatSession], int]:
     filters = [
-        ChatSessionRow.user_id == user_id,
         ChatSessionRow.deleted_at.is_(None),
     ]
     if project_id is not None:
@@ -571,7 +524,6 @@ def _session_to_row(session: ChatSession) -> ChatSessionRow:
 
 def _apply_session(row: ChatSessionRow, session: ChatSession) -> None:
     row.id = session.id
-    row.user_id = session.user_id
     row.project_id = session.project_id
     row.title = session.title
     row.kind = session.kind.value
@@ -596,7 +548,6 @@ def _apply_session(row: ChatSessionRow, session: ChatSession) -> None:
 def _row_to_session(row: ChatSessionRow) -> ChatSession:
     return ChatSession(
         id=row.id,
-        user_id=row.user_id,
         project_id=row.project_id,
         title=row.title,
         kind=ChatSessionKind(row.kind),

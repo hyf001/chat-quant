@@ -45,25 +45,14 @@ def build_parser() -> argparse.ArgumentParser:
         prog="chatq-strategy",
         description="Operate Chat-Quant strategies through business-level API actions.",
     )
-    context_common = argparse.ArgumentParser(add_help=False)
-    context_common.add_argument("--user-id", help="User context.")
-    context_common.add_argument(
-        "--project-id",
-        help="Project context.",
-    )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    def command(
-        name: str,
-        *,
-        requires_context: bool = False,
-        **kwargs: object,
-    ) -> argparse.ArgumentParser:
-        parents = [context_common] if requires_context else []
-        return subparsers.add_parser(name, parents=parents, **kwargs)
+    def command(name: str, **kwargs: object) -> argparse.ArgumentParser:
+        return subparsers.add_parser(name, **kwargs)
 
-    command("list", requires_context=True, help="List strategies in a user project.")
+    list_command = command("list", help="List strategies in the current local project.")
+    add_project_path_arg(list_command)
     show = command("show", help="Show one strategy by id.")
     show.add_argument("strategy_id")
 
@@ -74,11 +63,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     create = command(
         "create",
-        requires_context=True,
         help="Create a strategy and its first version.",
     )
     create.add_argument("--name", required=True)
     create.add_argument("--description")
+    add_project_path_arg(create)
     add_source_args(create)
     add_mode_arg(create)
     add_risk_note_arg(create)
@@ -125,6 +114,16 @@ def add_source_args(parser: argparse.ArgumentParser) -> None:
         "--source-file",
         required=True,
         help="Path to strategy Python source. The CLI submits file content as source_code.",
+    )
+
+
+def add_project_path_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--project-path",
+        help=(
+            "Business project directory to resolve as Chat-Quant project. "
+            "Defaults to the current working directory."
+        ),
     )
 
 
@@ -182,17 +181,18 @@ def add_backtest_args(parser: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> object:
-    if args.command in CONTEXT_COMMANDS:
-        require_context(args)
-
     client = ApiClient(
         base_url=get_config().api_base_url,
-        user_id=getattr(args, "user_id", None),
-        project_id=getattr(args, "project_id", None),
     )
+    if args.command in CONTEXT_COMMANDS:
+        client = client.with_current_project(getattr(args, "project_path", None))
 
     if args.command == "list":
-        return client.request("GET", "/strategies")
+        return client.request(
+            "GET",
+            "/strategies",
+            query={"project_id": _client_project_id(client)},
+        )
     if args.command == "show":
         return client.request("GET", f"/strategies/{quote_path(args.strategy_id)}")
     if args.command == "versions":
@@ -221,6 +221,7 @@ def run(args: argparse.Namespace) -> object:
 
 def create_strategy(client: ApiClient, args: argparse.Namespace) -> object:
     payload = {
+        "project_id": _client_project_id(client),
         "name": args.name,
         "source_code": read_source_file(args.source_file),
         "strategy_mode": args.mode,
@@ -294,14 +295,14 @@ def backtest_strategy(client: ApiClient, args: argparse.Namespace) -> object:
     config = build_backtest_config(args)
     if args.strategy_version_id is None:
         config["strategy_mode"] = current_strategy_mode(client, detail)
-        payload = {"config": config}
+        payload = {"config": config, "project_id": _client_project_id(client)}
     else:
         config["strategy_mode"] = strategy_version_mode(
             client,
             args.strategy_id,
             args.strategy_version_id,
         )
-        payload = {"config": config}
+        payload = {"config": config, "project_id": _client_project_id(client)}
         payload["strategy_version_id"] = args.strategy_version_id
     return client.request("POST", f"/strategies/{quote_path(args.strategy_id)}/backtest", payload)
 
@@ -374,11 +375,6 @@ def strategy_record(detail: dict[str, object]) -> dict[str, object]:
     return strategy
 
 
-def require_context(args: argparse.Namespace) -> None:
-    if not args.user_id or not args.project_id:
-        raise CliError(f"{args.command} requires --user-id and --project-id")
-
-
 def read_source_file(source_file: str) -> str:
     path = Path(source_file)
     try:
@@ -423,33 +419,61 @@ def quote_path(value: str) -> str:
     return urllib.parse.quote(value, safe="")
 
 
+def _client_project_id(client: object) -> str:
+    require_project_id = getattr(client, "require_project_id", None)
+    if callable(require_project_id):
+        value = require_project_id()
+    else:
+        value = getattr(client, "project_id", None)
+    if not isinstance(value, str) or not value:
+        raise CliError("Current project could not be resolved")
+    return value
+
+
 class ApiClient:
     def __init__(
         self,
         *,
         base_url: str,
-        user_id: str | None,
-        project_id: str | None,
+        project_id: str | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
-        self.user_id = user_id
         self.project_id = project_id
+
+    def require_project_id(self) -> str:
+        if not self.project_id:
+            raise CliError("Current project could not be resolved")
+        return self.project_id
+
+    def with_current_project(self, project_path: str | None = None) -> ApiClient:
+        local_path = (
+            Path(project_path).expanduser().resolve()
+            if project_path
+            else Path.cwd().resolve()
+        )
+        project = self.request(
+            "POST",
+            "/projects/resolve",
+            {"local_path": str(local_path)},
+        )
+        if not isinstance(project, dict):
+            raise CliError("Failed to resolve current project")
+        project_id = project.get("id")
+        if not isinstance(project_id, str) or not project_id:
+            raise CliError("Resolved project has no id")
+        return ApiClient(base_url=self.base_url, project_id=project_id)
 
     def with_strategy_context(self, strategy_id: str) -> tuple[ApiClient, dict[str, object]]:
         detail = self.request("GET", f"/strategies/{quote_path(strategy_id)}")
         if not isinstance(detail, dict):
             raise CliError("Failed to resolve strategy detail")
         strategy = strategy_record(detail)
-        user_id = strategy.get("user_id")
         project_id = strategy.get("project_id")
-        if not isinstance(user_id, str) or not user_id:
-            raise CliError("Strategy detail has no user_id")
         if not isinstance(project_id, str) or not project_id:
             raise CliError("Strategy detail has no project_id")
         return (
             ApiClient(
                 base_url=self.base_url,
-                user_id=user_id,
                 project_id=project_id,
             ),
             detail,
@@ -471,11 +495,6 @@ class ApiClient:
         if payload is not None:
             body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             headers["Content-Type"] = "application/json"
-        if self.user_id is not None:
-            headers["X-User-Id"] = self.user_id
-        if self.project_id is not None:
-            headers["X-Project-Id"] = self.project_id
-
         request = urllib.request.Request(url, data=body, headers=headers, method=method)
         try:
             with urllib.request.urlopen(request) as response:

@@ -13,8 +13,7 @@ class FakeClient:
     def __init__(self) -> None:
         self.calls: list[tuple[str, str, object | None, dict[str, object] | None]] = []
         self.base_url = "http://test/api"
-        self.user_id: str | None = None
-        self.project_id: str | None = None
+        self.project_id: str | None = "project_a"
 
     def request(
         self,
@@ -29,7 +28,6 @@ class FakeClient:
             return {
                 "strategy": {
                     "id": "str_1",
-                    "user_id": "user_a",
                     "project_id": "project_a",
                     "current_version_id": "stv_1",
                 }
@@ -43,9 +41,26 @@ class FakeClient:
 
     def with_strategy_context(self, strategy_id: str) -> tuple[FakeClient, dict[str, object]]:
         detail = self.request("GET", f"/strategies/{strategy_id}")
-        self.user_id = detail["strategy"]["user_id"]
         self.project_id = detail["strategy"]["project_id"]
         return self, detail
+
+    def with_current_project(self, project_path: str | None = None) -> FakeClient:
+        self.calls.append(
+            (
+                "POST",
+                "/projects/resolve",
+                {
+                    "local_path": str(
+                        Path(project_path).expanduser().resolve()
+                        if project_path
+                        else Path.cwd().resolve()
+                    )
+                },
+                None,
+            )
+        )
+        self.project_id = "project_a"
+        return self
 
 
 def test_create_strategy_uses_source_file_without_request_custom_params(tmp_path: Path) -> None:
@@ -68,6 +83,7 @@ def test_create_strategy_uses_source_file_without_request_custom_params(tmp_path
     payload = result["payload"]
     assert payload == {
         "name": "均线策略",
+        "project_id": "project_a",
         "description": "测试策略",
         "source_code": "import backtrader as bt\n",
         "strategy_mode": "single_symbol",
@@ -197,6 +213,7 @@ def test_backtest_omits_strategy_version_id_by_default() -> None:
 
     assert result["path"] == "/strategies/str_1/backtest"
     assert result["payload"]["config"]["strategy_mode"] == "single_symbol"
+    assert result["payload"]["project_id"] == "project_a"
     assert "strategy_version_id" not in result["payload"]
 
 
@@ -236,30 +253,133 @@ def test_backtest_can_target_specific_strategy_version() -> None:
     )
 
     assert result["payload"]["strategy_version_id"] == "stv_2"
+    assert result["payload"]["project_id"] == "project_a"
     assert result["payload"]["config"]["strategy_mode"] == "multi_symbol"
 
 
-def test_project_scoped_commands_require_context() -> None:
+def test_project_scoped_commands_resolve_current_directory(monkeypatch: pytest.MonkeyPatch) -> None:
     parser = chatq_strategy.build_parser()
     args = parser.parse_args(["list"])
+    client = FakeClient()
 
-    with pytest.raises(chatq_strategy.CliError, match="requires --user-id and --project-id"):
-        chatq_strategy.require_context(args)
+    monkeypatch.setattr(chatq_strategy, "ApiClient", lambda base_url: client)
+
+    result = chatq_strategy.run(args)
+
+    assert result["path"] == "/strategies"
+    assert client.calls[0] == (
+        "POST",
+        "/projects/resolve",
+        {"local_path": str(Path.cwd().resolve())},
+        None,
+    )
+    assert result["query"] == {"project_id": "project_a"}
 
 
-def test_context_flags_are_accepted_after_subcommand() -> None:
+def test_list_can_resolve_explicit_project_path(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     parser = chatq_strategy.build_parser()
-    args = parser.parse_args(["list", "--user-id", "user_a", "--project-id", "project_a"])
+    args = parser.parse_args(["list", "--project-path", str(tmp_path)])
+    client = FakeClient()
 
-    assert args.command == "list"
-    assert args.user_id == "user_a"
-    assert args.project_id == "project_a"
+    monkeypatch.setattr(chatq_strategy, "ApiClient", lambda base_url: client)
+
+    result = chatq_strategy.run(args)
+
+    assert result["path"] == "/strategies"
+    assert client.calls[0] == (
+        "POST",
+        "/projects/resolve",
+        {"local_path": str(tmp_path.resolve())},
+        None,
+    )
+    assert result["query"] == {"project_id": "project_a"}
+
+
+def test_create_can_resolve_explicit_project_path(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    source_file = tmp_path / "strategy.py"
+    source_file.write_text("import backtrader as bt\n", encoding="utf-8")
+    parser = chatq_strategy.build_parser()
+    args = parser.parse_args(
+        [
+            "create",
+            "--project-path",
+            str(tmp_path),
+            "--name",
+            "显式项目路径策略",
+            "--source-file",
+            str(source_file),
+        ]
+    )
+    client = FakeClient()
+
+    monkeypatch.setattr(chatq_strategy, "ApiClient", lambda base_url: client)
+
+    result = chatq_strategy.run(args)
+
+    assert result["path"] == "/strategies"
+    assert client.calls[0] == (
+        "POST",
+        "/projects/resolve",
+        {"local_path": str(tmp_path.resolve())},
+        None,
+    )
+    assert result["payload"]["project_id"] == "project_a"
+    assert result["payload"]["name"] == "显式项目路径策略"
+
+
+def test_context_flags_are_removed_from_subcommand() -> None:
+    parser = chatq_strategy.build_parser()
+
+    with pytest.raises(SystemExit):
+        parser.parse_args(["list", "--user-id", "user_a", "--project-id", "project_a"])
 
 
 def test_api_base_url_is_loaded_from_config(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CHATQ_API_BASE_URL", "http://example.test/api")
 
     assert config.get_config().api_base_url == "http://example.test/api"
+
+
+def test_api_base_url_accepts_base_without_api_suffix(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CHATQ_API_BASE", "http://example.test")
+
+    assert config.get_config().api_base_url == "http://example.test/api"
+
+
+def test_api_base_url_is_loaded_from_runtime_file(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    runtime_file = tmp_path / "api-runtime.json"
+    runtime_file.write_text(
+        json.dumps({"api_base_url": "http://127.0.0.1:12345/api"}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("CHATQ_API_RUNTIME_FILE", str(runtime_file))
+    monkeypatch.setattr(config, "_is_api_healthy", lambda api_base_url: True)
+
+    assert config.get_config().api_base_url == "http://127.0.0.1:12345/api"
+
+
+def test_unhealthy_runtime_file_falls_back_to_default(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    runtime_file = tmp_path / "api-runtime.json"
+    runtime_file.write_text(
+        json.dumps({"api_base_url": "http://127.0.0.1:54321/api"}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("CHATQ_API_RUNTIME_FILE", str(runtime_file))
+    monkeypatch.setattr(config, "_is_api_healthy", lambda api_base_url: False)
+
+    assert config.get_config().api_base_url == "http://127.0.0.1:12345/api"
 
 
 def test_show_and_backtest_records_do_not_require_context() -> None:
@@ -292,12 +412,21 @@ def test_api_base_url_is_not_exposed_as_cli_argument(
     assert "--api-base-url" not in captured.out
 
 
-def test_cli_error_is_json(capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_error_is_json(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class MissingProjectClient(FakeClient):
+        def with_current_project(self, project_path: str | None = None) -> FakeClient:
+            del project_path
+            raise chatq_strategy.CliError("Current project could not be resolved")
+
+    monkeypatch.setattr(chatq_strategy, "ApiClient", lambda base_url: MissingProjectClient())
     exit_code = chatq_strategy.main(["list"])
 
     captured = capsys.readouterr()
     assert exit_code == 1
     assert json.loads(captured.err) == {
         "error": "cli_error",
-        "message": "list requires --user-id and --project-id",
+        "message": "Current project could not be resolved",
     }

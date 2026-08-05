@@ -7,7 +7,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import {
   createModelProvider,
@@ -30,7 +30,7 @@ type AppSettingsDialogProps = {
   onClose: () => void;
 };
 
-type SettingsTab = "agent" | "paths" | "identity" | "system" | "logging";
+type SettingsTab = "agent" | "system" | "logging";
 
 type ProviderDraft = ModelProviderPayload & {
   id: string | null;
@@ -38,8 +38,6 @@ type ProviderDraft = ModelProviderPayload & {
 
 const tabs: Array<{ id: SettingsTab; label: string }> = [
   { id: "agent", label: "Agent" },
-  { id: "paths", label: "路径" },
-  { id: "identity", label: "身份" },
   { id: "system", label: "系统" },
   { id: "logging", label: "日志" },
 ];
@@ -65,32 +63,55 @@ export function AppSettingsDialog({ isOpen, onClose }: AppSettingsDialogProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [providerMessage, setProviderMessage] = useState<string | null>(null);
   const [testedProviderSignature, setTestedProviderSignature] = useState<string | null>(null);
-  const [testedProviderModels, setTestedProviderModels] = useState<ProviderModel[]>([]);
+
+  const loadSettings = useCallback(async (selectedProviderId?: string | null) => {
+    setIsLoading(true);
+    setMessage(null);
+    setProviderMessage(null);
+    try {
+      const [nextConfig, providerResponse] = await Promise.all([
+        getAppConfig(),
+        listModelProviders(),
+      ]);
+      const providerId = nextConfig.settings.agent.provider_id;
+      const modelResponse = providerId ? await listProviderModels(providerId) : null;
+      const nextModels = modelResponse?.models ?? [];
+      const nextSettings =
+        nextModels.length > 0 &&
+        !nextModels.some((model) => model.id === nextConfig.settings.agent.model)
+          ? {
+              ...nextConfig.settings,
+              agent: {
+                ...nextConfig.settings.agent,
+                model: nextModels[0].id,
+              },
+            }
+          : nextConfig.settings;
+      const selectedProvider =
+        providerResponse.providers.find((provider) => provider.id === selectedProviderId) ??
+        providerResponse.providers.find((provider) => provider.id === providerId) ??
+        null;
+      setConfig(nextConfig);
+      setDraft(nextSettings);
+      setProviders(providerResponse.providers);
+      setModels(nextModels);
+      setProviderDraft(selectedProvider ? providerToDraft(selectedProvider) : blankProviderDraft);
+      setTestedProviderSignature(null);
+      return { config: nextConfig, providers: providerResponse.providers, models: nextModels };
+    } catch (caught) {
+      setMessage(caught instanceof Error ? caught.message : "设置加载失败");
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isOpen) {
       return;
     }
-    setIsLoading(true);
-    setMessage(null);
-    setProviderMessage(null);
-    Promise.all([getAppConfig(), listModelProviders()])
-      .then(([nextConfig, providerResponse]) => {
-        setConfig(nextConfig);
-        setDraft(nextConfig.settings);
-        setProviders(providerResponse.providers);
-        const activeProvider = providerResponse.providers.find(
-          (provider) => provider.id === nextConfig.settings.agent.provider_id,
-        );
-        setProviderDraft(activeProvider ? providerToDraft(activeProvider) : blankProviderDraft);
-        setTestedProviderSignature(null);
-        setTestedProviderModels([]);
-      })
-      .catch((caught) => {
-        setMessage(caught instanceof Error ? caught.message : "设置加载失败");
-      })
-      .finally(() => setIsLoading(false));
-  }, [isOpen]);
+    void loadSettings();
+  }, [isOpen, loadSettings]);
 
   useEffect(() => {
     const providerId = draft?.agent.provider_id;
@@ -140,8 +161,7 @@ export function AppSettingsDialog({ isOpen, onClose }: AppSettingsDialogProps) {
     setMessage(null);
     try {
       const nextConfig = await updateAppConfig(draft);
-      setConfig(nextConfig);
-      setDraft(nextConfig.settings);
+      await loadSettings(nextConfig.settings.agent.provider_id);
       setMessage("已保存");
     } catch (caught) {
       setMessage(caught instanceof Error ? caught.message : "保存失败");
@@ -150,17 +170,10 @@ export function AppSettingsDialog({ isOpen, onClose }: AppSettingsDialogProps) {
     }
   };
 
-  const reloadProviders = async () => {
-    const response = await listModelProviders();
-    setProviders(response.providers);
-    return response.providers;
-  };
-
   const updateProviderDraft = (nextDraft: ProviderDraft) => {
     setProviderDraft(nextDraft);
     setProviderMessage(null);
     setTestedProviderSignature(null);
-    setTestedProviderModels([]);
   };
 
   const providerPayload = (): ModelProviderPayload => ({
@@ -178,7 +191,6 @@ export function AppSettingsDialog({ isOpen, onClose }: AppSettingsDialogProps) {
       setProviderMessage(response.message);
       if (response.ok) {
         setTestedProviderSignature(providerSignature(providerDraft));
-        setTestedProviderModels(response.models);
         if (draft?.agent.provider_id === providerDraft.id) {
           setModels(response.models);
           if (!response.models.some((model) => model.id === draft.agent.model)) {
@@ -211,22 +223,30 @@ export function AppSettingsDialog({ isOpen, onClose }: AppSettingsDialogProps) {
       const savedProvider = providerDraft.id
         ? await updateModelProvider(providerDraft.id, payload)
         : await createModelProvider(payload);
-      await reloadProviders();
-      setProviderDraft(providerToDraft(savedProvider));
-      if (!draft?.agent.provider_id || providerDraft.id === null) {
-        setDraft((current) =>
-          current
-            ? {
-                ...current,
-                agent: {
-                  ...current.agent,
-                  provider_id: savedProvider.id,
-                  model: testedProviderModels[0]?.id ?? current.agent.model,
-                },
-              }
-            : current,
-        );
+      const [currentConfig, modelResponse] = await Promise.all([
+        getAppConfig(),
+        listProviderModels(savedProvider.id),
+      ]);
+      const shouldUseSavedProvider =
+        providerDraft.id === null ||
+        !currentConfig.settings.agent.provider_id ||
+        currentConfig.settings.agent.provider_id === savedProvider.id;
+      if (shouldUseSavedProvider) {
+        const nextModel = modelResponse.models.some(
+          (model) => model.id === currentConfig.settings.agent.model,
+        )
+          ? currentConfig.settings.agent.model
+          : modelResponse.models[0]?.id ?? "";
+        await updateAppConfig({
+          ...currentConfig.settings,
+          agent: {
+            ...currentConfig.settings.agent,
+            provider_id: savedProvider.id,
+            model: nextModel,
+          },
+        });
       }
+      await loadSettings(savedProvider.id);
       setProviderMessage("Provider 已保存");
     } catch (caught) {
       setProviderMessage(caught instanceof Error ? caught.message : "Provider 保存失败");
@@ -242,8 +262,7 @@ export function AppSettingsDialog({ isOpen, onClose }: AppSettingsDialogProps) {
     setProviderMessage(null);
     try {
       await deleteModelProvider(provider.id);
-      await reloadProviders();
-      setProviderDraft(blankProviderDraft);
+      await loadSettings();
       setProviderMessage("Provider 已删除");
     } catch (caught) {
       setProviderMessage(caught instanceof Error ? caught.message : "Provider 删除失败");
@@ -322,8 +341,6 @@ export function AppSettingsDialog({ isOpen, onClose }: AppSettingsDialogProps) {
                   testedProviderSignature={testedProviderSignature}
                 />
               ) : null}
-              {activeTab === "paths" ? <PathForm draft={draft} onChange={setDraft} /> : null}
-              {activeTab === "identity" ? <IdentityForm draft={draft} onChange={setDraft} /> : null}
               {activeTab === "system" ? <SystemForm draft={draft} onChange={setDraft} /> : null}
               {activeTab === "logging" ? <LoggingForm draft={draft} onChange={setDraft} /> : null}
             </div>
@@ -607,26 +624,6 @@ function ProviderEditorCard({
         </div>
       )}
     </div>
-  );
-}
-
-function PathForm({ draft, onChange }: { draft: AppSettings; onChange: (settings: AppSettings) => void }) {
-  const paths = draft.paths;
-  return (
-    <FormSection title="路径">
-      <TextField label="项目目录" value={paths.project_home ?? ""} onChange={(project_home) => onChange({ ...draft, paths: { ...paths, project_home: emptyToNull(project_home) } })} />
-      <TextField label="Agent 工作目录" value={paths.claude_agent_cwd ?? ""} onChange={(claude_agent_cwd) => onChange({ ...draft, paths: { ...paths, claude_agent_cwd: emptyToNull(claude_agent_cwd) } })} />
-    </FormSection>
-  );
-}
-
-function IdentityForm({ draft, onChange }: { draft: AppSettings; onChange: (settings: AppSettings) => void }) {
-  const identity = draft.identity;
-  return (
-    <FormSection title="身份">
-      <TextField label="默认用户" value={identity.default_user_id} onChange={(default_user_id) => onChange({ ...draft, identity: { ...identity, default_user_id } })} />
-      <TextField label="默认项目" value={identity.default_project_id} onChange={(default_project_id) => onChange({ ...draft, identity: { ...identity, default_project_id } })} />
-    </FormSection>
   );
 }
 

@@ -1,10 +1,3 @@
-export type AgentScenario =
-  | "chat_analysis"
-  | "screening"
-  | "strategy_build"
-  | "backtest"
-  | "follow_up";
-
 export type SDKEvent = Record<string, unknown>;
 
 export type SDKStreamEnvelope = {

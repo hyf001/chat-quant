@@ -33,6 +33,7 @@ def ensure_database_schema(settings: Settings) -> None:
         engine = create_engine(database_url)
         try:
             Base.metadata.create_all(engine)
+            _migrate_local_project_schema(engine, settings)
             _migrate_strategy_source_code(engine)
             _migrate_strategy_version_contract(engine)
             _merge_backtest_payloads(engine)
@@ -45,6 +46,65 @@ def ensure_database_schema(settings: Settings) -> None:
         finally:
             engine.dispose()
         _INITIALIZED_DATABASE_URLS.add(database_url)
+
+
+def _migrate_local_project_schema(engine: Engine, settings: Settings) -> None:
+    inspector = inspect(engine)
+    table_names = set(inspector.get_table_names())
+    if "projects" in table_names:
+        _migrate_projects_local_path(engine, inspector, settings)
+    for table_name, index_names in {
+        "chat_sessions": ("idx_chat_sessions_user_updated",),
+        "strategies": ("idx_strategies_user_project_updated",),
+        "strategy_backtests": (),
+    }.items():
+        if table_name in table_names:
+            _drop_column_if_exists(engine, inspector, table_name, "user_id", index_names)
+
+
+def _migrate_projects_local_path(
+    engine: Engine, inspector, settings: Settings
+) -> None:
+    columns = {column["name"] for column in inspector.get_columns("projects")}
+    with engine.begin() as connection:
+        if "local_path" not in columns:
+            connection.execute(text("ALTER TABLE projects ADD COLUMN local_path TEXT"))
+            legacy_root = settings.database_path.parent / "projects"
+            rows = connection.execute(text("SELECT id FROM projects")).mappings()
+            for row in rows:
+                project_id = str(row["id"])
+                legacy_path = str((legacy_root / project_id).expanduser().resolve(strict=False))
+                connection.execute(
+                    text("UPDATE projects SET local_path = :local_path WHERE id = :id"),
+                    {"id": project_id, "local_path": legacy_path},
+                )
+        connection.execute(text("DROP INDEX IF EXISTS idx_projects_user_updated"))
+        connection.execute(
+            text("CREATE INDEX IF NOT EXISTS idx_projects_updated ON projects(updated_at)")
+        )
+        connection.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS "
+                "idx_projects_local_path_unique ON projects(local_path)"
+            )
+        )
+    _drop_column_if_exists(engine, inspector, "projects", "user_id", ())
+
+
+def _drop_column_if_exists(
+    engine: Engine,
+    inspector,
+    table_name: str,
+    column_name: str,
+    index_names: tuple[str, ...],
+) -> None:
+    columns = {column["name"] for column in inspector.get_columns(table_name)}
+    if column_name not in columns:
+        return
+    with engine.begin() as connection:
+        for index_name in index_names:
+            connection.execute(text(f"DROP INDEX IF EXISTS {index_name}"))
+        connection.execute(text(f"ALTER TABLE {table_name} DROP COLUMN {column_name}"))
 
 
 def _seed_model_providers(engine: Engine) -> None:

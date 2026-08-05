@@ -21,7 +21,7 @@ export function RuntimeResultPanel({
         <div className="min-w-0">
           <div className="text-sm font-semibold">M4 Python 运行时</div>
           <div className="mt-1 text-xs text-muted">
-            Python {health?.python_version ?? "-"} · 项目目录 {health?.project_home_writable ? "可写" : "待确认"}
+            Python {health?.python_version ?? "-"}
           </div>
         </div>
       </div>

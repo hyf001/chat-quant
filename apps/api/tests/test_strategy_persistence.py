@@ -5,6 +5,7 @@ from app.core.config import Settings
 from app.db.schema import ensure_database_schema
 from app.db.session import make_engine, make_session_factory
 from app.schema.strategy import StrategyCreate
+from app.service import project as project_service
 from app.service.strategy import StrategyService
 from tests.test_strategy_api import strategy_create_payload
 
@@ -18,11 +19,17 @@ async def test_strategy_service_persists_strategy_across_instances(
 
     session_factory = make_session_factory(make_engine(settings))
     async with session_factory() as db:
+        project = await project_service.create_project(
+            db,
+            local_path=str(tmp_path / "project-a"),
+            name="Project A",
+        )
         strategy_service = StrategyService(db)
+        payload = strategy_create_payload()
+        payload.pop("project_id")
         created = await strategy_service.create_strategy(
-            user_id="user_a",
-            project_id="project_a",
-            strategy_input=StrategyCreate.model_validate(strategy_create_payload()),
+            project_id=project.id,
+            strategy_input=StrategyCreate.model_validate(payload),
         )
 
     async with session_factory() as db:

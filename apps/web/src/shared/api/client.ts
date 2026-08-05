@@ -1,6 +1,5 @@
 import type {
   AgentChatSessionDetail,
-  AgentScenario,
   ChatMessageAccepted,
   SDKStreamEnvelope,
 } from "../types/agentRuntime";
@@ -21,21 +20,15 @@ const API_BASE_URL =
   window.chatqDesktop?.apiBaseUrl ?? import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 export { API_BASE_URL };
 
-const API_USER_ID = import.meta.env.VITE_CHATQ_USER_ID ?? "local_user";
-const API_PROJECT_ID = import.meta.env.VITE_CHATQ_PROJECT_ID ?? "local_project";
-export { API_PROJECT_ID, API_USER_ID };
-
 type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
-  projectId?: string;
 };
 
 type SendAgentChatMessageInput = {
   message: string;
   chatSessionId?: string | null;
   projectId?: string;
-  scenario?: AgentScenario;
 };
 
 async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -43,8 +36,6 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
     method: options.method ?? "GET",
     headers: {
       "Content-Type": "application/json",
-      "X-User-Id": API_USER_ID,
-      "X-Project-Id": options.projectId ?? API_PROJECT_ID,
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
@@ -107,7 +98,6 @@ export type RuntimeHealth = {
   status: string;
   python_version: string;
   packages: Record<string, string>;
-  project_home_writable: boolean;
 };
 
 export type BootstrapConfig = {
@@ -125,16 +115,6 @@ export type SystemSettings = {
 export type LoggingSettings = {
   level: "DEBUG" | "INFO" | "WARNING" | "ERROR";
   format: "text" | "json";
-};
-
-export type IdentitySettings = {
-  default_user_id: string;
-  default_project_id: string;
-};
-
-export type PathSettings = {
-  claude_agent_cwd: string | null;
-  project_home: string | null;
 };
 
 export type AgentSettings = {
@@ -157,8 +137,6 @@ export type AgentSettings = {
 export type AppSettings = {
   system: SystemSettings;
   logging: LoggingSettings;
-  identity: IdentitySettings;
-  paths: PathSettings;
   agent: AgentSettings;
 };
 
@@ -297,7 +275,21 @@ export async function listProjects(query?: string): Promise<ProjectListResponse>
 }
 
 export async function createProject(payload: CreateProjectPayload): Promise<Project> {
-  return requestJson<Project>("/api/projects", {
+  return requestJson<Project>("/api/projects/create", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function openProject(payload: CreateProjectPayload): Promise<Project> {
+  return requestJson<Project>("/api/projects/open", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function resolveProject(payload: CreateProjectPayload): Promise<Project> {
+  return requestJson<Project>("/api/projects/resolve", {
     method: "POST",
     body: payload,
   });
@@ -321,24 +313,26 @@ export async function deleteProject(projectId: string): Promise<void> {
 
 export async function listChatSessions(
   query?: string,
-  projectId?: string,
+  projectId?: string | null,
 ): Promise<ChatSessionListResponse> {
   const params = new URLSearchParams();
+  if (!projectId) {
+    return { items: [], total: 0, limit: 20, offset: 0 };
+  }
+  params.set("project_id", projectId);
   if (query) {
     params.set("query", query);
   }
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  return requestJson<ChatSessionListResponse>(`/api/chat-sessions${suffix}`, { projectId });
+  return requestJson<ChatSessionListResponse>(`/api/chat-sessions${suffix}`);
 }
 
 export async function createChatSession(
-  payload: CreateChatSessionPayload = {},
-  projectId?: string,
+  payload: CreateChatSessionPayload,
 ): Promise<ChatSession> {
   return requestJson<ChatSession>("/api/chat-sessions", {
     method: "POST",
     body: payload,
-    projectId,
   });
 }
 
@@ -364,11 +358,8 @@ export async function sendAgentChatMessage(
     body: {
       message: input.message,
       chat_session_id: input.chatSessionId,
-      scenario: input.scenario,
-      user_id: API_USER_ID,
-      project_id: input.projectId ?? API_PROJECT_ID,
+      project_id: input.projectId,
     },
-    projectId: input.projectId,
   });
 }
 
@@ -382,11 +373,7 @@ export async function readChatStream(
   streamUrl: string,
   onEnvelope: (envelope: SDKStreamEnvelope) => void,
 ): Promise<void> {
-  const response = await fetch(toApiUrl(streamUrl), {
-    headers: {
-      "X-User-Id": API_USER_ID,
-    },
-  });
+  const response = await fetch(toApiUrl(streamUrl));
   if (!response.ok || response.body === null) {
     throw new Error(`Chat stream failed: ${response.status}`);
   }
@@ -420,11 +407,7 @@ export async function getRuntimeHealth(): Promise<RuntimeHealth> {
 export async function createBacktestRun(payload: CreateBacktestRunPayload): Promise<BacktestRun> {
   return requestJson<BacktestRun>("/api/backtests", {
     method: "POST",
-    body: {
-      ...payload,
-      user_id: API_USER_ID,
-      project_id: API_PROJECT_ID,
-    },
+    body: payload,
   });
 }
 

@@ -10,6 +10,7 @@ type ComposerProps = {
   isModelLoading?: boolean;
   isModelSaving?: boolean;
   onModelChange: (model: string) => void;
+  onModelRefresh?: () => void;
   onSendMessage: (content: string) => Promise<void>;
 };
 
@@ -21,10 +22,11 @@ export function Composer({
   isModelLoading = false,
   isModelSaving = false,
   onModelChange,
+  onModelRefresh,
   onSendMessage,
 }: ComposerProps) {
   const [content, setContent] = useState("");
-  const canSelectModel = models.length > 0 && !disabled && !isModelLoading && !isModelSaving;
+  const canSelectModel = models.length > 0 && !disabled && !isModelSaving;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -40,6 +42,8 @@ export function Composer({
     <footer className="glass-panel shrink-0 border-t border-line p-4">
       <form
         className="mx-auto flex max-w-5xl items-center gap-3 rounded-lg border border-strong bg-panel px-4 py-3 shadow-lift transition-all focus-within:border-signal focus-within:bg-panel"
+        onFocusCapture={onModelRefresh}
+        onPointerEnter={onModelRefresh}
         onSubmit={handleSubmit}
       >
         <span className="select-none font-mono text-lg font-black text-signal">&gt;</span>

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from app.schema.agent_runtime import AgentExecutionCommand, RuntimeErrorCode
 
@@ -20,10 +21,17 @@ class AgentRuntimeHooks:
                 RuntimeErrorCode.TOOL_PERMISSION_DENIED,
                 "project_dir is required",
             )
-        if ".." in command.project_dir.split("/"):
+        project_dir = Path(command.project_dir)
+        if not project_dir.is_absolute():
             return HookDecision(
                 False,
                 RuntimeErrorCode.TOOL_PERMISSION_DENIED,
-                "project_dir cannot contain parent traversal",
+                "project_dir must be an absolute path",
+            )
+        if not project_dir.exists() or not project_dir.is_dir():
+            return HookDecision(
+                False,
+                RuntimeErrorCode.TOOL_PERMISSION_DENIED,
+                "project_dir must be an existing directory",
             )
         return HookDecision(True)

@@ -1,4 +1,7 @@
+import pytest
 from fastapi.testclient import TestClient
+
+pytestmark = pytest.mark.usefixtures("project_test")
 
 
 def test_create_strategy_returns_draft_first_version(client: TestClient) -> None:
@@ -11,6 +14,19 @@ def test_create_strategy_returns_draft_first_version(client: TestClient) -> None
     data = response.json()
     assert data["strategy_id"].startswith("str_")
     assert set(data) == {"strategy_id"}
+
+
+def test_create_strategy_rejects_missing_project(client: TestClient) -> None:
+    payload = strategy_create_payload()
+    payload["project_id"] = "project_missing"
+
+    response = client.post(
+        "/api/strategies",
+        json=payload,
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["error_code"] == "PROJECT_NOT_FOUND"
 
 
 def test_create_strategy_rejects_chatq_param_default_type_mismatch(client: TestClient) -> None:
@@ -130,7 +146,7 @@ def test_create_strategy_version_switches_current_version(client: TestClient) ->
     detail = client.get(f"/api/strategies/{created['strategy_id']}").json()
     assert detail["strategy"]["current_version_id"] == version["id"]
 
-    strategies = client.get("/api/strategies").json()
+    strategies = client.get("/api/strategies?project_id=project_test").json()
     assert strategies[0]["strategy_version_id"] == version["id"]
     assert strategies[0]["version"] == 2
     assert strategies[0]["strategy_mode"] == "multi_symbol"
@@ -219,7 +235,7 @@ def test_switch_current_version_can_select_existing_version(client: TestClient) 
     detail = client.get(f"/api/strategies/{created['strategy_id']}").json()
     assert detail["strategy"]["current_version_id"] == first_version["id"]
 
-    strategies = client.get("/api/strategies").json()
+    strategies = client.get("/api/strategies?project_id=project_test").json()
     assert strategies[0]["strategy_version_id"] == first_version["id"]
     assert strategies[0]["version"] == 1
     assert strategies[0]["strategy_version_id"] != second_version["id"]
@@ -270,7 +286,7 @@ def test_deleted_strategy_is_hidden_from_list(client: TestClient) -> None:
     response = client.delete(f"/api/strategies/{created['strategy_id']}")
 
     assert response.status_code == 200
-    assert client.get("/api/strategies").json() == []
+    assert client.get("/api/strategies?project_id=project_test").json() == []
 
 
 def strategy_create_payload(
@@ -281,6 +297,7 @@ def strategy_create_payload(
     strategy_mode: str = "single_symbol",
 ) -> dict[str, object]:
     return {
+        "project_id": "project_test",
         "name": "均线突破策略",
         "description": "短期均线上穿长期均线买入，下穿卖出",
         "source_code": "\n".join(
@@ -333,6 +350,7 @@ def strategy_version_payload(
     )
     payload.pop("name")
     payload.pop("description")
+    payload.pop("project_id")
     return payload
 
 

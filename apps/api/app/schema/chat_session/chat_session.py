@@ -61,7 +61,6 @@ class AssetLinkResponse(BaseModel):
 
 class ChatSessionResponse(BaseModel):
     id: str
-    user_id: str
     project_id: str
     sdk_session_id: str | None = None
     sdk_project_key: str | None = None
@@ -92,6 +91,7 @@ class ChatSessionListResponse(BaseModel):
 
 
 class ChatSessionCreateRequest(BaseModel):
+    project_id: str = Field(min_length=1)
     title: str | None = Field(default=None, max_length=200)
     initial_prompt: str | None = Field(default=None, max_length=8000)
     kind: ChatSessionKind = ChatSessionKind.NORMAL

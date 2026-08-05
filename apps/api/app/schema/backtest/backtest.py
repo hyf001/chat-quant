@@ -110,7 +110,6 @@ class StrategyBacktestConfig(BaseModel):
 
 class StrategyBacktestRecord(BaseModel):
     id: str
-    user_id: str
     project_id: str
     strategy_id: str
     strategy_version_id: str

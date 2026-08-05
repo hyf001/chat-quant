@@ -1,6 +1,5 @@
 from app.service.chat_session.service import (
     AssetLinkService,
-    ChatSessionAccessError,
     ChatSessionNotFoundError,
     ChatSessionService,
     SDKSessionReadError,
@@ -10,7 +9,6 @@ from app.service.chat_session.service import (
 
 __all__ = [
     "AssetLinkService",
-    "ChatSessionAccessError",
     "ChatSessionNotFoundError",
     "ChatSessionService",
     "SDKSessionReadError",

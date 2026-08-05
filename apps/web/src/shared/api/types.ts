@@ -47,7 +47,6 @@ export type AssetLink = {
 
 export type ChatSession = {
   id: string;
-  user_id: string;
   project_id: string;
   sdk_session_id: string | null;
   sdk_project_key: string | null;
@@ -83,6 +82,7 @@ export type ChatSessionDetail = {
 };
 
 export type CreateChatSessionPayload = {
+  project_id: string;
   title?: string;
   initial_prompt?: string;
   kind?: ChatSessionKind;
@@ -102,7 +102,7 @@ export type SendMessageResponse = {
 
 export type Project = {
   id: string;
-  user_id: string;
+  local_path: string;
   name: string;
   description: string | null;
   created_at: string;
@@ -117,7 +117,8 @@ export type ProjectListResponse = {
 };
 
 export type CreateProjectPayload = {
-  name: string;
+  local_path: string;
+  name?: string | null;
   description?: string | null;
 };
 

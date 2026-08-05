@@ -7,7 +7,6 @@ from app.agent_runtime.claude_runtime import ClaudeAgentRuntime, serialize_sdk_m
 from app.core.config import Settings
 from app.schema.agent_runtime import (
     AgentExecutionCommand,
-    AgentScenario,
     RuntimeErrorCode,
 )
 from claude_agent_sdk import (
@@ -39,12 +38,10 @@ def test_sdk_options_omit_thinking_by_default_for_compatible_agent_api() -> None
         sdk_query=fake_sdk_query,
     )
     command = AgentExecutionCommand(
-        user_id="user_1",
         project_id="project_1",
         chat_session_id="chat_1",
         user_message_id="msg_1",
-        scenario=AgentScenario.CHAT_ANALYSIS,
-        project_dir="/tmp/chatq/projects/chat_1",
+        project_dir=str(Path.cwd()),
         sdk_session_id=None,
         request_id="req_1",
         user_prompt="你好",
@@ -65,18 +62,16 @@ def test_sdk_options_omit_thinking_by_default_for_compatible_agent_api() -> None
     ]
 
 
-def test_runtime_injects_user_and_project_id_into_system_prompt() -> None:
+def test_runtime_system_prompt_omits_user_and_project_id() -> None:
     runtime = ClaudeAgentRuntime(
         settings=Settings(),
         sdk_query=fake_sdk_query,
     )
     command = AgentExecutionCommand(
-        user_id="user_prompt_1",
         project_id="project_prompt_1",
         chat_session_id="chat_1",
         user_message_id="msg_1",
-        scenario=AgentScenario.CHAT_ANALYSIS,
-        project_dir="/tmp/chatq/projects/chat_1",
+        project_dir=str(Path.cwd()),
         sdk_session_id=None,
         request_id="req_1",
         user_prompt="你好",
@@ -86,9 +81,10 @@ def test_runtime_injects_user_and_project_id_into_system_prompt() -> None:
 
     assert isinstance(options.system_prompt, dict)
     system_prompt = options.system_prompt["append"]
-    assert "当前身份上下文：" in system_prompt
-    assert "- user_id: user_prompt_1" in system_prompt
-    assert "- project_id: project_prompt_1" in system_prompt
+    assert "当前项目上下文：" in system_prompt
+    assert "当前工作目录就是本地项目目录" in system_prompt
+    assert "user_id" not in system_prompt
+    assert "project_prompt_1" not in system_prompt
 
 
 def test_runtime_uses_plugin_namespaced_skills_without_copying_into_cwd(tmp_path) -> None:
@@ -106,11 +102,9 @@ def test_runtime_uses_plugin_namespaced_skills_without_copying_into_cwd(tmp_path
         sdk_query=fake_sdk_query,
     )
     command = AgentExecutionCommand(
-        user_id="user_1",
         project_id="project_1",
         chat_session_id="chat_1",
         user_message_id="msg_1",
-        scenario=AgentScenario.CHAT_ANALYSIS,
         project_dir=str(project_dir),
         sdk_session_id=None,
         request_id="req_1",
@@ -139,12 +133,10 @@ def test_sdk_options_delegate_permissions_to_sdk_rules_without_hooks() -> None:
         sdk_query=fake_sdk_query,
     )
     command = AgentExecutionCommand(
-        user_id="user_1",
         project_id="project_1",
         chat_session_id="chat_1",
         user_message_id="msg_1",
-        scenario=AgentScenario.CHAT_ANALYSIS,
-        project_dir="/tmp/chatq/projects/chat_1",
+        project_dir=str(Path.cwd()),
         sdk_session_id=None,
         request_id="req_1",
         user_prompt="你好",
@@ -171,12 +163,10 @@ def test_sdk_env_maps_configured_token_to_claude_code_api_key() -> None:
         sdk_query=fake_sdk_query,
     )
     command = AgentExecutionCommand(
-        user_id="user_1",
         project_id="project_1",
         chat_session_id="chat_1",
         user_message_id="msg_1",
-        scenario=AgentScenario.CHAT_ANALYSIS,
-        project_dir="/tmp/chatq/projects/chat_1",
+        project_dir=str(Path.cwd()),
         sdk_session_id=None,
         request_id="req_1",
         user_prompt="你好",
@@ -215,12 +205,10 @@ async def _run_runtime_stream_assertions() -> None:
     envelopes = await _collect_stream(
         runtime,
         AgentExecutionCommand(
-            user_id="user_1",
             project_id="project_1",
             chat_session_id="chat_1",
             user_message_id="msg_1",
-            scenario=AgentScenario.CHAT_ANALYSIS,
-            project_dir="/tmp/chatq/projects/chat_1",
+            project_dir=str(Path.cwd()),
             sdk_session_id=None,
             request_id="req_1",
             user_prompt="分析贵州茅台最近走势",
@@ -241,12 +229,10 @@ async def _run_stream_event_type_assertions() -> None:
     envelopes = await _collect_stream(
         runtime,
         AgentExecutionCommand(
-            user_id="user_1",
             project_id="project_1",
             chat_session_id="chat_stream_1",
             user_message_id="msg_1",
-            scenario=AgentScenario.CHAT_ANALYSIS,
-            project_dir="/tmp/chatq/projects/chat_stream_1",
+            project_dir=str(Path.cwd()),
             sdk_session_id=None,
             request_id="req_1",
             user_prompt="你好",
@@ -274,12 +260,10 @@ async def _run_system_event_session_id_assertions() -> None:
     envelopes = await _collect_stream(
         runtime,
         AgentExecutionCommand(
-            user_id="user_1",
             project_id="project_1",
             chat_session_id="chat_system_1",
             user_message_id="msg_1",
-            scenario=AgentScenario.CHAT_ANALYSIS,
-            project_dir="/tmp/chatq/projects/chat_system_1",
+            project_dir=str(Path.cwd()),
             sdk_session_id=None,
             request_id="req_1",
             user_prompt="你好",
@@ -302,12 +286,10 @@ async def _run_first_token_timeout_assertions() -> None:
     envelopes = await _collect_stream(
         runtime,
         AgentExecutionCommand(
-            user_id="user_1",
             project_id="project_1",
             chat_session_id="chat_timeout_1",
             user_message_id="msg_1",
-            scenario=AgentScenario.CHAT_ANALYSIS,
-            project_dir="/tmp/chatq/projects/chat_timeout_1",
+            project_dir=str(Path.cwd()),
             sdk_session_id=None,
             request_id="req_1",
             user_prompt="你好",
@@ -329,12 +311,10 @@ async def _run_sdk_stderr_error_assertions() -> None:
     envelopes = await _collect_stream(
         runtime,
         AgentExecutionCommand(
-            user_id="user_1",
             project_id="project_1",
             chat_session_id="chat_stderr_1",
             user_message_id="msg_1",
-            scenario=AgentScenario.CHAT_ANALYSIS,
-            project_dir="/tmp/chatq/projects/chat_stderr_1",
+            project_dir=str(Path.cwd()),
             sdk_session_id=None,
             request_id="req_1",
             user_prompt="你好",

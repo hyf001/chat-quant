@@ -1,4 +1,4 @@
-import { API_BASE_URL, API_PROJECT_ID, API_USER_ID } from "./client";
+import { API_BASE_URL } from "./client";
 
 export type StrategyParamValue = number | string | boolean;
 export type StrategyMode = "single_symbol" | "multi_symbol" | "portfolio" | "universe_selection";
@@ -32,7 +32,6 @@ export type StrategySummary = {
 
 export type StrategyRecord = {
   id: string;
-  user_id: string;
   project_id: string;
   name: string;
   description?: string | null;
@@ -111,7 +110,6 @@ export type StrategyBacktestStatus = "pending" | "running" | "succeeded" | "fail
 
 export type StrategyBacktestRecord = {
   id: string;
-  user_id: string;
   project_id: string;
   strategy_id: string;
   strategy_version_id: string;
@@ -241,6 +239,7 @@ export type StrategyBacktestDetail = {
 };
 
 export type StrategyBacktestPayload = {
+  project_id: string;
   config: StrategyBacktestConfig;
   strategy_version_id?: string;
 };
@@ -258,31 +257,32 @@ type ApiFetchOptions = RequestInit & {
 };
 
 export async function listStrategies(projectId?: string): Promise<StrategySummary[]> {
-  return apiFetch<StrategySummary[]>("/api/strategies", { projectId });
+  if (!projectId) {
+    return [];
+  }
+  const params = new URLSearchParams({ project_id: projectId });
+  return apiFetch<StrategySummary[]>(`/api/strategies?${params.toString()}`);
 }
 
-export async function getStrategy(strategyId: string, projectId?: string): Promise<StrategyDetail> {
-  return apiFetch<StrategyDetail>(`/api/strategies/${strategyId}`, { projectId });
+export async function getStrategy(strategyId: string): Promise<StrategyDetail> {
+  return apiFetch<StrategyDetail>(`/api/strategies/${strategyId}`);
 }
 
 export async function listStrategyVersions(
   strategyId: string,
-  projectId?: string,
 ): Promise<StrategyVersion[]> {
-  return apiFetch<StrategyVersion[]>(`/api/strategies/${strategyId}/versions`, { projectId });
+  return apiFetch<StrategyVersion[]>(`/api/strategies/${strategyId}/versions`);
 }
 
 export async function createStrategy(
   payload: StrategyCreatePayload,
-  projectId?: string,
+  projectId: string,
 ): Promise<StrategyCreateResult> {
   return apiFetch<StrategyCreateResult>("/api/strategies", {
     method: "POST",
-    projectId,
     body: JSON.stringify({
       ...payload,
-      user_id: API_USER_ID,
-      project_id: projectId ?? API_PROJECT_ID,
+      project_id: projectId,
     }),
   });
 }
@@ -290,33 +290,25 @@ export async function createStrategy(
 export async function updateStrategyMetadata(
   strategyId: string,
   payload: StrategyMetadataUpdate,
-  projectId?: string,
 ): Promise<StrategyRecord> {
   return apiFetch<StrategyRecord>(`/api/strategies/${strategyId}`, {
     method: "PATCH",
-    projectId,
     body: JSON.stringify(payload),
   });
 }
 
-export async function deleteStrategy(
-  strategyId: string,
-  projectId?: string,
-): Promise<StrategyRecord> {
+export async function deleteStrategy(strategyId: string): Promise<StrategyRecord> {
   return apiFetch<StrategyRecord>(`/api/strategies/${strategyId}`, {
     method: "DELETE",
-    projectId,
   });
 }
 
 export async function createStrategyVersion(
   strategyId: string,
   payload: StrategyVersionCreatePayload,
-  projectId?: string,
 ): Promise<StrategyVersion> {
   return apiFetch<StrategyVersion>(`/api/strategies/${strategyId}/versions`, {
     method: "POST",
-    projectId,
     body: JSON.stringify(payload),
   });
 }
@@ -324,11 +316,9 @@ export async function createStrategyVersion(
 export async function switchStrategyCurrentVersion(
   strategyId: string,
   versionId: string,
-  projectId?: string,
 ): Promise<StrategySummary> {
   return apiFetch<StrategySummary>(`/api/strategies/${strategyId}/current-version`, {
     method: "PATCH",
-    projectId,
     body: JSON.stringify({ strategy_version_id: versionId }),
   });
 }
@@ -336,32 +326,22 @@ export async function switchStrategyCurrentVersion(
 export async function backtestStrategy(
   strategyId: string,
   payload: StrategyBacktestPayload,
-  projectId?: string,
 ): Promise<StrategyBacktestDetail> {
   return apiFetch<StrategyBacktestDetail>(`/api/strategies/${strategyId}/backtest`, {
     method: "POST",
-    projectId,
-    body: JSON.stringify({
-      ...payload,
-      user_id: API_USER_ID,
-      project_id: projectId ?? API_PROJECT_ID,
-    }),
+    body: JSON.stringify(payload),
   });
 }
 
 export async function listStrategyBacktests(
   strategyVersionId: string,
-  projectId?: string,
 ): Promise<StrategyBacktestRecord[]> {
   const params = new URLSearchParams({ strategy_version_id: strategyVersionId, limit: "20" });
-  return apiFetch<StrategyBacktestRecord[]>(`/api/backtests?${params.toString()}`, { projectId });
+  return apiFetch<StrategyBacktestRecord[]>(`/api/backtests?${params.toString()}`);
 }
 
-export async function getStrategyBacktest(
-  backtestId: string,
-  projectId?: string,
-): Promise<StrategyBacktestDetail> {
-  return apiFetch<StrategyBacktestDetail>(`/api/backtests/${backtestId}`, { projectId });
+export async function getStrategyBacktest(backtestId: string): Promise<StrategyBacktestDetail> {
+  return apiFetch<StrategyBacktestDetail>(`/api/backtests/${backtestId}`);
 }
 
 export async function validateStrategyVersion(versionId: string): Promise<unknown> {
@@ -373,22 +353,17 @@ export async function validateStrategyVersion(versionId: string): Promise<unknow
 export async function copyStrategySummary(versionId: string): Promise<StrategyCopySummary> {
   return apiFetch<StrategyCopySummary>(`/api/strategy-versions/${versionId}/copy`, {
     method: "POST",
-    body: JSON.stringify({
-      mode: "summary",
-      user_id: API_USER_ID,
-      project_id: API_PROJECT_ID,
-    }),
+    body: JSON.stringify({ mode: "summary" }),
   });
 }
 
 async function apiFetch<T>(path: string, init?: ApiFetchOptions): Promise<T> {
   const { projectId, headers, ...requestInit } = init ?? {};
+  void projectId;
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...requestInit,
     headers: {
       "Content-Type": "application/json",
-      "X-User-Id": API_USER_ID,
-      "X-Project-Id": projectId ?? API_PROJECT_ID,
       ...headers,
     },
   });

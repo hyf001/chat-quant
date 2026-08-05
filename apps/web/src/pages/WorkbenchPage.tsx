@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FolderOpen, Plus } from "lucide-react";
 
 import { Composer } from "../modules/composer";
 import { ConversationShell } from "../modules/conversation";
@@ -16,12 +17,13 @@ import {
   listChatSessions,
   listProviderModels,
   listProjects,
+  openProject,
   readChatStream,
   sendAgentChatMessage,
   updateAppConfig,
-  type AppConfig,
   updateProject,
   type AgentChatSessionDetail,
+  type AppSettings,
   type ChatSession,
   type ChatSessionDetail,
   type Project,
@@ -31,10 +33,14 @@ import {
   type SdkMessage,
 } from "../shared/api";
 
-const ACTIVE_PROJECT_STORAGE_KEY = "chatq.activeProjectId";
 const routePaths: Record<PrimaryRoute, string> = {
   "new-task": "/tasks/new",
   strategies: "/strategies",
+};
+
+type ComposerModelState = {
+  currentModel: string | null;
+  models: ProviderModel[];
 };
 
 export function WorkbenchPage() {
@@ -54,12 +60,15 @@ export function WorkbenchPage() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(null);
-  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
-  const [availableModels, setAvailableModels] = useState<ProviderModel[]>([]);
+  const [composerModelState, setComposerModelState] = useState<ComposerModelState>({
+    currentModel: null,
+    models: [],
+  });
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [isModelSaving, setIsModelSaving] = useState(false);
   const streamingSessionIdRef = useRef<string | null>(null);
   const loadDetailRequestIdRef = useRef(0);
+  const modelStateRequestIdRef = useRef(0);
 
   const activeSession = useMemo(
     () => detail?.session ?? sessions.find((session) => session.id === activeSessionId) ?? null,
@@ -74,26 +83,21 @@ export function WorkbenchPage() {
     [conversationEnvelopes],
   );
   const conversationRuntimeEnvelopes = conversationEnvelopes;
+  const hasNoProjects = !isProjectLoading && projects.length === 0;
 
-  const refreshProjects = useCallback(async () => {
+  const refreshProjects = useCallback(async (preferredProjectId?: string | null) => {
     setIsProjectLoading(true);
     setError(null);
     try {
       const data = await listProjects();
       setProjects(data.items);
       setActiveProjectId((currentProjectId) => {
-        const storedProjectId = localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY);
-        const nextProjectId =
+        return (
+          data.items.find((project) => project.id === preferredProjectId)?.id ??
           data.items.find((project) => project.id === currentProjectId)?.id ??
-          data.items.find((project) => project.id === storedProjectId)?.id ??
           data.items[0]?.id ??
-          null;
-        if (nextProjectId) {
-          localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, nextProjectId);
-        } else {
-          localStorage.removeItem(ACTIVE_PROJECT_STORAGE_KEY);
-        }
-        return nextProjectId;
+          null
+        );
       });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "项目列表加载失败");
@@ -126,6 +130,39 @@ export function WorkbenchPage() {
     },
     [],
   );
+
+  const loadComposerModelState = useCallback(async () => {
+    const requestId = modelStateRequestIdRef.current + 1;
+    modelStateRequestIdRef.current = requestId;
+    setIsModelLoading(true);
+    try {
+      const config = await getAppConfig();
+      const providerId = config.settings.agent.provider_id;
+      if (!providerId) {
+        if (requestId === modelStateRequestIdRef.current) {
+          setComposerModelState({ currentModel: config.settings.agent.model || null, models: [] });
+        }
+        return config.settings;
+      }
+      const response = await listProviderModels(providerId);
+      if (requestId === modelStateRequestIdRef.current) {
+        setComposerModelState({
+          currentModel: config.settings.agent.model || null,
+          models: response.models,
+        });
+      }
+      return config.settings;
+    } catch {
+      if (requestId === modelStateRequestIdRef.current) {
+        setComposerModelState({ currentModel: null, models: [] });
+      }
+      return null;
+    } finally {
+      if (requestId === modelStateRequestIdRef.current) {
+        setIsModelLoading(false);
+      }
+    }
+  }, []);
 
   const loadDetail = useCallback(async (chatSessionId: string) => {
     const requestId = loadDetailRequestIdRef.current + 1;
@@ -179,41 +216,8 @@ export function WorkbenchPage() {
   }, []);
 
   useEffect(() => {
-    getAppConfig()
-      .then(setAppConfig)
-      .catch(() => setAppConfig(null));
-  }, []);
-
-  useEffect(() => {
-    const providerId = appConfig?.settings.agent.provider_id;
-    if (!providerId) {
-      setAvailableModels([]);
-      return;
-    }
-    setIsModelLoading(true);
-    listProviderModels(providerId)
-      .then((response) => {
-        setAvailableModels(response.models);
-        setAppConfig((current) => {
-          if (!current || current.settings.agent.provider_id !== providerId) {
-            return current;
-          }
-          if (response.models.some((model) => model.id === current.settings.agent.model)) {
-            return current;
-          }
-          const nextModel = response.models[0]?.id ?? "";
-          return {
-            ...current,
-            settings: {
-              ...current.settings,
-              agent: { ...current.settings.agent, model: nextModel },
-            },
-          };
-        });
-      })
-      .catch(() => setAvailableModels([]))
-      .finally(() => setIsModelLoading(false));
-  }, [appConfig?.settings.agent.provider_id]);
+    void loadComposerModelState();
+  }, [loadComposerModelState]);
 
   useEffect(() => {
     setHistoryQuery("");
@@ -239,7 +243,6 @@ export function WorkbenchPage() {
   };
 
   const handleSelectProject = (projectId: string) => {
-    localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, projectId);
     setActiveProjectId(projectId);
   };
 
@@ -266,19 +269,39 @@ export function WorkbenchPage() {
   const handleCreateProject = async (name: string) => {
     setError(null);
     try {
-      const project = await createProject({ name });
-      setProjects((current) => [project, ...current]);
-      handleSelectProject(project.id);
+      const localPath = await selectCreateProjectPath();
+      if (!localPath) {
+        return;
+      }
+      const project = await createProject({
+        local_path: localPath,
+        name: name || undefined,
+      });
+      await refreshProjects(project.id);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "新建项目失败");
+    }
+  };
+
+  const handleOpenProject = async () => {
+    setError(null);
+    try {
+      const localPath = await selectOpenProjectPath();
+      if (!localPath) {
+        return;
+      }
+      const project = await openProject({ local_path: localPath });
+      await refreshProjects(project.id);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "打开项目失败");
     }
   };
 
   const handleRenameProject = async (projectId: string, name: string) => {
     setError(null);
     try {
-      const project = await updateProject(projectId, { name });
-      setProjects((current) => current.map((item) => (item.id === project.id ? project : item)));
+      await updateProject(projectId, { name });
+      await refreshProjects(activeProjectId);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "编辑项目失败");
     }
@@ -288,19 +311,7 @@ export function WorkbenchPage() {
     setError(null);
     try {
       await deleteProject(projectId);
-      setProjects((current) => {
-        const nextProjects = current.filter((project) => project.id !== projectId);
-        if (projectId === activeProjectId) {
-          const nextProjectId = nextProjects[0]?.id ?? null;
-          setActiveProjectId(nextProjectId);
-          if (nextProjectId) {
-            localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, nextProjectId);
-          } else {
-            localStorage.removeItem(ACTIVE_PROJECT_STORAGE_KEY);
-          }
-        }
-        return nextProjects;
-      });
+      await refreshProjects(projectId === activeProjectId ? null : activeProjectId);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "删除项目失败");
     }
@@ -339,6 +350,7 @@ export function WorkbenchPage() {
       await readChatStream(accepted.stream_url, (envelope) => {
         setConversationEnvelopes((current) => appendStreamEnvelope(current, envelope));
       });
+      await loadDetail(sessionId);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "消息发送失败");
     } finally {
@@ -349,27 +361,26 @@ export function WorkbenchPage() {
   };
 
   const handleModelChange = async (model: string) => {
-    if (!appConfig || !model || model === appConfig.settings.agent.model) {
+    if (!model) {
       return;
     }
-    const nextConfig: AppConfig = {
-      ...appConfig,
-      settings: {
-        ...appConfig.settings,
-        agent: {
-          ...appConfig.settings.agent,
-          model,
-        },
-      },
-    };
-    setAppConfig(nextConfig);
     setIsModelSaving(true);
     setError(null);
     try {
-      const updatedConfig = await updateAppConfig(nextConfig.settings);
-      setAppConfig(updatedConfig);
+      const settings = await loadComposerModelState();
+      if (!settings || model === settings.agent.model) {
+        return;
+      }
+      const nextSettings: AppSettings = {
+        ...settings,
+        agent: {
+          ...settings.agent,
+          model,
+        },
+      };
+      await updateAppConfig(nextSettings);
+      await loadComposerModelState();
     } catch (caught) {
-      setAppConfig(appConfig);
       setError(caught instanceof Error ? caught.message : "模型切换失败");
     } finally {
       setIsModelSaving(false);
@@ -390,6 +401,7 @@ export function WorkbenchPage() {
           isLoading={isHistoryLoading}
           isStreaming={isSending}
           onCreateProject={handleCreateProject}
+          onOpenProject={handleOpenProject}
           onRenameProject={handleRenameProject}
           onDeleteProject={handleDeleteProject}
           onSelectProject={handleSelectProject}
@@ -407,7 +419,13 @@ export function WorkbenchPage() {
         />
       }
       conversation={
-        activeRoute === "new-task" ? (
+        hasNoProjects ? (
+          <ProjectOnboarding
+            error={error}
+            onCreateProject={() => void handleCreateProject("")}
+            onOpenProject={() => void handleOpenProject()}
+          />
+        ) : activeRoute === "new-task" ? (
           <ConversationShell
             session={activeSession}
             messages={conversationMessages}
@@ -423,15 +441,16 @@ export function WorkbenchPage() {
         )
       }
       composer={
-        activeRoute === "new-task" ? (
+        activeRoute === "new-task" && !hasNoProjects ? (
           <Composer
             disabled={isSending || !activeProjectId}
-            currentModel={appConfig?.settings.agent.model ?? null}
-            models={availableModels}
+            currentModel={composerModelState.currentModel}
+            models={composerModelState.models}
             isModelLoading={isModelLoading}
             isModelSaving={isModelSaving}
             placeholder={activeProjectId ? "随心输入" : "先创建或选择项目"}
             onModelChange={(model) => void handleModelChange(model)}
+            onModelRefresh={() => void loadComposerModelState()}
             onSendMessage={handleSendMessage}
           />
         ) : null
@@ -447,6 +466,69 @@ export function WorkbenchPage() {
       }
     />
   );
+}
+
+type ProjectOnboardingProps = {
+  error: string | null;
+  onCreateProject: () => void;
+  onOpenProject: () => void;
+};
+
+function ProjectOnboarding({
+  error,
+  onCreateProject,
+  onOpenProject,
+}: ProjectOnboardingProps) {
+  return (
+    <section className="grid min-h-[calc(100vh-160px)] place-items-center">
+      <div className="w-full max-w-xl rounded-lg border border-dashed border-strong bg-panel/70 p-8 text-center shadow-sm">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-lg border border-line bg-soft text-signal">
+          <FolderOpen className="h-6 w-6" />
+        </div>
+        <h1 className="mt-5 text-xl font-semibold text-ink">创建或打开项目</h1>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">
+          Chat Quant 需要先绑定一个本地项目目录，策略、会话和运行产物都会归属到这个项目。
+        </p>
+        {error ? (
+          <div className="mt-4 rounded-md border border-risk/30 bg-riskSoft px-3 py-2 text-left text-xs text-risk">
+            {error}
+          </div>
+        ) : null}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <button
+            className="inline-flex h-10 items-center gap-2 rounded-md bg-ink px-4 text-sm font-semibold text-panel transition-colors hover:bg-graphite focus:outline-none focus:ring-2 focus:ring-signal/25"
+            type="button"
+            onClick={onCreateProject}
+          >
+            <Plus className="h-4 w-4" />
+            新建项目
+          </button>
+          <button
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-line bg-panel px-4 text-sm font-semibold text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+            type="button"
+            onClick={onOpenProject}
+          >
+            <FolderOpen className="h-4 w-4" />
+            打开已有目录
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+async function selectCreateProjectPath(): Promise<string | null> {
+  if (window.chatqDesktop?.createProjectDirectory) {
+    return window.chatqDesktop.createProjectDirectory();
+  }
+  return window.prompt("输入要创建或注册的本地项目目录")?.trim() || null;
+}
+
+async function selectOpenProjectPath(): Promise<string | null> {
+  if (window.chatqDesktop?.selectProjectDirectory) {
+    return window.chatqDesktop.selectProjectDirectory();
+  }
+  return window.prompt("输入要打开的本地项目目录")?.trim() || null;
 }
 
 function routeFromPath(pathname: string): PrimaryRoute {

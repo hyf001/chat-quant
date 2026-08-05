@@ -12,7 +12,6 @@ class ChatSessionRow(Base):
     __tablename__ = "chat_sessions"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(128), nullable=False)
     project_id: Mapped[str] = mapped_column(String(128), nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -34,7 +33,7 @@ class ChatSessionRow(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (
-        Index("idx_chat_sessions_user_updated", "user_id", "updated_at"),
+        Index("idx_chat_sessions_project_updated", "project_id", "updated_at"),
         Index("idx_chat_sessions_sdk", "sdk_session_id"),
         Index("idx_chat_sessions_kind", "kind"),
     )

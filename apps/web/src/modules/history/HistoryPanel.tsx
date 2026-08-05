@@ -31,6 +31,7 @@ type HistoryPanelProps = {
   isLoading: boolean;
   isStreaming: boolean;
   onCreateProject: (name: string) => Promise<void>;
+  onOpenProject: () => Promise<void>;
   onRenameProject: (projectId: string, name: string) => Promise<void>;
   onDeleteProject: (projectId: string) => Promise<void>;
   onSelectProject: (projectId: string) => void;
@@ -50,6 +51,7 @@ export function HistoryPanel({
   isLoading,
   isStreaming,
   onCreateProject,
+  onOpenProject,
   onRenameProject,
   onDeleteProject,
   onSelectProject,
@@ -68,7 +70,7 @@ export function HistoryPanel({
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
 
   const handleCreateProject = async () => {
-    const trimmed = newProjectName.trim() || nextDefaultProjectName(projects);
+    const trimmed = newProjectName.trim();
     setNewProjectName("");
     await onCreateProject(trimmed);
   };
@@ -88,7 +90,7 @@ export function HistoryPanel({
   };
 
   const handleDeleteProject = async (project: Project) => {
-    const confirmed = window.confirm(`删除项目“${project.name}”？`);
+    const confirmed = window.confirm(`从列表移除项目“${project.name}”？不会删除本地目录。`);
     if (!confirmed) {
       return;
     }
@@ -337,12 +339,12 @@ export function HistoryPanel({
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-base font-semibold text-ink">项目管理</h2>
-                  <p className="mt-1 text-xs text-muted">
-                    当前项目：{activeProject?.name ?? "未选择"}
+                  <p className="mt-1 max-w-xl truncate text-xs text-muted">
+                    {activeProject ? `${activeProject.name} · ${activeProject.local_path}` : "未选择项目"}
                   </p>
                 </div>
                 <form
-                  className="flex min-w-72 items-center gap-2"
+                  className="flex min-w-80 flex-wrap items-center justify-end gap-2"
                   onSubmit={(event) => {
                     event.preventDefault();
                     void handleCreateProject();
@@ -351,15 +353,23 @@ export function HistoryPanel({
                   <input
                     className="min-w-0 flex-1 rounded-md border border-line bg-panel px-3 py-2 text-xs text-ink outline-none placeholder:text-muted/70 focus:border-signal"
                     onChange={(event) => setNewProjectName(event.target.value)}
-                    placeholder="新项目名称"
+                    placeholder="项目名称（可选）"
                     value={newProjectName}
                   />
                   <button
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-ink text-panel transition-colors hover:bg-graphite focus:outline-none focus:ring-2 focus:ring-signal/25"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+                    type="button"
+                    onClick={() => void onOpenProject()}
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                    打开
+                  </button>
+                  <button
+                    className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite focus:outline-none focus:ring-2 focus:ring-signal/25"
                     type="submit"
-                    aria-label="创建项目"
                   >
                     <Plus className="h-4 w-4" />
+                    新建
                   </button>
                 </form>
               </div>
@@ -407,7 +417,9 @@ export function HistoryPanel({
                               </h3>
                             )}
                           </div>
-                          <p className="font-mono text-[10px] text-muted">{project.id}</p>
+                          <p className="truncate font-mono text-[10px] text-muted">
+                            {project.local_path}
+                          </p>
                         </div>
                         {isActive ? (
                           <span
@@ -467,21 +479,6 @@ export function HistoryPanel({
       <AppSettingsDialog isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </>
   );
-}
-
-function nextDefaultProjectName(projects: Project[]): string {
-  const baseName = "新项目";
-  const names = new Set(projects.map((project) => project.name));
-  if (!names.has(baseName)) {
-    return baseName;
-  }
-  for (let index = 2; index < 1000; index += 1) {
-    const candidate = `${baseName} ${index}`;
-    if (!names.has(candidate)) {
-      return candidate;
-    }
-  }
-  return `${baseName} ${projects.length + 1}`;
 }
 
 function sessionCode(id: string): string {

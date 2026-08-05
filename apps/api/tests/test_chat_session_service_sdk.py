@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 from app.db.session import get_session_factory
 from app.schema.chat_session import sdk_messages_to_response
+from app.service import project as project_service
 from app.service.chat_session import ChatSessionService
 from claude_agent_sdk.types import AssistantMessage, TextBlock, UserMessage
 
@@ -48,13 +50,14 @@ def test_sdk_session_message_wrappers_are_converted_to_api_messages() -> None:
 
 async def _run_direct_sdk_get_session_messages_test(monkeypatch):
     calls: list[str] = []
+    project_dir = str(Path("/tmp/chatq").resolve())
 
     def fake_get_session_messages(
         session_id: str, directory: str | None = None, limit: int | None = None, offset: int = 0
     ) -> list[object]:
         calls.append("get_session_messages")
         assert session_id == "sdk_real"
-        assert directory == "/tmp/chatq"
+        assert directory == project_dir
         assert limit == 10
         assert offset == 0
         return [
@@ -74,20 +77,19 @@ async def _run_direct_sdk_get_session_messages_test(monkeypatch):
     )
 
     async with get_session_factory()() as db:
-        chat_session_service = ChatSessionService(db, claude_agent_cwd="/tmp/chatq")
+        Path(project_dir).mkdir(parents=True, exist_ok=True)
+        project = await project_service.resolve_project(db, local_path=project_dir)
+        chat_session_service = ChatSessionService(db)
         session = await chat_session_service.create_chat_session(
-            user_id="user_a",
-            project_id="project_a",
+            project_id=project.id,
             title="SDK 直连",
         )
         updated_session = await chat_session_service.update_chat_session(
             session.id,
-            user_id="user_a",
             sdk_session_id="sdk_real",
         )
         _, history_messages, _ = await chat_session_service.get_chat_session_detail(
             session.id,
-            user_id="user_a",
             message_limit=10,
         )
 
@@ -114,18 +116,19 @@ async def _run_derived_sdk_directory_test(monkeypatch):
     )
 
     async with get_session_factory()() as db:
-        chat_session_service = ChatSessionService(db, project_home="/tmp/chatq/projects")
+        project_dir = str(Path("/tmp/chatq/projects/project_a").resolve())
+        Path(project_dir).mkdir(parents=True, exist_ok=True)
+        project = await project_service.resolve_project(db, local_path=project_dir)
+        chat_session_service = ChatSessionService(db)
         session = await chat_session_service.create_chat_session(
-            user_id="user_a",
-            project_id="project_a",
+            project_id=project.id,
             chat_session_id="conv_real",
             title="SDK 目录",
         )
         await chat_session_service.update_chat_session(
             session.id,
-            user_id="user_a",
             sdk_session_id="sdk_real",
         )
-        await chat_session_service.get_chat_session_detail(session.id, user_id="user_a")
+        await chat_session_service.get_chat_session_detail(session.id)
 
-    assert calls == ["/tmp/chatq/projects/project_a"]
+    assert calls == [project_dir]
