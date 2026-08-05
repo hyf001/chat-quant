@@ -46,8 +46,14 @@ class ChatExecutionState:
 
 
 class ChatApplicationService:
-    def __init__(self, runtime: ClaudeAgentRuntime) -> None:
+    def __init__(
+        self,
+        runtime: ClaudeAgentRuntime,
+        *,
+        auto_refresh_settings: bool = False,
+    ) -> None:
         self.runtime = runtime
+        self.auto_refresh_settings = auto_refresh_settings
         self._pending_executions: dict[str, AgentExecutionCommand] = {}
         self._session_state: dict[str, ChatExecutionState] = {}
 
@@ -56,6 +62,7 @@ class ChatApplicationService:
         request: ChatMessageRequest,
         chat_sessions: ChatSessionService | None = None,
     ) -> ChatMessageAccepted:
+        self._refresh_runtime_settings()
         chat_session_id = request.chat_session_id or f"chat_{uuid4().hex}"
         user_message_id = f"msg_user_{uuid4().hex}"
         title = _title_from_prompt(request.message)
@@ -255,6 +262,7 @@ class ChatApplicationService:
         sdk_session_id: str | None,
         project_id: str,
     ) -> list[SDKStreamEnvelope]:
+        self._refresh_runtime_settings()
         if sdk_session_id is None:
             return []
         try:
@@ -283,6 +291,13 @@ class ChatApplicationService:
                 extra={"sdk_session_id": sdk_session_id, "error": str(exc)},
             )
             return []
+
+    def _refresh_runtime_settings(self) -> None:
+        if not self.auto_refresh_settings:
+            return
+        settings = get_settings()
+        if settings != self.runtime.settings:
+            self.runtime = ClaudeAgentRuntime(settings=settings)
 
 
 def infer_scenario(message: str, has_history: bool = False) -> AgentScenario:
@@ -356,4 +371,4 @@ def _now() -> datetime:
 runtime = ClaudeAgentRuntime(
     settings=get_settings(),
 )
-chat_application_service = ChatApplicationService(runtime)
+chat_application_service = ChatApplicationService(runtime, auto_refresh_settings=True)

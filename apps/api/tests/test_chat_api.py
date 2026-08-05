@@ -5,7 +5,8 @@ from types import SimpleNamespace
 
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime
 from app.api.v1 import chat_api as chat_api_module
-from app.core.config import Settings
+from app.core.config import Settings, get_settings
+from app.core.project_dirs import project_dir
 from app.db.session import get_session_factory
 from app.main import app
 from app.schema.agent_runtime import ChatMessageRequest
@@ -239,7 +240,7 @@ async def _run_first_answer_sdk_title_assertions(monkeypatch: MonkeyPatch) -> No
             user_id="local_user",
         )
 
-    assert calls == [("sdk_api_1", "data/projects/project_1")]
+    assert calls == [("sdk_api_1", project_dir(get_settings().project_home, "project_1"))]
     assert session.title == "SDK 生成的会话名称"
 
 

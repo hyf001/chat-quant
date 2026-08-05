@@ -6,9 +6,10 @@ from threading import Lock
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import Engine
 
-from app.core.config import Settings
+from app.core.config import APP_CONFIG_DEFINITIONS, Settings, default_app_config_values
 from app.db.session import Base, sync_database_url
 from app.model.chat_session import chat_session as chat_session_model  # noqa: F401
+from app.model.config import app_setting as app_setting_model  # noqa: F401
 from app.model.project import project as project_model  # noqa: F401
 from app.model.strategy import strategy as strategy_model  # noqa: F401
 
@@ -28,12 +29,51 @@ def ensure_database_schema(settings: Settings) -> None:
             _migrate_strategy_source_code(engine)
             _migrate_strategy_version_contract(engine)
             _merge_backtest_payloads(engine)
+            _seed_app_settings(engine, settings)
             _drop_retired_strategy_columns(engine)
             _drop_retired_backtest_result_table(engine)
             _drop_retired_artifact_tables(engine)
         finally:
             engine.dispose()
         _INITIALIZED_DATABASE_URLS.add(database_url)
+
+
+def _seed_app_settings(engine: Engine, settings: Settings) -> None:
+    inspector = inspect(engine)
+    if "app_settings" not in inspector.get_table_names():
+        return
+
+    now = "CURRENT_TIMESTAMP"
+    defaults = default_app_config_values(settings.database_path)
+    with engine.begin() as connection:
+        for definition in APP_CONFIG_DEFINITIONS:
+            count = connection.execute(
+                text(
+                    "SELECT COUNT(*) FROM app_settings "
+                    "WHERE scope = 'global' AND namespace = :namespace AND key = :key"
+                ),
+                {"namespace": definition.group, "key": definition.key},
+            ).scalar_one()
+            if count:
+                continue
+            connection.execute(
+                text(
+                    "INSERT INTO app_settings "
+                    "(scope, namespace, key, value_json, value_type, is_secret, "
+                    f"label, description, updated_at) VALUES "
+                    "('global', :namespace, :key, :value_json, :value_type, :is_secret, "
+                    f":label, :description, {now})"
+                ),
+                {
+                    "namespace": definition.group,
+                    "key": definition.key,
+                    "value_json": json.dumps(defaults[definition.key]),
+                    "value_type": definition.value_type,
+                    "is_secret": definition.value_type == "password",
+                    "label": definition.label,
+                    "description": definition.description,
+                },
+            )
 
 
 def _drop_retired_strategy_columns(engine: Engine) -> None:

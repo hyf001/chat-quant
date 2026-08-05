@@ -17,7 +17,8 @@ import type {
   UpdateProjectPayload,
 } from "./types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL =
+  window.chatqDesktop?.apiBaseUrl ?? import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 export { API_BASE_URL };
 
 const API_USER_ID = import.meta.env.VITE_CHATQ_USER_ID ?? "local_user";
@@ -25,7 +26,7 @@ const API_PROJECT_ID = import.meta.env.VITE_CHATQ_PROJECT_ID ?? "local_project";
 export { API_PROJECT_ID, API_USER_ID };
 
 type RequestOptions = {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   projectId?: string;
 };
@@ -109,8 +110,88 @@ export type RuntimeHealth = {
   project_home_writable: boolean;
 };
 
+export type BootstrapConfig = {
+  config_file_path: string;
+  database_path: string;
+};
+
+export type SystemSettings = {
+  environment: "development" | "desktop" | "production";
+  access_log_enabled: boolean;
+  access_log_slow_threshold_ms: number;
+  cors_origins: string[];
+};
+
+export type LoggingSettings = {
+  level: "DEBUG" | "INFO" | "WARNING" | "ERROR";
+  format: "text" | "json";
+};
+
+export type IdentitySettings = {
+  default_user_id: string;
+  default_project_id: string;
+};
+
+export type PathSettings = {
+  claude_agent_cwd: string | null;
+  project_home: string | null;
+};
+
+export type AgentSettings = {
+  model: string;
+  base_url: string | null;
+  api_token: string | null;
+  max_turns: number;
+  turn_timeout_seconds: number;
+  first_token_timeout_seconds: number;
+  skill_plugin_dir: string;
+  skill_plugin_name: string;
+  include_partial_messages: boolean;
+  thinking: {
+    type: "disabled" | "adaptive" | "enabled";
+    budget_tokens: number;
+  };
+  allowed_tools_default: string[];
+  env_allowlist: string[];
+};
+
+export type AppSettings = {
+  system: SystemSettings;
+  logging: LoggingSettings;
+  identity: IdentitySettings;
+  paths: PathSettings;
+  agent: AgentSettings;
+};
+
+export type ConfigFieldDefinition = {
+  namespace: string;
+  key: string;
+  label: string;
+  value_type: string;
+  description: string;
+  options: string[];
+  is_secret: boolean;
+};
+
+export type AppConfig = {
+  bootstrap: BootstrapConfig;
+  settings: AppSettings;
+  fields: ConfigFieldDefinition[];
+};
+
 export async function getHealth(): Promise<{ status: string; service?: string }> {
   return requestJson<{ status: string; service?: string }>("/api/health");
+}
+
+export async function getAppConfig(): Promise<AppConfig> {
+  return requestJson<AppConfig>("/api/config");
+}
+
+export async function updateAppConfig(settings: AppSettings): Promise<AppConfig> {
+  return requestJson<AppConfig>("/api/config", {
+    method: "PUT",
+    body: { settings },
+  });
 }
 
 export async function listProjects(query?: string): Promise<ProjectListResponse> {

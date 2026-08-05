@@ -17,3 +17,7 @@ dist/
 /data/
 /storage/
 .codex/skills
+
+/apps/desktop/sidecars/*
+!/apps/desktop/sidecars/.gitkeep
+/apps/desktop/chat-quant-api.spec

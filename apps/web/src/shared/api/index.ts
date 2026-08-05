@@ -9,6 +9,7 @@ export {
   createProject,
   deleteProject,
   getAgentChatSessionDetail,
+  getAppConfig,
   getBacktest,
   getChatSessionDetail,
   getHealth,
@@ -20,12 +21,22 @@ export {
   sendAgentChatMessage,
   sendChatMessage,
   updateProject,
+  updateAppConfig,
 } from "./client";
 export type {
+  AgentSettings,
+  AppConfig,
+  AppSettings,
+  BootstrapConfig,
+  ConfigFieldDefinition,
   ExecutionResult,
+  IdentitySettings,
+  LoggingSettings,
+  PathSettings,
   RuntimeArtifact,
   RuntimeErrorInfo,
   RuntimeHealth,
+  SystemSettings,
 } from "./client";
 export type {
   AssetLink,
