@@ -8,8 +8,10 @@ def test_config_api_returns_structured_settings(client: TestClient) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["bootstrap"]["database_path"].endswith("chat-quant.db")
+    assert payload["settings"]["agent"]["provider_id"] == "provider_anthropic_default"
     assert payload["settings"]["agent"]["model"] == "claude-sonnet-4"
     assert payload["settings"]["agent"]["thinking"]["type"] == "disabled"
+    assert any(field["key"] == "agent_provider_id" for field in payload["fields"])
     assert any(field["key"] == "agent_model" for field in payload["fields"])
 
 
@@ -29,3 +31,13 @@ def test_config_api_updates_sqlite_backed_settings(client: TestClient) -> None:
     assert updated["paths"]["project_home"] == "custom/projects"
     assert get_settings().agent_model == "claude-test-model"
     assert get_settings().project_home == "custom/projects"
+
+
+def test_config_api_rejects_unknown_agent_provider(client: TestClient) -> None:
+    current = client.get("/api/config").json()
+    settings = current["settings"]
+    settings["agent"]["provider_id"] = "provider_missing"
+
+    response = client.put("/api/config", json={"settings": settings})
+
+    assert response.status_code == 422

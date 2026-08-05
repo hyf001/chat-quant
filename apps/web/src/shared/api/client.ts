@@ -138,9 +138,8 @@ export type PathSettings = {
 };
 
 export type AgentSettings = {
+  provider_id: string;
   model: string;
-  base_url: string | null;
-  api_token: string | null;
   max_turns: number;
   turn_timeout_seconds: number;
   first_token_timeout_seconds: number;
@@ -179,6 +178,43 @@ export type AppConfig = {
   fields: ConfigFieldDefinition[];
 };
 
+export type ModelProvider = {
+  id: string;
+  name: string;
+  base_url: string | null;
+  has_api_key: boolean;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ModelProviderPayload = {
+  name: string;
+  base_url: string | null;
+  api_key: string | null;
+  enabled: boolean;
+};
+
+export type ModelProviderListResponse = {
+  providers: ModelProvider[];
+};
+
+export type ProviderModel = {
+  id: string;
+  name: string;
+};
+
+export type ProviderModelListResponse = {
+  provider_id: string;
+  models: ProviderModel[];
+};
+
+export type ProviderConnectionTestResponse = {
+  ok: boolean;
+  message: string;
+  models: ProviderModel[];
+};
+
 export async function getHealth(): Promise<{ status: string; service?: string }> {
   return requestJson<{ status: string; service?: string }>("/api/health");
 }
@@ -191,6 +227,63 @@ export async function updateAppConfig(settings: AppSettings): Promise<AppConfig>
   return requestJson<AppConfig>("/api/config", {
     method: "PUT",
     body: { settings },
+  });
+}
+
+export async function listModelProviders(): Promise<ModelProviderListResponse> {
+  return requestJson<ModelProviderListResponse>("/api/model-providers");
+}
+
+export async function createModelProvider(
+  payload: ModelProviderPayload,
+): Promise<ModelProvider> {
+  return requestJson<ModelProvider>("/api/model-providers", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function updateModelProvider(
+  providerId: string,
+  payload: ModelProviderPayload,
+): Promise<ModelProvider> {
+  return requestJson<ModelProvider>(`/api/model-providers/${providerId}`, {
+    method: "PUT",
+    body: payload,
+  });
+}
+
+export async function deleteModelProvider(providerId: string): Promise<void> {
+  return requestJson<void>(`/api/model-providers/${providerId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function listProviderModels(
+  providerId: string,
+): Promise<ProviderModelListResponse> {
+  return requestJson<ProviderModelListResponse>(`/api/model-providers/${providerId}/models`);
+}
+
+export async function testModelProvider(
+  providerId: string,
+): Promise<ProviderConnectionTestResponse> {
+  return requestJson<ProviderConnectionTestResponse>(
+    `/api/model-providers/${providerId}/test`,
+    { method: "POST" },
+  );
+}
+
+export async function testModelProviderPayload(
+  payload: ModelProviderPayload,
+  providerId?: string | null,
+): Promise<ProviderConnectionTestResponse> {
+  const path = providerId
+    ? `/api/model-providers/${providerId}/test-payload`
+    : "/api/model-providers/test";
+  return requestJson<ProviderConnectionTestResponse>(path, {
+    method: "POST",
+    body: payload,
   });
 }
 

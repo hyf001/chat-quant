@@ -10,17 +10,22 @@ import {
   createProject,
   deleteProject,
   getAgentChatSessionDetail,
+  getAppConfig,
   getChatSessionDetail,
   getRuntimeHealth,
   listChatSessions,
+  listProviderModels,
   listProjects,
   readChatStream,
   sendAgentChatMessage,
+  updateAppConfig,
+  type AppConfig,
   updateProject,
   type AgentChatSessionDetail,
   type ChatSession,
   type ChatSessionDetail,
   type Project,
+  type ProviderModel,
   type RuntimeHealth,
   type SDKStreamEnvelope,
   type SdkMessage,
@@ -49,6 +54,10 @@ export function WorkbenchPage() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(null);
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+  const [availableModels, setAvailableModels] = useState<ProviderModel[]>([]);
+  const [isModelLoading, setIsModelLoading] = useState(false);
+  const [isModelSaving, setIsModelSaving] = useState(false);
   const streamingSessionIdRef = useRef<string | null>(null);
   const loadDetailRequestIdRef = useRef(0);
 
@@ -168,6 +177,43 @@ export function WorkbenchPage() {
       .then(setRuntimeHealth)
       .catch(() => setRuntimeHealth(null));
   }, []);
+
+  useEffect(() => {
+    getAppConfig()
+      .then(setAppConfig)
+      .catch(() => setAppConfig(null));
+  }, []);
+
+  useEffect(() => {
+    const providerId = appConfig?.settings.agent.provider_id;
+    if (!providerId) {
+      setAvailableModels([]);
+      return;
+    }
+    setIsModelLoading(true);
+    listProviderModels(providerId)
+      .then((response) => {
+        setAvailableModels(response.models);
+        setAppConfig((current) => {
+          if (!current || current.settings.agent.provider_id !== providerId) {
+            return current;
+          }
+          if (response.models.some((model) => model.id === current.settings.agent.model)) {
+            return current;
+          }
+          const nextModel = response.models[0]?.id ?? "";
+          return {
+            ...current,
+            settings: {
+              ...current.settings,
+              agent: { ...current.settings.agent, model: nextModel },
+            },
+          };
+        });
+      })
+      .catch(() => setAvailableModels([]))
+      .finally(() => setIsModelLoading(false));
+  }, [appConfig?.settings.agent.provider_id]);
 
   useEffect(() => {
     setHistoryQuery("");
@@ -302,6 +348,34 @@ export function WorkbenchPage() {
     }
   };
 
+  const handleModelChange = async (model: string) => {
+    if (!appConfig || !model || model === appConfig.settings.agent.model) {
+      return;
+    }
+    const nextConfig: AppConfig = {
+      ...appConfig,
+      settings: {
+        ...appConfig.settings,
+        agent: {
+          ...appConfig.settings.agent,
+          model,
+        },
+      },
+    };
+    setAppConfig(nextConfig);
+    setIsModelSaving(true);
+    setError(null);
+    try {
+      const updatedConfig = await updateAppConfig(nextConfig.settings);
+      setAppConfig(updatedConfig);
+    } catch (caught) {
+      setAppConfig(appConfig);
+      setError(caught instanceof Error ? caught.message : "模型切换失败");
+    } finally {
+      setIsModelSaving(false);
+    }
+  };
+
   return (
     <WorkspaceLayout
       history={
@@ -352,7 +426,12 @@ export function WorkbenchPage() {
         activeRoute === "new-task" ? (
           <Composer
             disabled={isSending || !activeProjectId}
+            currentModel={appConfig?.settings.agent.model ?? null}
+            models={availableModels}
+            isModelLoading={isModelLoading}
+            isModelSaving={isModelSaving}
             placeholder={activeProjectId ? "随心输入" : "先创建或选择项目"}
+            onModelChange={(model) => void handleModelChange(model)}
             onSendMessage={handleSendMessage}
           />
         ) : null

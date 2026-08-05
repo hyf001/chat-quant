@@ -11,6 +11,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 JsonPrimitive = str | int | bool | None
 ConfigValue = JsonPrimitive | list[str]
+DEFAULT_MODEL_PROVIDER_ID = "provider_anthropic_default"
+DEFAULT_MODEL_PROVIDER_NAME = "Anthropic"
+ANTHROPIC_DEFAULT_MODELS = (
+    "claude-opus-4-1",
+    "claude-opus-4",
+    "claude-sonnet-4",
+    "claude-3-7-sonnet-latest",
+    "claude-3-5-sonnet-latest",
+    "claude-3-5-haiku-latest",
+)
 
 
 @dataclass(frozen=True)
@@ -109,30 +119,20 @@ APP_CONFIG_DEFINITIONS: tuple[ConfigDefinition, ...] = (
         "允许访问 API 的 Web 来源。",
     ),
     ConfigDefinition(
+        "agent_provider_id",
+        "Agent Provider",
+        "agent",
+        "string",
+        DEFAULT_MODEL_PROVIDER_ID,
+        "当前 Agent 使用的 Anthropic 协议模型供应商。",
+    ),
+    ConfigDefinition(
         "agent_model",
         "Agent 模型",
         "agent",
         "string",
         "claude-sonnet-4",
         "Claude Agent SDK 使用的模型。",
-    ),
-    ConfigDefinition(
-        "agent_base_url",
-        "Agent Base URL",
-        "agent",
-        "string",
-        None,
-        "自定义 Anthropic/Agent API 地址；留空使用默认地址。",
-        nullable=True,
-    ),
-    ConfigDefinition(
-        "agent_api_token",
-        "Agent Token",
-        "agent",
-        "password",
-        None,
-        "Anthropic/Agent API Token；留空使用运行环境默认认证。",
-        nullable=True,
     ),
     ConfigDefinition(
         "agent_max_turns",
@@ -258,6 +258,7 @@ class Settings(BaseModel):
         "http://127.0.0.1:5174",
         "null",
     ]
+    agent_provider_id: str = DEFAULT_MODEL_PROVIDER_ID
     agent_model: str = "claude-sonnet-4"
     agent_base_url: str | None = Field(
         default=None,
@@ -362,6 +363,7 @@ def get_settings() -> Settings:
     database_path = database_config.database_path
     values = default_app_config_values(database_path)
     values.update(_load_sqlite_config_values(database_path))
+    values.update(_load_agent_provider_values(database_path, values.get("agent_provider_id")))
     return Settings(
         config_file_path=file_path,
         database_path=database_path,
@@ -394,3 +396,31 @@ def _load_sqlite_config_values(database_path: Path) -> dict[str, ConfigValue]:
         except (TypeError, ValueError, json.JSONDecodeError):
             continue
     return values
+
+
+def _load_agent_provider_values(
+    database_path: Path,
+    provider_id: object,
+) -> dict[str, ConfigValue]:
+    if not database_path.exists() or not provider_id:
+        return {}
+
+    try:
+        connection = sqlite3.connect(database_path)
+        try:
+            row = connection.execute(
+                "SELECT base_url, api_key FROM model_providers "
+                "WHERE id = ? AND enabled = 1",
+                (str(provider_id),),
+            ).fetchone()
+        finally:
+            connection.close()
+    except sqlite3.Error:
+        return {}
+    if row is None:
+        return {}
+    base_url, api_key = row
+    return {
+        "agent_base_url": str(base_url) if base_url else None,
+        "agent_api_token": str(api_key) if api_key else None,
+    }

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
+from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +14,7 @@ from app.core.config import (
     coerce_config_value,
     get_settings,
 )
-from app.model.config import AppSettingRow
+from app.model.config import AppSettingRow, ModelProviderRow
 from app.schema.config import (
     AgentSettingsPayload,
     AgentThinkingSettingsPayload,
@@ -46,6 +47,8 @@ class AppConfigService:
         for key, raw_value in values.items():
             definition = definitions[key]
             value = coerce_config_value(definition, raw_value)
+            if key == "agent_provider_id":
+                await self._validate_agent_provider(str(value))
             row = await self._db.get(
                 AppSettingRow,
                 {
@@ -78,6 +81,19 @@ class AppConfigService:
         await self._db.commit()
         get_settings.cache_clear()
         return await self.get_config()
+
+    async def _validate_agent_provider(self, provider_id: str) -> None:
+        row = await self._db.get(ModelProviderRow, provider_id)
+        if row is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Agent provider does not exist",
+            )
+        if not row.enabled:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Agent provider is disabled",
+            )
 
 
 async def list_setting_rows(db: AsyncSession) -> list[AppSettingRow]:
@@ -130,9 +146,8 @@ def _payload_from_settings(settings: Settings) -> AppSettingsPayload:
             project_home=settings.project_home,
         ),
         agent=AgentSettingsPayload(
+            provider_id=settings.agent_provider_id,
             model=settings.agent_model,
-            base_url=settings.agent_base_url,
-            api_token=settings.agent_api_token,
             max_turns=settings.agent_max_turns,
             turn_timeout_seconds=settings.agent_turn_timeout_seconds,
             first_token_timeout_seconds=settings.agent_first_token_timeout_seconds,
@@ -161,9 +176,8 @@ def _flatten_payload(payload: AppSettingsPayload) -> dict[str, ConfigValue]:
         "default_project_id": payload.identity.default_project_id,
         "claude_agent_cwd": payload.paths.claude_agent_cwd,
         "project_home": payload.paths.project_home,
+        "agent_provider_id": payload.agent.provider_id,
         "agent_model": payload.agent.model,
-        "agent_base_url": payload.agent.base_url,
-        "agent_api_token": payload.agent.api_token,
         "agent_max_turns": payload.agent.max_turns,
         "agent_turn_timeout_seconds": payload.agent.turn_timeout_seconds,
         "agent_first_token_timeout_seconds": payload.agent.first_token_timeout_seconds,

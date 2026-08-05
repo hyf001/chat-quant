@@ -38,9 +38,8 @@ class AgentThinkingSettingsPayload(BaseModel):
 
 
 class AgentSettingsPayload(BaseModel):
+    provider_id: str = Field(min_length=1)
     model: str = Field(min_length=1)
-    base_url: str | None = None
-    api_token: str | None = None
     max_turns: int = Field(ge=0)
     turn_timeout_seconds: int = Field(ge=0)
     first_token_timeout_seconds: int = Field(ge=0)

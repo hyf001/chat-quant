@@ -6,10 +6,17 @@ from threading import Lock
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import Engine
 
-from app.core.config import APP_CONFIG_DEFINITIONS, Settings, default_app_config_values
+from app.core.config import (
+    APP_CONFIG_DEFINITIONS,
+    DEFAULT_MODEL_PROVIDER_ID,
+    DEFAULT_MODEL_PROVIDER_NAME,
+    Settings,
+    default_app_config_values,
+)
 from app.db.session import Base, sync_database_url
 from app.model.chat_session import chat_session as chat_session_model  # noqa: F401
 from app.model.config import app_setting as app_setting_model  # noqa: F401
+from app.model.config import model_provider as model_provider_model  # noqa: F401
 from app.model.project import project as project_model  # noqa: F401
 from app.model.strategy import strategy as strategy_model  # noqa: F401
 
@@ -29,13 +36,37 @@ def ensure_database_schema(settings: Settings) -> None:
             _migrate_strategy_source_code(engine)
             _migrate_strategy_version_contract(engine)
             _merge_backtest_payloads(engine)
+            _seed_model_providers(engine)
             _seed_app_settings(engine, settings)
+            _migrate_legacy_agent_provider_settings(engine)
             _drop_retired_strategy_columns(engine)
             _drop_retired_backtest_result_table(engine)
             _drop_retired_artifact_tables(engine)
         finally:
             engine.dispose()
         _INITIALIZED_DATABASE_URLS.add(database_url)
+
+
+def _seed_model_providers(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if "model_providers" not in inspector.get_table_names():
+        return
+
+    with engine.begin() as connection:
+        count = connection.execute(
+            text("SELECT COUNT(*) FROM model_providers WHERE id = :id"),
+            {"id": DEFAULT_MODEL_PROVIDER_ID},
+        ).scalar_one()
+        if count:
+            return
+        connection.execute(
+            text(
+                "INSERT INTO model_providers "
+                "(id, name, base_url, api_key, enabled, created_at, updated_at) "
+                "VALUES (:id, :name, NULL, NULL, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            ),
+            {"id": DEFAULT_MODEL_PROVIDER_ID, "name": DEFAULT_MODEL_PROVIDER_NAME},
+        )
 
 
 def _seed_app_settings(engine: Engine, settings: Settings) -> None:
@@ -74,6 +105,50 @@ def _seed_app_settings(engine: Engine, settings: Settings) -> None:
                     "description": definition.description,
                 },
             )
+
+
+def _migrate_legacy_agent_provider_settings(engine: Engine) -> None:
+    inspector = inspect(engine)
+    table_names = set(inspector.get_table_names())
+    if "app_settings" not in table_names or "model_providers" not in table_names:
+        return
+
+    with engine.begin() as connection:
+        rows = connection.execute(
+            text(
+                "SELECT key, value_json FROM app_settings "
+                "WHERE scope = 'global' AND namespace = 'agent' "
+                "AND key IN ('agent_base_url', 'agent_api_token')"
+            )
+        ).mappings()
+        legacy_values = {str(row["key"]): _schema_json_value(row["value_json"]) for row in rows}
+        base_url = legacy_values.get("agent_base_url")
+        api_key = legacy_values.get("agent_api_token")
+        if not isinstance(base_url, str) and not isinstance(api_key, str):
+            return
+        connection.execute(
+            text(
+                "UPDATE model_providers "
+                "SET base_url = COALESCE(:base_url, base_url), "
+                "api_key = COALESCE(:api_key, api_key), "
+                "updated_at = CURRENT_TIMESTAMP "
+                "WHERE id = :id"
+            ),
+            {
+                "id": DEFAULT_MODEL_PROVIDER_ID,
+                "base_url": base_url if isinstance(base_url, str) and base_url else None,
+                "api_key": api_key if isinstance(api_key, str) and api_key else None,
+            },
+        )
+
+
+def _schema_json_value(value: object) -> object:
+    if not isinstance(value, str):
+        return None
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        return None
 
 
 def _drop_retired_strategy_columns(engine: Engine) -> None:
