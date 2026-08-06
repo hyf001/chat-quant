@@ -26,7 +26,9 @@ export function Composer({
   onSendMessage,
 }: ComposerProps) {
   const [content, setContent] = useState("");
-  const canSelectModel = models.length > 0 && !disabled && !isModelSaving;
+  const hasModels = models.length > 0;
+  const canSelectModel = hasModels && !disabled && !isModelSaving;
+  const selectedModel = currentModel ?? models[0]?.id ?? "";
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -43,7 +45,6 @@ export function Composer({
       <form
         className="mx-auto flex max-w-5xl items-center gap-3 rounded-lg border border-strong bg-panel px-4 py-3 shadow-lift transition-all focus-within:border-signal focus-within:bg-panel"
         onFocusCapture={onModelRefresh}
-        onPointerEnter={onModelRefresh}
         onSubmit={handleSubmit}
       >
         <span className="select-none font-mono text-lg font-black text-signal">&gt;</span>
@@ -63,12 +64,15 @@ export function Composer({
           className="h-9 max-w-52 shrink-0 rounded-md border border-line bg-soft px-2.5 font-mono text-[11px] text-graphite outline-none transition-colors hover:border-signal focus:border-signal disabled:cursor-not-allowed disabled:text-muted"
           disabled={!canSelectModel}
           id="agent-model-select"
-          value={canSelectModel ? currentModel ?? "" : ""}
+          value={hasModels ? selectedModel : ""}
           onChange={(event) => onModelChange(event.target.value)}
         >
-          {canSelectModel ? null : (
+          {hasModels ? null : (
             <option value="">{isModelLoading ? "loading model" : "no model"}</option>
           )}
+          {hasModels && currentModel && !models.some((model) => model.id === currentModel) ? (
+            <option value={currentModel}>{currentModel}</option>
+          ) : null}
           {models.map((model) => (
             <option key={model.id} value={model.id}>
               {model.name}

@@ -256,6 +256,15 @@ class ClaudeAgentRuntime:
                 if saw_effective_event
                 else RuntimeErrorCode.FIRST_TOKEN_TIMEOUT
             )
+            timeout_message = (
+                f"模型执行超过 {command.deadline_seconds or self.settings.agent_turn_timeout_seconds} 秒，本轮已中止。"
+                if timeout_code == RuntimeErrorCode.RUN_TIMEOUT
+                else (
+                    "模型在 "
+                    f"{self.settings.agent_first_token_timeout_seconds} 秒内没有返回首个有效输出，"
+                    "本轮已中止。后台调用可能仍在耗时，请稍后重试，或切换模型/Provider。"
+                )
+            )
             sequence += 1
             yield _make_envelope(
                 sequence=sequence,
@@ -265,12 +274,7 @@ class ClaudeAgentRuntime:
                 sdk_event={
                     "type": "runtime_error",
                     "code": timeout_code.value,
-                    "message": _sdk_failure_message(
-                        "agent execution timed out"
-                        if timeout_code == RuntimeErrorCode.RUN_TIMEOUT
-                        else "agent sdk stream timed out before assistant output",
-                        sdk_stderr_lines,
-                    ),
+                    "message": _sdk_failure_message(timeout_message, sdk_stderr_lines),
                     "retryable": True,
                 },
             )

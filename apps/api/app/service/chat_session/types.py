@@ -16,6 +16,7 @@ class ChatSessionKind(StrEnum):
 
 
 class AssetType(StrEnum):
+    STRATEGY = "strategy"
     STRATEGY_VERSION = "strategy_version"
     BACKTEST_RUN = "backtest_run"
 

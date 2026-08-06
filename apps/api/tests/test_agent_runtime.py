@@ -299,6 +299,7 @@ async def _run_first_token_timeout_assertions() -> None:
 
     assert envelopes[-1].sdk_event["type"] == "runtime_error"
     assert envelopes[-1].sdk_event["code"] == RuntimeErrorCode.FIRST_TOKEN_TIMEOUT
+    assert "模型在 0.01 秒内没有返回首个有效输出" in envelopes[-1].sdk_event["message"]
     assert envelopes[-1].sdk_session_id == "sdk_real_1"
 
 

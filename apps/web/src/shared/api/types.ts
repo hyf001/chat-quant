@@ -8,9 +8,14 @@ export type JsonValue =
 
 export type ChatSessionKind = "normal" | "strategy" | "screening";
 
-export type AssetType = "strategy_version" | "backtest_run";
+export type AssetType = "strategy" | "strategy_version" | "backtest_run";
 
 export type AssetRelationType = "created" | "used" | "displayed" | "result" | "reused";
+
+export type InspectorObject =
+  | { type: "backtest"; id: string }
+  | { type: "strategy"; id: string }
+  | { type: "strategy-version"; id: string };
 
 export type SdkMessageRole = "user" | "assistant" | "tool" | "system";
 

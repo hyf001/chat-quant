@@ -261,6 +261,20 @@ def test_list_strategy_versions_returns_all_versions(client: TestClient) -> None
     assert "strategy_config" not in versions[0]
 
 
+def test_get_strategy_version_by_id(client: TestClient) -> None:
+    created = client.post(
+        "/api/strategies",
+        json=strategy_create_payload(),
+    ).json()
+    version = client.get(f"/api/strategies/{created['strategy_id']}/versions").json()[0]
+
+    response = client.get(f"/api/strategy-versions/{version['id']}")
+
+    assert response.status_code == 200
+    assert response.json()["id"] == version["id"]
+    assert response.json()["strategy_id"] == created["strategy_id"]
+
+
 def test_create_strategy_version_rejects_deleted_strategy(client: TestClient) -> None:
     created = client.post(
         "/api/strategies",

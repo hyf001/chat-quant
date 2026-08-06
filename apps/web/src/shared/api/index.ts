@@ -57,6 +57,8 @@ export type {
   ChatSessionDetail,
   ChatSessionKind,
   CreateProjectPayload,
+  InspectorObject,
+  JsonValue,
   Project,
   ProjectListResponse,
   SdkMessage,

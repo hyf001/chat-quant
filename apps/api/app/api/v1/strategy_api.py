@@ -149,6 +149,17 @@ async def list_strategy_versions(
         raise _http_error(error) from error
 
 
+@router.get("/strategy-versions/{version_id}", response_model=StrategyVersionRecord)
+async def get_strategy_version(
+    version_id: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> StrategyVersionRecord:
+    try:
+        return await strategy_service.get_version(db, version_id)
+    except StrategyError as error:
+        raise _http_error(error) from error
+
+
 @router.patch("/strategies/{strategy_id}/current-version", response_model=StrategySummary)
 async def switch_current_strategy_version(
     strategy_id: str,

@@ -274,6 +274,10 @@ export async function listStrategyVersions(
   return apiFetch<StrategyVersion[]>(`/api/strategies/${strategyId}/versions`);
 }
 
+export async function getStrategyVersion(versionId: string): Promise<StrategyVersion> {
+  return apiFetch<StrategyVersion>(`/api/strategy-versions/${versionId}`);
+}
+
 export async function createStrategy(
   payload: StrategyCreatePayload,
   projectId: string,

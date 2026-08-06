@@ -304,7 +304,8 @@ def backtest_strategy(client: ApiClient, args: argparse.Namespace) -> object:
         )
         payload = {"config": config, "project_id": _client_project_id(client)}
         payload["strategy_version_id"] = args.strategy_version_id
-    return client.request("POST", f"/strategies/{quote_path(args.strategy_id)}/backtest", payload)
+    result = client.request("POST", f"/strategies/{quote_path(args.strategy_id)}/backtest", payload)
+    return with_display_artifacts(result)
 
 
 def build_backtest_config(args: argparse.Namespace) -> dict[str, object]:
@@ -345,6 +346,86 @@ def list_backtests(client: ApiClient, args: argparse.Namespace) -> object:
     if args.strategy_version_id is not None:
         query["strategy_version_id"] = args.strategy_version_id
     return client.request("GET", "/backtests", query=query)
+
+
+def with_display_artifacts(result: object) -> object:
+    if not isinstance(result, dict):
+        return result
+    backtest = result.get("backtest")
+    if not isinstance(backtest, dict):
+        return result
+
+    artifacts: list[dict[str, object]] = []
+    backtest_id = _string_value(backtest.get("id"))
+    strategy_id = _string_value(backtest.get("strategy_id"))
+    strategy_version_id = _string_value(backtest.get("strategy_version_id"))
+    symbols = backtest_symbols(backtest)
+
+    if backtest_id:
+        artifacts.append(
+            display_artifact(
+                asset_type="backtest_run",
+                asset_id=backtest_id,
+                title=f"{symbols} 回测结果" if symbols else "回测结果",
+                display_token=f"[查看回测结果](chatq://backtest/{backtest_id})",
+            )
+        )
+    if strategy_id:
+        artifacts.append(
+            display_artifact(
+                asset_type="strategy",
+                asset_id=strategy_id,
+                title="策略",
+                display_token=f"[打开策略](chatq://strategy/{strategy_id})",
+            )
+        )
+    if strategy_version_id:
+        artifacts.append(
+            display_artifact(
+                asset_type="strategy_version",
+                asset_id=strategy_version_id,
+                title="策略版本",
+                display_token=f"[查看策略版本](chatq://strategy-version/{strategy_version_id})",
+            )
+        )
+
+    if not artifacts:
+        return result
+    existing = result.get("artifacts")
+    if isinstance(existing, list):
+        result["artifacts"] = [*existing, *artifacts]
+    else:
+        result["artifacts"] = artifacts
+    return result
+
+
+def display_artifact(
+    *,
+    asset_type: str,
+    asset_id: str,
+    title: str,
+    display_token: str,
+) -> dict[str, object]:
+    return {
+        "asset_type": asset_type,
+        "asset_id": asset_id,
+        "title": title,
+        "display_token": display_token,
+    }
+
+
+def backtest_symbols(backtest: dict[str, object]) -> str:
+    config = backtest.get("config")
+    if not isinstance(config, dict):
+        return ""
+    symbols = config.get("symbols")
+    if not isinstance(symbols, list):
+        return ""
+    return "、".join(str(symbol) for symbol in symbols if symbol)
+
+
+def _string_value(value: object) -> str | None:
+    return value if isinstance(value, str) and value else None
 
 
 def current_strategy_mode(client: ApiClient, detail: dict[str, object]) -> str:

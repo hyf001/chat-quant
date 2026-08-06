@@ -102,3 +102,5 @@ uv run python -m cli.chatq_strategy backtest-show "$BACKTEST_ID"
 - 回测状态。
 - 总收益、年化收益、最大回撤、夏普比率、交易次数。
 - 失败时的 `failure_code`、`failure_message` 和详细错误。
+
+如果命令输出包含 `artifacts[].display_token`，最终回答必须原样包含这些 token，方便用户在右侧对象面板打开回测、策略和策略版本。

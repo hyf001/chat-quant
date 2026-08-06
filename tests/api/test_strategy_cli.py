@@ -257,6 +257,40 @@ def test_backtest_can_target_specific_strategy_version() -> None:
     assert result["payload"]["config"]["strategy_mode"] == "multi_symbol"
 
 
+def test_backtest_result_adds_display_artifacts() -> None:
+    result = chatq_strategy.with_display_artifacts(
+        {
+            "backtest": {
+                "id": "sbt_1",
+                "strategy_id": "str_1",
+                "strategy_version_id": "stv_1",
+                "config": {"symbols": ["600519.SH"]},
+            }
+        }
+    )
+
+    assert result["artifacts"] == [
+        {
+            "asset_type": "backtest_run",
+            "asset_id": "sbt_1",
+            "title": "600519.SH 回测结果",
+            "display_token": "[查看回测结果](chatq://backtest/sbt_1)",
+        },
+        {
+            "asset_type": "strategy",
+            "asset_id": "str_1",
+            "title": "策略",
+            "display_token": "[打开策略](chatq://strategy/str_1)",
+        },
+        {
+            "asset_type": "strategy_version",
+            "asset_id": "stv_1",
+            "title": "策略版本",
+            "display_token": "[查看策略版本](chatq://strategy-version/stv_1)",
+        },
+    ]
+
+
 def test_project_scoped_commands_resolve_current_directory(monkeypatch: pytest.MonkeyPatch) -> None:
     parser = chatq_strategy.build_parser()
     args = parser.parse_args(["list"])

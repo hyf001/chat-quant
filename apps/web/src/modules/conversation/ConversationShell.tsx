@@ -4,18 +4,20 @@ import {
   BarChart3,
   Brain,
   ChevronDown,
+  ExternalLink,
   FileCode2,
   FileText,
   Loader2,
   Search,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import type { AssetLink, ChatSession, SDKStreamEnvelope, SdkMessage } from "../../shared/api";
 import type { Components } from "react-markdown";
 import type { ReactNode } from "react";
+import type { InspectorObject } from "../../shared/api/types";
 
 type ConversationShellProps = {
   session: ChatSession | null;
@@ -25,6 +27,7 @@ type ConversationShellProps = {
   isLoading: boolean;
   isStreaming: boolean;
   error: string | null;
+  onOpenInspectorObject?: (object: InspectorObject) => void;
   onPromptSelect?: (content: string) => void | Promise<void>;
 };
 
@@ -109,6 +112,75 @@ const markdownComponents: Components = {
   },
 };
 
+function markdownComponentsFor(
+  onOpenInspectorObject?: (object: InspectorObject) => void,
+): Components {
+  return {
+    ...markdownComponents,
+    a({ children, href }) {
+      const object = parseInspectorHref(href);
+      if (object && onOpenInspectorObject) {
+        return (
+          <button
+            className="my-1 inline-flex items-center gap-2 rounded-md border-2 border-brandBlue/50 bg-compareSoft px-3 py-1.5 text-xs font-bold text-brandBlue shadow-sm transition-colors hover:border-brandBlue hover:bg-panel focus:outline-none focus:ring-2 focus:ring-signal/25"
+            type="button"
+            onClick={() => onOpenInspectorObject(object)}
+          >
+            <InspectorLinkIcon object={object} />
+            {children}
+            <ExternalLink className="h-3.5 w-3.5" />
+          </button>
+        );
+      }
+      return (
+        <a href={href} rel="noreferrer" target={href?.startsWith("http") ? "_blank" : undefined}>
+          {children}
+        </a>
+      );
+    },
+  };
+}
+
+function chatqUrlTransform(url: string, key: string, node: unknown): string {
+  void key;
+  void node;
+  if (url.startsWith("chatq://")) {
+    return url;
+  }
+  return defaultUrlTransform(url);
+}
+
+function InspectorLinkIcon({ object }: { object: InspectorObject }) {
+  if (object.type === "backtest") {
+    return <BarChart3 className="h-4 w-4" />;
+  }
+  if (object.type === "strategy") {
+    return <FileCode2 className="h-4 w-4" />;
+  }
+  return <FileText className="h-4 w-4" />;
+}
+
+function parseInspectorHref(href: string | undefined): InspectorObject | null {
+  if (!href?.startsWith("chatq://")) {
+    return null;
+  }
+  const normalized = href.replace("chatq://", "");
+  const [type, id] = normalized.split("/");
+  if (!id) {
+    return null;
+  }
+  if (type === "backtest") {
+    return { type: "backtest", id };
+  }
+  if (type === "strategy") {
+    return { type: "strategy", id };
+  }
+  if (type === "strategy-version") {
+    return { type: "strategy-version", id };
+  }
+  return null;
+}
+
 function blockText(message: SdkMessage): string {
   const text = message.content
     .filter((block) => block.type === "text")
@@ -130,6 +202,7 @@ export function ConversationShell({
   isLoading,
   isStreaming,
   error,
+  onOpenInspectorObject,
   onPromptSelect,
 }: ConversationShellProps) {
   const [now, setNow] = useState(() => Date.now());
@@ -216,6 +289,7 @@ export function ConversationShell({
                       isStreaming={isStreaming}
                       latestAssistantId={latestAssistantId}
                       message={item.message}
+                      onOpenInspectorObject={onOpenInspectorObject}
                     />
                     {item.message.uuid === latestUserId && elapsedLabel ? (
                       <TurnStatusEntry elapsedLabel={elapsedLabel} isStreaming={isStreaming} />
@@ -234,6 +308,7 @@ export function ConversationShell({
                             isStreaming={isStreaming}
                             latestAssistantId={latestAssistantId}
                             message={item.message}
+                            onOpenInspectorObject={onOpenInspectorObject}
                           />
                         </TimelineStage>
                       );
@@ -462,10 +537,12 @@ function MessageEntry({
   message,
   latestAssistantId,
   isStreaming,
+  onOpenInspectorObject,
 }: {
   message: SdkMessage;
   latestAssistantId: string | null;
   isStreaming: boolean;
+  onOpenInspectorObject?: (object: InspectorObject) => void;
 }) {
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
@@ -487,7 +564,7 @@ function MessageEntry({
       <div className="min-w-0 text-sm leading-relaxed text-graphite">
         {isAssistant ? (
           <div>
-            <MarkdownContent text={blockText(message)} />
+            <MarkdownContent text={blockText(message)} onOpenInspectorObject={onOpenInspectorObject} />
             {isStreaming && isLatestAssistant ? <span className="streaming-caret" /> : null}
           </div>
         ) : (
@@ -498,10 +575,24 @@ function MessageEntry({
   );
 }
 
-function MarkdownContent({ text }: { text: string }) {
+function MarkdownContent({
+  text,
+  onOpenInspectorObject,
+}: {
+  text: string;
+  onOpenInspectorObject?: (object: InspectorObject) => void;
+}) {
+  const components = useMemo(
+    () => markdownComponentsFor(onOpenInspectorObject),
+    [onOpenInspectorObject],
+  );
   return (
     <div className="markdown-content">
-      <ReactMarkdown components={markdownComponents} remarkPlugins={[remarkGfm]}>
+      <ReactMarkdown
+        components={components}
+        remarkPlugins={[remarkGfm]}
+        urlTransform={chatqUrlTransform}
+      >
         {text}
       </ReactMarkdown>
     </div>

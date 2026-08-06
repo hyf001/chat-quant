@@ -26,6 +26,7 @@ import {
   type AppSettings,
   type ChatSession,
   type ChatSessionDetail,
+  type InspectorObject,
   type Project,
   type ProviderModel,
   type RuntimeHealth,
@@ -53,6 +54,7 @@ export function WorkbenchPage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [detail, setDetail] = useState<ChatSessionDetail | null>(null);
   const [conversationEnvelopes, setConversationEnvelopes] = useState<SDKStreamEnvelope[]>([]);
+  const [activeInspectorObject, setActiveInspectorObject] = useState<InspectorObject | null>(null);
   const [historyQuery, setHistoryQuery] = useState("");
   const [isProjectLoading, setIsProjectLoading] = useState(true);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
@@ -224,6 +226,7 @@ export function WorkbenchPage() {
     setActiveSessionId(null);
     setDetail(null);
     setConversationEnvelopes([]);
+    setActiveInspectorObject(null);
     void refreshSessions("", activeProjectId);
   }, [activeProjectId, refreshSessions]);
 
@@ -234,6 +237,7 @@ export function WorkbenchPage() {
       loadDetailRequestIdRef.current += 1;
       setDetail(null);
       setConversationEnvelopes([]);
+      setActiveInspectorObject(null);
     }
   }, [activeSessionId, loadDetail]);
 
@@ -255,6 +259,7 @@ export function WorkbenchPage() {
       setActiveSessionId(null);
       setDetail(null);
       setConversationEnvelopes([]);
+      setActiveInspectorObject(null);
     }
   };
 
@@ -263,6 +268,7 @@ export function WorkbenchPage() {
     if (window.location.pathname !== routePaths["new-task"]) {
       window.history.pushState({}, "", routePaths["new-task"]);
     }
+    setActiveInspectorObject(null);
     setActiveSessionId(chatSessionId);
   };
 
@@ -347,9 +353,14 @@ export function WorkbenchPage() {
           content,
         }),
       );
+      let receivedStreamEnvelope = false;
       await readChatStream(accepted.stream_url, (envelope) => {
+        receivedStreamEnvelope = true;
         setConversationEnvelopes((current) => appendStreamEnvelope(current, envelope));
       });
+      if (!receivedStreamEnvelope) {
+        setError("本轮没有收到任何模型返回事件。可能是流连接提前结束、模型调用超时或被中断，请稍后重试，或切换模型/Provider。");
+      }
       await loadDetail(sessionId);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "消息发送失败");
@@ -385,6 +396,13 @@ export function WorkbenchPage() {
     } finally {
       setIsModelSaving(false);
     }
+  };
+
+  const handleModelRefresh = () => {
+    if (isSending || isModelLoading || isModelSaving) {
+      return;
+    }
+    void loadComposerModelState();
   };
 
   return (
@@ -434,6 +452,7 @@ export function WorkbenchPage() {
             isLoading={isDetailLoading}
             isStreaming={isSending}
             error={error}
+            onOpenInspectorObject={setActiveInspectorObject}
             onPromptSelect={handleSendMessage}
           />
         ) : (
@@ -450,7 +469,7 @@ export function WorkbenchPage() {
             isModelSaving={isModelSaving}
             placeholder={activeProjectId ? "随心输入" : "先创建或选择项目"}
             onModelChange={(model) => void handleModelChange(model)}
-            onModelRefresh={() => void loadComposerModelState()}
+            onModelRefresh={handleModelRefresh}
             onSendMessage={handleSendMessage}
           />
         ) : null
@@ -459,9 +478,8 @@ export function WorkbenchPage() {
         <InsightPanel
           session={activeSession}
           assets={detail?.assets ?? []}
-          health={runtimeHealth}
-          result={null}
-          backtestDetail={null}
+          activeObject={activeInspectorObject}
+          onOpenObject={setActiveInspectorObject}
         />
       }
     />
