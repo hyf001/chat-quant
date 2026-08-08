@@ -1,0 +1,79 @@
+---
+title: "stock_zh_kcb_report_em - 科创板公告"
+created: 2026-07-26
+updated: 2026-07-26
+type: entity
+tags: [akshare, data-dictionary, interface, stock, parameters, returns, example]
+sources: [raw/data-dictionary/stock/stock.md]
+confidence: high
+---
+# stock_zh_kcb_report_em
+
+- 分类: [[stock-stock|AKShare 股票数据]]
+- 主题路径: 注意：该接口返回的数据只有最近一个交易日的有开盘价，其他日期开盘价为 0 > 科创板 > 科创板公告
+- 描述: 东方财富-科创板报告数据
+- 目标地址: https://data.eastmoney.com/notices/kcb.html
+- 限量: 单次返回所有科创板上市公司的报告数据
+- 来源页面: https://akshare.akfamily.xyz/data/stock/stock.html
+
+## 相关
+
+- [[stock-stock|AKShare 股票数据]]
+- [[_meta/topic-map]]
+
+## 源文摘录
+
+#### 科创板公告
+
+接口: stock_zh_kcb_report_em
+
+目标地址: https://data.eastmoney.com/notices/kcb.html
+
+描述: 东方财富-科创板报告数据
+
+限量: 单次返回所有科创板上市公司的报告数据
+
+输入参数
+
+| 名称        | 类型  | 描述                   |
+|-----------|-----|----------------------|
+| from_page | int | from_page=1; 始获取的页码  |
+| to_page   | int | to_page=100; 结束获取的页码 |
+
+输出参数
+
+| 名称   | 类型     | 描述                                                                          |
+|------|--------|-----------------------------------------------------------------------------|
+| 代码   | object | -                                                                           |
+| 名称   | object | -                                                                           |
+| 公告标题 | object | -                                                                           |
+| 公告类型 | object | -                                                                           |
+| 公告日期 | object | -                                                                           |
+| 公告代码 | object | 本代码可以用来获取公告详情: http://data.eastmoney.com/notices/detail/688595/{替换到此处}.html |
+
+接口示例
+
+```python
+import akshare as ak
+
+stock_zh_kcb_report_em_df = ak.stock_zh_kcb_report_em(from_page=1, to_page=100)
+print(stock_zh_kcb_report_em_df)
+```
+
+数据示例
+
+```
+        代码    名称  ...       公告日期                公告代码
+0     688092  爱科科技  ...  2024-07-22  AN202407211638153639
+1     688303  大全能源  ...  2024-07-22  AN202407211638152326
+2     688536   思瑞浦  ...  2024-07-22  AN202407211638152204
+3     688599  天合光能  ...  2024-07-22  AN202407211638152159
+4     688352  颀中科技  ...  2024-07-22  AN202407211638151001
+...      ...   ...  ...         ...                   ...
+9995  688370  丛麟科技  ...  2024-05-11  AN202405101632831676
+9996  688131  皓元医药  ...  2024-05-11  AN202405101632831212
+9997  688199  久日新材  ...  2024-05-11  AN202405101632831202
+9998  688199  久日新材  ...  2024-05-11  AN202405101632831197
+9999  688519  南亚新材  ...  2024-05-11  AN202405101632831199
+[10000 rows x 6 columns]
+```

@@ -15,6 +15,7 @@ uv run --project "$ROOT_DIR/apps/api" pyinstaller \
   --name chat-quant-api \
   --hidden-import aiosqlite \
   --hidden-import aiosqlite.core \
+  --collect-data akshare \
   --collect-binaries claude_agent_sdk \
   --collect-data claude_agent_sdk \
   --paths "$ROOT_DIR/apps/api" \

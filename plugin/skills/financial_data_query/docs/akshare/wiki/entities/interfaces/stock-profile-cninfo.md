@@ -1,0 +1,87 @@
+---
+title: "stock_profile_cninfo - 公司概况-巨潮资讯"
+created: 2026-07-26
+updated: 2026-07-26
+type: entity
+tags: [akshare, data-dictionary, interface, stock, parameters, returns, example]
+sources: [raw/data-dictionary/stock/stock.md]
+confidence: high
+---
+# stock_profile_cninfo
+
+- 分类: [[stock-stock|AKShare 股票数据]]
+- 主题路径: 注意：该接口返回的数据只有最近一个交易日的有开盘价，其他日期开盘价为 0 > 年报季报 > 公司概况-巨潮资讯
+- 描述: 巨潮资讯-个股-公司概况
+- 目标地址: http://webapi.cninfo.com.cn/#/company
+- 限量: 单次获取指定 symbol 的公司概况
+- 来源页面: https://akshare.akfamily.xyz/data/stock/stock.html
+
+## 相关
+
+- [[stock-stock|AKShare 股票数据]]
+- [[_meta/topic-map]]
+
+## 源文摘录
+
+#### 公司概况-巨潮资讯
+
+接口: stock_profile_cninfo
+
+目标地址: http://webapi.cninfo.com.cn/#/company
+
+描述: 巨潮资讯-个股-公司概况
+
+限量: 单次获取指定 symbol 的公司概况
+
+输入参数
+
+| 名称         | 类型  | 描述                    |
+|------------|-----|-----------------------|
+| symbol     | str | symbol="600030"       |
+
+输出参数
+
+| 名称   | 类型     | 描述  |
+|------|--------|-----|
+| 公司名称 | object | -   |
+| 英文名称 | object | -   |
+| 曾用简称 | object | -   |
+| A股代码 | object | -   |
+| A股简称 | object | -   |
+| B股代码 | object | -   |
+| B股简称 | object | -   |
+| H股代码 | object | -   |
+| H股简称 | object | -   |
+| 入选指数 | object | -   |
+| 所属市场 | object | -   |
+| 所属行业 | object | -   |
+| 法人代表 | object | -   |
+| 注册资金 | object | -   |
+| 成立日期 | object | -   |
+| 上市日期 | object | -   |
+| 官方网站 | object | -   |
+| 电子邮箱 | object | -   |
+| 联系电话 | object | -   |
+| 传真   | object | -   |
+| 注册地址 | object | -   |
+| 办公地址 | object | -   |
+| 邮政编码 | object | -   |
+| 主营业务 | object | -   |
+| 经营范围 | object | -   |
+| 机构简介 | object | -   |
+
+接口示例
+
+```python
+import akshare as ak
+
+stock_profile_cninfo_df = ak.stock_profile_cninfo(symbol="600030")
+print(stock_profile_cninfo_df)
+```
+
+数据示例
+
+```
+         公司名称  ...                                               机构简介
+0  中信证券股份有限公司  ...  公司的前身中信证券有限责任公司是经中国人民银行银复[1995]313号文批准，由中信公司，中...
+```

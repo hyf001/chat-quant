@@ -1,0 +1,238 @@
+---
+title: "AKShare 宏观数据"
+created: 2026-07-26
+updated: 2026-07-26
+type: concept
+tags: [akshare, data-dictionary, category, macro]
+sources: [raw/data-dictionary/macro/macro.md]
+confidence: high
+---
+# AKShare 宏观数据
+
+来源页面: https://akshare.akfamily.xyz/data/macro/macro.html
+原始快照: [macro/macro.md](../../raw/data-dictionary/macro/macro.md)
+
+该分类从 AKShare 数据字典中抽取出 215 个接口页面。相关接口页统一放在 `entities/interfaces/`，并通过 `[[index]]` 与 `[[_meta/topic-map]]` 汇总。
+
+## 接口
+
+- [[macro-australia-bank-rate|macro_australia_bank_rate]] - 东方财富-经济数据-澳大利亚-央行公布利率决议
+- [[macro-australia-cpi-quarterly|macro_australia_cpi_quarterly]] - 东方财富-经济数据-澳大利亚-消费者物价指数季率
+- [[macro-australia-cpi-yearly|macro_australia_cpi_yearly]] - 东方财富-经济数据-澳大利亚-消费者物价指数年率
+- [[macro-australia-ppi-quarterly|macro_australia_ppi_quarterly]] - 东方财富-经济数据-澳大利亚-生产者物价指数季率
+- [[macro-australia-retail-rate-monthly|macro_australia_retail_rate_monthly]] - 东方财富-经济数据-澳大利亚-零售销售月率
+- [[macro-australia-trade|macro_australia_trade]] - 东方财富-经济数据-澳大利亚-贸易帐
+- [[macro-australia-unemployment-rate|macro_australia_unemployment_rate]] - 东方财富-经济数据-澳大利亚-失业率
+- [[macro-canada-bank-rate|macro_canada_bank_rate]] - 东方财富-经济数据-加拿大-央行公布利率决议
+- [[macro-canada-core-cpi-monthly|macro_canada_core_cpi_monthly]] - 东方财富-经济数据-加拿大-核心消费者物价指数月率
+- [[macro-canada-core-cpi-yearly|macro_canada_core_cpi_yearly]] - 东方财富-经济数据-加拿大-核心消费者物价指数年率
+- [[macro-canada-cpi-monthly|macro_canada_cpi_monthly]] - 东方财富-经济数据-加拿大-消费者物价指数月率
+- [[macro-canada-cpi-yearly|macro_canada_cpi_yearly]] - 东方财富-经济数据-加拿大-消费者物价指数年率
+- [[macro-canada-gdp-monthly|macro_canada_gdp_monthly]] - 东方财富-经济数据-加拿大-GDP 月率
+- [[macro-canada-new-house-rate|macro_canada_new_house_rate]] - 东方财富-经济数据-加拿大-新屋开工
+- [[macro-canada-retail-rate-monthly|macro_canada_retail_rate_monthly]] - 东方财富-经济数据-加拿大-零售销售月率
+- [[macro-canada-trade|macro_canada_trade]] - 东方财富-经济数据-加拿大-贸易帐
+- [[macro-canada-unemployment-rate|macro_canada_unemployment_rate]] - 东方财富-经济数据-加拿大-失业率
+- [[macro-china-agricultural-index|macro_china_agricultural_index]] - 农副指数数据, 数据区间从 20111205-至今
+- [[macro-china-agricultural-product|macro_china_agricultural_product]] - 农产品批发价格总指数, 数据区间从 20050927-至今
+- [[macro-china-au-report|macro_china_au_report]] - 上海黄金交易所报告, 数据区间从 20140905-至今
+- [[macro-china-bank-financing|macro_china_bank_financing]] - 银行理财产品发行数量, 数据区间从 2000 一月-至今
+- [[macro-china-bdti-index|macro_china_bdti_index]] - 原油运输指数数据, 数据区间从 20011227-至今
+- [[macro-china-bond-public|macro_china_bond_public]] - 中国外汇交易中心暨全国银行间同业拆借中心-债券信息披露-新债发行; 近期债券发行数据
+- [[macro-china-bsi-index|macro_china_bsi_index]] - 超灵便型船运价指数数据, 数据区间从 20060103-至今
+- [[macro-china-central-bank-balance|macro_china_central_bank_balance]] - 新浪财经-中国宏观经济数据-央行货币当局资产负债
+- [[macro-china-commodity-price-index|macro_china_commodity_price_index]] - 大宗商品价格数据, 数据区间从 20111205-至今
+- [[macro-china-construction-index|macro_china_construction_index]] - 建材指数数据, 数据区间从 20111205-至今
+- [[macro-china-construction-price-index|macro_china_construction_price_index]] - 建材价格指数数据, 数据区间从 20100615-至今
+- [[macro-china-consumer-goods-retail|macro_china_consumer_goods_retail]] - 东方财富-经济数据-社会消费品零售总额
+- [[macro-china-cpi|macro_china_cpi]] - 中国居民消费价格指数, 数据区间从 200801 至今, 月度数据
+- [[macro-china-cpi-monthly|macro_china_cpi_monthly]] - 中国月度 CPI 数据, 数据区间从 19960201-至今
+- [[macro-china-cpi-yearly|macro_china_cpi_yearly]] - 中国年度 CPI 数据, 数据区间从 19860201-至今
+- [[macro-china-cx-pmi-yearly|macro_china_cx_pmi_yearly]] - 中国年度财新 PMI 数据, 数据区间从 20120120-至今
+- [[macro-china-cx-services-pmi-yearly|macro_china_cx_services_pmi_yearly]] - 中国财新服务业 PMI 报告, 数据区间从 20120405-至今
+- [[macro-china-czsr|macro_china_czsr]] - 中国财政收入, 数据区间从 200801 至今, 月度数据
+- [[macro-china-daily-energy|macro_china_daily_energy]] - 中国日度沿海六大电库存数据, 数据区间从20160101-至今, 不再更新, 只能获得历史数据
+- [[macro-china-energy-index|macro_china_energy_index]] - 能源指数数据, 数据区间从 20111205-至今
+- [[macro-china-enterprise-boom-index|macro_china_enterprise_boom_index]] - 中国企业景气及企业家信心指数数据, 数据区间从 2005 一季度-至今
+- [[macro-china-exports-yoy|macro_china_exports_yoy]] - 中国以美元计算出口年率报告, 数据区间从 19820201-至今
+- [[macro-china-fdi|macro_china_fdi]] - 东方财富-经济数据一览-中国-外商直接投资数据, 数据区间从 200801-202307
+- [[macro-china-foreign-exchange-gold|macro_china_foreign_exchange_gold]] - 国家统计局-央行黄金和外汇储备, 比东财接口数据时间长
+- [[macro-china-freight-index|macro_china_freight_index]] - 新浪财经-中国宏观经济数据-航贸运价指数
+- [[macro-china-fx-gold|macro_china_fx_gold]] - 中国外汇和黄金储备, 数据区间从 200801 至今, 月度数据
+- [[macro-china-fx-reserves-yearly|macro_china_fx_reserves_yearly]] - 中国年度外汇储备数据, 数据区间从 20140115-至今
+- [[macro-china-gdp|macro_china_gdp]] - 中国国内生产总值, 数据区间从 200601 至今, 月度数据
+- [[macro-china-gdp-yearly|macro_china_gdp_yearly]] - 金十数据中心-中国 GDP 年率报告, 数据区间从 20110120-至今
+- [[macro-china-gdzctz|macro_china_gdzctz]] - 中国城镇固定资产投资, 数据区间从 200802 至今, 月度数据
+- [[macro-china-gyzjz|macro_china_gyzjz]] - 东方财富-中国工业增加值增长, 数据区间从 2008 - 至今
+- [[macro-china-hgjck|macro_china_hgjck]] - 中国海关进出口增减情况一览表, 数据区间从 200801 至今, 月度数据
+- [[macro-china-hk-building-amount|macro_china_hk_building_amount]] - 东方财富-经济数据一览-中国香港-香港楼宇买卖合约成交金额
+- [[macro-china-hk-building-volume|macro_china_hk_building_volume]] - 东方财富-经济数据一览-中国香港-香港楼宇买卖合约数量
+- [[macro-china-hk-cpi|macro_china_hk_cpi]] - 东方财富-经济数据一览-中国香港-消费者物价指数
+- [[macro-china-hk-cpi-ratio|macro_china_hk_cpi_ratio]] - 东方财富-经济数据一览-中国香港-消费者物价指数年率
+- [[macro-china-hk-gbp|macro_china_hk_gbp]] - 东方财富-经济数据一览-中国香港-香港 GDP
+- [[macro-china-hk-gbp-ratio|macro_china_hk_gbp_ratio]] - 东方财富-经济数据一览-中国香港-香港 GDP 同比
+- [[macro-china-hk-market-info|macro_china_hk_market_info]] - 香港同业拆借报告, 数据区间从 20170320-至今
+- [[macro-china-hk-ppi|macro_china_hk_ppi]] - 东方财富-经济数据一览-中国香港-香港制造业PPI年率
+- [[macro-china-hk-rate-of-unemployment|macro_china_hk_rate_of_unemployment]] - 东方财富-经济数据一览-中国香港-失业率
+- [[macro-china-hk-trade-diff-ratio|macro_china_hk_trade_diff_ratio]] - 东方财富-经济数据一览-中国香港-香港商品贸易差额年率
+- [[macro-china-imports-yoy|macro_china_imports_yoy]] - 中国以美元计算进口年率报告, 数据区间从 19960201-至今
+- [[macro-china-industrial-production-yoy|macro_china_industrial_production_yoy]] - 中国规模以上工业增加值年率报告, 数据区间从 19900301-至今
+- [[macro-china-insurance|macro_china_insurance]] - 新浪财经-中国宏观经济数据-保险业经营情况
+- [[macro-china-insurance-income|macro_china_insurance_income]] - 原保险保费收入, 数据区间从 200407-至今
+- [[macro-china-international-tourism-fx|macro_china_international_tourism_fx]] - 国家统计局-国际旅游外汇收入构成
+- [[macro-china-lpi-index|macro_china_lpi_index]] - 物流景气指数数据, 数据区间从 20130701-至今
+- [[macro-china-lpr|macro_china_lpr]] - 中国 LPR 品种数据, 数据区间从 19910421-至今
+- [[macro-china-m2-yearly|macro_china_m2_yearly]] - 中国年度 M2 数据, 数据区间从 19980201-至今
+- [[macro-china-market-margin-sh|macro_china_market_margin_sh]] - 上海融资融券报告, 数据区间从 20100331-至今
+- [[macro-china-market-margin-sz|macro_china_market_margin_sz]] - 深圳融资融券报告, 数据区间从 20100331-至今
+- [[macro-china-mobile-number|macro_china_mobile_number]] - 手机出货量, 数据区间从 201201-至今
+- [[macro-china-money-supply|macro_china_money_supply]] - 东方财富-经济数据-中国宏观-中国货币供应量; 数据区间从 200801 至今, 月度数据
+- [[macro-china-national-tax-receipts|macro_china_national_tax_receipts]] - 中国全国税收收入数据, 数据区间从 2005 一季度-至今
+- [[macro-china-nbs-nation|macro_china_nbs_nation]] - 国家统计局全国数据通用接口，包括月度数据、季度数据、年度数据，具体指标见国家统计局新站官网。
+- [[macro-china-nbs-region|macro_china_nbs_region]] - 国家统计局地区数据通用接口，包括分省月度数据、分省季度数据、分省年度数据、主要城市月度价格、主要城市年度数据、港澳台月度数据、港澳台年度数据，具体指标见国家统计局新站官网。
+- [[macro-china-new-financial-credit|macro_china_new_financial_credit]] - 中国新增信贷数据数据, 数据区间从 200801 至今, 月度数据
+- [[macro-china-new-house-price|macro_china_new_house_price]] - 中国新房价指数月度数据, 数据区间从 201101-至今
+- [[macro-china-non-man-pmi|macro_china_non_man_pmi]] - 中国官方非制造业 PMI, 数据区间从 20160101-至今
+- [[macro-china-passenger-load-factor|macro_china_passenger_load_factor]] - 国家统计局-民航客座率及载运率
+- [[macro-china-pmi|macro_china_pmi]] - 采购经理人指数, 数据区间从 200801 至今, 月度数据
+- [[macro-china-pmi-yearly|macro_china_pmi_yearly]] - 中国年度PMI数据, 数据区间从 20050201-至今
+- [[macro-china-postal-telecommunicational|macro_china_postal_telecommunicational]] - 国家统计局-邮电业务基本情况-非累计
+- [[macro-china-ppi|macro_china_ppi]] - 工业品出厂价格指数, 数据区间从 200601 至今, 月度数据
+- [[macro-china-ppi-yearly|macro_china_ppi_yearly]] - 中国年度 PPI 数据, 数据区间从 19950801-至今
+- [[macro-china-qyspjg|macro_china_qyspjg]] - 东方财富-经济数据一览-中国-企业商品价格指数, 数据区间从 20050101-至今
+- [[macro-china-real-estate|macro_china_real_estate]] - 国家统计局-国房景气指数
+- [[macro-china-reserve-requirement-ratio|macro_china_reserve_requirement_ratio]] - 国家统计局-存款准备金率
+- [[macro-china-retail-price-index|macro_china_retail_price_index]] - 国家统计局-商品零售价格指数
+- [[macro-china-rmb|macro_china_rmb]] - 中国人民币汇率中间价报告, 数据区间从 20170103-20210513
+- [[macro-china-shibor-all|macro_china_shibor_all]] - 上海银行业同业拆借报告, 数据区间从 20170317-至今
+- [[macro-china-shrzgm|macro_china_shrzgm]] - 商务数据中心-国内贸易-社会融资规模增量统计, 数据区间从 201501-至今
+- [[macro-china-society-electricity|macro_china_society_electricity]] - 国家统计局-全社会用电分类情况表
+- [[macro-china-society-traffic-volume|macro_china_society_traffic_volume]] - 国家统计局-全社会客货运输量-非累计
+- [[macro-china-stock-market-cap|macro_china_stock_market_cap]] - 全国股票交易统计表, 数据区间从 200801 至今, 月度数据
+- [[macro-china-supply-of-money|macro_china_supply_of_money]] - 新浪财经-中国宏观经济数据-货币供应量
+- [[macro-china-swap-rate|macro_china_swap_rate]] - 国家统计局-FR007利率互换曲线历史数据
+- [[macro-china-trade-balance|macro_china_trade_balance]] - 中国以美元计算贸易帐报告, 数据区间从19810201-至今
+- [[macro-china-urban-unemployment|macro_china_urban_unemployment]] - 国家统计局-月度数据-城镇调查失业率
+- [[macro-china-vegetable-basket|macro_china_vegetable_basket]] - 菜篮子产品批发价格指数, 数据区间从 20050927-至今
+- [[macro-china-wbck|macro_china_wbck]] - 本外币存款, 数据区间从 200802 至今, 月度数据
+- [[macro-china-whxd|macro_china_whxd]] - 外汇贷款数据, 数据区间从 200802 至今, 月度数据
+- [[macro-china-xfzxx|macro_china_xfzxx]] - 东方财富网-消费者信心指数
+- [[macro-china-yw-electronic-index|macro_china_yw_electronic_index]] - 义乌小商品指数-电子元器件数据, 数据区间从 20060911-至今
+- [[macro-cnbs|macro_cnbs]] - 中国国家金融与发展实验室-中国宏观杠杆率数据
+- [[macro-cons-gold|macro_cons_gold]] - 全球最大黄金 ETF—SPDR Gold Trust 持仓报告, 数据区间从 20041119-至今
+- [[macro-cons-opec-month|macro_cons_opec_month]] - 欧佩克报告, 数据区间从 20170118-至今
+- [[macro-cons-silver|macro_cons_silver]] - 全球最大白银 ETF--iShares Silver Trust 持仓报告, 数据区间从 20041202-至今
+- [[macro-euro-cpi-mom|macro_euro_cpi_mom]] - 欧元区 CPI 月率报告, 数据区间从 19900301-至今
+- [[macro-euro-cpi-yoy|macro_euro_cpi_yoy]] - 欧元区 CPI 年率报告, 数据区间从 19910201-至今
+- [[macro-euro-current-account-mom|macro_euro_current_account_mom]] - 欧元区经常帐报告, 数据区间从 20080221-至今
+- [[macro-euro-employment-change-qoq|macro_euro_employment_change_qoq]] - 欧元区季调后就业人数季率报告, 数据区间从 20083017-至今
+- [[macro-euro-gdp-yoy|macro_euro_gdp_yoy]] - 欧元区季度 GDP 年率报告, 数据区间从 20131114-至今
+- [[macro-euro-industrial-production-mom|macro_euro_industrial_production_mom]] - 欧元区工业产出月率报告, 数据区间从 19910301-至今
+- [[macro-euro-lme-holding|macro_euro_lme_holding]] - 伦敦金属交易所(LME)-持仓报告, 数据区间从 20151022-至今
+- [[macro-euro-lme-stock|macro_euro_lme_stock]] - 伦敦金属交易所(LME)-库存报告, 数据区间从 20140702-至今
+- [[macro-euro-manufacturing-pmi|macro_euro_manufacturing_pmi]] - 欧元区制造业 PMI 初值报告, 数据区间从 20080222-至今
+- [[macro-euro-ppi-mom|macro_euro_ppi_mom]] - 欧元区 PPI 月率报告, 数据区间从 19810301-至今
+- [[macro-euro-retail-sales-mom|macro_euro_retail_sales_mom]] - 欧元区零售销售月率报告, 数据区间从 20000301-至今
+- [[macro-euro-sentix-investor-confidence|macro_euro_sentix_investor_confidence]] - 欧元区 Sentix 投资者信心指数报告, 数据区间从 20020801-至今
+- [[macro-euro-services-pmi|macro_euro_services_pmi]] - 欧元区服务业 PMI 终值报告, 数据区间从 20080222-至今
+- [[macro-euro-trade-balance|macro_euro_trade_balance]] - 欧元区未季调贸易帐报告, 数据区间从 19990201-至今
+- [[macro-euro-unemployment-rate-mom|macro_euro_unemployment_rate_mom]] - 欧元区失业率报告, 数据区间从 19980501-至今
+- [[macro-euro-zew-economic-sentiment|macro_euro_zew_economic_sentiment]] - 欧元区 ZEW 经济景气指数报告, 数据区间从 20080212-至今
+- [[macro-germany-cpi-monthly|macro_germany_cpi_monthly]] - 东方财富-数据中心-经济数据一览-德国-消费者物价指数月率终值
+- [[macro-germany-cpi-yearly|macro_germany_cpi_yearly]] - 东方财富-数据中心-经济数据一览-德国-消费者物价指数年率终值
+- [[macro-germany-gdp|macro_germany_gdp]] - 东方财富-数据中心-经济数据一览-德国-GDP
+- [[macro-germany-ifo|macro_germany_ifo]] - 东方财富-数据中心-经济数据一览-IFO商业景气指数
+- [[macro-germany-retail-sale-monthly|macro_germany_retail_sale_monthly]] - 东方财富-数据中心-经济数据一览-德国-实际零售销售月率
+- [[macro-germany-retail-sale-yearly|macro_germany_retail_sale_yearly]] - 东方财富-数据中心-经济数据一览-德国-实际零售销售年率
+- [[macro-germany-trade-adjusted|macro_germany_trade_adjusted]] - 东方财富-数据中心-经济数据一览-德国-贸易帐(季调后)
+- [[macro-germany-zew|macro_germany_zew]] - 东方财富-数据中心-经济数据一览-德国-ZEW 经济景气指数
+- [[macro-global-sox-index|macro_global_sox_index]] - 费城半导体指数数据, 数据区间从 19940504-至今
+- [[macro-info-ws|macro_info_ws]] - 华尔街见闻-日历-宏观
+- [[macro-japan-bank-rate|macro_japan_bank_rate]] - 东方财富-经济数据-日本-央行公布利率决议
+- [[macro-japan-core-cpi-yearly|macro_japan_core_cpi_yearly]] - 东方财富-经济数据-日本-全国核心消费者物价指数年率
+- [[macro-japan-cpi-yearly|macro_japan_cpi_yearly]] - 东方财富-经济数据-日本-全国消费者物价指数年率
+- [[macro-japan-head-indicator|macro_japan_head_indicator]] - 东方财富-经济数据-日本-领先指标终值
+- [[macro-japan-unemployment-rate|macro_japan_unemployment_rate]] - 东方财富-经济数据-日本-失业率
+- [[macro-rmb-deposit|macro_rmb_deposit]] - 同花顺-数据中心-宏观数据-人民币存款余额
+- [[macro-rmb-loan|macro_rmb_loan]] - 同花顺-数据中心-宏观数据-新增人民币贷款
+- [[macro-shipping-bci|macro_shipping_bci]] - 海岬型运费指数, 数据区间从 19990430-至今
+- [[macro-shipping-bcti|macro_shipping_bcti]] - 成品油运输指数, 数据区间从 20011217-至今
+- [[macro-shipping-bdi|macro_shipping_bdi]] - 波罗的海干散货指数, 数据区间从 19881019-至今
+- [[macro-shipping-bpi|macro_shipping_bpi]] - 巴拿马型运费指数, 数据区间从 19981231-至今
+- [[macro-stock-finance|macro_stock_finance]] - 同花顺-数据中心-宏观数据-股票筹资
+- [[macro-swiss-cpi-yearly|macro_swiss_cpi_yearly]] - 东方财富-经济数据-瑞士-消费者物价指数年率
+- [[macro-swiss-gbd-bank-rate|macro_swiss_gbd_bank_rate]] - 东方财富-经济数据-瑞士-央行公布利率决议
+- [[macro-swiss-gbd-yearly|macro_swiss_gbd_yearly]] - 东方财富-经济数据-瑞士-GDP 年率
+- [[macro-swiss-gdp-quarterly|macro_swiss_gdp_quarterly]] - 东方财富-经济数据-瑞士-GDP 季率
+- [[macro-swiss-svme|macro_swiss_svme]] - 东方财富-经济数据-瑞士-SVME采购经理人指数
+- [[macro-swiss-trade|macro_swiss_trade]] - 东方财富-经济数据-瑞士-贸易帐
+- [[macro-uk-bank-rate|macro_uk_bank_rate]] - 东方财富-经济数据-英国-央行公布利率决议
+- [[macro-uk-core-cpi-monthly|macro_uk_core_cpi_monthly]] - 东方财富-经济数据-英国-核心消费者物价指数月率
+- [[macro-uk-core-cpi-yearly|macro_uk_core_cpi_yearly]] - 东方财富-经济数据-英国-核心消费者物价指数年率
+- [[macro-uk-cpi-monthly|macro_uk_cpi_monthly]] - 东方财富-经济数据-英国-消费者物价指数月率
+- [[macro-uk-cpi-yearly|macro_uk_cpi_yearly]] - 东方财富-经济数据-英国-消费者物价指数年率
+- [[macro-uk-gdp-quarterly|macro_uk_gdp_quarterly]] - 东方财富-经济数据-英国-GDP 季率初值
+- [[macro-uk-gdp-yearly|macro_uk_gdp_yearly]] - 东方财富-经济数据-英国-GDP 年率初值
+- [[macro-uk-halifax-monthly|macro_uk_halifax_monthly]] - 东方财富-经济数据-英国-Halifax 房价指数月率
+- [[macro-uk-halifax-yearly|macro_uk_halifax_yearly]] - 东方财富-经济数据-英国-Halifax 房价指数年率
+- [[macro-uk-retail-monthly|macro_uk_retail_monthly]] - 东方财富-经济数据-英国-零售销售月率
+- [[macro-uk-retail-yearly|macro_uk_retail_yearly]] - 东方财富-经济数据-英国-零售销售年率
+- [[macro-uk-rightmove-monthly|macro_uk_rightmove_monthly]] - 东方财富-经济数据-英国-Rightmove 房价指数月率
+- [[macro-uk-rightmove-yearly|macro_uk_rightmove_yearly]] - 东方财富-经济数据-英国-Rightmove 房价指数年率
+- [[macro-uk-trade|macro_uk_trade]] - 东方财富-经济数据-英国-贸易帐
+- [[macro-uk-unemployment-rate|macro_uk_unemployment_rate]] - 东方财富-经济数据-英国-失业率
+- [[macro-usa-adp-employment|macro_usa_adp_employment]] - 美国 ADP 就业人数报告, 数据区间从 20010601-至今
+- [[macro-usa-api-crude-stock|macro_usa_api_crude_stock]] - 美国 API 原油库存报告, 数据区间从 20120328-至今
+- [[macro-usa-building-permits|macro_usa_building_permits]] - 美国营建许可总数报告, 数据区间从 20080220-至今
+- [[macro-usa-business-inventories|macro_usa_business_inventories]] - 美国商业库存月率报告, 数据区间从 19920301-至今
+- [[macro-usa-cb-consumer-confidence|macro_usa_cb_consumer_confidence]] - 美国谘商会消费者信心指数报告, 数据区间从 19700101-至今
+- [[macro-usa-cftc-c-holding|macro_usa_cftc_c_holding]] - 美国商品期货交易委员会CFTC商品类非商业持仓报告, 数据区间从 19830107-至今
+- [[macro-usa-cftc-merchant-currency-holding|macro_usa_cftc_merchant_currency_holding]] - 美国商品期货交易委员会CFTC外汇类商业持仓报告, 数据区间从 19860115-至今
+- [[macro-usa-cftc-merchant-goods-holding|macro_usa_cftc_merchant_goods_holding]] - 美国商品期货交易委员会 CFTC 商品类商业持仓报告, 数据区间从 19860115-至今
+- [[macro-usa-cftc-nc-holding|macro_usa_cftc_nc_holding]] - 美国商品期货交易委员会CFTC外汇类非商业持仓报告, 数据区间从 19830107-至今
+- [[macro-usa-cme-merchant-goods-holding|macro_usa_cme_merchant_goods_holding]] - CME-贵金属, 数据区间从 20180405-至今
+- [[macro-usa-core-cpi-monthly|macro_usa_core_cpi_monthly]] - 美国核心 CPI 月率报告, 数据区间从 19700101-至今
+- [[macro-usa-core-pce-price|macro_usa_core_pce_price]] - 美国核心 PCE 物价指数年率报告, 数据区间从 19700101-至今
+- [[macro-usa-core-ppi|macro_usa_core_ppi]] - 美国核心生产者物价指数(PPI)报告, 数据区间从 20080318-至今
+- [[macro-usa-cpi-monthly|macro_usa_cpi_monthly]] - 美国 CPI 月率报告, 数据区间从 19700101-至今
+- [[macro-usa-cpi-yoy|macro_usa_cpi_yoy]] - 东方财富-经济数据一览-美国-CPI年率, 数据区间从2008-至今
+- [[macro-usa-crude-inner|macro_usa_crude_inner]] - 美国原油产量报告, 数据区间从 19830107-至今, 每周三公布(美国节假日除外), 美国能源信息署(EIA)
+- [[macro-usa-current-account|macro_usa_current_account]] - 美国经常帐报告, 数据区间从 20080317-至今
+- [[macro-usa-durable-goods-orders|macro_usa_durable_goods_orders]] - 美国耐用品订单月率报告, 数据区间从 20080227-至今
+- [[macro-usa-eia-crude-rate|macro_usa_eia_crude_rate]] - 美国EIA原油库存报告, 数据区间从 19950801-至今
+- [[macro-usa-exist-home-sales|macro_usa_exist_home_sales]] - 美国成屋销售总数年化报告, 数据区间从 19700101-至今
+- [[macro-usa-export-price|macro_usa_export_price]] - 美国出口价格指数报告, 数据区间从 19890201-至今
+- [[macro-usa-factory-orders|macro_usa_factory_orders]] - 美国工厂订单月率报告, 数据区间从 19920401-至今
+- [[macro-usa-gdp-monthly|macro_usa_gdp_monthly]] - 美国国内生产总值(GDP)报告, 数据区间从 20080228-至今
+- [[macro-usa-house-price-index|macro_usa_house_price_index]] - 美国 FHFA 房价指数月率报告, 数据区间从 19910301-至今
+- [[macro-usa-house-starts|macro_usa_house_starts]] - 美国新屋开工总数年化报告, 数据区间从 19700101-至今
+- [[macro-usa-import-price|macro_usa_import_price]] - 美国进口物价指数报告, 数据区间从 19890201-至今
+- [[macro-usa-industrial-production|macro_usa_industrial_production]] - 美国工业产出月率报告, 数据区间从 19700101-至今
+- [[macro-usa-initial-jobless|macro_usa_initial_jobless]] - 美国初请失业金人数报告, 数据区间从 19700101-至今
+- [[macro-usa-ism-non-pmi|macro_usa_ism_non_pmi]] - 美国 ISM 非制造业 PMI 报告, 数据区间从 19970801-至今
+- [[macro-usa-ism-pmi|macro_usa_ism_pmi]] - 美国 ISM 制造业 PMI 报告, 数据区间从 19700101-至今
+- [[macro-usa-job-cuts|macro_usa_job_cuts]] - 美国挑战者企业裁员人数报告, 数据区间从 19940201-至今
+- [[macro-usa-lmci|macro_usa_lmci]] - 美联储劳动力市场状况指数报告, 数据区间从 20141006-至今
+- [[macro-usa-michigan-consumer-sentiment|macro_usa_michigan_consumer_sentiment]] - 美国密歇根大学消费者信心指数初值报告, 数据区间从 19700301-至今
+- [[macro-usa-nahb-house-market-index|macro_usa_nahb_house_market_index]] - 美国 NAHB 房产市场指数报告, 数据区间从 19850201-至今
+- [[macro-usa-new-home-sales|macro_usa_new_home_sales]] - 美国新屋销售总数年化报告, 数据区间从 19700101-至今
+- [[macro-usa-nfib-small-business|macro_usa_nfib_small_business]] - 美国NFIB小型企业信心指数报告, 数据区间从 19750201-至今
+- [[macro-usa-non-farm|macro_usa_non_farm]] - 美国非农就业人数报告, 数据区间从 19700102-至今
+- [[macro-usa-pending-home-sales|macro_usa_pending_home_sales]] - 美国成屋签约销售指数月率报告, 数据区间从 20010301-至今
+- [[macro-usa-personal-spending|macro_usa_personal_spending]] - 美国个人支出月率报告, 数据区间从 19700101-至今
+- [[macro-usa-phs|macro_usa_phs]] - 东方财富-经济数据一览-美国-未决房屋销售月率, 数据区间从 20080201-至今
+- [[macro-usa-pmi|macro_usa_pmi]] - 美国 Markit 制造业 PMI 初值报告, 数据区间从 20120601-至今
+- [[macro-usa-ppi|macro_usa_ppi]] - 美国生产者物价指数(PPI)报告, 数据区间从 20080226-至今
+- [[macro-usa-real-consumer-spending|macro_usa_real_consumer_spending]] - 美国实际个人消费支出季率初值报告, 数据区间从 20131107-至今
+- [[macro-usa-retail-sales|macro_usa_retail_sales]] - 美国零售销售月率报告, 数据区间从 19920301-至今
+- [[macro-usa-rig-count|macro_usa_rig_count]] - 贝克休斯钻井报告, 数据区间从 19870717-至今
+- [[macro-usa-services-pmi|macro_usa_services_pmi]] - 美国Markit服务业PMI初值报告, 数据区间从 20120701-至今
+- [[macro-usa-spcs20|macro_usa_spcs20]] - 美国S&P/CS20座大城市房价指数年率报告, 数据区间从 20010201-至今
+- [[macro-usa-trade-balance|macro_usa_trade_balance]] - 美国贸易帐报告, 数据区间从 19700101-至今
+- [[macro-usa-unemployment-rate|macro_usa_unemployment_rate]] - 美国失业率报告, 数据区间从 19700101-至今
+- [[news-economic-baidu|news_economic_baidu]] - 全球宏观指标重大事件
+
+## 相关
+
+- [[index]]
+- [[_meta/topic-map]]

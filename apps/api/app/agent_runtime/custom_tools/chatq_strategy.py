@@ -9,9 +9,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from claude_agent_sdk import McpSdkServerConfig
-from mcp.server import Server
-from mcp.types import CallToolResult, TextContent, Tool
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.db.session import get_session_factory
@@ -146,9 +143,8 @@ class ToolTextResult:
     is_error: bool = False
 
 
-def build_chatq_strategy_mcp_server(command: AgentExecutionCommand) -> object:
-    server = Server(CHATQ_STRATEGY_SERVER_NAME, version="1.0.0")
-    input_schema = {
+def build_chatq_strategy_tool_schema() -> dict[str, object]:
+    return {
         "type": "object",
         "properties": {
             "command": {
@@ -162,39 +158,6 @@ def build_chatq_strategy_mcp_server(command: AgentExecutionCommand) -> object:
         "required": ["command"],
         "additionalProperties": False,
     }
-
-    @server.list_tools()
-    async def list_tools() -> list[Tool]:
-        return [
-            Tool.model_validate(
-                {
-                    "name": CHATQ_STRATEGY_MCP_TOOL_NAME,
-                    "description": (
-                        "Operate Chat-Quant strategies and backtests using a CLI-style "
-                        "command string. Supports --help and normal --flag arguments. "
-                        "The current project is supplied by Chat-Quant; do not pass "
-                        "project_id, user_id, or project_path."
-                    ),
-                    "inputSchema": input_schema,
-                }
-            )
-        ]
-
-    @server.call_tool(validate_input=False)
-    async def call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
-        if name != CHATQ_STRATEGY_MCP_TOOL_NAME:
-            raise ValueError(f"Tool not found: {name}")
-        result = await handle_chatq_strategy_tool(command, arguments)
-        return CallToolResult(
-            content=[TextContent(type="text", text=result.text)],
-            isError=result.is_error,
-        )
-
-    return McpSdkServerConfig(
-        type="sdk",
-        name=CHATQ_STRATEGY_SERVER_NAME,
-        instance=server,
-    )
 
 
 async def handle_chatq_strategy_tool(
@@ -293,7 +256,10 @@ def build_command_parser() -> argparse.ArgumentParser:
     add_mode_arg(modify, default=None)
     add_risk_note_arg(modify)
 
-    switch_version = strategy_subparsers.add_parser("switch-version", help="Switch current version.")
+    switch_version = strategy_subparsers.add_parser(
+        "switch-version",
+        help="Switch current version.",
+    )
     switch_version.add_argument("--strategy-id", required=True)
     switch_version.add_argument("--strategy-version-id", required=True)
 

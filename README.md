@@ -185,19 +185,51 @@ npm --prefix apps/web run build
 
 ## 桌面端
 
+桌面端基于 Electron 和 electron-builder，打包时会先完成三件事：
+
+1. 使用 PyInstaller 把 FastAPI 后端打成 API sidecar。
+2. 构建 `apps/web` 前端静态资源。
+3. 由 electron-builder 生成 macOS 桌面端产物。
+
+打包前先安装依赖：
+
+```bash
+uv sync --project apps/api --all-groups
+npm --prefix apps/web install
+npm --prefix apps/desktop install
+```
+
 开发模式会先构建 Web，再启动 Electron：
 
 ```bash
 npm run dev:desktop
 ```
 
-打包目录版本：
+如果只是本地验证 Electron 应用结构，可以打包目录版本：
 
 ```bash
 npm run pack:desktop
 ```
 
-桌面端 API sidecar 构建脚本位于 `apps/desktop/scripts/build-api-sidecar.sh`，产物目录为 `apps/desktop/sidecars/`。
+该命令会生成可直接运行的 `.app` 目录，产物位于 `apps/desktop/dist/`，但不会生成用于分发的安装包。
+
+打包 macOS 分发版本需要在 macOS 上执行：
+
+```bash
+npm --prefix apps/desktop run dist
+```
+
+执行成功后，macOS 产物会输出到 `apps/desktop/dist/`，通常包括：
+
+- `Chat Quant-<version>-<arch>.dmg`：给用户安装的磁盘镜像。
+- `Chat Quant-<version>-<arch>-mac.zip`：压缩版应用包。
+- `.blockmap`：electron-builder 生成的增量更新元数据。
+
+Apple Silicon 机器默认会生成 `arm64` 产物；Intel Mac 默认会生成 `x64` 产物。API sidecar 由 PyInstaller 在本机环境构建，建议在目标架构对应的 Mac 上打包。
+
+当前项目未配置 macOS 代码签名和公证，生成的 DMG/ZIP 适合本地测试或内部试用。正式对外分发前，需要补充 Apple Developer 证书、签名和公证配置，否则用户首次打开时可能会被 Gatekeeper 拦截。
+
+桌面端 API sidecar 构建脚本位于 `apps/desktop/scripts/build-api-sidecar.sh`，sidecar 产物目录为 `apps/desktop/sidecars/`。
 
 ## 部署
 

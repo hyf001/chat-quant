@@ -2,9 +2,10 @@ import asyncio
 from pathlib import Path
 
 import pytest
+from app.agent_runtime.custom_tools import build_chatq_mcp_server
+from app.agent_runtime.custom_tools.chatq_python import CHATQ_PYTHON_TOOL_NAME
 from app.agent_runtime.custom_tools.chatq_strategy import (
     CHATQ_STRATEGY_TOOL_NAME,
-    build_chatq_strategy_mcp_server,
     handle_chatq_strategy_tool,
 )
 from app.schema.agent_runtime import AgentExecutionCommand
@@ -34,9 +35,10 @@ def test_update_strategy_can_update_metadata_and_create_version(tmp_path: Path) 
 
 
 def test_chatq_strategy_mcp_server_uses_native_server() -> None:
-    server_config = build_chatq_strategy_mcp_server(_command())
+    server_config = build_chatq_mcp_server(_command())
 
     assert CHATQ_STRATEGY_TOOL_NAME == "mcp__chatq__strategy"
+    assert CHATQ_PYTHON_TOOL_NAME == "mcp__chatq__python"
     assert server_config["type"] == "sdk"
     assert server_config["name"] == "chatq"
     assert server_config["instance"] is not None
@@ -60,7 +62,9 @@ async def _run_create_and_list_strategy_assertions(project_dir: Path) -> None:
 
     assert result.is_error is False
     assert "策略已创建：均线突破策略" in result.text
-    strategy_id_line = next(line for line in result.text.splitlines() if line.startswith("strategy_id: "))
+    strategy_id_line = next(
+        line for line in result.text.splitlines() if line.startswith("strategy_id: ")
+    )
     strategy_id = strategy_id_line.removeprefix("strategy_id: ")
 
     listed = await handle_chatq_strategy_tool(command, {"command": "strategy list"})
@@ -116,7 +120,9 @@ async def _run_update_strategy_with_version_assertions(project_dir: Path) -> Non
         command,
         {"command": "strategy create --name 均线策略 --source-file strategy_tool_update.py"},
     )
-    strategy_id_line = next(line for line in created.text.splitlines() if line.startswith("strategy_id: "))
+    strategy_id_line = next(
+        line for line in created.text.splitlines() if line.startswith("strategy_id: ")
+    )
     strategy_id = strategy_id_line.removeprefix("strategy_id: ")
     updated_source = payload["source_code"].replace('"default": 20', '"default": 30', 1)
     source_file.write_text(updated_source, encoding="utf-8")

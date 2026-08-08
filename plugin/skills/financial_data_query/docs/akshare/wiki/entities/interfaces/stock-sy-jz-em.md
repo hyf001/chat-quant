@@ -1,0 +1,82 @@
+---
+title: "stock_sy_jz_em - 个股商誉减值明细"
+created: 2026-07-26
+updated: 2026-07-26
+type: entity
+tags: [akshare, data-dictionary, interface, stock, parameters, returns, example]
+sources: [raw/data-dictionary/stock/stock.md]
+confidence: high
+---
+# stock_sy_jz_em
+
+- 分类: [[stock-stock|AKShare 股票数据]]
+- 主题路径: 注意：该接口返回的数据只有最近一个交易日的有开盘价，其他日期开盘价为 0 > 商誉专题 > 个股商誉减值明细
+- 描述: 东方财富网-数据中心-特色数据-商誉-个股商誉减值明细
+- 目标地址: https://data.eastmoney.com/sy/jzlist.html
+- 限量: 单次返回所有历史数据
+- 来源页面: https://akshare.akfamily.xyz/data/stock/stock.html
+
+## 相关
+
+- [[stock-stock|AKShare 股票数据]]
+- [[_meta/topic-map]]
+
+## 源文摘录
+
+#### 个股商誉减值明细
+
+接口: stock_sy_jz_em
+
+目标地址: https://data.eastmoney.com/sy/jzlist.html
+
+描述: 东方财富网-数据中心-特色数据-商誉-个股商誉减值明细
+
+限量: 单次返回所有历史数据
+
+输入参数
+
+| 名称   | 类型  | 描述                      |
+|------|-----|-------------------------|
+| date | str | date="20230331"; 参见网页选项 |
+
+输出参数
+
+| 名称         | 类型      | 描述      |
+|------------|---------|---------|
+| 序号         | int64   | -       |
+| 股票代码       | object  | -       |
+| 股票简称       | object  | -       |
+| 商誉         | float64 | 注意单位: 元 |
+| 商誉减值       | float64 | 注意单位: 元 |
+| 商誉减值占净资产比例 | float64 | -       |
+| 净利润        | float64 | 注意单位: 元 |
+| 商誉减值占净利润比例 | float64 | -       |
+| 公告日期       | object  | -       |
+| 交易市场       | object  | -       |
+
+接口示例
+
+```python
+import akshare as ak
+
+stock_sy_jz_em_df = ak.stock_sy_jz_em(date="20230331")
+print(stock_sy_jz_em_df)
+```
+
+数据示例
+
+```
+        序号    股票代码  股票简称  ...  商誉减值占净利润比例        公告日期  交易市场
+0        1  600587  新华医疗  ...         NaN  2023-04-28  沪市主板
+1        2  000829  天音控股  ...         NaN  2023-04-29  深市主板
+2        3  600271  航天信息  ...         NaN  2023-04-29  沪市主板
+3        4  600383  金地集团  ...         NaN  2023-04-29  沪市主板
+4        5  000917  电广传媒  ...         NaN  2023-04-28  深市主板
+    ...     ...   ...  ...         ...         ...   ...
+2446  2447  002846  英联股份  ...         NaN  2023-04-29  深市主板
+2447  2448  688625  呈和科技  ...         NaN  2023-04-25   科创板
+2448  2449  601995  中金公司  ...         NaN  2023-04-29  沪市主板
+2449  2450  002724   海洋王  ...         NaN  2023-04-28  深市主板
+2450  2451  002815  崇达技术  ...         NaN  2023-04-27  深市主板
+[2451 rows x 11 columns]
+```

@@ -20,19 +20,25 @@ AKShare wiki 位于：
 - `docs/akshare/wiki/entities/interfaces/*.md`：接口页，包含参数、返回字段、示例代码和来源摘录。
 - `docs/akshare/wiki/raw/data-dictionary/`：原始数据字典快照，仅在需要核对源文时阅读。
 
-## 当前运行环境
+需要参考完整查询样例或工具调用格式时，阅读 `references/examples.md`。
 
-当前环境是 `/Users/huyufei/Documents/hyf/code/github/chat-quant` 下的虚拟环境解释器：
+## Python 执行环境
+
+执行查询代码时，使用平台提供的 `mcp__chatq__python` 工具，不要写死本机 Python 路径，也不要直接调用 Bash、`python`、`.venv/bin/python` 或系统解释器。
+
+工具入参是 `command` 字符串；实际传入 `command` 的内容从 `run` 开始：
 
 ```text
-.venv/bin/python
+run --code "..."
 ```
 
-执行查询时，从仓库根目录运行：
+或先在当前智能体工作项目目录下生成查询脚本，再用完整绝对路径执行：
 
-```bash
-.venv/bin/python -c "import sys; print(sys.executable); print(sys.version)"
+```text
+run --code-file /当前智能体工作项目目录/queries/query_financial_data.py
 ```
+
+使用 `--code-file` 时，路径必须是当前智能体工作项目目录下的完整绝对路径；不要传相对路径，不要传仓库外、系统目录或用户敏感目录中的文件。
 
 ## 渐进式阅读
 
@@ -54,11 +60,19 @@ AKShare wiki 位于：
 ## 查询流程
 
 1. 仅在必要时向用户澄清关键条件：标的、市场、代码、日期范围、频率、字段或输出格式。
-2. 从 AKShare wiki 中找到候选接口，并说明选择依据。
+2. 从 AKShare wiki 中找到候选接口，并说明选择依据；同类数据尽量同时识别 2-3 个可替代接口。
 3. 根据接口页里的参数和示例编写 Python 查询代码，不凭记忆猜参数。
-4. 使用当前项目提供的 Python 环境直接执行 Python 代码。
-5. 如果环境缺少 `akshare` 或依赖不可用，如实说明；不要切换到系统 Python，也不要擅自安装依赖。
-6. 返回结果时说明接口、参数、行列规模、关键数据片段和来源限制。
+4. 使用 `mcp__chatq__python` 执行 Python 查询代码。
+5. 如果某个 AKShare 接口因网络、限流、空数据、数据源不可用或字段变化失败，不要立即结束；回到 wiki 搜索同类替代接口或不同数据源接口，调整参数后继续尝试。
+6. 如果环境缺少 `akshare` 或依赖不可用，如实说明；不要切换到系统 Python，也不要擅自安装依赖。
+7. 返回结果时说明接口、参数、行列规模、关键数据片段和来源限制。
+
+## 失败重试策略
+
+- 单个接口失败时，至少尝试 1 个同类替代接口；如果 wiki 中有明确的多数据源接口，优先尝试 2-3 个不同数据源。
+- A 股历史行情常见替代方向包括东财、腾讯、新浪等来源；以本地 wiki 记录为准，不凭记忆编造函数名。
+- 只有在替代接口也失败、wiki 中没有合适替代、或失败原因是依赖缺失/参数不可满足时，才向用户说明无法完成。
+- 最终答复要区分“成功接口”和“失败接口”，简要列出失败接口名、关键参数和失败原因；不要只建议用户稍后重试。
 
 ## 编码规则
 

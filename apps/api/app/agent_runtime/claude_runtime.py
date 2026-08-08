@@ -7,9 +7,10 @@ from datetime import UTC, datetime
 from claude_agent_sdk import ClaudeAgentOptions, query
 
 from app.agent_runtime.custom_tools import (
-    CHATQ_STRATEGY_SERVER_NAME,
+    CHATQ_PYTHON_TOOL_NAME,
+    CHATQ_SERVER_NAME,
     CHATQ_STRATEGY_TOOL_NAME,
-    build_chatq_strategy_mcp_server,
+    build_chatq_mcp_server,
 )
 from app.agent_runtime.hooks import AgentRuntimeHooks
 from app.agent_runtime.prompts import build_system_prompt
@@ -209,13 +210,13 @@ class ClaudeAgentRuntime:
             tuple(command.allowed_tools or self.settings.agent_available_tools),
         )
         tools = _ensure_skill_tool(tools, skills)
-        tools = _dedupe_tools((*tools, CHATQ_STRATEGY_TOOL_NAME))
+        tools = _dedupe_tools((*tools, CHATQ_STRATEGY_TOOL_NAME, CHATQ_PYTHON_TOOL_NAME))
         return ClaudeAgentOptions(
             tools=list(tools),
             allowed_tools=list(tools),
             disallowed_tools=[],
             mcp_servers={
-                CHATQ_STRATEGY_SERVER_NAME: build_chatq_strategy_mcp_server(command),
+                CHATQ_SERVER_NAME: build_chatq_mcp_server(command),
             },
             strict_mcp_config=True,
             system_prompt={

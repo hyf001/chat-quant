@@ -4,7 +4,11 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime, serialize_sdk_message
-from app.agent_runtime.custom_tools import CHATQ_STRATEGY_SERVER_NAME, CHATQ_STRATEGY_TOOL_NAME
+from app.agent_runtime.custom_tools import (
+    CHATQ_PYTHON_TOOL_NAME,
+    CHATQ_SERVER_NAME,
+    CHATQ_STRATEGY_TOOL_NAME,
+)
 from app.core.config import DEFAULT_AGENT_TOOLS, Settings
 from app.schema.agent_runtime import (
     AgentExecutionCommand,
@@ -49,12 +53,16 @@ def test_sdk_options_omit_thinking_by_default_for_compatible_agent_api() -> None
     )
     sdk_options = runtime.build_sdk_options(command, ())
 
-    assert sdk_options.tools == [*DEFAULT_AGENT_TOOLS, CHATQ_STRATEGY_TOOL_NAME]
+    assert sdk_options.tools == [
+        *DEFAULT_AGENT_TOOLS,
+        CHATQ_STRATEGY_TOOL_NAME,
+        CHATQ_PYTHON_TOOL_NAME,
+    ]
     assert "Skill" not in sdk_options.tools
     assert sdk_options.allowed_tools == sdk_options.tools
     assert sdk_options.permission_mode == "bypassPermissions"
     assert sdk_options.strict_mcp_config is True
-    assert set(sdk_options.mcp_servers) == {CHATQ_STRATEGY_SERVER_NAME}
+    assert set(sdk_options.mcp_servers) == {CHATQ_SERVER_NAME}
     assert sdk_options.thinking is None
     assert sdk_options.plugins == [
         {
@@ -124,7 +132,12 @@ def test_runtime_uses_fixed_plugin_dir_skills_without_copying_into_cwd(
 
     assert sdk_options.cwd == str(project_dir)
     assert sdk_options.plugins == [{"type": "local", "path": str(plugin_dir.resolve())}]
-    assert sdk_options.tools == [*DEFAULT_AGENT_TOOLS, "Skill", CHATQ_STRATEGY_TOOL_NAME]
+    assert sdk_options.tools == [
+        *DEFAULT_AGENT_TOOLS,
+        "Skill",
+        CHATQ_STRATEGY_TOOL_NAME,
+        CHATQ_PYTHON_TOOL_NAME,
+    ]
     assert "Skill" in sdk_options.tools
     assert sdk_options.skills == [
         "chat-quant:custom_local_skill",
@@ -153,7 +166,12 @@ def test_sdk_options_delegate_permissions_to_sdk_rules_without_hooks() -> None:
         ("chat-quant:financial_data_query",),
     )
 
-    assert sdk_options.tools == [*DEFAULT_AGENT_TOOLS, "Skill", CHATQ_STRATEGY_TOOL_NAME]
+    assert sdk_options.tools == [
+        *DEFAULT_AGENT_TOOLS,
+        "Skill",
+        CHATQ_STRATEGY_TOOL_NAME,
+        CHATQ_PYTHON_TOOL_NAME,
+    ]
     assert "Skill" in sdk_options.tools
     assert sdk_options.allowed_tools == sdk_options.tools
     assert sdk_options.permission_mode == "bypassPermissions"
@@ -181,7 +199,13 @@ def test_runtime_uses_configured_tools_and_adds_system_skill_tool() -> None:
         ("chat-quant:financial_data_query",),
     )
 
-    assert sdk_options.tools == ["Bash", "Read", "Skill", CHATQ_STRATEGY_TOOL_NAME]
+    assert sdk_options.tools == [
+        "Bash",
+        "Read",
+        "Skill",
+        CHATQ_STRATEGY_TOOL_NAME,
+        CHATQ_PYTHON_TOOL_NAME,
+    ]
     assert sdk_options.allowed_tools == sdk_options.tools
     assert sdk_options.permission_mode == "bypassPermissions"
     assert sdk_options.skills == ["chat-quant:financial_data_query"]
@@ -207,7 +231,13 @@ def test_runtime_adds_skill_tool_when_plugin_skills_exist() -> None:
         ("chat-quant:financial_data_query",),
     )
 
-    assert sdk_options.tools == ["Bash", "Read", "Skill", CHATQ_STRATEGY_TOOL_NAME]
+    assert sdk_options.tools == [
+        "Bash",
+        "Read",
+        "Skill",
+        CHATQ_STRATEGY_TOOL_NAME,
+        CHATQ_PYTHON_TOOL_NAME,
+    ]
     assert sdk_options.skills == ["chat-quant:financial_data_query"]
 
 

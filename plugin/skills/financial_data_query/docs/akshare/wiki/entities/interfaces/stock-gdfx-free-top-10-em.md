@@ -1,0 +1,80 @@
+---
+title: "stock_gdfx_free_top_10_em - 十大流通股东(个股)"
+created: 2026-07-26
+updated: 2026-07-26
+type: entity
+tags: [akshare, data-dictionary, interface, stock, parameters, returns, example]
+sources: [raw/data-dictionary/stock/stock.md]
+confidence: high
+---
+# stock_gdfx_free_top_10_em
+
+- 分类: [[stock-stock|AKShare 股票数据]]
+- 主题路径: 注意：该接口返回的数据只有最近一个交易日的有开盘价，其他日期开盘价为 0 > 基本面数据 > 十大流通股东(个股)
+- 描述: 东方财富网-个股-十大流通股东
+- 目标地址: https://emweb.securities.eastmoney.com/PC_HSF10/ShareholderResearch/Index?type=web&code=SH688686#sdltgd-0
+- 限量: 单次返回指定 symbol 和 date 的所有数据
+- 来源页面: https://akshare.akfamily.xyz/data/stock/stock.html
+
+## 相关
+
+- [[stock-stock|AKShare 股票数据]]
+- [[_meta/topic-map]]
+
+## 源文摘录
+
+#### 十大流通股东(个股)
+
+接口: stock_gdfx_free_top_10_em
+
+目标地址: https://emweb.securities.eastmoney.com/PC_HSF10/ShareholderResearch/Index?type=web&code=SH688686#sdltgd-0
+
+描述: 东方财富网-个股-十大流通股东
+
+限量: 单次返回指定 symbol 和 date 的所有数据
+
+输入参数
+
+| 名称     | 类型  | 描述                            |
+|--------|-----|-------------------------------|
+| symbol | str | symbol="sh688686"; 带市场标识的股票代码 |
+| date   | str | date="20240930"; 财报发布季度最后日    |
+
+输出参数
+
+| 名称         | 类型      | 描述      |
+|------------|---------|---------|
+| 名次         | int64   | -       |
+| 股东名称       | object  | -       |
+| 股东性质       | object  | -       |
+| 股份类型       | object  | -       |
+| 持股数        | int64   | 注意单位: 股 |
+| 占总流通股本持股比例 | float64 | 注意单位: % |
+| 增减         | object  | 注意单位: 股 |
+| 变动比率       | float64 | 注意单位: % |
+
+接口示例
+
+```python
+import akshare as ak
+
+stock_gdfx_free_top_10_em_df = ak.stock_gdfx_free_top_10_em(symbol="sh688686", date="20240930")
+print(stock_gdfx_free_top_10_em_df)
+```
+
+数据示例
+
+```
+   名次                               股东名称  ...        增减       变动比率
+0   1                                 卢治临  ...        不变        NaN
+1   2                                 卢盛林  ...        不变        NaN
+2   3                                 许学亮  ...        不变        NaN
+3   4                  宁波千智创业投资合伙企业(有限合伙)  ...        不变        NaN
+4   5                          香港中央结算有限公司  ...  -1132820 -25.435429
+5   6  国信证券-招商银行-国信证券鼎信10号科创板战略配售集合资产管理计划  ...        不变        NaN
+6   7        摩根资产管理(新加坡)有限公司-摩根中国A股市场机会基金  ...        不变        NaN
+7   8                                 李茂波  ...        不变        NaN
+8   9     招商银行股份有限公司-惠升惠泽灵活配置混合型发起式证券投资基金  ...        不变        NaN
+9  10         MERRILL LYNCH INTERNATIONAL  ...        新进        NaN
+[10 rows x 8 columns]
+```

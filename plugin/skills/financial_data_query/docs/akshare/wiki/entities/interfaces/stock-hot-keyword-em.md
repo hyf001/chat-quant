@@ -1,0 +1,75 @@
+---
+title: "stock_hot_keyword_em - 热门关键词"
+created: 2026-07-26
+updated: 2026-07-26
+type: entity
+tags: [akshare, data-dictionary, interface, stock, parameters, returns, example]
+sources: [raw/data-dictionary/stock/stock.md]
+confidence: high
+---
+# stock_hot_keyword_em
+
+- 分类: [[stock-stock|AKShare 股票数据]]
+- 主题路径: 注意：该接口返回的数据只有最近一个交易日的有开盘价，其他日期开盘价为 0 > 股票热度 > 热门关键词
+- 描述: 东方财富-个股人气榜-热门关键词
+- 目标地址: http://guba.eastmoney.com/rank/stock?code=000665
+- 限量: 单次返回指定 symbol 的最近交易日时点数据
+- 来源页面: https://akshare.akfamily.xyz/data/stock/stock.html
+
+## 相关
+
+- [[stock-stock|AKShare 股票数据]]
+- [[_meta/topic-map]]
+
+## 源文摘录
+
+#### 热门关键词
+
+接口: stock_hot_keyword_em
+
+目标地址: http://guba.eastmoney.com/rank/stock?code=000665
+
+描述: 东方财富-个股人气榜-热门关键词
+
+限量: 单次返回指定 symbol 的最近交易日时点数据
+
+输入参数
+
+| 名称     | 类型  | 描述                |
+|--------|-----|-------------------|
+| symbol | str | symbol="SZ000665" |
+
+输出参数
+
+| 名称   | 类型     | 描述  |
+|------|--------|-----|
+| 时间   | object | -   |
+| 股票代码 | object | -   |
+| 概念名称 | object | -   |
+| 概念代码 | object | -   |
+| 热度   | int64  | -   |
+
+接口示例
+
+```python
+import akshare as ak
+
+stock_hot_keyword_em_df = ak.stock_hot_keyword_em(symbol="SZ000665")
+print(stock_hot_keyword_em_df)
+```
+
+数据示例
+
+```
+               时间      股票代码   概念名称    概念代码  热度
+0  2022-02-28 12:00:00  SZ000665  元宇宙概念  BK1009  2138
+1  2022-02-28 12:00:00  SZ000665     广电  BK0904  1082
+2  2022-02-28 12:00:00  SZ000665    云计算  BK0579   411
+3  2022-02-28 12:00:00  SZ000665   虚拟现实  BK0722   152
+4  2022-02-28 12:00:00  SZ000665   彩票概念  BK0671   131
+5  2022-02-28 12:00:00  SZ000665   转债标的  BK0528    51
+6  2022-02-28 12:00:00  SZ000665   华为概念  BK0854    36
+7  2022-02-28 12:00:00  SZ000665   智慧城市  BK0628    31
+8  2022-02-28 12:00:00  SZ000665   预盈预增  BK0571    13
+9  2022-02-28 12:00:00  SZ000665   超清视频  BK0859     1
+```

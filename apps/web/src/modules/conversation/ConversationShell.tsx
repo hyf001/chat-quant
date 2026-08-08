@@ -758,8 +758,12 @@ function ToolCallDisclosure({ toolCall }: { toolCall: ToolCallView }) {
   return (
     <details className="group/tool-call overflow-hidden rounded border border-line bg-panel">
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 font-mono text-xs transition-colors hover:bg-soft">
-        <span className="min-w-0 truncate font-bold text-ink">{toolCall.name}</span>
-        <span className="min-w-0 truncate text-muted">{toolCall.command}</span>
+        <span className="shrink-0 whitespace-nowrap font-bold text-ink" title={toolCall.name}>
+          {toolCall.name}
+        </span>
+        <span className="min-w-0 flex-1 truncate text-muted" title={toolCall.command}>
+          {toolCall.command}
+        </span>
         <span className="ml-auto flex shrink-0 items-center gap-2">
           <span
             className={`rounded px-2 py-0.5 font-sans text-[10px] font-bold ${toolStatusBadgeClass(

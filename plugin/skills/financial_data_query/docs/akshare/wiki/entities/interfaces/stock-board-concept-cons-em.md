@@ -1,0 +1,88 @@
+---
+title: "stock_board_concept_cons_em - 东方财富-成份股"
+created: 2026-07-26
+updated: 2026-07-26
+type: entity
+tags: [akshare, data-dictionary, interface, stock, parameters, returns, example]
+sources: [raw/data-dictionary/stock/stock.md]
+confidence: high
+---
+# stock_board_concept_cons_em
+
+- 分类: [[stock-stock|AKShare 股票数据]]
+- 主题路径: 注意：该接口返回的数据只有最近一个交易日的有开盘价，其他日期开盘价为 0 > 概念板块 > 东方财富-成份股
+- 描述: 东方财富-沪深板块-概念板块-板块成份
+- 目标地址: http://quote.eastmoney.com/center/boardlist.html#boards-BK06551
+- 限量: 单次返回当前时刻所有成份股
+- 来源页面: https://akshare.akfamily.xyz/data/stock/stock.html
+
+## 相关
+
+- [[stock-stock|AKShare 股票数据]]
+- [[_meta/topic-map]]
+
+## 源文摘录
+
+#### 东方财富-成份股
+
+接口: stock_board_concept_cons_em
+
+目标地址: http://quote.eastmoney.com/center/boardlist.html#boards-BK06551
+
+描述: 东方财富-沪深板块-概念板块-板块成份
+
+限量: 单次返回当前时刻所有成份股
+
+输入参数
+
+| 名称     | 类型  | 描述                                                                                              |
+|--------|-----|-------------------------------------------------------------------------------------------------|
+| symbol | str | symbol="融资融券"; 支持传入板块代码比如：BK0655，可以通过调用 **ak.stock_board_concept_name_em()** 查看东方财富-概念板块的所有行业名称 |
+
+输出参数
+
+| 名称     | 类型      | 描述      |
+|--------|---------|---------|
+| 序号     | int64   | -       |
+| 代码     | object  | -       |
+| 名称     | object  | -       |
+| 最新价    | float64 | -       |
+| 涨跌幅    | float64 | 注意单位: % |
+| 涨跌额    | float64 | -       |
+| 成交量    | float64 | 注意单位: 手 |
+| 成交额    | float64 | -       |
+| 振幅     | float64 | 注意单位: % |
+| 最高     | float64 | -       |
+| 最低     | float64 | -       |
+| 今开     | float64 | -       |
+| 昨收     | float64 | -       |
+| 换手率    | float64 | 注意单位: % |
+| 市盈率-动态 | float64 | -       |
+| 市净率    | float64 | -       |
+
+接口示例
+
+```python
+import akshare as ak
+
+stock_board_concept_cons_em_df = ak.stock_board_concept_cons_em(symbol="融资融券")
+print(stock_board_concept_cons_em_df)
+```
+
+数据示例
+
+```
+       序号  代码    名称    最新价     涨跌幅  ...     今开      昨收    换手率  市盈率-动态    市净率
+0        1  301557   N常友  89.99  211.60  ...  80.23   28.88  83.66   37.89   4.00
+1        2  603409   N汇通  50.81  110.13  ...  48.50   24.18  75.43   38.13   4.44
+2        3  832149   利尔达  17.29   30.00  ...  13.01   13.30  37.53  -49.74  10.49
+3        4  837006  晟楠科技  31.39   29.98  ...  24.24   24.15  47.44 -195.48   8.85
+4        5  831167   鑫汇科  33.87   29.97  ...  29.90   26.06  15.82   59.27   6.26
+...    ...     ...   ...    ...     ...  ...    ...     ...    ...     ...    ...
+3669  3670  603663  三祥新材  24.75  -10.00  ...  24.75   27.50  14.56  102.19   8.02
+3670  3671  603906  龙蟠科技  12.13  -10.01  ...  13.01   13.48   9.35  -19.98   2.73
+3671  3672  000042  中洲控股   6.71  -10.05  ...   7.45    7.46   3.17   -6.45   0.86
+3672  3673  870436  大地电气  25.53  -10.20  ...  26.72   28.43  11.62  -32.46   6.16
+3673  3674  920106  林泰新材  93.35  -11.93  ...  98.00  106.00  25.92   34.45   8.44
+[3674 rows x 16 columns]
+```
