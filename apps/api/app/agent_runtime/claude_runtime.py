@@ -324,9 +324,8 @@ class ClaudeAgentRuntime:
         system_prompt = build_system_prompt(
             command.context,
         )
-        tools = _sdk_tools(
-            tuple(command.allowed_tools or self.settings.agent_allowed_tools_default),
-            skills,
+        tools = _dedupe_tools(
+            tuple(command.allowed_tools or self.settings.agent_available_tools),
         )
         return ClaudeAgentOptionsSnapshot(
             model=self.settings.agent_model,
@@ -338,8 +337,8 @@ class ClaudeAgentRuntime:
                 "append": system_prompt,
             },
             tools=tools,
-            allowed_tools=_sdk_allowed_tools(tools),
-            disallowed_tools=_sdk_disallowed_tools(tools),
+            allowed_tools=(),
+            disallowed_tools=(),
             skills=skills,
             include_partial_messages=self.settings.agent_include_partial_messages,
             setting_sources=("project",),
@@ -358,7 +357,7 @@ class ClaudeAgentRuntime:
             allowed_tools=list(options.allowed_tools),
             disallowed_tools=list(options.disallowed_tools),
             system_prompt=options.system_prompt,
-            permission_mode="dontAsk",
+            permission_mode="bypassPermissions",
             resume=command.sdk_session_id,
             max_turns=options.max_turns,
             model=options.model,
@@ -412,21 +411,8 @@ def _sdk_thinking_config(settings: Settings) -> dict[str, object] | None:
     return {"type": settings.agent_thinking_type}
 
 
-def _sdk_tools(configured_tools: tuple[str, ...], skills: tuple[str, ...]) -> tuple[str, ...]:
-    tools = list(dict.fromkeys(configured_tools))
-    if skills and "Skill" not in tools:
-        tools.append("Skill")
-    return tuple(tools)
-
-
-def _sdk_allowed_tools(tools: tuple[str, ...]) -> tuple[str, ...]:
-    return tuple(tool for tool in tools if tool != "Skill")
-
-
-def _sdk_disallowed_tools(tools: tuple[str, ...]) -> tuple[str, ...]:
-    available = set(tools)
-    blocked_tools = ("Write", "Edit", "NotebookEdit", "Read", "WebFetch")
-    return tuple(tool for tool in blocked_tools if tool not in available)
+def _dedupe_tools(configured_tools: tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(configured_tools))
 
 
 def _min_deadline(first_deadline: float, second_deadline: float | None) -> float:

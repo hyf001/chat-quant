@@ -148,7 +148,7 @@ def _payload_from_settings(settings: Settings) -> AppSettingsPayload:
                 type=settings.agent_thinking_type,
                 budget_tokens=settings.agent_thinking_budget_tokens,
             ),
-            allowed_tools_default=settings.agent_allowed_tools_default,
+            available_tools=settings.agent_available_tools,
             env_allowlist=settings.agent_env_allowlist,
         ),
     )
@@ -172,6 +172,6 @@ def _flatten_payload(payload: AppSettingsPayload) -> dict[str, ConfigValue]:
         "agent_include_partial_messages": payload.agent.include_partial_messages,
         "agent_thinking_type": payload.agent.thinking.type,
         "agent_thinking_budget_tokens": payload.agent.thinking.budget_tokens,
-        "agent_allowed_tools_default": payload.agent.allowed_tools_default,
+        "agent_available_tools": payload.agent.available_tools,
         "agent_env_allowlist": payload.agent.env_allowlist,
     }

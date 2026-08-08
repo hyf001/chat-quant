@@ -4,14 +4,13 @@ import {
   BarChart3,
   Brain,
   ChevronDown,
-  ExternalLink,
   FileCode2,
   FileText,
   Loader2,
   Search,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
+import { Children, useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import type { AssetLink, ChatSession, SDKStreamEnvelope, SdkMessage } from "../../shared/api";
@@ -112,26 +111,39 @@ const markdownComponents: Components = {
   },
 };
 
+const tradingValidationIllustrationSrc = `${import.meta.env.BASE_URL}trading-validation-illustration.png`;
+const inspectorIdPattern = /\b(?:sbt|str|stv)_[A-Za-z0-9]+\b/g;
+
 function markdownComponentsFor(
   onOpenInspectorObject?: (object: InspectorObject) => void,
 ): Components {
   return {
     ...markdownComponents,
+    p({ children }) {
+      return <p>{linkifyInspectorIds(children, onOpenInspectorObject)}</p>;
+    },
+    li({ children }) {
+      return <li>{linkifyInspectorIds(children, onOpenInspectorObject)}</li>;
+    },
+    td({ children }) {
+      return <td>{linkifyInspectorIds(children, onOpenInspectorObject)}</td>;
+    },
+    th({ children }) {
+      return <th>{linkifyInspectorIds(children, onOpenInspectorObject)}</th>;
+    },
+    h1({ children }) {
+      return <h1>{linkifyInspectorIds(children, onOpenInspectorObject)}</h1>;
+    },
+    h2({ children }) {
+      return <h2>{linkifyInspectorIds(children, onOpenInspectorObject)}</h2>;
+    },
+    h3({ children }) {
+      return <h3>{linkifyInspectorIds(children, onOpenInspectorObject)}</h3>;
+    },
+    h4({ children }) {
+      return <h4>{linkifyInspectorIds(children, onOpenInspectorObject)}</h4>;
+    },
     a({ children, href }) {
-      const object = parseInspectorHref(href);
-      if (object && onOpenInspectorObject) {
-        return (
-          <button
-            className="my-1 inline-flex items-center gap-2 rounded-md border-2 border-brandBlue/50 bg-compareSoft px-3 py-1.5 text-xs font-bold text-brandBlue shadow-sm transition-colors hover:border-brandBlue hover:bg-panel focus:outline-none focus:ring-2 focus:ring-signal/25"
-            type="button"
-            onClick={() => onOpenInspectorObject(object)}
-          >
-            <InspectorLinkIcon object={object} />
-            {children}
-            <ExternalLink className="h-3.5 w-3.5" />
-          </button>
-        );
-      }
       return (
         <a href={href} rel="noreferrer" target={href?.startsWith("http") ? "_blank" : undefined}>
           {children}
@@ -141,44 +153,70 @@ function markdownComponentsFor(
   };
 }
 
-function chatqUrlTransform(url: string, key: string, node: unknown): string {
-  void key;
-  void node;
-  if (url.startsWith("chatq://")) {
-    return url;
-  }
-  return defaultUrlTransform(url);
-}
-
-function InspectorLinkIcon({ object }: { object: InspectorObject }) {
-  if (object.type === "backtest") {
-    return <BarChart3 className="h-4 w-4" />;
-  }
-  if (object.type === "strategy") {
-    return <FileCode2 className="h-4 w-4" />;
-  }
-  return <FileText className="h-4 w-4" />;
-}
-
-function parseInspectorHref(href: string | undefined): InspectorObject | null {
-  if (!href?.startsWith("chatq://")) {
-    return null;
-  }
-  const normalized = href.replace("chatq://", "");
-  const [type, id] = normalized.split("/");
-  if (!id) {
-    return null;
-  }
-  if (type === "backtest") {
+function inspectorObjectFromId(id: string): InspectorObject | null {
+  if (id.startsWith("sbt_")) {
     return { type: "backtest", id };
   }
-  if (type === "strategy") {
+  if (id.startsWith("str_")) {
     return { type: "strategy", id };
   }
-  if (type === "strategy-version") {
+  if (id.startsWith("stv_")) {
     return { type: "strategy-version", id };
   }
   return null;
+}
+
+function linkifyInspectorIds(
+  children: ReactNode,
+  onOpenInspectorObject?: (object: InspectorObject) => void,
+): ReactNode {
+  if (!onOpenInspectorObject) {
+    return children;
+  }
+  return Children.toArray(children).flatMap((child, childIndex) => {
+    if (typeof child !== "string") {
+      return child;
+    }
+    return linkifyString(child, childIndex, onOpenInspectorObject);
+  });
+}
+
+function linkifyString(
+  value: string,
+  childIndex: number,
+  onOpenInspectorObject: (object: InspectorObject) => void,
+): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let lastIndex = 0;
+  for (const match of value.matchAll(inspectorIdPattern)) {
+    const id = match[0];
+    const index = match.index ?? 0;
+    const object = inspectorObjectFromId(id);
+    if (!object) {
+      continue;
+    }
+    if (index > lastIndex) {
+      nodes.push(value.slice(lastIndex, index));
+    }
+    nodes.push(
+      <button
+        className="inline font-mono text-xs font-semibold text-brandBlue underline decoration-brandBlue/40 decoration-dotted underline-offset-2 transition-colors hover:text-signal focus:outline-none focus:ring-2 focus:ring-signal/20"
+        key={`${id}-${childIndex}-${index}`}
+        type="button"
+        onClick={() => onOpenInspectorObject(object)}
+      >
+        {id}
+      </button>,
+    );
+    lastIndex = index + id.length;
+  }
+  if (lastIndex === 0) {
+    return [value];
+  }
+  if (lastIndex < value.length) {
+    nodes.push(value.slice(lastIndex));
+  }
+  return nodes;
 }
 
 function blockText(message: SdkMessage): string {
@@ -416,7 +454,7 @@ function NewTaskHome({
           <img
             alt="交易策略验证流程插画"
             className="pointer-events-none h-80 w-auto max-w-none select-none object-contain sm:h-[22rem] lg:h-[25rem]"
-            src="/trading-validation-illustration.png"
+            src={tradingValidationIllustrationSrc}
           />
         </section>
 
@@ -591,7 +629,6 @@ function MarkdownContent({
       <ReactMarkdown
         components={components}
         remarkPlugins={[remarkGfm]}
-        urlTransform={chatqUrlTransform}
       >
         {text}
       </ReactMarkdown>

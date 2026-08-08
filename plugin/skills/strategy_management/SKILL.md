@@ -27,14 +27,3 @@ description: 当需要在 Chat-Quant 中管理量化策略和回测时使用，�
 3. 从仓库根目录执行项目提供的策略管理命令；`list`、`create` 等项目级命令显式传 `--project-path "<当前项目路径>"`。不确定参数时先运行 `uv run python -m cli.chatq_strategy --help` 或 `uv run python -m cli.chatq_strategy <command> --help`。
 4. 对会创建资源的动作，记录返回的 `strategy_id`、`strategy_version_id`、`backtest_id`。
 5. 修改策略后，优先用当前版本回测；需要历史对比时再指定版本。
-
-## 可打开对象链接
-
-策略管理命令返回 JSON 中如果包含 `artifacts[].display_token`，最终回答必须原样输出这些
-`display_token`，不要改写链接、ID、括号或标题。`display_token` 会被前端识别并在右侧对象面板打开。
-
-支持的对象链接包括：
-
-- `[查看回测结果](chatq://backtest/sbt_xxx)`
-- `[打开策略](chatq://strategy/str_xxx)`
-- `[查看策略版本](chatq://strategy-version/stv_xxx)`

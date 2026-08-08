@@ -9,8 +9,8 @@
     "build:sidecar": "bash scripts/build-api-sidecar.sh",
     "build": "npm run build:web",
     "dev": "npm run build:web && electron .",
-    "pack": "npm run build:web && electron-builder --dir",
-    "dist": "npm run build:web && electron-builder"
+    "pack": "npm run build:sidecar && npm run build:web && electron-builder --dir",
+    "dist": "npm run build:sidecar && npm run build:web && electron-builder"
   },
   "devDependencies": {
     "electron": "^33.4.11",
@@ -35,6 +35,20 @@
       {
         "from": "sidecars",
         "to": "sidecars",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../../plugin",
+        "to": "plugin",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../../docs",
+        "to": "docs",
         "filter": [
           "**/*"
         ]

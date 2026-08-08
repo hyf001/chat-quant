@@ -130,7 +130,7 @@ export type AgentSettings = {
     type: "disabled" | "adaptive" | "enabled";
     budget_tokens: number;
   };
-  allowed_tools_default: string[];
+  available_tools: string[];
   env_allowlist: string[];
 };
 

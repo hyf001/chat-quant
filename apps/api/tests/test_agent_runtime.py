@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime, serialize_sdk_message
-from app.core.config import Settings
+from app.core.config import DEFAULT_AGENT_TOOLS, Settings
 from app.schema.agent_runtime import (
     AgentExecutionCommand,
     RuntimeErrorCode,
@@ -50,9 +50,9 @@ def test_sdk_options_omit_thinking_by_default_for_compatible_agent_api() -> None
 
     sdk_options = runtime.build_sdk_options(command, options)
 
-    assert sdk_options.tools == ["Bash"]
-    assert sdk_options.allowed_tools == ["Bash"]
-    assert sdk_options.permission_mode == "dontAsk"
+    assert sdk_options.tools == DEFAULT_AGENT_TOOLS
+    assert sdk_options.allowed_tools == []
+    assert sdk_options.permission_mode == "bypassPermissions"
     assert sdk_options.thinking is None
     assert sdk_options.plugins == [
         {
@@ -119,7 +119,7 @@ def test_runtime_uses_plugin_namespaced_skills_without_copying_into_cwd(tmp_path
 
     assert sdk_options.cwd == str(project_dir)
     assert sdk_options.plugins == [{"type": "local", "path": str(plugin_dir)}]
-    assert sdk_options.tools == ["Bash", "Skill"]
+    assert sdk_options.tools == DEFAULT_AGENT_TOOLS
     assert sdk_options.skills == [
         "chat-quant:custom_local_skill",
         "chat-quant:financial_data_query",
@@ -147,10 +147,37 @@ def test_sdk_options_delegate_permissions_to_sdk_rules_without_hooks() -> None:
     )
     sdk_options = runtime.build_sdk_options(command, options)
 
-    assert sdk_options.tools == ["Bash", "Skill"]
-    assert sdk_options.allowed_tools == ["Bash"]
-    assert "Skill" not in sdk_options.allowed_tools
+    assert sdk_options.tools == DEFAULT_AGENT_TOOLS
+    assert sdk_options.allowed_tools == []
+    assert sdk_options.permission_mode == "bypassPermissions"
     assert not hasattr(sdk_options, "hooks") or sdk_options.hooks is None
+
+
+def test_runtime_uses_configured_tools_exactly() -> None:
+    runtime = ClaudeAgentRuntime(
+        settings=Settings(agent_available_tools=["Bash", "Read"]),
+        sdk_query=fake_sdk_query,
+    )
+    command = AgentExecutionCommand(
+        project_id="project_1",
+        chat_session_id="chat_1",
+        user_message_id="msg_1",
+        project_dir=str(Path.cwd()),
+        sdk_session_id=None,
+        request_id="req_1",
+        user_prompt="你好",
+    )
+
+    options = runtime.build_agent_options(
+        command,
+        ("chat-quant:financial_data_query",),
+    )
+    sdk_options = runtime.build_sdk_options(command, options)
+
+    assert sdk_options.tools == ["Bash", "Read"]
+    assert sdk_options.allowed_tools == []
+    assert sdk_options.permission_mode == "bypassPermissions"
+    assert sdk_options.skills == ["chat-quant:financial_data_query"]
 
 
 def test_sdk_env_maps_configured_token_to_claude_code_api_key() -> None:

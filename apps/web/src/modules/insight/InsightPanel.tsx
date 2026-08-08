@@ -6,6 +6,8 @@ import {
   GitBranch,
   LineChart,
   Loader2,
+  PanelRightClose,
+  PanelRightOpen,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
@@ -56,6 +58,7 @@ export function InsightPanel({
   onOpenObject,
 }: InsightPanelProps) {
   const [panelWidth, setPanelWidth] = useState(() => storedPanelWidth());
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [state, setState] = useState<InspectorState>({ status: "idle" });
 
   useEffect(() => {
@@ -65,6 +68,7 @@ export function InsightPanel({
     }
 
     let isCancelled = false;
+    setIsCollapsed(false);
     setState({ status: "loading" });
 
     loadInspectorObject(activeObject)
@@ -106,29 +110,54 @@ export function InsightPanel({
     window.addEventListener("pointerup", handleUp);
   }, [panelWidth]);
 
+  if (isCollapsed) {
+    return (
+      <button
+        className="fixed right-3 top-3 z-40 hidden h-9 w-9 place-items-center rounded-md border border-line bg-panel text-graphite shadow-sm transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20 xl:grid"
+        type="button"
+        title="显示侧边栏"
+        aria-label="显示侧边栏"
+        onClick={() => setIsCollapsed(false)}
+      >
+        <PanelRightOpen className="h-4 w-4" />
+      </button>
+    );
+  }
+
   return (
-    <aside
-      className="glass-panel relative hidden shrink-0 overflow-auto border-l border-line px-4 py-5 xl:block"
-      style={{ width: panelWidth }}
-      aria-label="对象详情"
-    >
-      <div
-        className="absolute left-0 top-0 h-full w-1 cursor-col-resize border-l border-transparent transition-colors hover:border-signal"
-        role="separator"
-        aria-orientation="vertical"
-        onPointerDown={startResize}
-      />
-      <PanelHeader />
-      {state.status === "idle" ? (
-        <SessionAssets session={session} assets={assets} onOpenObject={onOpenObject} />
-      ) : state.status === "loading" ? (
-        <LoadingState />
-      ) : state.status === "error" ? (
-        <ErrorState message={state.message} />
-      ) : (
-        <ObjectDetail state={state} onOpenObject={onOpenObject} />
-      )}
-    </aside>
+    <>
+      <button
+        className="fixed right-3 top-3 z-40 hidden h-9 w-9 place-items-center rounded-md border border-line bg-panel text-graphite shadow-sm transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20 xl:grid"
+        type="button"
+        title="隐藏侧边栏"
+        aria-label="隐藏侧边栏"
+        onClick={() => setIsCollapsed(true)}
+      >
+        <PanelRightClose className="h-4 w-4" />
+      </button>
+      <aside
+        className="glass-panel relative hidden shrink-0 overflow-auto border-l border-line px-4 pb-5 pt-14 xl:block"
+        style={{ width: panelWidth }}
+        aria-label="对象详情"
+      >
+        <div
+          className="absolute left-0 top-0 h-full w-1 cursor-col-resize border-l border-transparent transition-colors hover:border-signal"
+          role="separator"
+          aria-orientation="vertical"
+          onPointerDown={startResize}
+        />
+        <PanelHeader />
+        {state.status === "idle" ? (
+          <SessionAssets session={session} assets={assets} onOpenObject={onOpenObject} />
+        ) : state.status === "loading" ? (
+          <LoadingState />
+        ) : state.status === "error" ? (
+          <ErrorState message={state.message} />
+        ) : (
+          <ObjectDetail state={state} onOpenObject={onOpenObject} />
+        )}
+      </aside>
+    </>
   );
 }
 

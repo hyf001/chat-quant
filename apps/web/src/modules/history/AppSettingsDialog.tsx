@@ -479,7 +479,7 @@ function AgentForm({
         <SelectField label="思考模式" value={agent.thinking.type} options={["disabled", "adaptive", "enabled"]} onChange={(type) => onChange({ ...draft, agent: { ...agent, thinking: { ...agent.thinking, type: type as AppSettings["agent"]["thinking"]["type"] } } })} />
         <NumberField label="思考预算" value={agent.thinking.budget_tokens} onChange={(budget_tokens) => onChange({ ...draft, agent: { ...agent, thinking: { ...agent.thinking, budget_tokens } } })} />
         <ToggleField label="保留增量消息" checked={agent.include_partial_messages} onChange={(include_partial_messages) => onChange({ ...draft, agent: { ...agent, include_partial_messages } })} />
-        <ListField label="默认工具" value={agent.allowed_tools_default} onChange={(allowed_tools_default) => onChange({ ...draft, agent: { ...agent, allowed_tools_default } })} />
+        <ListField label="可用工具" value={agent.available_tools} onChange={(available_tools) => onChange({ ...draft, agent: { ...agent, available_tools } })} />
         <ListField label="环境变量白名单" value={agent.env_allowlist} onChange={(env_allowlist) => onChange({ ...draft, agent: { ...agent, env_allowlist } })} />
       </FormSection>
     </div>

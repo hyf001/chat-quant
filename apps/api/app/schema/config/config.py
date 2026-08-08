@@ -37,7 +37,7 @@ class AgentSettingsPayload(BaseModel):
     skill_plugin_name: str = Field(min_length=1)
     include_partial_messages: bool
     thinking: AgentThinkingSettingsPayload
-    allowed_tools_default: list[str]
+    available_tools: list[str]
     env_allowlist: list[str]
 
 

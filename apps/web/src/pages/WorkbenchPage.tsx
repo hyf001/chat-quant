@@ -6,14 +6,13 @@ import { ConversationShell } from "../modules/conversation";
 import { HistoryPanel, type PrimaryRoute } from "../modules/history";
 import { InsightPanel } from "../modules/insight";
 import { StrategyList } from "../modules/strategy";
-import { WorkspaceHeader, WorkspaceLayout } from "../modules/workspace";
+import { WorkspaceLayout } from "../modules/workspace";
 import {
   createProject,
   deleteProject,
   getAgentChatSessionDetail,
   getAppConfig,
   getChatSessionDetail,
-  getRuntimeHealth,
   listChatSessions,
   listProviderModels,
   listProjects,
@@ -29,7 +28,6 @@ import {
   type InspectorObject,
   type Project,
   type ProviderModel,
-  type RuntimeHealth,
   type SDKStreamEnvelope,
   type SdkMessage,
 } from "../shared/api";
@@ -61,7 +59,6 @@ export function WorkbenchPage() {
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(null);
   const [composerModelState, setComposerModelState] = useState<ComposerModelState>({
     currentModel: null,
     models: [],
@@ -80,10 +77,19 @@ export function WorkbenchPage() {
     () => projects.find((project) => project.id === activeProjectId) ?? null,
     [activeProjectId, projects],
   );
-  const conversationMessages = useMemo(
+  const envelopeMessages = useMemo(
     () => messagesFromEnvelopes(conversationEnvelopes),
     [conversationEnvelopes],
   );
+  const conversationMessages = useMemo(() => {
+    if (envelopeMessages.length > 0) {
+      return envelopeMessages;
+    }
+    if (detail?.messages.length) {
+      return detail.messages;
+    }
+    return activeSession ? fallbackMessagesFromSession(activeSession) : [];
+  }, [activeSession, detail?.messages, envelopeMessages]);
   const conversationRuntimeEnvelopes = conversationEnvelopes;
   const hasNoProjects = !isProjectLoading && projects.length === 0;
 
@@ -209,12 +215,6 @@ export function WorkbenchPage() {
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
-
-  useEffect(() => {
-    getRuntimeHealth()
-      .then(setRuntimeHealth)
-      .catch(() => setRuntimeHealth(null));
   }, []);
 
   useEffect(() => {
@@ -426,14 +426,6 @@ export function WorkbenchPage() {
           onNavigateRoute={handleNavigateRoute}
           onQueryChange={handleSearchChange}
           onSelectSession={handleSelectSession}
-        />
-      }
-      header={
-        <WorkspaceHeader
-          project={activeProject}
-          session={activeRoute === "new-task" ? activeSession : null}
-          isConnected={!error}
-          health={runtimeHealth}
         />
       }
       conversation={
@@ -785,8 +777,40 @@ function isDisplayableUserMessage(event: Record<string, unknown>): boolean {
   if (typeof event.content === "string") {
     return true;
   }
+  if (textFromContentBlocks(event.content)) {
+    return true;
+  }
   const message = asRecord(event.message);
-  return typeof message?.content === "string";
+  return typeof message?.content === "string" || Boolean(textFromContentBlocks(message?.content));
+}
+
+function fallbackMessagesFromSession(session: ChatSession): SdkMessage[] {
+  const text = fallbackUserTextFromSession(session);
+  if (!text) {
+    return [];
+  }
+  return [
+    {
+      uuid: `session_fallback_${session.id}`,
+      role: "user",
+      content: [{ type: "text", text, tool_use_id: null, name: null }],
+      created_at: session.last_saved_at ?? session.updated_at ?? session.created_at,
+    },
+  ];
+}
+
+function fallbackUserTextFromSession(session: ChatSession): string | null {
+  const summaryPrefix = "最近请求：";
+  if (session.snippet?.trim()) {
+    return session.snippet.trim();
+  }
+  if (session.summary?.startsWith(summaryPrefix)) {
+    return session.summary.slice(summaryPrefix.length).trim() || null;
+  }
+  if (session.title && session.title !== "Chat-Quant 分析会话" && session.title !== "新的分析会话") {
+    return session.title;
+  }
+  return null;
 }
 
 function appendStreamEnvelope(

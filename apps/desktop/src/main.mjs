@@ -1,10 +1,14 @@
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
+import { createRequire } from "node:module";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+const require = createRequire(import.meta.url);
+const electron = require("electron");
+const { app, BrowserWindow, dialog, ipcMain } = electron;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const API_HOST = "127.0.0.1";
 const DEFAULT_API_PORT = 12345;
@@ -25,6 +29,7 @@ async function main() {
   app.on("before-quit", stopApiSidecar);
 
   mainWindow = createWindow(apiBaseUrl);
+  attachWindowDiagnostics(mainWindow);
 
   try {
     await waitForHealth(`${apiBaseUrl}/api/health`, 120_000);
@@ -88,14 +93,34 @@ function createWindow(apiBaseUrl) {
   });
 }
 
+function attachWindowDiagnostics(window) {
+  window.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedUrl) => {
+    console.error(
+      `Renderer failed to load ${validatedUrl}: ${errorCode} ${errorDescription}`,
+    );
+  });
+  window.webContents.on("render-process-gone", (_event, details) => {
+    console.error(`Renderer process gone: ${details.reason} (${details.exitCode})`);
+  });
+  window.webContents.on("console-message", (_event, level, message, line, sourceId) => {
+    if (level >= 2) {
+      console.error(`[renderer] ${sourceId}:${line} ${message}`);
+    }
+  });
+  window.webContents.on("preload-error", (_event, preloadPath, error) => {
+    console.error(`Preload failed ${preloadPath}: ${error.message}`);
+  });
+
+  if (process.env.CHATQ_DESKTOP_OPEN_DEVTOOLS === "1") {
+    window.webContents.openDevTools({ mode: "detach" });
+  }
+}
+
 function startApiSidecar(port, configFilePath) {
   const command = sidecarCommand(port);
   const child = spawn(command.executable, command.args, {
     cwd: command.cwd,
-    env: {
-      ...process.env,
-      CHATQ_CONFIG_FILE: configFilePath,
-    },
+    env: sidecarEnv(configFilePath),
     stdio: ["ignore", "pipe", "pipe"],
   });
 
@@ -114,13 +139,58 @@ function startApiSidecar(port, configFilePath) {
   return child;
 }
 
+function sidecarEnv(configFilePath) {
+  return {
+    ...process.env,
+    CHATQ_CONFIG_FILE: configFilePath,
+    PATH: desktopCliPath(),
+  };
+}
+
+function desktopCliPath() {
+  const existingPath = process.env.PATH ?? "";
+  const home = os.homedir();
+  const candidateDirs = [
+    ...nvmNodeBinDirs(home),
+    path.join(home, ".local", "bin"),
+    path.join(home, ".npm-global", "bin"),
+    path.join(home, "node_modules", ".bin"),
+    path.join(home, ".yarn", "bin"),
+    path.join(home, ".claude", "local"),
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    "/usr/bin",
+    "/bin",
+    "/usr/sbin",
+    "/sbin",
+  ];
+  const pathParts = [...candidateDirs, ...existingPath.split(path.delimiter)]
+    .filter(Boolean)
+    .filter((dir, index, dirs) => dirs.indexOf(dir) === index);
+  return pathParts.join(path.delimiter);
+}
+
+function nvmNodeBinDirs(home) {
+  const versionsDir = path.join(home, ".nvm", "versions", "node");
+  if (!existsSync(versionsDir)) {
+    return [];
+  }
+  try {
+    return readdirSync(versionsDir)
+      .map((version) => path.join(versionsDir, version, "bin"))
+      .filter((binDir) => existsSync(binDir));
+  } catch {
+    return [];
+  }
+}
+
 function sidecarCommand(port) {
   const packagedBinary = packagedSidecarPath();
   if (app.isPackaged && packagedBinary) {
     return {
       executable: packagedBinary,
       args: ["--host", API_HOST, "--port", String(port)],
-      cwd: path.dirname(packagedBinary),
+      cwd: process.resourcesPath,
     };
   }
 
@@ -145,8 +215,18 @@ function sidecarCommand(port) {
 
 function packagedSidecarPath() {
   const sidecarName = process.platform === "win32" ? "chat-quant-api.exe" : "chat-quant-api";
-  const candidate = path.join(process.resourcesPath, "sidecars", sidecarName);
-  return existsSync(candidate) ? candidate : null;
+  const onedirCandidate = path.join(
+    process.resourcesPath,
+    "sidecars",
+    "chat-quant-api",
+    sidecarName,
+  );
+  if (existsSync(onedirCandidate)) {
+    return onedirCandidate;
+  }
+
+  const onefileCandidate = path.join(process.resourcesPath, "sidecars", sidecarName);
+  return existsSync(onefileCandidate) ? onefileCandidate : null;
 }
 
 function stopApiSidecar() {

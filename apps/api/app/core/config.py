@@ -13,6 +13,23 @@ JsonPrimitive = str | int | bool | None
 ConfigValue = JsonPrimitive | list[str]
 DEFAULT_MODEL_PROVIDER_ID = "provider_anthropic_default"
 DEFAULT_MODEL_PROVIDER_NAME = "Anthropic"
+DEFAULT_AGENT_TOOLS = [
+    "Task",
+    "Bash",
+    "Glob",
+    "Grep",
+    "LS",
+    "Read",
+    "Edit",
+    "MultiEdit",
+    "Write",
+    "NotebookRead",
+    "NotebookEdit",
+    "WebFetch",
+    "TodoWrite",
+    "WebSearch",
+    "Skill",
+]
 ANTHROPIC_DEFAULT_MODELS = (
     "claude-opus-4-1",
     "claude-opus-4",
@@ -175,12 +192,12 @@ APP_CONFIG_DEFINITIONS: tuple[ConfigDefinition, ...] = (
         "thinking=enabled 时使用的 token 预算。",
     ),
     ConfigDefinition(
-        "agent_allowed_tools_default",
-        "默认工具",
+        "agent_available_tools",
+        "可用工具",
         "agent",
         "list",
-        ["Bash"],
-        "未显式指定时允许 Agent 使用的工具。",
+        DEFAULT_AGENT_TOOLS,
+        "传给 Agent SDK 的可用工具列表；删除某项即禁用该工具。",
     ),
     ConfigDefinition(
         "agent_env_allowlist",
@@ -246,7 +263,7 @@ class Settings(BaseModel):
     agent_include_partial_messages: bool = True
     agent_thinking_type: Literal["disabled", "adaptive", "enabled"] = "disabled"
     agent_thinking_budget_tokens: int = 2048
-    agent_allowed_tools_default: list[str] = ["Bash"]
+    agent_available_tools: list[str] = DEFAULT_AGENT_TOOLS
     agent_env_allowlist: list[str] = ["CHATQ_API_BASE", "CHATQ_AGENT_TOKEN"]
 
     @field_validator("cors_origins", mode="before")
@@ -256,7 +273,7 @@ class Settings(BaseModel):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
 
-    @field_validator("agent_allowed_tools_default", "agent_env_allowlist", mode="before")
+    @field_validator("agent_available_tools", "agent_env_allowlist", mode="before")
     @classmethod
     def split_csv_values(cls, value: str | list[str]) -> list[str]:
         if isinstance(value, str):
@@ -346,15 +363,28 @@ def _load_sqlite_config_values(database_path: Path) -> dict[str, ConfigValue]:
 
     values: dict[str, ConfigValue] = {}
     for key, value_json in rows:
-        definition = definitions.get(str(key))
+        config_key = _normalized_config_key(str(key))
+        definition = definitions.get(config_key)
         if definition is None:
             continue
         try:
             decoded = json.loads(str(value_json))
+            if config_key == "agent_available_tools" and _is_legacy_agent_tools_default(decoded):
+                continue
             values[definition.key] = coerce_config_value(definition, decoded)
         except (TypeError, ValueError, json.JSONDecodeError):
             continue
     return values
+
+
+def _normalized_config_key(key: str) -> str:
+    if key == "agent_allowed_tools_default":
+        return "agent_available_tools"
+    return key
+
+
+def _is_legacy_agent_tools_default(value: object) -> bool:
+    return value == ["Bash"]
 
 
 def _load_agent_provider_values(

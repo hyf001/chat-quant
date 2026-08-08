@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 
 type WorkspaceLayoutProps = {
   history: ReactNode;
-  header: ReactNode;
   conversation: ReactNode;
   result?: ReactNode;
   composer?: ReactNode;
@@ -11,7 +10,6 @@ type WorkspaceLayoutProps = {
 
 export function WorkspaceLayout({
   history,
-  header,
   conversation,
   result,
   composer,
@@ -22,7 +20,6 @@ export function WorkspaceLayout({
       <div className="flex h-full min-w-0 flex-1">
         {history}
         <section className="flex h-full min-w-0 flex-1 flex-col bg-app/70">
-          {header}
           <div className="min-h-0 flex-1 overflow-y-auto p-5 lg:p-7">
             {conversation}
             {result ? (
