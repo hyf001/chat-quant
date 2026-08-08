@@ -141,8 +141,6 @@ def _payload_from_settings(settings: Settings) -> AppSettingsPayload:
             max_turns=settings.agent_max_turns,
             turn_timeout_seconds=settings.agent_turn_timeout_seconds,
             first_token_timeout_seconds=settings.agent_first_token_timeout_seconds,
-            skill_plugin_dir=settings.agent_skill_plugin_dir,
-            skill_plugin_name=settings.agent_skill_plugin_name,
             include_partial_messages=settings.agent_include_partial_messages,
             thinking=AgentThinkingSettingsPayload(
                 type=settings.agent_thinking_type,
@@ -167,8 +165,6 @@ def _flatten_payload(payload: AppSettingsPayload) -> dict[str, ConfigValue]:
         "agent_max_turns": payload.agent.max_turns,
         "agent_turn_timeout_seconds": payload.agent.turn_timeout_seconds,
         "agent_first_token_timeout_seconds": payload.agent.first_token_timeout_seconds,
-        "agent_skill_plugin_dir": payload.agent.skill_plugin_dir,
-        "agent_skill_plugin_name": payload.agent.skill_plugin_name,
         "agent_include_partial_messages": payload.agent.include_partial_messages,
         "agent_thinking_type": payload.agent.thinking.type,
         "agent_thinking_budget_tokens": payload.agent.thinking.budget_tokens,

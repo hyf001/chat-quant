@@ -161,6 +161,8 @@ def sdk_message_to_response(message: object) -> SDKMessageResponse | None:
     if session_response := _session_message_to_response(message):
         return session_response
     if isinstance(message, UserMessage):
+        if _is_internal_skill_context(message.content):
+            return None
         return SDKMessageResponse(
             uuid=message.uuid or _new_message_id(),
             role=SDKMessageRole.USER,
@@ -260,6 +262,8 @@ def _session_message_to_response(message: object) -> SDKMessageResponse | None:
         return None
 
     content = _session_message_content(message_type, payload)
+    if role == SDKMessageRole.USER and _is_internal_skill_context(content):
+        return None
     content_blocks = _json_content_blocks(content)
     if not content_blocks:
         return None
@@ -370,6 +374,25 @@ def _tool_result_text(content: object) -> str | None:
     if isinstance(content, str):
         return content
     return json.dumps(content, ensure_ascii=False, default=str)
+
+
+def _is_internal_skill_context(content: object) -> bool:
+    text = _first_text_content(content)
+    return text is not None and text.lstrip().startswith("Base directory for this skill:")
+
+
+def _first_text_content(content: object) -> str | None:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        for block in content:
+            if isinstance(block, TextBlock):
+                return block.text
+            if isinstance(block, dict) and block.get("type") == "text":
+                text = block.get("text")
+                if isinstance(text, str):
+                    return text
+    return None
 
 
 def _new_message_id() -> str:

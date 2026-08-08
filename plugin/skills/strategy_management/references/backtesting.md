@@ -2,54 +2,52 @@
 
 ## 执行入口
 
-所有命令从仓库根目录执行：
+使用 MCP 工具 `mcp__chatq__strategy`，只传一个 CLI-style `command` 字符串。下面所有代码块都是 `command` 字符串本身，不是 Bash 命令，也不是 JSON：
 
-```bash
-uv run python -m cli.chatq_strategy <command>
+```text
+<subcommand> [--flags]
 ```
 
-不要传 API base URL。连接地址由项目配置读取。
+不要用 Bash 或本地 HTTP 请求替代 MCP 工具。当前业务项目由后端绑定，不要传 `--project-path`、`--project-id`、`--user-id` 或 API base URL。
+
+ID 前缀含义：
+
+- `str_xxx`：策略 ID，只能用于 `backtest`、`show`、`versions` 等策略命令。
+- `stv_xxx`：策略版本 ID，用于 `backtest run --strategy-version-id` 和 `backtest list --strategy-version-id`。
+- `sbt_xxx`：回测记录 ID，用于 `backtest show --backtest-id`。
+
+不确定参数时先调用：
+
+```text
+backtest run --help
+backtest list --help
+backtest show --help
+```
 
 ## 默认回测当前版本
 
 不传版本 ID 时，回测当前策略版本：
 
-```bash
-uv run python -m cli.chatq_strategy backtest "$STRATEGY_ID" \
-  --symbol 600519.SH \
-  --start 2024-01-01 \
-  --end 2024-04-30 \
-  --cash 100000 \
-  --commission 0.001 \
-  --slippage 0.0002
+```text
+backtest run --strategy-id str_xxx --symbol 600519.SH --start 2024-01-01 --end 2024-04-30 --cash 100000 --commission 0.001 --slippage 0.0002
 ```
 
-执行工具会自动推断策略模式，不要传 `--mode`。
+工具会自动推断策略模式；不要传 `--mode`。
 
 ## 指定版本回测
 
-需要对比历史版本时传 `--version`：
+需要对比历史版本时传 `--strategy-version-id`：
 
-```bash
-uv run python -m cli.chatq_strategy backtest "$STRATEGY_ID" \
-  --version "$VERSION_ID" \
-  --symbol 600519.SH \
-  --start 2024-01-01 \
-  --end 2024-04-30
+```text
+backtest run --strategy-id str_xxx --strategy-version-id stv_xxx --symbol 600519.SH --start 2024-01-01 --end 2024-04-30
 ```
 
 ## 运行时参数覆盖
 
 只用 `--param key=value` 覆盖源码协议中已注册的参数：
 
-```bash
-uv run python -m cli.chatq_strategy backtest "$STRATEGY_ID" \
-  --symbol 600519.SH \
-  --start 2024-01-01 \
-  --end 2024-04-30 \
-  --param buy_drop_pct=0.10 \
-  --param sell_rise_pct=0.20 \
-  --param step_pct=0.10
+```text
+backtest run --strategy-id str_xxx --symbol 600519.SH --start 2024-01-01 --end 2024-04-30 --param buy_drop_pct=0.10 --param sell_rise_pct=0.20 --param step_pct=0.10
 ```
 
 不要用 `--param` 传策略参数 schema。
@@ -60,7 +58,7 @@ uv run python -m cli.chatq_strategy backtest "$STRATEGY_ID" \
 
 只有用户明确要求其他市场或资产类型时再传：
 
-```bash
+```text
 --market HK --asset-class stock
 --market US --asset-class stock
 --market CN --asset-class etf
@@ -69,7 +67,7 @@ uv run python -m cli.chatq_strategy backtest "$STRATEGY_ID" \
 
 不支持的市场和资产类型组合会导致行情数据源错误。
 
-## 常用配置
+## 常用参数
 
 - `--symbol`：标的代码。单只股票策略只传一个。
 - `--start` / `--end`：回测日期区间。
@@ -81,18 +79,37 @@ uv run python -m cli.chatq_strategy backtest "$STRATEGY_ID" \
 
 ## 查看回测记录
 
-查看记录列表：
+查看当前项目的回测记录列表，不按策略过滤：
 
-```bash
-uv run python -m cli.chatq_strategy backtests \
-  --version "$VERSION_ID" \
-  --limit 20
+```text
+backtest list --limit 20
+```
+
+按策略版本过滤记录，只能传 `--strategy-version-id stv_xxx`：
+
+```text
+backtest list --strategy-version-id stv_xxx --limit 20
+```
+
+如果手里只有策略 ID `str_xxx`，先查看版本，再用返回的 `stv_xxx` 查回测记录：
+
+```text
+strategy versions --strategy-id str_xxx
+backtest list --strategy-version-id stv_xxx --limit 20
+```
+
+不要把策略 ID 当作 `backtest list` 的位置参数，也不要给 list 传 `--strategy-id`：
+
+```text
+错误：backtest list str_xxx
+错误：backtest list --strategy-id str_xxx
+正确：backtest list --strategy-version-id stv_xxx
 ```
 
 查看单次回测详情：
 
-```bash
-uv run python -m cli.chatq_strategy backtest-show "$BACKTEST_ID"
+```text
+backtest show --backtest-id sbt_xxx
 ```
 
 ## 结果处理

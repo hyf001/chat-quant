@@ -64,11 +64,14 @@ class BacktestService:
         self,
         *,
         strategy_version_id: str | None,
+        project_id: str | None = None,
         limit: int,
     ) -> list[StrategyBacktestRecord]:
         filters = []
         if strategy_version_id is not None:
             filters.append(StrategyBacktestRow.strategy_version_id == strategy_version_id)
+        if project_id is not None:
+            filters.append(StrategyBacktestRow.project_id == project_id)
         result = await self._db.scalars(
             select(StrategyBacktestRow)
             .where(*filters)
@@ -259,10 +262,12 @@ async def list_records(
     db: AsyncSession,
     *,
     strategy_version_id: str | None,
+    project_id: str | None = None,
     limit: int,
 ) -> list[StrategyBacktestRecord]:
     return await _service(db).list_records(
         strategy_version_id=strategy_version_id,
+        project_id=project_id,
         limit=limit,
     )
 

@@ -28,7 +28,6 @@ DEFAULT_AGENT_TOOLS = [
     "WebFetch",
     "TodoWrite",
     "WebSearch",
-    "Skill",
 ]
 ANTHROPIC_DEFAULT_MODELS = (
     "claude-opus-4-1",
@@ -151,22 +150,6 @@ APP_CONFIG_DEFINITIONS: tuple[ConfigDefinition, ...] = (
         "等待 Agent 首个有效输出的秒数。",
     ),
     ConfigDefinition(
-        "agent_skill_plugin_dir",
-        "技能插件目录",
-        "agent",
-        "string",
-        "plugin",
-        "传给 Agent SDK 的插件目录。",
-    ),
-    ConfigDefinition(
-        "agent_skill_plugin_name",
-        "技能插件名",
-        "agent",
-        "string",
-        "chat-quant",
-        "传给 Agent SDK 的插件名称。",
-    ),
-    ConfigDefinition(
         "agent_include_partial_messages",
         "保留增量消息",
         "agent",
@@ -255,11 +238,6 @@ class Settings(BaseModel):
     agent_max_turns: int = 8
     agent_turn_timeout_seconds: int = 300
     agent_first_token_timeout_seconds: int = 15
-    agent_skill_plugin_dir: str = Field(
-        default="plugin",
-        validation_alias=AliasChoices("agent_skill_plugin_dir", "AGENT_SKILL_PLUGIN_DIR"),
-    )
-    agent_skill_plugin_name: str = "chat-quant"
     agent_include_partial_messages: bool = True
     agent_thinking_type: Literal["disabled", "adaptive", "enabled"] = "disabled"
     agent_thinking_budget_tokens: int = 2048
@@ -279,6 +257,11 @@ class Settings(BaseModel):
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
+
+    @field_validator("agent_available_tools")
+    @classmethod
+    def remove_system_managed_tools(cls, value: list[str]) -> list[str]:
+        return [tool for tool in value if tool != "Skill"]
 
 
 def config_file_path() -> Path:

@@ -47,16 +47,21 @@ class GeneratedStrategy(bt.Strategy):
 
 ## 策略模式
 
-策略创建时需要指定策略模式，例如 `single_symbol`、`multi_symbol`、`portfolio`、`universe_selection`。编辑已有策略源码时，执行工具会沿用当前版本的策略模式。回测时执行工具会从当前版本或指定版本推断策略模式。
+策略创建时需要指定策略模式，例如 `single_symbol`、`multi_symbol`、`portfolio`、`universe_selection`。编辑已有策略源码时，`update_strategy` 未传 `strategy_mode` 会沿用当前版本的策略模式。回测时 `run_backtest` 会从当前版本或指定版本推断策略模式。
 
-单只股票策略使用 `single_symbol`，回测配置中应只有一个 `--symbol`。
+单只股票策略使用 `single_symbol`，回测 `config.symbols` 中应只有一个标的。
 
 ## 回测参数覆盖
 
 运行回测时可以覆盖源码协议注册过的参数：
 
-```bash
---param fast_period=20 --param slow_period=60
+```json
+{
+  "params": {
+    "fast_period": 20,
+    "slow_period": 60
+  }
+}
 ```
 
 只能覆盖已注册参数。未在源码协议中声明的参数会被后端拒绝。

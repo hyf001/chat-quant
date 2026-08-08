@@ -33,8 +33,6 @@ class AgentSettingsPayload(BaseModel):
     max_turns: int = Field(ge=0)
     turn_timeout_seconds: int = Field(ge=0)
     first_token_timeout_seconds: int = Field(ge=0)
-    skill_plugin_dir: str = Field(min_length=1)
-    skill_plugin_name: str = Field(min_length=1)
     include_partial_messages: bool
     thinking: AgentThinkingSettingsPayload
     available_tools: list[str]

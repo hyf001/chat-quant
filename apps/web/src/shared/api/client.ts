@@ -123,8 +123,6 @@ export type AgentSettings = {
   max_turns: number;
   turn_timeout_seconds: number;
   first_token_timeout_seconds: number;
-  skill_plugin_dir: string;
-  skill_plugin_name: string;
   include_partial_messages: boolean;
   thinking: {
     type: "disabled" | "adaptive" | "enabled";

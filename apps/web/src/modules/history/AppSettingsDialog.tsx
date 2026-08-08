@@ -474,8 +474,6 @@ function AgentForm({
         <NumberField label="最大轮数" value={agent.max_turns} onChange={(max_turns) => onChange({ ...draft, agent: { ...agent, max_turns } })} />
         <NumberField label="执行超时 秒" value={agent.turn_timeout_seconds} onChange={(turn_timeout_seconds) => onChange({ ...draft, agent: { ...agent, turn_timeout_seconds } })} />
         <NumberField label="首包超时 秒" value={agent.first_token_timeout_seconds} onChange={(first_token_timeout_seconds) => onChange({ ...draft, agent: { ...agent, first_token_timeout_seconds } })} />
-        <TextField label="插件目录" value={agent.skill_plugin_dir} onChange={(skill_plugin_dir) => onChange({ ...draft, agent: { ...agent, skill_plugin_dir } })} />
-        <TextField label="插件名" value={agent.skill_plugin_name} onChange={(skill_plugin_name) => onChange({ ...draft, agent: { ...agent, skill_plugin_name } })} />
         <SelectField label="思考模式" value={agent.thinking.type} options={["disabled", "adaptive", "enabled"]} onChange={(type) => onChange({ ...draft, agent: { ...agent, thinking: { ...agent.thinking, type: type as AppSettings["agent"]["thinking"]["type"] } } })} />
         <NumberField label="思考预算" value={agent.thinking.budget_tokens} onChange={(budget_tokens) => onChange({ ...draft, agent: { ...agent, thinking: { ...agent.thinking, budget_tokens } } })} />
         <ToggleField label="保留增量消息" checked={agent.include_partial_messages} onChange={(include_partial_messages) => onChange({ ...draft, agent: { ...agent, include_partial_messages } })} />

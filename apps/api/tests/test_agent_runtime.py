@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 from app.agent_runtime.claude_runtime import ClaudeAgentRuntime, serialize_sdk_message
+from app.agent_runtime.custom_tools import CHATQ_STRATEGY_SERVER_NAME, CHATQ_STRATEGY_TOOL_NAME
 from app.core.config import DEFAULT_AGENT_TOOLS, Settings
 from app.schema.agent_runtime import (
     AgentExecutionCommand,
@@ -46,13 +47,14 @@ def test_sdk_options_omit_thinking_by_default_for_compatible_agent_api() -> None
         request_id="req_1",
         user_prompt="你好",
     )
-    options = runtime.build_agent_options(command, ())
+    sdk_options = runtime.build_sdk_options(command, ())
 
-    sdk_options = runtime.build_sdk_options(command, options)
-
-    assert sdk_options.tools == DEFAULT_AGENT_TOOLS
-    assert sdk_options.allowed_tools == []
+    assert sdk_options.tools == [*DEFAULT_AGENT_TOOLS, CHATQ_STRATEGY_TOOL_NAME]
+    assert "Skill" not in sdk_options.tools
+    assert sdk_options.allowed_tools == sdk_options.tools
     assert sdk_options.permission_mode == "bypassPermissions"
+    assert sdk_options.strict_mcp_config is True
+    assert set(sdk_options.mcp_servers) == {CHATQ_STRATEGY_SERVER_NAME}
     assert sdk_options.thinking is None
     assert sdk_options.plugins == [
         {
@@ -77,17 +79,21 @@ def test_runtime_system_prompt_omits_user_and_project_id() -> None:
         user_prompt="你好",
     )
 
-    options = runtime.build_agent_options(command, ())
+    sdk_options = runtime.build_sdk_options(command, ())
 
-    assert isinstance(options.system_prompt, dict)
-    system_prompt = options.system_prompt["append"]
+    assert isinstance(sdk_options.system_prompt, dict)
+    system_prompt = sdk_options.system_prompt["append"]
     assert "当前项目上下文：" in system_prompt
     assert "当前工作目录就是本地项目目录" in system_prompt
     assert "user_id" not in system_prompt
     assert "project_prompt_1" not in system_prompt
 
 
-def test_runtime_uses_plugin_namespaced_skills_without_copying_into_cwd(tmp_path) -> None:
+def test_runtime_uses_fixed_plugin_dir_skills_without_copying_into_cwd(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
     plugin_dir = tmp_path / "plugin"
     skill_dir = plugin_dir / "skills" / "financial_data_query"
     skill_dir.mkdir(parents=True)
@@ -98,7 +104,7 @@ def test_runtime_uses_plugin_namespaced_skills_without_copying_into_cwd(tmp_path
     project_dir = tmp_path / "user-project"
     project_dir.mkdir()
     runtime = ClaudeAgentRuntime(
-        settings=Settings(_env_file=None, AGENT_SKILL_PLUGIN_DIR=str(plugin_dir)),
+        settings=Settings(_env_file=None),
         sdk_query=fake_sdk_query,
     )
     command = AgentExecutionCommand(
@@ -111,19 +117,20 @@ def test_runtime_uses_plugin_namespaced_skills_without_copying_into_cwd(tmp_path
         user_prompt="你好",
     )
 
-    options = runtime.build_agent_options(
+    sdk_options = runtime.build_sdk_options(
         command,
         runtime.skill_plugin.qualify_skill_names(runtime.skill_plugin.list_skill_names()),
     )
-    sdk_options = runtime.build_sdk_options(command, options)
 
     assert sdk_options.cwd == str(project_dir)
-    assert sdk_options.plugins == [{"type": "local", "path": str(plugin_dir)}]
-    assert sdk_options.tools == DEFAULT_AGENT_TOOLS
+    assert sdk_options.plugins == [{"type": "local", "path": str(plugin_dir.resolve())}]
+    assert sdk_options.tools == [*DEFAULT_AGENT_TOOLS, "Skill", CHATQ_STRATEGY_TOOL_NAME]
+    assert "Skill" in sdk_options.tools
     assert sdk_options.skills == [
         "chat-quant:custom_local_skill",
         "chat-quant:financial_data_query",
     ]
+    assert sdk_options.allowed_tools == sdk_options.tools
     assert not (project_dir / ".claude" / "skills").exists()
 
 
@@ -141,19 +148,20 @@ def test_sdk_options_delegate_permissions_to_sdk_rules_without_hooks() -> None:
         request_id="req_1",
         user_prompt="你好",
     )
-    options = runtime.build_agent_options(
+    sdk_options = runtime.build_sdk_options(
         command,
         ("chat-quant:financial_data_query",),
     )
-    sdk_options = runtime.build_sdk_options(command, options)
 
-    assert sdk_options.tools == DEFAULT_AGENT_TOOLS
-    assert sdk_options.allowed_tools == []
+    assert sdk_options.tools == [*DEFAULT_AGENT_TOOLS, "Skill", CHATQ_STRATEGY_TOOL_NAME]
+    assert "Skill" in sdk_options.tools
+    assert sdk_options.allowed_tools == sdk_options.tools
     assert sdk_options.permission_mode == "bypassPermissions"
+    assert sdk_options.skills == ["chat-quant:financial_data_query"]
     assert not hasattr(sdk_options, "hooks") or sdk_options.hooks is None
 
 
-def test_runtime_uses_configured_tools_exactly() -> None:
+def test_runtime_uses_configured_tools_and_adds_system_skill_tool() -> None:
     runtime = ClaudeAgentRuntime(
         settings=Settings(agent_available_tools=["Bash", "Read"]),
         sdk_query=fake_sdk_query,
@@ -168,16 +176,45 @@ def test_runtime_uses_configured_tools_exactly() -> None:
         user_prompt="你好",
     )
 
-    options = runtime.build_agent_options(
+    sdk_options = runtime.build_sdk_options(
         command,
         ("chat-quant:financial_data_query",),
     )
-    sdk_options = runtime.build_sdk_options(command, options)
 
-    assert sdk_options.tools == ["Bash", "Read"]
-    assert sdk_options.allowed_tools == []
+    assert sdk_options.tools == ["Bash", "Read", "Skill", CHATQ_STRATEGY_TOOL_NAME]
+    assert sdk_options.allowed_tools == sdk_options.tools
     assert sdk_options.permission_mode == "bypassPermissions"
     assert sdk_options.skills == ["chat-quant:financial_data_query"]
+
+
+def test_runtime_adds_skill_tool_when_plugin_skills_exist() -> None:
+    runtime = ClaudeAgentRuntime(
+        settings=Settings(agent_available_tools=["Bash", "Read"]),
+        sdk_query=fake_sdk_query,
+    )
+    command = AgentExecutionCommand(
+        project_id="project_1",
+        chat_session_id="chat_1",
+        user_message_id="msg_1",
+        project_dir=str(Path.cwd()),
+        sdk_session_id=None,
+        request_id="req_1",
+        user_prompt="你好",
+    )
+
+    sdk_options = runtime.build_sdk_options(
+        command,
+        ("chat-quant:financial_data_query",),
+    )
+
+    assert sdk_options.tools == ["Bash", "Read", "Skill", CHATQ_STRATEGY_TOOL_NAME]
+    assert sdk_options.skills == ["chat-quant:financial_data_query"]
+
+
+def test_settings_filters_system_managed_skill_tool() -> None:
+    settings = Settings(agent_available_tools=["Bash", "Skill", "Read", "Skill"])
+
+    assert settings.agent_available_tools == ["Bash", "Read"]
 
 
 def test_sdk_env_maps_configured_token_to_claude_code_api_key() -> None:
@@ -199,9 +236,9 @@ def test_sdk_env_maps_configured_token_to_claude_code_api_key() -> None:
         user_prompt="你好",
     )
 
-    options = runtime.build_agent_options(command, ())
+    sdk_options = runtime.build_sdk_options(command, ())
 
-    assert dict(options.env) == {
+    assert sdk_options.env == {
         "ANTHROPIC_API_KEY": "secret_token",
         "ANTHROPIC_AUTH_TOKEN": "secret_token",
         "ANTHROPIC_BASE_URL": "https://api.example.test",

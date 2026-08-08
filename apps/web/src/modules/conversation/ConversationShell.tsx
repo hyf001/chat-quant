@@ -1133,7 +1133,7 @@ function buildToolCalls(envelopes: SDKStreamEnvelope[]): ToolCallView[] {
         turnId,
         startedAt: envelope.received_at,
         completedAt: null,
-        detail: formatDetail(toolUse.input),
+        detail: null,
         sequence: envelope.sequence,
       });
     });
@@ -1149,7 +1149,7 @@ function buildToolCalls(envelopes: SDKStreamEnvelope[]): ToolCallView[] {
         turnId: existing?.turnId ?? turnId,
         startedAt: existing?.startedAt ?? envelope.received_at,
         completedAt: envelope.received_at,
-        detail: mergeDetail(existing?.detail ?? null, toolResult.content),
+        detail: toolResult.content,
         sequence: existing?.sequence ?? envelope.sequence,
       });
     });
@@ -1337,17 +1337,18 @@ function stringifyToolResult(content: unknown): string | null {
   if (typeof content === "string") {
     return content;
   }
+  if (Array.isArray(content)) {
+    const text = content
+      .map((item) => {
+        const block = asRecord(item);
+        return block && asString(block.type) === "text" ? asString(block.text) : null;
+      })
+      .filter((value): value is string => Boolean(value));
+    if (text.length > 0) {
+      return text.join("\n");
+    }
+  }
   return formatDetail(content);
-}
-
-function mergeDetail(existing: string | null, result: string | null): string | null {
-  if (!existing) {
-    return result;
-  }
-  if (!result) {
-    return existing;
-  }
-  return `${existing}\n\n返回：\n${result}`;
 }
 
 function formatDetail(value: unknown): string | null {

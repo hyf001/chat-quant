@@ -48,6 +48,46 @@ def test_sdk_session_message_wrappers_are_converted_to_api_messages() -> None:
     assert responses[1].content[0].text == "你好，我可以帮你分析股票。"
 
 
+def test_sdk_session_internal_skill_context_is_not_displayed() -> None:
+    responses = sdk_messages_to_response(
+        [
+            SimpleNamespace(
+                type="user",
+                uuid="msg_skill_context",
+                session_id="sdk_real",
+                message={
+                    "role": "user",
+                    "content": (
+                        "Base directory for this skill: /tmp/plugin/skills/strategy_management\n\n"
+                        "# 策略管理与回测"
+                    ),
+                },
+            ),
+            UserMessage(
+                content=[
+                    TextBlock(
+                        text=(
+                            "Base directory for this skill: /tmp/plugin/skills/strategy_management\n\n"
+                            "# 策略管理与回测"
+                        )
+                    )
+                ],
+                uuid="msg_skill_context_native",
+            ),
+            SimpleNamespace(
+                type="user",
+                uuid="msg_user",
+                session_id="sdk_real",
+                message={"role": "user", "content": "帮我回测策略"},
+            ),
+        ]
+    )
+
+    assert len(responses) == 1
+    assert responses[0].uuid == "msg_user"
+    assert responses[0].content[0].text == "帮我回测策略"
+
+
 async def _run_direct_sdk_get_session_messages_test(monkeypatch):
     calls: list[str] = []
     project_dir = str(Path("/tmp/chatq").resolve())

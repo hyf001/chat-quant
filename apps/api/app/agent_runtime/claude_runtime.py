@@ -1,120 +1,16 @@
 from __future__ import annotations
 
 import asyncio
-import sys
-import types
 from collections.abc import AsyncIterator, Callable
-from dataclasses import dataclass
 from datetime import UTC, datetime
 
-try:
-    from claude_agent_sdk import (
-        AssistantMessage,
-        ClaudeAgentOptions,
-        ResultMessage,
-        TextBlock,
-        ToolResultBlock,
-        ToolUseBlock,
-        UserMessage,
-        query,
-    )
-except ModuleNotFoundError:
-    @dataclass
-    class ClaudeAgentOptions:
-        tools: list[str]
-        allowed_tools: list[str]
-        system_prompt: object
-        permission_mode: str
-        resume: str | None
-        max_turns: int
-        model: str
-        cwd: str
-        include_partial_messages: bool
-        setting_sources: list[str]
-        skills: list[str]
-        plugins: list[dict[str, str]]
-        env: dict[str, str]
-        disallowed_tools: list[str] | None = None
-        thinking: dict[str, object] | None = None
-        stderr: Callable[[str], None] | None = None
+from claude_agent_sdk import ClaudeAgentOptions, query
 
-    @dataclass
-    class TextBlock:
-        text: str
-
-    @dataclass
-    class ToolUseBlock:
-        id: str
-        name: str
-        input: dict[str, object]
-
-    @dataclass
-    class ToolResultBlock:
-        tool_use_id: str
-        content: str
-        is_error: bool = False
-
-    @dataclass
-    class AssistantMessage:
-        content: list[object]
-        model: str
-        session_id: str
-        message_id: str | None = None
-        uuid: str | None = None
-
-    @dataclass
-    class UserMessage:
-        content: list[object]
-        uuid: str
-
-    @dataclass
-    class SystemMessage:
-        content: list[object]
-        uuid: str
-
-    @dataclass
-    class ResultMessage:
-        subtype: str
-        duration_ms: int
-        duration_api_ms: int
-        is_error: bool
-        num_turns: int
-        session_id: str
-        result: str
-        uuid: str
-
-    async def query(*_args: object, **_kwargs: object) -> AsyncIterator[object]:
-        raise RuntimeError("claude-agent-sdk is not installed")
-
-    def get_session_messages(
-        _sdk_session_id: str,
-        *,
-        directory: str | None = None,
-        limit: int | None = None,
-    ) -> list[object]:
-        del directory, limit
-        return []
-
-    fallback_module = types.ModuleType("claude_agent_sdk")
-    fallback_module.__path__ = []  # type: ignore[attr-defined]
-    fallback_types_module = types.ModuleType("claude_agent_sdk.types")
-    for name, value in {
-        "AssistantMessage": AssistantMessage,
-        "ClaudeAgentOptions": ClaudeAgentOptions,
-        "ResultMessage": ResultMessage,
-        "TextBlock": TextBlock,
-        "ToolResultBlock": ToolResultBlock,
-        "ToolUseBlock": ToolUseBlock,
-        "UserMessage": UserMessage,
-        "SystemMessage": SystemMessage,
-        "get_session_messages": get_session_messages,
-        "query": query,
-    }.items():
-        setattr(fallback_module, name, value)
-        setattr(fallback_types_module, name, value)
-    sys.modules.setdefault("claude_agent_sdk", fallback_module)
-    sys.modules.setdefault("claude_agent_sdk.types", fallback_types_module)
-
+from app.agent_runtime.custom_tools import (
+    CHATQ_STRATEGY_SERVER_NAME,
+    CHATQ_STRATEGY_TOOL_NAME,
+    build_chatq_strategy_mcp_server,
+)
 from app.agent_runtime.hooks import AgentRuntimeHooks
 from app.agent_runtime.prompts import build_system_prompt
 from app.agent_runtime.sdk_message_parser import (
@@ -135,22 +31,8 @@ from app.schema.agent_runtime import (
 SDKQuery = Callable[..., AsyncIterator[object]]
 logger = get_logger(__name__)
 serialize_sdk_message = parse_sdk_message
-
-
-@dataclass(frozen=True)
-class ClaudeAgentOptionsSnapshot:
-    model: str
-    max_turns: int
-    cwd: str
-    system_prompt: object
-    tools: tuple[str, ...]
-    allowed_tools: tuple[str, ...]
-    disallowed_tools: tuple[str, ...]
-    skills: tuple[str, ...]
-    include_partial_messages: bool
-    setting_sources: tuple[str, ...]
-    env: tuple[tuple[str, str], ...]
-    plugins: tuple[dict[str, str], ...]
+DEFAULT_SKILL_PLUGIN_DIR = "plugin"
+DEFAULT_SKILL_PLUGIN_NAME = "chat-quant"
 
 
 class ClaudeAgentRuntime:
@@ -164,8 +46,8 @@ class ClaudeAgentRuntime:
         self.sdk_query = sdk_query
         self.hooks = AgentRuntimeHooks()
         self.skill_plugin = SDKSkillPlugin(
-            settings.agent_skill_plugin_dir,
-            settings.agent_skill_plugin_name,
+            DEFAULT_SKILL_PLUGIN_DIR,
+            DEFAULT_SKILL_PLUGIN_NAME,
         )
 
     async def stream_messages(
@@ -191,11 +73,6 @@ class ClaudeAgentRuntime:
             )
             return
 
-        options = self.build_agent_options(
-            command,
-            self.skill_plugin.qualify_skill_names(self.skill_plugin.list_skill_names()),
-        )
-
         current_sdk_session_id = command.sdk_session_id
         sdk_stderr_lines: list[str] = []
         saw_effective_event = False
@@ -211,7 +88,6 @@ class ClaudeAgentRuntime:
 
             sdk_options = self.build_sdk_options(
                 command,
-                options,
                 stderr=collect_sdk_stderr,
             )
             loop = asyncio.get_running_loop()
@@ -257,7 +133,9 @@ class ClaudeAgentRuntime:
                 else RuntimeErrorCode.FIRST_TOKEN_TIMEOUT
             )
             timeout_message = (
-                f"模型执行超过 {command.deadline_seconds or self.settings.agent_turn_timeout_seconds} 秒，本轮已中止。"
+                "模型执行超过 "
+                f"{command.deadline_seconds or self.settings.agent_turn_timeout_seconds} "
+                "秒，本轮已中止。"
                 if timeout_code == RuntimeErrorCode.RUN_TIMEOUT
                 else (
                     "模型在 "
@@ -316,57 +194,48 @@ class ClaudeAgentRuntime:
                     },
                 )
 
-    def build_agent_options(
+    def build_sdk_options(
         self,
         command: AgentExecutionCommand,
-        skills: tuple[str, ...],
-    ) -> ClaudeAgentOptionsSnapshot:
-        system_prompt = build_system_prompt(
-            command.context,
-        )
+        skills: tuple[str, ...] | None = None,
+        stderr: Callable[[str], None] | None = None,
+    ) -> ClaudeAgentOptions:
+        if skills is None:
+            skills = self.skill_plugin.qualify_skill_names(
+                self.skill_plugin.list_skill_names(),
+            )
+        system_prompt = build_system_prompt(command.context)
         tools = _dedupe_tools(
             tuple(command.allowed_tools or self.settings.agent_available_tools),
         )
-        return ClaudeAgentOptionsSnapshot(
-            model=self.settings.agent_model,
-            max_turns=self.settings.agent_max_turns,
-            cwd=command.project_dir,
+        tools = _ensure_skill_tool(tools, skills)
+        tools = _dedupe_tools((*tools, CHATQ_STRATEGY_TOOL_NAME))
+        return ClaudeAgentOptions(
+            tools=list(tools),
+            allowed_tools=list(tools),
+            disallowed_tools=[],
+            mcp_servers={
+                CHATQ_STRATEGY_SERVER_NAME: build_chatq_strategy_mcp_server(command),
+            },
+            strict_mcp_config=True,
             system_prompt={
                 "type": "preset",
                 "preset": "claude_code",
                 "append": system_prompt,
             },
-            tools=tools,
-            allowed_tools=(),
-            disallowed_tools=(),
-            skills=skills,
-            include_partial_messages=self.settings.agent_include_partial_messages,
-            setting_sources=("project",),
-            env=tuple(_sdk_env(self.settings).items()),
-            plugins=self.skill_plugin.sdk_plugin_configs(),
-        )
-
-    def build_sdk_options(
-        self,
-        command: AgentExecutionCommand,
-        options: ClaudeAgentOptionsSnapshot,
-        stderr: Callable[[str], None] | None = None,
-    ) -> ClaudeAgentOptions:
-        return ClaudeAgentOptions(
-            tools=list(options.tools),
-            allowed_tools=list(options.allowed_tools),
-            disallowed_tools=list(options.disallowed_tools),
-            system_prompt=options.system_prompt,
             permission_mode="bypassPermissions",
             resume=command.sdk_session_id,
-            max_turns=options.max_turns,
-            model=options.model,
-            cwd=options.cwd,
-            include_partial_messages=options.include_partial_messages,
-            setting_sources=list(options.setting_sources),
-            skills=list(options.skills),
-            plugins=[dict(plugin_config) for plugin_config in options.plugins],
-            env=dict(options.env),
+            max_turns=self.settings.agent_max_turns,
+            model=self.settings.agent_model,
+            cwd=command.project_dir,
+            include_partial_messages=self.settings.agent_include_partial_messages,
+            setting_sources=["project"],
+            skills=list(skills),
+            plugins=[
+                dict(plugin_config)
+                for plugin_config in self.skill_plugin.sdk_plugin_configs()
+            ],
+            env=_sdk_env(self.settings),
             thinking=_sdk_thinking_config(self.settings),
             stderr=stderr,
         )
@@ -413,6 +282,12 @@ def _sdk_thinking_config(settings: Settings) -> dict[str, object] | None:
 
 def _dedupe_tools(configured_tools: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(configured_tools))
+
+
+def _ensure_skill_tool(tools: tuple[str, ...], skills: tuple[str, ...]) -> tuple[str, ...]:
+    if not skills or "Skill" in tools:
+        return tools
+    return (*tools, "Skill")
 
 
 def _min_deadline(first_deadline: float, second_deadline: float | None) -> float:

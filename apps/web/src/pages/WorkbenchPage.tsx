@@ -774,6 +774,9 @@ function textFromUserEvent(event: Record<string, unknown>): string | null {
 }
 
 function isDisplayableUserMessage(event: Record<string, unknown>): boolean {
+  if (isInternalSkillContext(textFromUserEvent(event))) {
+    return false;
+  }
   if (typeof event.content === "string") {
     return true;
   }
@@ -782,6 +785,10 @@ function isDisplayableUserMessage(event: Record<string, unknown>): boolean {
   }
   const message = asRecord(event.message);
   return typeof message?.content === "string" || Boolean(textFromContentBlocks(message?.content));
+}
+
+function isInternalSkillContext(text: string | null): boolean {
+  return Boolean(text?.trimStart().startsWith("Base directory for this skill:"));
 }
 
 function fallbackMessagesFromSession(session: ChatSession): SdkMessage[] {

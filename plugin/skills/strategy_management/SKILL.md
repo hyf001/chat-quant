@@ -9,9 +9,9 @@ description: 当需要在 Chat-Quant 中管理量化策略和回测时使用，�
 
 ## 执行环境
 
-当前项目 Python 环境位于仓库根目录的 `.venv`。执行策略管理命令时从 `/Users/huyufei/Documents/hyf/code/github/chat-quant` 运行，优先使用 `uv run ...` 或 `.venv/bin/python ...`，避免系统 Python 环境导致依赖不一致。
+策略管理和回测通过 Claude Agent SDK 注入的 MCP 工具 `strategy` 完成，完整工具名是 `mcp__chatq__strategy`。不要用 Bash 或本地 HTTP 请求替代该工具。
 
-项目级策略命令需要传入业务项目路径，例如 `--project-path "<当前项目路径>"`。该路径来自 Agent 启动时的当前 `pwd` / `project.local_path`，不要用仓库根目录替代。
+工具调用统一使用一个 `command` 字符串，内容按 `chatq-strategy` CLI 子命令和 `--参数` 写法传入。当前业务项目上下文由后端绑定，不要传 `project_id`、`user_id`、`project_path` 或 API base URL。
 
 ## 模块选择
 
@@ -24,6 +24,6 @@ description: 当需要在 Chat-Quant 中管理量化策略和回测时使用，�
 
 1. 先确认用户是在做策略管理、策略源码编写，还是回测。
 2. 读取对应 reference 文件；创建策略或新版本时必须同时了解策略源码协议，不要默认加载无关模块。
-3. 从仓库根目录执行项目提供的策略管理命令；`list`、`create` 等项目级命令显式传 `--project-path "<当前项目路径>"`。不确定参数时先运行 `uv run python -m cli.chatq_strategy --help` 或 `uv run python -m cli.chatq_strategy <command> --help`。
+3. 调用 MCP 工具 `mcp__chatq__strategy`，按 reference 中的 CLI-style `command` 传参。
 4. 对会创建资源的动作，记录返回的 `strategy_id`、`strategy_version_id`、`backtest_id`。
 5. 修改策略后，优先用当前版本回测；需要历史对比时再指定版本。
