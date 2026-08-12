@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "mindgo": {
+      "command": "<ABSOLUTE_PATH>/mindgo-mcp-portable/scripts/run_mcp.sh",
+      "args": []
+    }
+  }
+}

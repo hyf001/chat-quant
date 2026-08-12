@@ -43,7 +43,7 @@ async def fake_sdk_query(*, prompt: str, options: object | None = None) -> Async
 
 
 runtime = ClaudeAgentRuntime(
-    settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
+    settings=Settings(),
     sdk_query=fake_sdk_query,
 )
 test_service = ChatApplicationService(runtime)
@@ -170,7 +170,7 @@ async def _run_project_directory_creation_assertions(tmp_path: Path) -> None:
     project_path.mkdir()
     chat_session_id = "conv_project_dir_creation"
     isolated_runtime = ClaudeAgentRuntime(
-        settings=Settings(_env_file=None),
+        settings=Settings(),
         sdk_query=fake_sdk_query,
     )
     isolated_service = ChatApplicationService(isolated_runtime)
@@ -193,7 +193,7 @@ async def _run_project_directory_creation_assertions(tmp_path: Path) -> None:
 
 async def _run_m1_index_sync_assertions() -> None:
     isolated_runtime = ClaudeAgentRuntime(
-        settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
+        settings=Settings(),
         sdk_query=fake_sdk_query,
     )
     isolated_service = ChatApplicationService(isolated_runtime)
@@ -238,7 +238,7 @@ async def _run_first_answer_sdk_title_assertions(monkeypatch: MonkeyPatch) -> No
     )
     isolated_service = ChatApplicationService(
         ClaudeAgentRuntime(
-            settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
+            settings=Settings(),
             sdk_query=fake_sdk_query,
         )
     )
@@ -285,7 +285,7 @@ async def _run_first_answer_fallback_title_follow_up_assertions(
     )
     isolated_service = ChatApplicationService(
         ClaudeAgentRuntime(
-            settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
+            settings=Settings(),
             sdk_query=fake_sdk_query,
         )
     )
@@ -362,7 +362,7 @@ async def _run_precreated_empty_session_title_assertions(monkeypatch: MonkeyPatc
     )
     isolated_service = ChatApplicationService(
         ClaudeAgentRuntime(
-            settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
+            settings=Settings(),
             sdk_query=fake_sdk_query,
         )
     )
@@ -445,7 +445,7 @@ async def _run_agent_detail_refresh_assertions(monkeypatch: MonkeyPatch) -> None
         )
         fresh_service = ChatApplicationService(
             ClaudeAgentRuntime(
-                settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
+                settings=Settings(),
                 sdk_query=fake_sdk_query,
             )
         )
@@ -486,7 +486,7 @@ async def _run_no_placeholder_resume_assertions() -> None:
         yield {"type": "result_message", "result": "完成。", "uuid": "sdk_result_no_session"}
 
     isolated_runtime = ClaudeAgentRuntime(
-        settings=Settings(_env_file=None, PROJECT_HOME=TEST_PROJECT_HOME),
+        settings=Settings(),
         sdk_query=sdk_query_without_session_id,
     )
     isolated_service = ChatApplicationService(isolated_runtime)

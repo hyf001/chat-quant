@@ -61,19 +61,13 @@ npm --prefix apps/desktop install
 cp .env.example .env
 ```
 
-常用后端配置：
+后端启动只需要用 `.env` 定位 SQLite 数据库：
 
 ```bash
-CHATQ_ENV=development
-CHATQ_API_CORS_ORIGINS=http://localhost:5173
 CHATQ_DATABASE_PATH=data/chat-quant.db
-PROJECT_HOME=data/projects
-ANTHROPIC_MODEL=
-ANTHROPIC_BASE_URL=
-ANTHROPIC_API_KEY=
 ```
 
-`ANTHROPIC_AUTH_TOKEN` 作为旧配置名仍兼容；运行时会转换为 Claude Agent SDK 识别的 `ANTHROPIC_API_KEY`。
+系统配置、Agent 参数和模型供应商配置保存在 SQLite，可在 Web 设置页维护。
 
 前端本地配置位于 `apps/web/.env.local`：
 
@@ -85,10 +79,10 @@ VITE_CHATQ_PROJECT_ID=
 
 ## 开发启动
 
-一键启动 API 与 Web：
+启动 Web 开发环境（API + Vite）：
 
 ```bash
-npm run dev:start
+npm run dev:web-start
 ```
 
 默认地址：
@@ -100,27 +94,33 @@ npm run dev:start
 启动脚本会把进程号和日志写入 `.dev/`：
 
 ```bash
-tail -f .dev/logs/api.log
+tail -f .dev/logs/web-api.log
 tail -f .dev/logs/web.log
 ```
 
 停止本地服务：
 
 ```bash
-npm run dev:stop
+npm run dev:web-stop
 ```
 
-也可以分别启动：
+启动桌面端开发环境：
 
 ```bash
-npm run dev:api
-npm run dev:web
+npm run dev:desktop-start
+```
+
+桌面端日志位于 `.dev/logs/desktop.log`，停止命令为：
+
+```bash
+npm run dev:desktop-stop
 ```
 
 如需改端口，可通过环境变量覆盖：
 
 ```bash
-API_PORT=8001 WEB_PORT=5174 npm run dev:start
+API_PORT=8001 WEB_PORT=5174 npm run dev:web-start
+DESKTOP_API_PORT=12346 npm run dev:desktop-start
 ```
 
 ## 常用 API
@@ -202,7 +202,7 @@ npm --prefix apps/desktop install
 开发模式会先构建 Web，再启动 Electron：
 
 ```bash
-npm run dev:desktop
+npm run dev:desktop-start
 ```
 
 如果只是本地验证 Electron 应用结构，可以打包目录版本：

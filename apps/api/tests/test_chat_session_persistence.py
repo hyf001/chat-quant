@@ -18,10 +18,7 @@ def test_chat_session_service_persists_index_across_instances(
 
 
 async def _run_persistence_assertions(tmp_path: Path) -> None:
-    settings = Settings(
-        _env_file=None,
-        CHATQ_DATABASE_PATH=tmp_path / "chat-quant.db",
-    )
+    settings = Settings(database_path=tmp_path / "chat-quant.db")
     ensure_database_schema(settings)
 
     session_factory = make_session_factory(make_engine(settings))

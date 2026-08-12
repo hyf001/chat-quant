@@ -1,0 +1,3016 @@
+{
+  "data": {
+    "75tzC8eXN9": [
+      {
+        "id": "1",
+        "name": "股票",
+        "order": 0,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "2",
+        "name": "期货",
+        "order": 1,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "3",
+        "name": "期权",
+        "order": 2,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "4",
+        "name": "基金",
+        "order": 3,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "5",
+        "name": "指数",
+        "order": 4,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "6",
+        "name": "债券",
+        "order": 5,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "7",
+        "name": "外汇",
+        "order": 6,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "8",
+        "name": "风险模型",
+        "order": 7,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "9",
+        "name": "因子数据",
+        "order": 8,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "11",
+        "name": "A股",
+        "order": 0,
+        "parentId": "1",
+        "levelId": 2
+      },
+      {
+        "id": "14",
+        "name": "基本信息(A股)",
+        "order": 0,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "15",
+        "name": "交易日历(A股)",
+        "order": 1,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "16",
+        "name": "行情数据(A股)",
+        "order": 2,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "17",
+        "name": "高频行情数据(A股)",
+        "order": 3,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "18",
+        "name": "行业分类",
+        "order": 7,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "19",
+        "name": "同花顺概念(A股)",
+        "order": 8,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "20",
+        "name": "上市公司财务数据",
+        "order": 5,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "21",
+        "name": "分析师一致预期",
+        "order": 9,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "22",
+        "name": "上市公司资料",
+        "order": 6,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "23",
+        "name": "市场资金数据",
+        "order": 4,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "33",
+        "name": "内地期货",
+        "order": 0,
+        "parentId": "2",
+        "levelId": 2
+      },
+      {
+        "id": "34",
+        "name": "延期交收合约(T+D合约)",
+        "order": 0,
+        "parentId": "2",
+        "levelId": 2
+      },
+      {
+        "id": "35",
+        "name": "金融期权",
+        "order": 0,
+        "parentId": "3",
+        "levelId": 2
+      },
+      {
+        "id": "36",
+        "name": "场内基金",
+        "order": 0,
+        "parentId": "4",
+        "levelId": 2
+      },
+      {
+        "id": "37",
+        "name": "场外基金",
+        "order": 0,
+        "parentId": "4",
+        "levelId": 2
+      },
+      {
+        "id": "38",
+        "name": "可转债",
+        "order": 0,
+        "parentId": "6",
+        "levelId": 2
+      },
+      {
+        "id": "44",
+        "name": "iFinD数据接口",
+        "order": 12,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "48",
+        "name": "期货基本信息",
+        "order": 0,
+        "parentId": "33",
+        "levelId": 3
+      },
+      {
+        "id": "49",
+        "name": "期货交易日历",
+        "order": 1,
+        "parentId": "33",
+        "levelId": 3
+      },
+      {
+        "id": "50",
+        "name": "期货行情数据",
+        "order": 2,
+        "parentId": "33",
+        "levelId": 3
+      },
+      {
+        "id": "51",
+        "name": "TD合约基本信息",
+        "order": 0,
+        "parentId": "34",
+        "levelId": 3
+      },
+      {
+        "id": "52",
+        "name": "TD合约交易日历",
+        "order": 0,
+        "parentId": "34",
+        "levelId": 3
+      },
+      {
+        "id": "53",
+        "name": "TD合约行情数据",
+        "order": 0,
+        "parentId": "34",
+        "levelId": 3
+      },
+      {
+        "id": "54",
+        "name": "期权基本信息",
+        "order": 0,
+        "parentId": "35",
+        "levelId": 3
+      },
+      {
+        "id": "55",
+        "name": "期权交易日历",
+        "order": 0,
+        "parentId": "35",
+        "levelId": 3
+      },
+      {
+        "id": "56",
+        "name": "期权行情数据",
+        "order": 0,
+        "parentId": "35",
+        "levelId": 3
+      },
+      {
+        "id": "57",
+        "name": "可转债基本信息",
+        "order": 0,
+        "parentId": "38",
+        "levelId": 3
+      },
+      {
+        "id": "58",
+        "name": "可转债行情",
+        "order": 0,
+        "parentId": "38",
+        "levelId": 3
+      },
+      {
+        "id": "59",
+        "name": "可转债条款信息",
+        "order": 0,
+        "parentId": "38",
+        "levelId": 3
+      },
+      {
+        "id": "60",
+        "name": "CNE5风险模型",
+        "order": 0,
+        "parentId": "8",
+        "levelId": 2
+      },
+      {
+        "id": "65",
+        "name": "基金基本信息",
+        "order": 0,
+        "parentId": "36",
+        "levelId": 3
+      },
+      {
+        "id": "66",
+        "name": "基金净值数据",
+        "order": 0,
+        "parentId": "36",
+        "levelId": 3
+      },
+      {
+        "id": "67",
+        "name": "基金行情数据",
+        "order": 0,
+        "parentId": "36",
+        "levelId": 3
+      },
+      {
+        "id": "68",
+        "name": "基金基本信息",
+        "order": 0,
+        "parentId": "37",
+        "levelId": 3
+      },
+      {
+        "id": "69",
+        "name": "基金净值数据",
+        "order": 0,
+        "parentId": "37",
+        "levelId": 3
+      },
+      {
+        "id": "70",
+        "name": "基金持仓情况",
+        "order": 0,
+        "parentId": "37",
+        "levelId": 3
+      },
+      {
+        "id": "73",
+        "name": "指数基本信息",
+        "order": 0,
+        "parentId": "5",
+        "levelId": 2
+      },
+      {
+        "id": "74",
+        "name": "指数行情数据",
+        "order": 1,
+        "parentId": "5",
+        "levelId": 2
+      },
+      {
+        "id": "75",
+        "name": "指数成分股数据",
+        "order": 1,
+        "parentId": "5",
+        "levelId": 2
+      },
+      {
+        "id": "76",
+        "name": "外汇基本信息",
+        "order": 0,
+        "parentId": "7",
+        "levelId": 2
+      },
+      {
+        "id": "77",
+        "name": "外汇交易日历",
+        "order": 0,
+        "parentId": "7",
+        "levelId": 2
+      },
+      {
+        "id": "78",
+        "name": "外汇行情数据",
+        "order": 0,
+        "parentId": "7",
+        "levelId": 2
+      },
+      {
+        "id": "79",
+        "name": "另类数据",
+        "order": 10,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "80",
+        "name": "i问财接口",
+        "order": 9,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "84",
+        "name": "期货市场信息",
+        "order": 3,
+        "parentId": "33",
+        "levelId": 3
+      }
+    ],
+    "TR86KYn1yh": [
+      {
+        "id": "1",
+        "title": "股票基本信息(A股)",
+        "content": "全市场股票基本信息数据，包含股票代码、中文简称、上市日期、退市日期等数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685359306,
+        "mtime": 1756297471,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "14"
+      },
+      {
+        "id": "5",
+        "title": "交易日历(A股)",
+        "content": "沪京深交易所交易日历数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685360434,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "15"
+      },
+      {
+        "id": "8",
+        "title": "股票日行情数据(A股)",
+        "content": "A股股票日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685361813,
+        "mtime": 1714109131,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);turnover_rate|换手率(%);is_paused|是否停牌;high_limit|涨停价(元);low_limit|跌停价(元);avg_price|均价(元);prev_close|前收盘价(元);quote_rate|涨跌幅(%);amp_rate|振幅(%);is_st|是否st;",
+        "parentId": "16"
+      },
+      {
+        "id": "12",
+        "title": "股票分钟行情数据(A股)",
+        "content": "A股股票分钟行情数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685363246,
+        "mtime": 1714109140,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);turnover_rate|换手率(%);is_paused|是否停牌;",
+        "parentId": "16"
+      },
+      {
+        "id": "16",
+        "title": "历史行情快照(A股)",
+        "content": "A股历史行情快照数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685363659,
+        "mtime": 1769425196,
+        "search_text": "trade_date|时间;prev_close|前收盘价;open|开盘价;high|最高价;low|最低价;current|现价;volume|成交量;amount|成交金额;cjcs|成交次数;b1_p|买一价;b1_v|买一量;b2_p|买二价;b2_v|买二量;b3_p|买三价;b3_v|买三量;b4_p|买四价;b4_v|买四量;b5_p|买五价;b5_v|买五量;a1_p|卖一价;a1_v|卖一量;a2_p|卖二价;a2_v|卖二量;a3_p|卖三价;a3_v|卖三量;a4_p|卖四价;a4_v|卖四量;a5_p|卖五价;a5_v|卖五量;",
+        "parentId": "17"
+      },
+      {
+        "id": "20",
+        "title": "实时行情快照(A股)",
+        "content": "股票实时行情快照接口",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685363982,
+        "mtime": 1769425815,
+        "search_text": "prev_close|前收盘价;open|开盘价;high|最高价;low|最低价;current|现价;volume|成交量;amount|成交金额;cjcs|成交次数;b1_p|买一价;b1_v|买一量;b2_p|买二价;b2_v|买二量;b3_p|买三价;b3_v|买三量;b4_p|买四价;b4_v|买四量;b5_p|买五价;b5_v|买五量;a1_p|卖一价;a1_v|卖一量;a2_p|卖二价;a2_v|卖二量;a3_p|卖三价;a3_v|卖三量;a4_p|卖四价;a4_v|卖四量;a5_p|卖五价;a5_v|卖五量;high_limit|涨停价(元);low_limit|跌停价(元);",
+        "parentId": "17"
+      },
+      {
+        "id": "24",
+        "title": "行业分类信息",
+        "content": "同花顺一级行业分类信息",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685364454,
+        "mtime": 1714283309,
+        "search_text": "industry\\_name|行业名称;available\\_date|行业可用日;disabled\\_date|行业删除日;industry\\_index|行业对应指数代码;industry\\_rank|行业等级;industry\\_symbol|行业代码;industry\\_thscode|行业代码(同花顺);industry\\_type|行业分类类型;industry\\_typecode|行业分类类型代码;",
+        "parentId": "18"
+      },
+      {
+        "id": "64",
+        "title": "资产负债表",
+        "content": "A股上市公司合并资产负债表数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685365697,
+        "mtime": 1714269635,
+        "search_text": "-|**基本信息**;symbol|股票代码;date|查询日期;report_date|公布日期;spec_conv_id|特殊转换标识;is_report_publish|报表是否公布值;spec_cond_desc|特殊情况说明;stat_date|报告期;reporttypecode|报表类型编码;change_id|报表变动记录标识;-|**流动资产**;cash|货币资金;tradable_financial_assets|交易性金融资产;notes_receivable|应收票据;accounts_receivable|应收账款;advance_payment|预付款项;interest_receivable|应收利息;dividends_receivable|应收股利;receivable_other|其他应收款;inventory|存货;noncurrent_asset_due_within1y|一年内到期的非流动资产;other_current_assets|其他流动资产;current_assets_si|流动资产特殊科目;balance_of_current_assets|流动资产平衡科目;total_current_assets|流动资产合计;funds_lent|拆出资金;insurance_premiums_receivable|应收保费;cession_premiums_receivable|应收分保账款;provision_of_cession_receivable|应收分保合同准备金;-|**非流动金融资产**;available_financial_assets|可供出售金融资产;held_to_maturity_investment|持有至到期投资;long_term_receivables|长期应收款;long_term_equity_investment|长期股权投资;investment_property|投资性房地产;fixed_asset|固定资产;cip_project|在建工程;engineering_material|工程物资;disposal_of_fixed_assets|固定资产清理;biological_assets|生产性生物资产;oil_and_gas_assets|油气资产;intangible_assets|无形资产;rd_cost|开发支出;goodwill|商誉;long_term_prepaid_expenses|长期待摊费用;deferred_tax_assets|递延所得税资产;other_non_current_assets|其他非流动资产;noncurrent_assets_si|非流动资产特殊科目;noncurrent_assets_bi|非流动资产平衡科目;total_non_current_assets|非流动资产合计;loans_and_payments_on_behalf|发放贷款和垫款;-|**其他资产**;cash_and_deposit_of_central_bank|现金及存放中央银行款项;deposit_interbank_payments|存放同业款项;precious_metal|贵金属;derivative_financial_assets|衍生金融资产;buy_resale_fnncl_assets|买入返售金融资产;other_assets|其他资产;subrogation_recourse_fee|应收代位追偿款;reinundueliabilityreserve|应收分保未到期责任准备金;outstanding_loss_reserve|应收分保未决赔款准备金;life_insurance_liability_reserve|应收分保寿险责任准备金;receivable_deposit_of_lt_hi|应收分保长期健康险责任准备金;policy_holder_pledge_loans|保户质押贷款;fixed_deposit|定期存款;refundable_capital_deposit|存出资本保证金;independent_accounts_of_assets|独立账户资产;client_provisions|客户备付金;refundable_deposits|存出保证金;transaction_placement_fee|交易席位费;money_loan|融出资金;receivables|应收款项;asset_special_account|资产特殊科目;asset_balance_account|资产平衡科目;total_assets|资产总计;-|**流动负债**;short_term_loan|短期借款;tradable_fnncl_liab|交易性金融负债;notes_payable|应付票据;account_payable|应付账款;deposit_received|预收账款;accrued_wages|应付职工薪酬;taxes_and_dues|应交税费;interest_payable|应付利息;dividend_payable|应付股利;other_payable|其他应付款;noncurrent_liab_due_in1y|一年内到期的非流动负债;other_current_liability|其他流动负债;current_liab_si|流动负债特殊科目;balance_of_current_liabilities|流动负债平衡科目;current_liabilities|流动负债合计;borrowing_from_central_bank|向中央银行借款;deposit_funds|拆入资金;fnncl_assets_sold_for_repur|卖出回购金融资产款;customer_brokerage_deposits|代理买卖证券款;act_underwriting_sec|代理承销证券款;saving_and_interbank_deposit|吸收存款及同业存放;insurance_contract_reserve|保险合同准备金;current_liab_di|流动负债递延收益;st_bond_payable|应付短期债券;-|**非流动负债**;long_term_loan|长期借款;bonds_payable|应付债券;long_term_payable|长期应付款;account_payable_special_funds|专项应付款;estimated_liabilities|预计负债;deferred_tax_liability|递延所得税负债;other_non_current_liabilities|其他非流动负债;non_current_liabilities|非流动负债特殊科目;noncurrent_liab_bi|非流动负债平衡科目;totalnon_current_liabilities|非流动负债合计;noncurrent_liab_di|非流动负债递延收益;lt_staff_salary_payable|长期应付职工薪酬;-|**其他负债**;interbank_deposit_etc|同业及其他金融机构存放款项;derivative_financial_liabilities|衍生金融负债;accept_money_deposits|吸收存款;other_liabilities|其他负债;advance_premium|预收保费;charge_and_commi_payable|应付手续费及佣金;rein_payable|应付分保账款;claims_payable|应付赔付款;policyholder_dividends_payable|应付保单红利;assured_saving_and_invest|保户储金及投资款;unearned_premium_reserve|未到期责任准备金;outstanding_claims_reserve|未决赔款准备金;life_insurance_reserve|寿险责任准备金;health_insurance_reserve|长期健康险责任准备金;independent_account_liab|独立账户负债;pledged_loan|其中：质押借款;guarantee_deposits|存入保证金;short_term_financing_payable|应付短期融资款;accounts_payable|应付款项;special_account_of_liabilities|负债特殊科目;balance_account_of_liabilities|负债平衡科目;total_liabilities|负债合计;-|**所有者权益**;equity|实收资本（或股本）;capital_reserve|资本公积金;stock_reduction_unit|库存股;special_reserves|专项储备;surplus_reserve|盈余公积;general_risk_preparation|一般风险准备;undistributed_profits|未分配利润;frgn_currency_convert_diff|外币报表折算差额;holders_equity_si|股东权益特殊科目;holders_equity_bi|股东权益平衡科目;total_quity_atsopc|归属于母公司股东权益合计;minority_equity|少数股东权益;total_equity|股东权益合计;total_share_capital|股本总数;other_consolidated_income|其他综合收益;other_equity_instrument|其他权益工具;preferred_equity|其他权益工具：优先股;perpetual_bond|其他权益工具：永续债;transaction_risk_reserve|交易风险准备;total_liab_and_holders_equity|负债和股东权益总计;",
+        "parentId": "20"
+      },
+      {
+        "id": "66",
+        "title": "同花顺概念分类",
+        "content": "同花顺概念分类数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685414547,
+        "mtime": 1700130130,
+        "search_text": "concept_name|概念名称;concept_symbol|概念代码;concept_code|概念代码（同花顺）;concept_level|概念分类代码;concept_levelname|概念分类名称;concept_rank|概念等级;available_date|概念可用日;disabled_date|概念删除日;",
+        "parentId": "19"
+      },
+      {
+        "id": "70",
+        "title": "概念股数据(A股)",
+        "content": "A股概念股数据，可跟据概念代码查询相关概念股",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685414805,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "19"
+      },
+      {
+        "id": "73",
+        "title": "个股概念数据",
+        "content": "A股个股概念数据表，可根据股票代码与日期查询股票所属全部概念",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685415086,
+        "mtime": 1700130130,
+        "search_text": "symbol|股票代码;date|日期;concept|概念名称;",
+        "parentId": "19"
+      },
+      {
+        "id": "77",
+        "title": "分析师一致预期(A股)",
+        "content": "分析师一致预期数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685415527,
+        "mtime": 1700130130,
+        "search_text": "symbol|股票代码;trade\\_date|查询日期;income\\_forecast\\_basic\\_eps\\_1|预测每股收益（本年度）;income\\_forecast\\_basic\\_eps\\_2|预测每股收益（次年）;income\\_forecast\\_net\\_profit\\_1|预测净利润（本年度）;income\\_forecast\\_net\\_profit\\_2|预测净利润（次年）;income\\_forecast\\_operating\\_income\\_1|预测营业收入（本年度）;income\\_forecast\\_operating\\_income\\_2|预测营业收入（次年）;valuation\\_forecast\\_pe\\_1|预测市盈率（本年度）;valuation\\_forecast\\_pe\\_2|预测市盈率（次年）;rating\\_agency\\_count\\_6m|六个月内评级机构家数;composite\\_rating\\_6m|六个月内综合评级（数值）;",
+        "parentId": "21"
+      },
+      {
+        "id": "81",
+        "title": "公司更名信息",
+        "content": "记录A股上市公司简称变更情况，可用来判断ST、退市情况",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685416325,
+        "mtime": 1700137296,
+        "search_text": "symbol|同花顺代码;report_date|公布日;change_date|截至日;stock_name|证券简称;original_name|原证券简称;stock_name_en|证券简称(英文);original_name_en|原证券简称(英文);",
+        "parentId": "22"
+      },
+      {
+        "id": "85",
+        "title": "公司员工数量表",
+        "content": "记录公司在职、退休员工数量",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685417198,
+        "mtime": 1700130130,
+        "search_text": "symbol|同花顺代码;report_date|公布日;stat_date|实际变更日;total_employees|在职员工总数;retired_employees|退休员工数;total_employees_subsidiaries|主要子公司在职员工数;total_employees_receiving|当期领取薪酬的总员工数;total_employees_parent|母公司在职员工数;",
+        "parentId": "22"
+      },
+      {
+        "id": "89",
+        "title": "十大股东信息表",
+        "content": "记录A股上市公司十大股东信息",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685417338,
+        "mtime": 1700130130,
+        "search_text": "symbol|股票代码;report_date|公布日;end_date|截止日期;shareholder_rank|股东名次;shareholder_name|股东名称;shareholder_id|股东ID;shareholder_type|股东类别;holding_num|持有数量;holding_ratio|持有比例;frozen_num|冻结数量;pledge_num|质押数量;limit_num|限售数量;action_mark|一致行动人标志;change_type|变动类型;",
+        "parentId": "22"
+      },
+      {
+        "id": "93",
+        "title": "十大流通股东信息表",
+        "content": "记录A股上市公司十大流通股东信息",
+        "order": 3,
+        "type": 0,
+        "ctime": 1685417463,
+        "mtime": 1715579700,
+        "search_text": "symbol|同花顺代码;report\\_date|公布日;end\\_date|截止日期;shareholder\\_rank|股东名次;shareholder\\_name|股东名称;shareholder\\_id|股东ID;shareholder\\_type|股东类别;holding\\_num|持有数量;holding\\_ratio|持有比例;frozen\\_num|冻结数量;pledge\\_num|质押数量;action\\_mark|一致行动人标志;",
+        "parentId": "22"
+      },
+      {
+        "id": "97",
+        "title": "上市公司所在地",
+        "content": "记录了A股上市公司所在的省(自治区、直辖市)、市、县(区)",
+        "order": 4,
+        "type": 0,
+        "ctime": 1685417631,
+        "mtime": 1700130130,
+        "search_text": "symbol|同花顺代码;report\\_date|公布日;province|省、直辖市;city|地级市;county|县、市、区;",
+        "parentId": "22"
+      },
+      {
+        "id": "101",
+        "title": "公司股本变动表",
+        "content": "记录了公司股本变动情况，可根据此计算市值等数据",
+        "order": 5,
+        "type": 0,
+        "ctime": 1685417720,
+        "mtime": 1700130130,
+        "search_text": "symbol|标的代码;report\\_date|公布日;change\\_date|变动日;limit\\_share|限售股本;limit\\_share\\_ashare|限售A股;limit\\_share\\_bshare|限售B股;limit\\_share\\_hshare|限售H股;negotiable\\_share|流通股本;negotiable\\_share\\_ashare|流通A股;negotiable\\_share\\_bshare|流通B股;negotiable\\_share\\_hshare|流通H股;total\\_share|总股本;total\\_share\\_ashare|A股总股本;nontrade\\_share|非流通股本;",
+        "parentId": "22"
+      },
+      {
+        "id": "105",
+        "title": "机构股东持股情况表",
+        "content": "记录了A股上市公司机构股东持股数据",
+        "order": 6,
+        "type": 0,
+        "ctime": 1685417932,
+        "mtime": 1700130130,
+        "search_text": "symbol|股票代码;report\\_date|公布日;end\\_date|截止日期;institution\\_name|机构/基金名称;institution\\_id|机构/基金id;institution\\_type|机构类型;holding\\_num|持股数量;holding\\_size|持股市值;holding\\_ratio|占流通股比例;",
+        "parentId": "22"
+      },
+      {
+        "id": "109",
+        "title": "解禁明细表",
+        "content": "记录A股上市公司限售股解禁明细数据",
+        "order": 7,
+        "type": 0,
+        "ctime": 1685418044,
+        "mtime": 1700130130,
+        "search_text": "symbol|股票代码;report\\_date|公布日;unlimited\\_date|可流通日期;limit\\_date|限售开始日期;unlimited\\_num|本期流通数量;negotiable\\_num|已流通数量;unlimited\\_num\\_pub|本期公布流通数量;limited\\_num|待流通数量;limited\\_reasom|流通股份类型;holding\\_cost|持股成本;",
+        "parentId": "22"
+      },
+      {
+        "id": "113",
+        "title": "配股信息表",
+        "content": "记录上市公司配股信息",
+        "order": 8,
+        "type": 0,
+        "ctime": 1685418154,
+        "mtime": 1700130130,
+        "search_text": "symbol|股票代码;date_of_record|配股股权登记日;number|每股配股数;",
+        "parentId": "22"
+      },
+      {
+        "id": "117",
+        "title": "分红送股信息",
+        "content": "记录A股上市公司历史分红送股数据",
+        "order": 9,
+        "type": 0,
+        "ctime": 1685418239,
+        "mtime": 1737632919,
+        "search_text": "symbol|标的代码;date|报告期;plan_announcement_day|预案公告日;per_share_bonus|每股红股;per_share_capital_stock|每股转增股本;bonus_shares_trading_day|红股上市交易日;announcement_date_of_gmos|股东大会公告日;cash_dividend_ratio|现金分红比例;ex_dividend_date|除权除息日;dividend_announcement_date|分红实施公告日;date_payable|派息日;date_of_record|股权登记日;pre_disclosure_announcement_date|预披露公告日期;字段|含义;----------------|------------;ex_date|除权除息日;symbol|标的代码;cash_dividends |每股现金红利;give_stock|每股红股;transfer_stock|每股转增股本;",
+        "parentId": "22"
+      },
+      {
+        "id": "121",
+        "title": "融资融券数据",
+        "content": "获取A股融资融券数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685424767,
+        "mtime": 1700130130,
+        "search_text": "fin\\_value|融资余额(元);fin\\_buy\\_value|融资买入额(元);fin\\_refund\\_value|融资偿还额(元);sec\\_value|融券余额(元);sec\\_sell\\_value|融券卖出额(元);sec\\_refund\\_value|融券偿还额(元);fin\\_sec\\_value|融资融券余额(元);",
+        "parentId": "23"
+      },
+      {
+        "id": "159",
+        "title": "期货基本信息(商品)",
+        "content": "商品期货基本信息，包含合约代码、中文简称、上市日期、退市日期等数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685434643,
+        "mtime": 1700130130,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "48"
+      },
+      {
+        "id": "160",
+        "title": "期货基本信息(金融)",
+        "content": "金融期货基本信息，包含合约代码、中文简称、上市日期、退市日期等数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685434699,
+        "mtime": 1700130130,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "48"
+      },
+      {
+        "id": "161",
+        "title": "期货基本信息(国债)",
+        "content": "国债期货基本信息，包含合约代码、中文简称、上市日期、退市日期等数据",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685434722,
+        "mtime": 1700130130,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "48"
+      },
+      {
+        "id": "171",
+        "title": "期货交易日历",
+        "content": "内地期货交易所交易日历",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436218,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "49"
+      },
+      {
+        "id": "174",
+        "title": "期货日频行情数据",
+        "content": "期货日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436304,
+        "mtime": 1700130130,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;volume|成交量;turnover|成交金额(元);open_interest|持仓;high_limit|涨停价(元);low_limit|跌停价(元);settle|结算价(元);change|涨跌(元);quote_rate|涨跌幅(%);amp_rate|振幅(%);pos_change|仓差;",
+        "parentId": "50"
+      },
+      {
+        "id": "178",
+        "title": "TD合约基本信息",
+        "content": "T+D合约基本信息，包含合约代码、中文简称、上市日期、退市日期等数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436415,
+        "mtime": 1700130130,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "51"
+      },
+      {
+        "id": "182",
+        "title": "TD合约交易日历",
+        "content": "T+D合约交易日历",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436484,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "52"
+      },
+      {
+        "id": "185",
+        "title": "TD合约日频行情数据",
+        "content": "T+D合约日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436585,
+        "mtime": 1700130130,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;volume|成交量;turnover|成交金额(元);weighted_avg_price|加权平均价(元);",
+        "parentId": "53"
+      },
+      {
+        "id": "189",
+        "title": "期权基本信息",
+        "content": "沪深交易所期权合约基本信息，包含合约代码、合约简称、合约上市时间、退市时间等信息",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436787,
+        "mtime": 1700130130,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "54"
+      },
+      {
+        "id": "193",
+        "title": "期权交易日历",
+        "content": "沪深交易所交易日历",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436916,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "55"
+      },
+      {
+        "id": "196",
+        "title": "期权日频行情数据",
+        "content": "沪深交易所ETF期权日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436980,
+        "mtime": 1700130130,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;volume|成交量;",
+        "parentId": "56"
+      },
+      {
+        "id": "197",
+        "title": "期权分钟行情数据",
+        "content": "沪深交易所ETF期权分钟行情数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685437002,
+        "mtime": 1700130130,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;volume|成交量;",
+        "parentId": "56"
+      },
+      {
+        "id": "204",
+        "title": "可转债基本信息",
+        "content": "包含可转债代码、简称、上市日期、退市日期等数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685437650,
+        "mtime": 1700130130,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "57"
+      },
+      {
+        "id": "208",
+        "title": "可转债日行情数据",
+        "content": "沪深交易所上市可转债日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685437972,
+        "mtime": 1700130130,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);is_paused|是否停牌;avg_price|均价(元);prev_close|前收盘价(元);quote_rate|涨跌幅(%);amp_rate|振幅(%);",
+        "parentId": "58"
+      },
+      {
+        "id": "209",
+        "title": "可转债分钟行情数据",
+        "content": "沪深交易所上市可转债分钟行情数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685437998,
+        "mtime": 1700130130,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);is_paused|是否停牌;",
+        "parentId": "58"
+      },
+      {
+        "id": "210",
+        "title": "可转债实时行情快照",
+        "content": "沪深交易所上市可转债实时行情快照",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685438034,
+        "mtime": 1700137296,
+        "search_text": "prev_close|前收盘价;open|开盘价;high|最高价;low|最低价;current|现价;volume|成交量;amount|成交金额;cjcs|成交次数;b1_p|买一价;b1_v|买一量;b2_p|买二价;b2_v|买二量;b3_p|买三价;b3_v|买三量;b4_p|买四价;b4_v|买四量;b5_p|买五价;b5_v|买五量;b6_p|买六价;b6_v|买六量;b7_p|买七价;b7_v|买七量;b8_p|买八价;b8_v|买八量;b9_p|买九价;b9_v|买九量;b10_p|买十价;b10_v|买十量;a1_p|卖一价;a1_v|卖一量;a2_p|卖二价;a2_v|卖二量;a3_p|卖三价;a3_v|卖三量;a4_p|卖四价;a4_v|卖四量;a5_p|卖五价;a5_v|卖五量;a6_p|卖六价;a6_v|卖六量;a7_p|卖七价;a7_v|卖七量;a8_p|卖八价;a8_v|卖八量;a9_p|卖九价;a9_v|卖九量;a10_p|卖十价;a10_v|卖十量;total_bid|十档委买总量;average_bid|十档委买均价;total_ask|十档委卖总量;average_ask|十档委卖均价;",
+        "parentId": "58"
+      },
+      {
+        "id": "211",
+        "title": "可转债历史行情快照",
+        "content": "沪深交易所上市可转债历史行情快照",
+        "order": 3,
+        "type": 0,
+        "ctime": 1685438082,
+        "mtime": 1700137296,
+        "search_text": "trade_date|时间;prev_close|前收盘价;open|开盘价;high|最高价;low|最低价;current|现价;volume|成交量;amount|成交金额;cjcs|成交次数;b1_p|买一价;b1_v|买一量;b2_p|买二价;b2_v|买二量;b3_p|买三价;b3_v|买三量;b4_p|买四价;b4_v|买四量;b5_p|买五价;b5_v|买五量;b6_p|买六价;b6_v|买六量;b7_p|买七价;b7_v|买七量;b8_p|买八价;b8_v|买八量;b9_p|买九价;b9_v|买九量;b10_p|买十价;b10_v|买十量;a1_p|卖一价;a1_v|卖一量;a2_p|卖二价;a2_v|卖二量;a3_p|卖三价;a3_v|卖三量;a4_p|卖四价;a4_v|卖四量;a5_p|卖五价;a5_v|卖五量;a6_p|卖六价;a6_v|卖六量;a7_p|卖七价;a7_v|卖七量;a8_p|卖八价;a8_v|卖八量;a9_p|卖九价;a9_v|卖九量;a10_p|卖十价;a10_v|卖十量;total_bid|十档委买总量;average_bid|十档委买均价;total_ask|十档委卖总量;average_ask|十档委卖均价;",
+        "parentId": "58"
+      },
+      {
+        "id": "224",
+        "title": "可转债条款信息",
+        "content": "记录可转债条款数据，包含日期条款、利率条款、转股价下修条款、赎回条款、回售条款数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685438731,
+        "mtime": 1700189624,
+        "search_text": "symbol|可转债代码;display_name|可转债简称;stock\\_symbol|正股代码;pub\\_startdate|上市日期;pub\\_enddate|摘牌日期;transaction\\_enddate|最后交易日;conversion\\_startdate|转股起始日;conversion\\_enddate|转股截止日;interest\\_startdate|起息日;interest\\_enddate|预计兑付日;interest\\_rate\\_1y|第一年利率;interest\\_rate\\_2y|第二年利率;interest\\_rate\\_3y|第三年利率;interest\\_rate\\_4y|第四年利率;interest\\_rate\\_5y|第五年利率;interest\\_rate\\_6y|第六年利率;revise\\_down\\_trem|是否有转股价下修条款;revise\\_down\\_ratio|向下修正触发比例;revise\\_down\\_trem\\_startdate|特别向下修正起始时间;revise\\_down\\_trem\\_enddate|特别向下修正结束时间;revise\\_down\\_daterange\\_max|向下修正重设触发计算最大时间区间;revise\\_down\\_daterange|向下修正重设触发计算时间区间;revise\\_down\\_timeslimit|向下修正次数限制;redeem\\_trem\\_startdate|赎回条款起始时间;redeem\\_trem\\_enddate|赎回条款结束时间;redeem\\_daterange\\_max|赎回条款触发计算最大时间区间;redeem\\_daterange|赎回条款触发计算时间区间;redeem\\_ratio|赎回条款触发比例;redeem\\_remaining|赎回条款触发余额;resale\\_trem\\_startdate|回售条款起始时间;resale\\_trem\\_enddate|回售条款结束时间;resale\\_daterange\\_max|回售条款触发计算最大时间区间;resale\\_daterange|回售条款触发计算时间区间;resale\\_ratio|回售条款触发比例;",
+        "parentId": "59"
+      },
+      {
+        "id": "228",
+        "title": "可转债转股价变更表",
+        "content": "记录可转债历史转股价变更信息",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685438829,
+        "mtime": 1700137296,
+        "search_text": "symbol|可转债代码;report\\_date|公布日;change\\_date|实际变更日;conversion\\_price|转股价;conversion\\_reason|变更原因;",
+        "parentId": "59"
+      },
+      {
+        "id": "229",
+        "title": "可转债余额变动表",
+        "content": "记录可转债余额变动情况以及变动原因",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685438892,
+        "mtime": 1700137296,
+        "search_text": "symbol|可转债代码;change\\_date|变更日;remaining|可转债余额;change\\_reason|变动原因;",
+        "parentId": "59"
+      },
+      {
+        "id": "230",
+        "title": "可转债转股数量表",
+        "content": "记录可转债转股数量、户数、价格数据",
+        "order": 3,
+        "type": 0,
+        "ctime": 1685438931,
+        "mtime": 1700137296,
+        "search_text": "symbol|可转债代码;report\\_date|报告日;end\\_date|截止日;convert\\_stocks\\_cum|累计转股数量;convert\\_stocks\\_current|当期转股数量;convert\\_holder\\_current|当期转股户数;convert\\_bondvalue\\_current|当期转股面值;convert\\_bondvalue\\_cum|累计转股面值;convert\\_ratio\\_cum|累计转股比例;convert\\_price\\_current|当期转股价格;",
+        "parentId": "59"
+      },
+      {
+        "id": "231",
+        "title": "可转债特殊条款预计价格表",
+        "content": "可转债特殊条款预计执行价格数据",
+        "order": 4,
+        "type": 0,
+        "ctime": 1685438961,
+        "mtime": 1700137296,
+        "search_text": "symbol|同花顺代码;change\\_date|预计变更日;term\\_type|条款类型;term\\_price|条款价格;",
+        "parentId": "59"
+      },
+      {
+        "id": "244",
+        "title": "CNE5风险模型",
+        "content": "支持获取CNE5版本风险因子暴露数据、因子收益、特质收益率数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685439626,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "60"
+      },
+      {
+        "id": "249",
+        "title": "场内基金基本信息",
+        "content": "场内基金(ETF、LOF等)基本信息，包括代码、简称、上市日期、退市日期等数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685451675,
+        "mtime": 1700137296,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "65"
+      },
+      {
+        "id": "253",
+        "title": "基金净值数据",
+        "content": "场内基金对应场外基金净值数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685451844,
+        "mtime": 1700137296,
+        "search_text": "unit_net_value|单位净值(元/份);acc_net_value|累计净值(元/份);pre_net_value|复权净值(元/份);",
+        "parentId": "66"
+      },
+      {
+        "id": "257",
+        "title": "基金日频行情数据",
+        "content": "场内基金日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685451980,
+        "mtime": 1700137296,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);turnover_rate|换手率(%);is_paused|是否停牌;high_limit|涨停价(元);low_limit|跌停价(元);avg_price|均价(元);prev_close|前收盘价(元);quote_rate|涨跌幅(%);amp_rate|振幅(%);",
+        "parentId": "67"
+      },
+      {
+        "id": "258",
+        "title": "基金分钟行情数据",
+        "content": "场内基金分钟行情数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685452005,
+        "mtime": 1700137296,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);turnover_rate|换手率(%);",
+        "parentId": "67"
+      },
+      {
+        "id": "259",
+        "title": "基金实时行情数据",
+        "content": "场内基金实时行情数据",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685452023,
+        "mtime": 1700137296,
+        "search_text": "prev_close|前收盘价;open|开盘价;high|最高价;low|最低价;current|现价;volume|成交量;amount|成交金额;cjcs|成交次数;b1_p|买一价;b1_v|买一量;b2_p|买二价;b2_v|买二量;b3_p|买三价;b3_v|买三量;b4_p|买四价;b4_v|买四量;b5_p|买五价;b5_v|买五量;b6_p|买六价;b6_v|买六量;b7_p|买七价;b7_v|买七量;b8_p|买八价;b8_v|买八量;b9_p|买九价;b9_v|买九量;b10_p|买十价;b10_v|买十量;a1_p|卖一价;a1_v|卖一量;a2_p|卖二价;a2_v|卖二量;a3_p|卖三价;a3_v|卖三量;a4_p|卖四价;a4_v|卖四量;a5_p|卖五价;a5_v|卖五量;a6_p|卖六价;a6_v|卖六量;a7_p|卖七价;a7_v|卖七量;a8_p|卖八价;a8_v|卖八量;a9_p|卖九价;a9_v|卖九量;a10_p|卖十价;a10_v|卖十量;total_bid|十档委买总量;average_bid|十档委买均价;total_ask|十档委卖总量;average_ask|十档委卖均价;",
+        "parentId": "67"
+      },
+      {
+        "id": "269",
+        "title": "场外基金基本信息",
+        "content": "场外基金基本信息数据，包括代码、简称、发行日期、解散日期等数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685452582,
+        "mtime": 1700137296,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "68"
+      },
+      {
+        "id": "273",
+        "title": "基金净值数据",
+        "content": "场外基金净值数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685452712,
+        "mtime": 1700137296,
+        "search_text": "unit_net_value|单位净值(元/份);acc_net_value|累计净值(元/份);pre_net_value|复权净值(元/份);",
+        "parentId": "69"
+      },
+      {
+        "id": "277",
+        "title": "基金十大持仓",
+        "content": "基金季报披露的十大持仓数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685452811,
+        "mtime": 1700137296,
+        "search_text": "symbol|基金代码;position\\_symbol|持仓代码;name|持仓名称;type|类型;amount|数量;value|市值;change|持仓变动;value\\_percent|证券投资市值比;net\\_value\\_percent|基金资产净值比;report\\_date|公告日期;stat\\_date|报告截止日期;",
+        "parentId": "70"
+      },
+      {
+        "id": "278",
+        "title": "基金持仓明细",
+        "content": "基金半年报、年报披露的持仓明细数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685452837,
+        "mtime": 1700137296,
+        "search_text": "symbol|基金代码;position\\_symbol|持仓代码;name|持仓名称;type|类型;amount|数量;value|市值;change|持仓变动;value\\_percent|证券投资市值比;net\\_value\\_percent|基金资产净值比;report\\_date|公告日期;stat\\_date|报告截止日期;",
+        "parentId": "70"
+      },
+      {
+        "id": "285",
+        "title": "技术因子",
+        "content": "常见量价指标类因子",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685453014,
+        "mtime": 1700137296,
+        "search_text": "symbol|股票代码;date|录入日期;bbi|多空指数;dma|平均线差;ma|简单移动平均;expma|指数平均数;macd|指数平滑异同平均;mtm|动力指标;priceosc|价格振荡指标;trix|三重指数平滑平均;ddi|方向标准差偏离指数;bias|乖离率;cci|顺势指标;dbcd|异同离差乖离率;dpo|区间震荡线;kdj|随机指标;lwr|L威廉指标;roc|变动速率;rsi|相对强弱指标;si|摆动指标;srdm|动向速度比率;vroc|量变动速率;vrsi|量相对强弱指标;wr|威廉指标;arbr|人气意愿指标;cr|能量指标;psy|心理指标;vr_rate|成交量比率;wad|威廉聚散指标;mfi|资金流向指标;obv|能量潮;pvt|量价趋势指标;wvad|威廉变异离散量;bbiboll|BBI多空布林线;boll|布林线MID;cdp|逆势操作;env|ENV指标;mike|麦克指标;vr|量比;vma|量简单移动平均;vmacd|量指数平滑异同平均;vosc|成交量震荡;tapi|加权指数成交值;vstd|成交量标准差;adtm|动态买卖气指标;mi|动量指标;micd|异同离差动力指数;rc|变化率指数;rccd|异同离差变化率指数;srmi|SRMIMI修正指标;dptb|大盘同步指标;jdqs|阶段强势指标;jdrs|阶段弱势指标;zdzb|筑底指标;atr|真实波幅;mass|梅丝线;std|标准差;vhf|纵横指标;cvlt|佳庆离散指标;up_n|连涨天数;down_n|连跌天数;",
+        "parentId": "9"
+      },
+      {
+        "id": "289",
+        "title": "基本面因子",
+        "content": "常见的财务指标因子",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685453792,
+        "mtime": 1700137296,
+        "search_text": "symbol|股票代码;date|录入日期;pe|市盈率;pe_ttm|市盈率TTM;pb|市净率;pcf_cash_flow_ttm|市现率PCF;ps|市销率;ps_ttm|市销率TTM;dividend_rate|股息率;dividend_rate_12_months|过去12个月的加权股息率;market_cap|总市值;capitalization|总股本;current_market_cap|流通市值;circulating_cap|流通股本;weighted_roe|净资产收益率roe加权;overall_assets_net_income_ratio|总资产净利率roa;roa|总资产报酬率roa;net_profit_margin_on_sales|销售净利率;gross_sales_profits|销售毛利率;ratio_of_sales_to_cost|销售成本率;net_profit_div_income|净利润／营业总收入;opt_profit_div_income|营业利润／营业总收入;before_tax_profit_div_income|息税前利润／营业总收入;opt_cost_div_income|营业总成本／营业总收入;sale_cost_div_income|销售费用／营业总收入;administration_cost_div_income|管理费用／营业总收入;financing_cost_div_income|财务费用／营业总收入;impairment_loss_div_income|资产减值损失／营业总收入;basic_pey_ear_growth_ratio|基本每股收益同比增长率;diluted_peg_rowth_ratio|稀释每股收益同比增长率;net_cashflow_psg_rowth_ratio|每股经营活动产生的现金流量净额同比增长率;overall_income_growth_ratio|营业总收入同比增长率;opt_income_growth_ratio|营业收入同比增长率;opt_profit_growth_ratio|营业利润同比增长率;total_profit_growth_ratio|利润总额同比增长率;net_profit_growth_ratio|净利润同比增长率;parent_company_profit_growth_ratio|归属母公司股东的净利润同比增长率;parent_company_share_holders_net_profit_growth_ratio|归属母公司股东的净利润-扣除非经常损益同比增长率;net_cashflow_from_opt_act_growth_ratio|经营活动产生的现金流量净额同比增长率;diluted_net_asset_growth_ratio|净资产收益率摊薄同比增长率;cash_cycle|现金循环周期;days_sales_of_inventory|存货周转天数;days_sales_outstanding|应收账款周转天数;days_payable_outstanding|应付账款周转天数;turnover_days_of_current_assets|流动资产周转天数;inventory_turnover_ratio|存货周转率;turnover_ratio_of_receivable|应收账款周转率;turnover_ratio_of_account_payable|应付账款周转率;turnover_of_current_assets|流动资产周转率;turnover_of_fixed_assets|固定资产周转率;turnover_of_overall_assets|总资产周转率;current_ratio|流动比率;quick_ratio|速动比率;conservative_quick_ratio|保守速动比率;equity_ratio|产权比率负债合计／归属母公司股东的权益;equity_liabilities_attributable_to_shareholders_of_parent_company|归属母公司股东的权益／负债合计;equity_int_liabilities_attributable_to_shareholders_of_parent_company|归属母公司股东的权益／带息债务;tangible_assets_liabilities|有形资产／负债合计;tangible_assets_int_liabilities|有形资产／带息债务;tangible_assets_net_liabilities|有形资产／净债务;ebitda_liabilities|息税折旧摊销前利润／负债合计;netcashflows_from_opt_act_int_liabilities|经营活动产生的现金流量净额／带息债务;netcashflows_from_opt_act_net_liabilities|经营活动产生的现金流量净额／净债务;long_term_debt_to_opt_capital_ratio|长期债务与营运资金比率;net_debt_equity|净债务／股权价值;int_debt_equity|带息债务／股权价值;",
+        "parentId": "9"
+      },
+      {
+        "id": "293",
+        "title": "指数基本信息",
+        "content": "主流指数基本信息，包括代码、简称、启用日期等数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685521185,
+        "mtime": 1700137296,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "73"
+      },
+      {
+        "id": "295",
+        "title": "常用股票型指数",
+        "content": "记录了常用股票型指数代码",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685535031,
+        "mtime": 1703818815,
+        "search_text": null,
+        "parentId": "73"
+      },
+      {
+        "id": "296",
+        "title": "指数日行情数据",
+        "content": "常用指数日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685535099,
+        "mtime": 1700137296,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);turnover_rate|换手率(%);is_paused|是否停牌;high_limit|涨停价(元);low_limit|跌停价(元);avg_price|均价(元);prev_close|前收盘价(元);quote_rate|涨跌幅(%);amp_rate|振幅(%);is_st|是否st;",
+        "parentId": "74"
+      },
+      {
+        "id": "297",
+        "title": "指数分钟行情数据",
+        "content": "常用指数分钟频行情数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685535122,
+        "mtime": 1700137296,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);turnover_rate|换手率(%);is_paused|是否停牌;",
+        "parentId": "74"
+      },
+      {
+        "id": "298",
+        "title": "指数实时行情快照",
+        "content": "常用指数实时行情快照数据",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685535142,
+        "mtime": 1700137296,
+        "search_text": "prev_close|前收盘价;open|开盘价;high|最高价;low|最低价;current|现价;volume|成交量;amount|成交金额;cjcs|成交次数;b1_p|买一价;b1_v|买一量;b2_p|买二价;b2_v|买二量;b3_p|买三价;b3_v|买三量;b4_p|买四价;b4_v|买四量;b5_p|买五价;b5_v|买五量;b6_p|买六价;b6_v|买六量;b7_p|买七价;b7_v|买七量;b8_p|买八价;b8_v|买八量;b9_p|买九价;b9_v|买九量;b10_p|买十价;b10_v|买十量;a1_p|卖一价;a1_v|卖一量;a2_p|卖二价;a2_v|卖二量;a3_p|卖三价;a3_v|卖三量;a4_p|卖四价;a4_v|卖四量;a5_p|卖五价;a5_v|卖五量;a6_p|卖六价;a6_v|卖六量;a7_p|卖七价;a7_v|卖七量;a8_p|卖八价;a8_v|卖八量;a9_p|卖九价;a9_v|卖九量;a10_p|卖十价;a10_v|卖十量;total_bid|十档委买总量;average_bid|十档委买均价;total_ask|十档委卖总量;average_ask|十档委卖均价;",
+        "parentId": "74"
+      },
+      {
+        "id": "300",
+        "title": "指数成分股及权重",
+        "content": "包含了常见加权指数的成分股权重",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685535206,
+        "mtime": 1703817602,
+        "search_text": "`symbol`|股票代码;`weight`|股票所占权重（百分比）;",
+        "parentId": "75"
+      },
+      {
+        "id": "324",
+        "title": "外汇日行情数据",
+        "content": "外汇日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685537467,
+        "mtime": 1700137296,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;",
+        "parentId": "78"
+      },
+      {
+        "id": "325",
+        "title": "外汇分钟行情数据",
+        "content": "外汇分钟频行情数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685537502,
+        "mtime": 1700137296,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;",
+        "parentId": "78"
+      },
+      {
+        "id": "332",
+        "title": "外汇基本信息",
+        "content": "记录了外汇(中国银行双向宝合约)的基本信息",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685537659,
+        "mtime": 1700137296,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "76"
+      },
+      {
+        "id": "336",
+        "title": "外汇交易日历",
+        "content": "中国银行双向宝合约交易日历数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685537743,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "77"
+      },
+      {
+        "id": "341",
+        "title": "利润表",
+        "content": "A股上市公司合并利润表数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685599378,
+        "mtime": 1714270070,
+        "search_text": "|**基本信息**;symbol|股票代码;date|查询日期;report_date|数据发布日期;spec_conv_id|特殊转换标识;is_report_publish|报表是否公布值;spec_cond_desc|特殊情况说明;stat_date|季度日期;reporttypecode|报表类型编码;change_id|报表变动记录标识;|**营业总收入**;overall_income|营业总收入;operating_income|加：营业收入;interests_net_income|加：利息净收入;interests_income|（其中）利息收入;interests_expenses|（其中）利息支出;commi_net_income|加：手续费及佣金净收入;charges_and_commissions_income|（其中）手续费及佣金收入;charges_and_commissions_expenses|（其中）手续费及佣金支出;other_business_income|加：其他业务收入;insurance_premiums_earned|加：已赚保费;insurance_income|加：保险业务收入;cession_income|（其中）分保费收入;reinsurance_premium_ceded|（其中）分出保费;unearned_premium_reserve|加：提取未到期责任准备金;net_income_from_brokerage|加：经纪业务手续费净收入;net_income_from_invest_bank|加：投资银行业务手续费净收入;net_income_from_custody|加：资产管理业务手续费净收入;overall_income_account|营业总收入差额（特殊科目）;bal_account_of_overall_income|营业总收入差额（平衡科目）;|**营业总成本**;overall_costs|营业总成本;operations_costs|加：营业成本;operations_taxes_and_surcharges|加：营业税金及附加;sales_fee|加：销售费用;manage_fee|加：管理费用;financial_expenses|加：财务费用;impairment_loss_on_assets|加：资产减值损失;operating_expenses|加：营业支出;business_and_manage_fee|加：业务及管理费;other_business_expense|加：其他业务成本;refund_of_insurance_premiums|加：退保金;payments_for_insurance_claims|加：赔付支出;reinsurers_share_claims_paid|减：摊回赔付支出;draw_duty_deposit|加：提取保险责任准备金;amortized_deposit_for_duty|减：摊回保险责任准备金;commi_on_insurance_policy|加：保单红利支出;cession_charges|加：分保费用;amortized_rein_expenditure|减：摊回分保费用;operating_total_cost_si|加：营业总成本特殊科目;fv_chg_income|加：公允价值变动收益;investment_income|加：投资收益;ii_from_jc_etc|（其中）对联营企业和合营企业的投资收益;exchange_gain|加：汇兑收益;bal_account_of_overall_cost|营业总成本差额（平衡科目）;|**营业利润**;profit_from_operations|营业利润;op_diff_sri|营业利润差额（特殊科目）;bal_account_of_operating_profit|营业利润差额（平衡科目）;non_operating_profit|加：营业外收入;non_operating_expenses|减：营业外支出;noncurrent_asset_dispose_gain|（其中）非流动资产处置利得;noncurrent_asset_dispose_loss|（其中）非流动资产处置损失;|**利润总额**;profit_before_tax|利润总额;total_profit_diff_sri|利润总额差额（特殊科目）;bal_account_of_overall_profit|利润总额差额（平衡科目）;minus_income_tax_expenses|减：所得税费用;|**净利润**;net_profit|净利润;special_account_of_net_profit|净利润差额（特殊科目）;bal_account_of_net_profit|净利润差额（平衡科目）;np_atsopc|归属于母公司股东的净利润;minority_interest_income|少数股东损益;other_comprehensive_income|其他综合收益;othrcompre_income_atoopc|归属母公司所有者的其他综合收益;othrcompre_income_atms|归属于少数股东的其他综合收益;total_comprehensive_income|综合收益总额;total_compre_income_atsopc|归属于母公司股东的综合收益总额;total_compre_income_atms|归属于少数股东的综合收益总额;basic_eps|基本每股收益;diluted_eps|稀释每股收益;|**其他**;extraordinary_atsopc|归属于母公司的非经常性损益;income_from_main_business|主营业务收入;cost_of_main_business|主营业务成本;profit_of_main_business|主营业务利润;othr_ci_nonreclassi_into_gal|（一）以后不能重分类进损益的其他综合收益;net_debt_or_na_chg_reclac|1.重新计量设定受益计划净负债或净资产的变动;unclass_other_profit_share|2.权益法下在被投资单位不能重分类进损益的其他综合收益中享有的份额;other3|3.其他;classify_other_profit|（二）以后将重分类进损益的其他综合收益;will_reclassi_equity_method|1.权益法下在被投资单位以后将重分类进损益的其他综合收益中享有的份额;saleable_fnncl_asset_fvc_gal|2.可供出售金融资产公允价值变动损益;htm_saleable_fnncl_asset_gal|3.持有至到期投资重分类为可供出售金融资产损益;cash_flow_gal_valid_part|4.现金流量套期损益的有效部分;translation_reserve|5.外币财务报表折算差额;other6|6.其他;",
+        "parentId": "20"
+      },
+      {
+        "id": "342",
+        "title": "现金流量表",
+        "content": "A股上市公司合并现金流量表数据",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685599471,
+        "mtime": 1714270630,
+        "search_text": "-|**基本信息**;symbol|股票代码;date|查询日期;report_date|数据发布日期;spec_conv_id|特殊转换标识;is_report_publish|报表是否公布值;spec_cond_desc|特殊情况说明;stat_date|季度日期;reporttypecode|报表类型编码;change_id|报表变动记录标识;-|**经营活动产生的现金流量**;cash_received_from_sales|销售商品、提供劳务收到的现金;receipts_of_tax_refunds|收到的税费返还;other_cash_received_from_op_act|收到其他与经营活动有关的现金;net_increase_in_deposits|客户存款和同业存放款项净增加额;net_increase_in_loan_from_central_bank|向中央银行借款净增加额;lending_net_add_other_org|向其他金融机构拆入资金净增加额;cash_received_of_interest_etc|收取利息、手续费及佣金的现金;cash_received_from_orig_ic|收到原保险合同保费取得的现金;cash_received_from_re_insurance|收到再保业务现金净额;naaassured_saving_and_invest|保户储金及投资款净增加额;naa_of_disposal_fnncl_assets|处置交易性金融资产净增加额;net_increase_in_funds_deposit|拆入资金净增加额;net_add_in_repur_capital|回购业务资金净增加额;oa_cash_inflow_diff_sri|经营活动现金流入差额（特殊科目）;sub_total_of_ci_from_oa|经营活动现金流入小计;goods_buy_and_service_cash_pay|购买商品、接受劳务支付的现金;employees_cash_payments|支付给职工以及为职工支付的现金;payments_of_taxes|支付的各项税费;other_cash_paid_related_to_oa|支付其他与经营活动有关的现金;loan_and_advancenet_add|客户贷款及垫款净增加额;naa_of_cb_and_interbank|存放中央银行和同业款项净增加额;cash_paid_for_interests_etc|支付利息、手续费及佣金的现金;cash_of_orig_ic_indemnity|支付原保险合同赔付款项的现金;cash_paid_for_pd|支付保单红利的现金;cash_outflows_from_opt_act|经营活动现金流出差额（特殊科目）;sub_total_of_cos_from_oa|经营活动现金流出小计;net_cash_flows_from_opt_act|经营活动产生的现金流量净额;cashin_flows_from_business_act|经营活动现金流入差额（平衡科目）;cashout_flows_from_business_act|经营活动现金流出差额（平衡科目）;oa_ncf_special_balance|经营活动产生的现金流量净额特殊科目;net_decrease_in_capital|融出资金净减少额;acting_sec_received_net_cash|代理买卖证券收到的现金净额;net_increase_in_capital|融出资金净增加额;acting_td_sec_paied_net_cash|代理买卖证券支付的现金净额;-|**投资活动产生的现金流量**;cash_received_of_dspsl_invest|收回投资收到的现金;investment_income_cash|取得投资收益收到的现金;net_cash_received_from_disposals|处置固定资产、无形资产和其他长期资产收回的现金净额;net_cash_of_disposal_branch|处置子公司及其他营业单位收到的现金净额;cash_received_of_other_fa|收到其他与投资活动有关的现金;cashin_flows_from_investing_act|投资活动现金流入特殊科目;sub_total_of_ci_from_ia|投资活动现金流入小计;cash_paid_for_assets|购建固定资产、无形资产和其他长期资产支付的现金;invest_paid_cash|投资支付的现金;net_cash_amt_from_branch|取得子公司及其他营业单位支付的现金净额;other_cash_paid_related_to_ia|支付其他与投资活动有关的现金;net_increase_in_secured_loans|质押贷款净增加额;cashout_flows_from_investing_act|投资活动现金流出差额（特殊项目）;sub_total_of_cos_fromia|投资活动现金流出小计;net_cashflows_from_investing_act|投资活动产生的现金流量净额;cashin_flows_from_invest_act|投资活动现金流入差额（平衡科目）;cashout_flows_from_invest_act|投资活动现金流出差额（平衡科目）;ncf_from_ia_si|投资活动产生的现金流量净额特殊科目;-|**筹资活动产生的现金流量**;cash_received_from_investors|吸收投资收到的现金;cr_from_minority_holders|子公司吸收少数股东投资收到的现金;cash_received_from_borrowings|取得借款收到的现金;cash_received_of_othr_fa|收到其他与筹资活动有关的现金;proceeds_from_issuance_of_bonds|发行债券收到的现金;fa_cash_in_flow_diff_sri|筹资活动现金流入差额（特殊项目）;sub_total_of_ci_from_fa|筹资活动现金流入小计;cash_pay_for_debt|偿还债务支付的现金;cash_paid_of_distribution|分配股利、利润或偿付利息支付的现金;dap_paid_to_minority_holder|子公司支付给少数股东的股利;othrcash_paid_relating_to_fa|支付其他与筹资活动有关的现金;cashout_flows_from_financing_act|筹资活动现金流出差额（特殊项目）;sub_total_of_cos_from_fa|筹资活动现金流出小计;ncf_from_fa|筹资活动产生的现金流量净额;cashin_flows_from_financing_act|筹资活动现金流入差额（平衡科目）;fa_cash_out_flow_diff_tbi|筹资活动现金流出差额（平衡科目）;ncf_from_fa_si|筹资活动产生的现金流量净额特殊科目;effect_of_exchange_chg_on_cce|汇率变动对现金及现金等价物的影响;net_increase_in_cce|现金及现金等价物净增加额;initial_cce_balance|期初现金及现金等价物余额;cash_and_cash_equivalents_at_end|期末现金及现金等价物余额;-|**补充资料**;net_profit|现金流量表-净利润;reserve_for_assets_impairment|资产减值准备;depreciation_etc|固定资产折旧、油气资产折耗、生产性生物资产折旧;intangible_assets|无形资产摊销;long_term_deferred_expenses|长期待摊费用摊销;disposal_of_fixed_assets_loss|处置固定资产、无形资产和其他长期资产的损失;fixed_asset_abnd_loss|固定资产报废损失;fair_value_change_loss|公允价值变动损失;financing_expenses|现金流量表-财务费用;investment_loss|投资损失;dt_assets_decrease|递延所得税资产减少;dt_liab_increase|递延所得税负债增加;inventory_reduction|存货的减少;operating_receivables_reduction|经营性应收项目的减少;operating_payable_increase|经营性应付项目的增加;other|其他;cashflows_from_operating_act|间接法-经营活动现金流量净额差额（特殊科目）;net_cashflows_from_operating_act|间接法-经营活动产生的现金流量净额;conversion_of_debt_into_capital|债务转为资本;cb_due_within1y|一年内到期的可转换公司债券;finance_lease_fixed_assets|融资租入固定资产;cash_at_end_of_year|现金的期末余额;minus_cash_at_beginning_of_year|现金的期初余额;final_balance_of_cce|现金等价物的期末余额;initial_balance_of_cce|现金等价物的期初余额;net_increase_in_cce_im|间接法-现金及现金等价物净增加额;cce_net_add_amt_diff_sri_dm|直接法-现金及现金等价物净增加额差额（特殊科目）;cce_net_add_amt_diff_tbi_dm|直接法-现金及现金等价物净增加额差额（平衡科目）;bal_cashflows_from_operating_act|间接法-经营活动现金流量净额平衡科目;decrease_in_prepaid_expenses|待摊费用减少;increase_in_prepaid_expenses|预提费用增加;cce_net_special_bi_im|间接法-现金及现金等价物净增加额特殊科目;cce_net_special_bi_im|间接法-现金及现金等价物净增加额平衡科目;final_cce_balance_si|期末现金及现金等价物余额特殊科目;final_cce_balance_bi|期末现金及现金等价物余额平衡科目;exchange_loss|汇兑损失;",
+        "parentId": "20"
+      },
+      {
+        "id": "343",
+        "title": "业绩快报",
+        "content": "A股上市公司业绩快报数据",
+        "order": 3,
+        "type": 0,
+        "ctime": 1685599515,
+        "mtime": 1714109173,
+        "search_text": "symbol|股票代码;report_date|公布日;stat_date|报告期;income_from_main_business|主营业务收入;profit_of_main_business|主营业务利润;total_profit|利润总额;parent_net_profit|归属母公司股东的净利润;diluted_eps|摊薄每股收益EPS;basic_eps|基本每股收益EPS;diluted_roe|全面摊薄净资产收益率ROE;weighted_roe|加权净资产收益率ROE;asset|总资产;net_asset|净资产;brief_report|业绩快报简要说明;parent_net_profit_excl|归属母公司股东的扣非净利润;",
+        "parentId": "20"
+      },
+      {
+        "id": "344",
+        "title": "业绩预告",
+        "content": "A股上市公司业绩预告数据",
+        "order": 4,
+        "type": 0,
+        "ctime": 1685599530,
+        "mtime": 1776930643,
+        "search_text": "symbol|股票代码;stat_date|报告期;report_date|报告公布日;profit_type|业绩预告类型;np_change_range|预告净利润变动;np_change_lower|预告净利润变动下限;np_change_upper|预告净利润变动上限;np_lower|预告净利润下限;np_upper|预告净利润上限;eps_upper|预告eps上限;eps_lower|预告eps下限;eps_change_upper|预告eps变动上限;eps_change_lower|预告eps变动下限;operating_income_excl_upper|预告扣除后营业收入上限;operating_income_excl_lower|预告扣除后营业收入上限;np_excl_upper|预告扣非净利润上限;np_excl_lower|预告扣非净利润下限;np_excl_change_upper|预告扣非净利润变动上限;np_excl_change_lower|预告扣非净利润变动下限;operating_income_upper_limit|预告营业收入上限;operating_income_lower_limit|预告营业收入下限;",
+        "parentId": "20"
+      },
+      {
+        "id": "345",
+        "title": "估值指标表",
+        "content": "A股上市公司估值相关计算财务指标",
+        "order": 5,
+        "type": 0,
+        "ctime": 1685599637,
+        "mtime": 1714273001,
+        "search_text": "date|日期;symbol|股票代码;pe\\_lyr|市盈率LYR;pe\\_mrq|市盈率MRQ;pe\\_ttm|市盈率TTM;fore\\_pe\\_his|预测市盈率(PE,历史预测);fore\\_pe\\_in12m|预测市盈率(PE,未来12个月);static\\_pe\\_csi|静态市盈率(中证发布);auto\\_pe\\_csi|滚动市盈率(中证发布);his\\_peg|历史PEG;fore\\_peg|预测PEG;pb\\_mrq|市净率MRQ;pb\\_csi|市净率(中证发布);pcf\\_operate\\_cash\\_flow\\_lyr|市现率(PCF,经营现金流)LYR;pcf\\_operate\\_cash\\_flow\\_ttm|市现率(PCF,经营现金流)TTM;pcf\\_net\\_cash\\_flow\\_lyr|市现率(PCF,现金净流量)LYR;pcf\\_net\\_cash\\_flow\\_ttm|市现率(PCF,现金净流量)TTM;ps\\_lyr|市销率LYR;ps\\_mrq|市销率MRQ;ps\\_ttm|市销率TTM;dividend\\_rate\\_ttm|股息率TTM;total\\_mv|总市值(元);total\\_mv\\_object|总市值(面向对象)(元);total\\_mv\\_csrc|总市值(证监会算法)(元);float\\_mv|流通市值(元);ev1|企业价值(含货币资金)(元);ev2|企业价值(剔除货币资金)(元);ev2\\_to\\_ebitda|企业倍数;total\\_shares|总股本(股);float\\_shares|流通股本(股);ashare\\_total\\_shares|A股总股本(股);ashare\\_float\\_shares|A股流通股本(股);字段|含义;--------------------------|---------------------------;date|日期;symbol|股票代码;pe|市盈率LYR;pe\\_ttm|市盈率TTM;history\\_forecast\\_pe|预测市盈率(PE,历史预测);forecast\\_pe|预测市盈率(PE,未来12个月);static\\_pe|静态市盈率(中证发布);history\\_peg|历史PEG;pb|市净率MRQ;published\\_pb|市净率(中证发布);pcf|市现率(PCF,经营现金流)LYR;pcf\\_ttm|市现率(PCF,经营现金流)TTM;pcf\\_cash\\_flow|市现率(PCF,现金净流量)LYR;pcf\\_cash\\_flow\\_ttm|市现率(PCF,现金净流量)TTM;ps|市销率LYR;ps\\_ttm|市销率TTM;dividend\\_rate\\_12\\_months|股息率TTM;market\\_cap|总市值(元);market\\_cap\\_csrc|总市值(证监会算法)(元);current\\_market\\_cap|流通市值(元);ev1|企业价值(含货币资金)(元);ev2|企业价值(剔除货币资金)(元);ev\\_times|企业倍数;capitalization|A股总股本(股);circulating\\_cap|A股流通股本(股);",
+        "parentId": "20"
+      },
+      {
+        "id": "346",
+        "title": "偿还能力表",
+        "content": "A股上市公司偿还能力相关计算财务指标",
+        "order": 6,
+        "type": 0,
+        "ctime": 1685599683,
+        "mtime": 1714118852,
+        "search_text": "date|日期;report\\_date|公告日期;stat\\_date|报告期;symbol|股票代码;current\\_ratio\\_mrq|流动比率MRQ;quick\\_ratio\\_mrq|速动比率MRQ;conservative\\_quick\\_ratio\\_ttm|保守速动比率MRQ;cash\\_ratio\\_mrq|现金比率MRQ;equity\\_ratio\\_mrq|产权比率MRQ;equity\\_atsopc\\_to\\_liab\\_mrq|归属母公司股东的权益／负债合计MRQ;equity\\_atsopc\\_to\\_dwi\\_mrq|归属母公司股东的权益／带息债务MRQ;ta\\_to\\_total\\_debt\\_mrq|有形资产／负债合计MRQ;ta\\_to\\_debt\\_with\\_interest\\_mrq|有形资产／带息债务MRQ;ta\\_to\\_net\\_debt\\_mrq|有形资产／净债务MRQ;ebitda\\_to\\_total\\_liab\\_mrq|息税折旧摊销前利润／负债合计MRQ;ncf\\_of\\_oa\\_to\\_dwi\\_mrq|经营活动产生的现金流量净额／带息债务MRQ;ncf\\_of\\_oa\\_to\\_net\\_debt\\_mrq|经营活动产生的现金流量净额／净债务MRQ;lt\\_debt\\_and\\_oc\\_ratio\\_mrq|长期债务与营运资金比率MRQ;net\\_debt\\_to\\_equity\\_value\\_mrq|净债务／总市值MRQ;dwi\\_to\\_equity\\_value\\_mrq|带息债务／总市值MRQ;字段|含义;-----------------------------------------------------------|---------------------------------------;date|日期;report\\_date|公告日期;stat\\_date|报告期;symbol|股票代码;current\\_ratio|流动比率MRQ;quick\\_ratio|速动比率MRQ;conservative\\_quick\\_ratio|保守速动比率MRQ;equity\\_ratio|产权比率MRQ;equity\\_liabilities\\_attributable\\_to\\_shareholders\\_of\\_pa|归属母公司股东的权益／负债合计MRQ;equity\\_int\\_liabilities\\_attributable\\_to\\_shareholders\\_o|归属母公司股东的权益／带息债务MRQ;tangible_assets_liabilities|有形资产／负债合计MRQ;tangible\\_assets\\_int\\_liabilities|有形资产／带息债务MRQ;tangible_assets_net_liabilities|有形资产／净债务MRQ;ebitda_liabilities|息税折旧摊销前利润／负债合计MRQ;netcashflows_from_opt_act_int_liabilities|经营活动产生的现金流量净额／带息债务MRQ;netcashflows_from_opt_act_net_liabilities|经营活动产生的现金流量净额／净债务MRQ;long_term_debt_to_opt_capital_ratio|长期债务与营运资金比率MRQ;net_debt_equity|净债务／总市值MRQ;int_debt_equity|带息债务／总市值MRQ;",
+        "parentId": "20"
+      },
+      {
+        "id": "355",
+        "title": "运营能力表",
+        "content": "A股上市公司运营能力相关计算财务指标",
+        "order": 7,
+        "type": 0,
+        "ctime": 1685623459,
+        "mtime": 1714112644,
+        "search_text": "date|日期;report\\_date|公告日期;stat\\_date|报告期;symbol|股票代码;inventory\\_turnover\\_ttm|存货周转率TTM;account\\_receive\\_turnover\\_ttm|应收账款周转率TTM;accounts\\_payable\\_turnover\\_ttm|应付账款周转率TTM;operation\\_capital\\_ttm|营运资本周转率TTM;float\\_asset\\_turnover\\_ttm|流动资产周转率TTM;unfloat\\_asset\\_turnover\\_ttm|非流动资产周转率TTM;fixed\\_asset\\_turnover\\_ttm|固定资产周转率TTM;total\\_capital\\_turnover\\_ttm|总资产周转率TTM;字段|含义;-----------------------------------|----------------;date|日期;report\\_date|公告日期;stat\\_date|报告期;symbol|股票代码;operating\\_cycle|营业周期;cash\\_cycle|现金循环周期;days\\_sales\\_of\\_inventory|存货周转天数;days\\_sales\\_outstanding|应收账款周转天数;days\\_payable\\_outstanding|应付账款周转天数;turnover\\_days\\_of\\_current\\_assets|流动资产周转天数;inventory_turnover_ratio|存货周转率;turnover\\_ratio\\_of\\_receivable|应收账款周转率;turnover_ratio_of_account_payable|应付账款周转率;turnover_of_current_assets|流动资产周转率;turnover\\_of\\_fixed\\_assets|固定资产周转率;turnover\\_of\\_overall\\_assets|总资产周转率;",
+        "parentId": "20"
+      },
+      {
+        "id": "356",
+        "title": "盈利能力表",
+        "content": "A股上市公司盈利能力计算财务指标\n",
+        "order": 8,
+        "type": 0,
+        "ctime": 1685623587,
+        "mtime": 1714118328,
+        "search_text": "date|日期;report_date|公告日期;stat_date|报告期;symbol|股票代码;roe_ttm|股东权益收益率(ROE)TTM;ebit_on_total_assets_ttm|总资产报酬率（扣非）TTM;roa_ttm|总资产收益率(ROA)TTM;roic_ttm|投入资本回报率(ROIC)TTM;net_sales_rate_ttm|销售净利率TTM;gross_sales_rate_ttm|销售毛利率TTM;sales_dur_fee_rate_ttm|销售期间费用率TTM;sales_fee_rate_ttm|销售费用率TTM;manage_fee_rate_ttm|管理费用率TTM;finance_fee_rate_ttm|财务费用率TTM;operating_profit_rate_ttm|营业利润率TTM;ebit_rate_ttm|息税前利润率（扣非）TTM;cost_to_revenue_ttm|营业总成本／营业总收入TTM;字段|含义;-----------------------------------------------|----------------------------------;date|日期;report\\_date|公告日期;stat\\_date|报告期;symbol|股票代码;roe_ths|净资产收益率-平均(%);weighted_roe|净资产收益率-加权(%);diluted_roe|净资产收益率-摊薄(%);deduct_diluted_roe|净资产收益率-扣除/摊薄(%);non_recurring_gains_and_losses_roe|净资产收益率-扣除非经常损益(%);additional_share_offering_roe|净资产收益率-增发条件(%);overall_assets_net_income_ratio|总资产净利率(%);roa|总资产报酬率(%);roic|投入资本回报率(%);annualized_rate_of_return_on_net_assets|净资产收益率-年化(%);annualized_rate_of_return_on_overall_assets|总资产报酬率-年化(%);annualized_rate_of_net_profit_on_overall_assets|总资产净利率-年化(%);net\\_profit\\_margin\\_on\\_sales|销售净利率(%);gross_sales_profits|销售毛利率(%);ratio_of_sales_to_cost|销售成本率(%);cost_of_sales_period|销售期间费用率(%);net_profit_div_income|净利润／营业总收入(%);opt_profit_div_income|营业利润／营业总收入(%);before_tax_profit_div_income|息税前利润／营业总收入(%);opt_cost_div_income|营业总成本／营业总收入(%);sale_cost_div_income|销售费用／营业总收入(%);administration_cost_div_income|(管理费用+研发费用)／营业总收入(%);financing_cost_div_income|财务费用／营业总收入(%);impairment_loss_div_income|资产减值损失／营业总收入(%);deduct_weighted_roe|净资产收益率-扣除／加权(%);",
+        "parentId": "20"
+      },
+      {
+        "id": "357",
+        "title": "成长能力表",
+        "content": "A股上市公司成长能力计算财务指标",
+        "order": 9,
+        "type": 0,
+        "ctime": 1685623647,
+        "mtime": 1714273436,
+        "search_text": "symbol|股票代码;date|查询日期;report_date|报告期;stat_date|季度日期;basic_eps_year_growth_ratio|基本每股收益(同比增长率);diluted_eps_growth_ratio|稀释每股收益(同比增长率);net_cashflow_psg_growth_ratio|每股经营活动产生的现金流量净额(同比增长率);overall_income_growth_ratio|营业总收入(同比增长率);opt_income_growth_ratio|营业收入(同比增长率);opt_profit_growth_ratio|营业利润(同比增长率);total_profit_growth_ratio|利润总额(同比增长率);net_profit_growth_ratio|净利润(同比增长率);np_atsopc_yoy|归属母公司股东的净利润(同比增长率);np_atsopc_dnrgal_yoy|归属母公司股东的净利润-扣除非经常损益(同比增长率);ncf_of_oa_yoy|经营活动产生的现金流量净额(同比增长率);diluted_net_asset_growth_ratio|净资产收益率(摊薄)(同比增长率);net_asset_growth_ratio|净资产(同比增长率);overall_liabilities_growth_ratio|总负债(同比增长率);overall_assets_growth_ratio|总资产(同比增长率);net_cash_flow_growth_ratio|现金净流量(同比增长率);opt_income_compound_growth_ratio|营业总收入复合年增长率;net_profit_compound_growth_ratio|净利润复合增长率;np_atsopc_compound_growth|归属母公司股东的净利润复合年增长率;bvps_growth_ratio|每股净资产(相对年初增长率);total_assets_growth_ratio|资产总计(相对年初增长率);equity_atsopc_growth_boy|归属母公司股东的权益(相对年初增长率);total_revenue_growth_3y|营业总收入(3年,增长率);overall_cost_years_growth_ratio|营业总成本(3年,增长率);opt_income_years_growth_ratio|营业收入(3年,增长率);opt_profit_years_growth_ratio|营业利润(3年,增长率);oa_net_income_growth_3y|经营活动净收益(3年,增长率);value_chg_growth_3y|价值变动净收益(3年,增长率);total_profit_growth_3y|利润总额(3年,增长率);net_profit_years_growth_ratio|净利润(3年,增长率);net_profit_atsopc_growth_3y|归属母公司股东的净利润(3年,增长率);opt_cash_flow_years_growth_ratio|经营活动产生的现金流量净额(3年,增长率);total_assets_growth_3y|资产总计(3年,增长率);holder_equity_growth_3y|股东权益(3年,增长率);equity_atsopc_growth_nearly3y|归属母公司股东的权益(3年,增长率);roe_years_growth_ratio|净资产收益率(3年,增长率);",
+        "parentId": "20"
+      },
+      {
+        "id": "358",
+        "title": "成长能力表(单季度)",
+        "content": "A股上市公司单季度成长能力计算财务指标数据",
+        "order": 13,
+        "type": 0,
+        "ctime": 1685623719,
+        "mtime": 1714275066,
+        "search_text": "overall_income_growth_ratio|营业总收入(同比增长率);opt_income_growth_ratio|营业收入(同比增长率);opt_profit_growth_ratio|营业利润(同比增长率);net_profit_growth_ratio|净利润(同比增长率);np_atsopc_yoy|归属母公司股东的净利润(同比增长率);",
+        "parentId": "20"
+      },
+      {
+        "id": "359",
+        "title": "现金流量表(单季度)",
+        "content": "A股上市公司单季度合并现金流量表数据都",
+        "order": 11,
+        "type": 0,
+        "ctime": 1685624561,
+        "mtime": 1714274762,
+        "search_text": "-|**经营活动产生的现金流量**;cash_received_from_sales|销售商品、提供劳务收到的现金;receipts_of_tax_refunds|收到的税费返还;other_cash_received_from_op_act|收到其他与经营活动有关的现金;net_increase_in_deposits|客户存款和同业存放款项净增加额;borrowing_net_add_central_bank|向中央银行借款净增加额;net_add_finan_org|向其他金融机构拆入资金净增加额;cash_received_of_interest_etc|收取利息、手续费及佣金的现金;premium_receive_of_orig_ic|收到原保险合同保费取得的现金;cash_received_from_re_insurance|收到再保业务现金净额;net_add_in_deposits_etc|保户储金及投资款净增加额;disposal_net_add_etc|处置交易性金融资产净增加额;net_increase_in_funds_deposit|拆入资金净增加额;net_add_in_repur_capital|回购业务资金净增加额;oa_net_ci_si|经营活动现金流入特殊科目;sub_total_of_ci_from_oa|经营活动现金流入小计;sq_cash_pay_for_goods_etc|购买商品、接受劳务支付的现金;employees_cash_payments|支付给职工以及为职工支付的现金;payments_of_taxes|支付的各项税费;other_cash_paid_related_to_oa|支付其他与经营活动有关的现金;net_add_in_loans_etc|客户贷款及垫款净增加额;deposit_net_add_etc|存放中央银行和同业款项净增加额;cp_for_interests_etc|支付利息、手续费及佣金的现金;cash_of_orig_ic_indemnity|支付原保险合同赔付款项的现金;cash_paid_for_pd|支付保单红利的现金;cash_outflows_from_opt_act|经营活动现金流出特殊科目;sub_total_of_cos_from_oa|经营活动现金流出小计;net_cash_flows_from_opt_act|经营活动产生的现金流量净额;-|**投资活动产生的现金流量**;cr_from_disposal_of_invest|收回投资收到的现金;investment_income_cash|取得投资收益收到的现金;net_cash_received_from_disposals|处置固定资产、无形资产和其他长期资产收回的现金净额;net_cr_from_disposal|处置子公司及其他营业单位收到的现金净额;other_cr_related_to_ia|收到其他与投资活动有关的现金;cashin_flows_from_investing_act|投资活动现金流入特殊科目;sub_total_of_ci_from_ia|投资活动现金流入小计;cash_paid_for_assets|购建固定资产、无形资产和其他长期资产支付的现金;invest_paid_cash|投资支付的现金;nc_of_branch_etc|取得子公司及其他营业单位支付的现金净额;othercp_related_to_ia|支付其他与投资活动有关的现金;net_increase_in_secured_loans|质押贷款净增加额;cashout_flows_from_investing_act|投资活动现金流出特殊科目;sub_total_of_cos_from_ia|投资活动现金流出小计;net_cashflows_from_investing_act|投资活动产生的现金流量净额;-|**筹资活动产生的现金流量**;cash_received_from_investors|吸收投资收到的现金;cash_received_from_investor|其中：子公司吸收少数股东投资收到的现金;cash_received_from_borrowings|取得借款收到的现金;other_cr_related_to_fa|收到其他与筹资活动有关的现金;proceeds_from_issuance_of_bonds|发行债券收到的现金;ci_from_fa_si|筹资活动现金流入特殊科目;sub_total_of_ci_from_fa|筹资活动现金流入小计;cash_pay_for_debt|偿还债务支付的现金;dividend_etc_cp|分配股利、利润或偿付利息支付的现金;branch_paid_to_minority_holder|其中：子公司支付给少数股东的股利;othercp_related_to_fa|支付其他与筹资活动有关的现金;cashout_flows_from_financing_act|筹资活动现金流出特殊科目;sub_total_of_co_from_fa|筹资活动现金流出小计;ncf_from_fa|筹资活动产生的现金流量净额;-|**其他**;effect_of_erc_on_cce|汇率变动对现金及现金等价物的影响;net_increase_in_cce|现金及现金等价物净增加额;initial_balance_of_cce|加：期初现金及现金等价物余额;cash_and_cash_equivalents_at_end|期末现金及现金等价物余额;net_profit|净利润;reserve_for_assets_impairment|加：资产减值准备;depreciation_etc|固定资产折旧、油气资产折耗、生产性生物资产折旧;intangible_assets|无形资产摊销;long_term_deferred_expenses|长期待摊费用摊销;disposal_of_fixed_assets_loss|处置固定资产、无形资产和其他长期资产的损失;fixed_asset_abnd_loss|固定资产报废损失;fair_value_change_loss|公允价值变动损失;financing_expenses|cfs_财务费用;investment_loss|投资损失;dt_assets_decrease|递延所得税资产减少;dt_liab_increase|递延所得税负债增加;inventory_reduction|存货的减少;operating_receivables_reduction|经营性应收项目的减少;operating_payable_increase|经营性应付项目的增加;other|其他;net_cashflows_from_operating_act|间接法-经营活动产生的现金流量净额;conversion_of_debt_into_capital|债务转为资本;cb_due_within1year|一年内到期的可转换公司债券;finance_lease_fixed_assets|融资租入固定资产;cash_at_end_of_year|现金的期末余额;minus_cash_at_beginning_of_year|减：现金的期初余额;final_balance_of_ce|加：现金等价物的期末余额;initial_balance_of_ce|减：现金等价物的期初余额;net_increase_in_cce_im|间接法-现金及现金等价物净增加额;spec_conv_id|cfs_特殊转换标识;is_report_publish|cfs_报表是否公布值;cashin_flows_from_business_act|经营活动现金流入平衡科目;cashout_flows_from_business_act|经营活动现金流出平衡科目;cashin_flows_from_invest_act|投资活动现金流入平衡科目;cashout_flows_from_invest_act|投资活动现金流出平衡科目;cashin_flows_from_financing_act|筹资活动现金流入平衡科目;cos_from_fa_bi|筹资活动现金流出平衡科目;net_increase_in_cce_si|现金及现金等价物净增加额特殊科目;net_increase_in_cce_bi|现金及现金等价物净增加额平衡科目;decrease_in_prepaid_expenses|待摊费用减少;increase_in_prepaid_expenses|预提费用增加;oa_ncf_special_balance|经营活动产生的现金流量净额特殊科目;ncf_from_ia_si|投资活动产生的现金流量净额特殊科目;ncf_from_fa_si|筹资活动产生的现金流量净额特殊科目;cce_net_special_bi_im|间接法-现金及现金等价物净增加额特殊科目;cce_net_add_bi_im|间接法-现金及现金等价物净增加额平衡科目;final_cce_balance_si|期末现金及现金等价物余额特殊科目;final_cce_balance_bi|期末现金及现金等价物余额平衡科目;net_decrease_in_capital|融出资金净减少额;acting_sec_received_net_cash|代理买卖证券收到的现金净额;net_increase_in_capital|融出资金净增加额;acting_td_sec_paied_net_cash|代理买卖证券支付的现金净额;exchange_loss|汇兑损失;",
+        "parentId": "20"
+      },
+      {
+        "id": "360",
+        "title": "盈利能力表(单季度)",
+        "content": "A股上市公司单季度盈利能力计算财务指标数据",
+        "order": 12,
+        "type": 0,
+        "ctime": 1685624605,
+        "mtime": 1714274997,
+        "search_text": "roe_dnrgal|净资产收益率roe-扣除非经常损益;overall_assets_net_income_ratio|总资产净利率roa;net_profit_margin_on_sales|销售净利率;gross_sales_profits|销售毛利率;net_profit_div_income|净利润／营业总收入;opt_profit_div_income|营业利润／营业总收入;opt_cost_div_income|营业总成本／营业总收入;administration_cost_div_income|管理费用／营业总收入;roe|净资产收益率roe（累计）;roe_one_season|净资产收益率roe（单季度）;",
+        "parentId": "20"
+      },
+      {
+        "id": "361",
+        "title": "利润表(单季度)",
+        "content": "A股上市公司单季度利润表",
+        "order": 10,
+        "type": 0,
+        "ctime": 1685624636,
+        "mtime": 1714274365,
+        "search_text": "-|**一、营业总收入**;overall_income|营业总收入;operating_income|营业收入;interests_net_income|利息净收入;interests_income|利息收入;interests_expenses|利息支出;commi_net_income|手续费及佣金净收入;charges_and_commissions_income|手续费及佣金收入;charges_and_commissions_expenses|手续费及佣金支出;other_business_income|其他业务收入;insurance_premiums_earned|已赚保费;insurance_income|保险业务收入;cession_income|其中：分保费收入;reinsurance_premium_ceded|减：分出保费;unearned_premium_reserve|提取未到期责任准备金;net_income_from_brokerage|其中：经纪业务手续费净收入;net_income_from_invest_bank|投资银行业务手续费净收入;net_income_from_custody|资产管理业务手续费净收入;overall_income_account|营业总收入特殊科目;-|**二、营业总成本**;overall_costs|营业总成本;operations_costs|其中：营业成本;operations_taxes_and_surcharges|营业税金及附加;sales_fee|销售费用;manage_fee|管理费用;financial_expenses|is_财务费用;impairment_loss_on_assets|资产减值损失;operating_expenses|营业支出;business_and_manage_fee|业务及管理费;other_business_expense|其他业务成本;refund_of_insurance_premiums|退保金;payments_for_insurance_claims|赔付支出;reinsurers_share_claims_paid|减：摊回赔付支出;draw_duty_deposit|提取保险责任准备金;amortized_deposit_for_duty|减：摊回保险责任准备金;commi_on_insurance_policy|保单红利支出;cession_charges|分保费用;amortized_rein_expenditure|减：摊回分保费用;operating_total_cost_si|营业总成本特殊科目;income_from_chg_in_fv|加：公允价值变动收益;investment_income|投资收益;invest_incomes_from_rr|其中：对联营企业和合营企业的投资收益;exchange_gain|汇兑收益;-|**三、营业利润**;profit_from_operations|营业利润;non_operating_profit|加：营业外收入;non_operating_expenses|减：营业外支出;noncurrent_asset_disposal_loss|其中：非流动资产处置损失;-|**四、利润总额**;profit_before_tax|利润总额;minus_income_tax_expenses|减：所得税费用;-|**五、净利润**;net_profit|净利润;np_atsopc|归属于母公司股东的净利润;minority_interest_income|少数股东损益;other_comprehensive_income|其他综合收益;total_comprehensive_income|综合收益总额;total_compre_income_atsopc|归属于母公司股东的综合收益总额;total_compre_income_atms|归属于少数股东的综合收益总额;spec_conv_id|特殊转换标识;income_from_main_business|主营业务收入;cost_of_main_business|主营业务成本;profit_of_main_business|主营业务利润;is_report_publish|报表是否公布值;bal_account_of_overall_income|营业总收入平衡科目;bal_account_of_overall_cost|营业总成本平衡科目;op_si|营业利润特殊科目;bal_account_of_operating_profit|营业利润平衡科目;total_profit_si|利润总额特殊科目;bal_account_of_overall_profit|利润总额平衡科目;special_account_of_net_profit|净利润特殊科目;bal_account_of_net_profit|净利润平衡科目;basic_eps|基本每股收益;diluted_eps|稀释每股收益;noncurrent_assets_dispose_gain|其中：非流动资产处置利得;other_compre_income_atoopc|归属母公司所有者的其他综合收益;othr_ci_nonreclassi_into_gal|（一）以后不能重分类进损益的其他综合收益;net_debt_or_na_chg_reclac|1.重新计量设定受益计划净负债或净资产的变动;unclass_other_profit_share|2.权益法下在被投资单位不能重分类进损益的其他综合收益中享有的份额;classify_other_profit|（二）以后将重分类进损益的其他综合收益;will_reclassi_equity_method|1.权益法下在被投资单位以后将重分类进损益的其他综合收益中享有的份额;saleable_fnncl_asset_fvc_gal|2.可供出售金融资产公允价值变动损益;htm_saleable_fnncl_asset_gal|3.持有至到期投资重分类为可供出售金融资产损益;cash_flow_gal_valid_part|4.现金流量套期损益的有效部分;translation_reserve|5.外币财务报表折算差额;other3|6.其他;other_compre_income_atms|归属于少数股东的其他综合收益;other6|3.其他;",
+        "parentId": "20"
+      },
+      {
+        "id": "393",
+        "title": "新闻评级数据",
+        "content": "记录了新闻标题、新闻来源、新闻评级、新闻发布时间、新闻评级时间、对应股票代码数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1686120798,
+        "mtime": 1700137296,
+        "search_text": "symbol|股票代码;ctime|新闻发布时间;rtime|审核评级时间;title|文章标题;source|文章来源;nature|新闻评级;",
+        "parentId": "79"
+      },
+      {
+        "id": "394",
+        "title": "举牌事件",
+        "content": "记录了A股上市公司举牌事件数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1686128527,
+        "mtime": 1700137296,
+        "search_text": "symbol|股票代码;report\\_date|举牌公告日期;name|举牌方;start\\_date|举牌起始日期;end\\_date|举牌截止日期;add\\_quantity|本次举牌增持数量;add\\_quantity\\_ratio|本次举牌增持数量占总股本比例;",
+        "parentId": "79"
+      },
+      {
+        "id": "395",
+        "title": "实控人变更事件",
+        "content": "记录A股上市公司实控人变更事件相关数据",
+        "order": 2,
+        "type": 0,
+        "ctime": 1686129751,
+        "mtime": 1700137296,
+        "search_text": "symbol|股票代码;after\\_name|实控人变更后名称;before\\_name|实控人变更前名称;date|实控人变更时间;",
+        "parentId": "79"
+      },
+      {
+        "id": "396",
+        "title": "定向增发事件",
+        "content": "记录了A股上市公司定向增发事件相关数据",
+        "order": 3,
+        "type": 0,
+        "ctime": 1686129983,
+        "mtime": 1700137296,
+        "search_text": "plan\\_date|增发预案日;rate|增发进度;plan\\_low\\_price|增发预案发行价格下限;plan\\_high\\_price|增发预案发行价格上限;quantity|增发预案募集数量;amount|增发预案募集金额;stock\\_buying\\_pattern|增发认购方式;",
+        "parentId": "79"
+      },
+      {
+        "id": "397",
+        "title": "机构调研数据",
+        "content": "记录A股上市公司机构调研事件相关数据",
+        "order": 4,
+        "type": 0,
+        "ctime": 1686130230,
+        "mtime": 1700137296,
+        "search_text": "symbol|同花顺代码;declare\\_date|调研公告日期;investigation\\_date|调研时间;institutions\\_cnt|调研机构家数;institutions|调研机构名称;investigation\\_type|调研类型;investigation\\_place|调研地点;pe\\_cnt|调研私募家数;pe|调研私募名称;fund\\_cnt|调研基金家数;fund|调研基金名称;security\\_cnt|调研券商家数;security|调研券商名称;insurance\\_cnt|调研保险家数;insurance|调研保险名称;qfii\\_cnt|调研qfii家数;qfii|调研qfii名称;overseas\\_cnt|调研海外机构家数;overseas|调研海外机构名称;others\\_cnt|调研其他类别家数;others|调研其他类别名称;",
+        "parentId": "79"
+      },
+      {
+        "id": "398",
+        "title": "query_iwencai",
+        "content": "问财接口服务，结果与问财网页版相同",
+        "order": 0,
+        "type": 0,
+        "ctime": 1686130848,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "80"
+      },
+      {
+        "id": "399",
+        "title": "get_iwencai",
+        "content": "自然语言选股接口服务，选股结果与问财backtest等同。仅支持在股票策略初始化阶段调用。",
+        "order": 1,
+        "type": 0,
+        "ctime": 1686131065,
+        "mtime": 1686131214,
+        "search_text": null,
+        "parentId": "80"
+      },
+      {
+        "id": "419",
+        "title": "iFinD数据接口",
+        "content": "iFinD金融数据终端提供Python数据接口",
+        "order": 0,
+        "type": 0,
+        "ctime": 1686191265,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "44"
+      },
+      {
+        "id": "422",
+        "title": "期货分钟行情数据",
+        "content": "记录了内地交易所期货分钟频行情数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1686201599,
+        "mtime": 1700137296,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;volume|成交量;turnover|成交金额(元);open_interest|持仓;",
+        "parentId": "50"
+      },
+      {
+        "id": "426",
+        "title": "期货日交易排名",
+        "content": "期货日交易排名表，包含持仓龙虎榜、多头持仓龙虎榜、空头持仓龙虎榜数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1686202480,
+        "mtime": 1700137296,
+        "search_text": "symbol|品种代码;date|日期;name|排名类型;rank|排名;member|经纪商名字;amount|持仓数量;amount_delta|持仓数量变动;",
+        "parentId": "84"
+      },
+      {
+        "id": "427",
+        "title": "期货库存情况",
+        "content": "期货库存情况表，包含库存量、库存变动、注册仓单数量、注册仓单变动、可用库存量、可用库存变动数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1686202590,
+        "mtime": 1700137296,
+        "search_text": "symbol|品种代码;date|日期;name|仓库名称;unit|单位;amount|库存量;amount\\_delta|库存变动;register|注册仓单数量;register_delta|注册仓单变动;available|可用库容量;available_delta|可用库容量变动;",
+        "parentId": "84"
+      },
+      {
+        "id": "435",
+        "title": "开盘竞价成交信息",
+        "content": "记录A股开盘集合竞价成交信息数据",
+        "order": 2,
+        "type": 0,
+        "ctime": 1686663895,
+        "mtime": 1714109211,
+        "search_text": "price|成交价;turnover|成交金额;",
+        "parentId": "16"
+      },
+      {
+        "id": "488",
+        "title": "常用基金型指数",
+        "content": "记录了常用基金型指数 ",
+        "order": 2,
+        "type": 0,
+        "ctime": 1703819147,
+        "mtime": 1704162893,
+        "search_text": null,
+        "parentId": "73"
+      },
+      {
+        "id": "498",
+        "title": "常用债券型指数",
+        "content": "记录了常用债券型指数",
+        "order": 3,
+        "type": 0,
+        "ctime": 1704162888,
+        "mtime": 1704163161,
+        "search_text": null,
+        "parentId": "73"
+      },
+      {
+        "id": "504",
+        "title": "常用期货型指数",
+        "content": "记录了常用期货型指数",
+        "order": 4,
+        "type": 0,
+        "ctime": 1704163154,
+        "mtime": 1704165034,
+        "search_text": null,
+        "parentId": "73"
+      },
+      {
+        "id": "510",
+        "title": "常用港股指数",
+        "content": "记录了常用港股指数",
+        "order": 6,
+        "type": 0,
+        "ctime": 1704165010,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "73"
+      },
+      {
+        "id": "512",
+        "title": "常用全球指数",
+        "content": "记录了常用全球指数",
+        "order": 6,
+        "type": 0,
+        "ctime": 1704165028,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "73"
+      },
+      {
+        "id": "538",
+        "title": "龙虎榜",
+        "content": "记录A股上市公司进入龙虎榜相关数据",
+        "order": 5,
+        "type": 0,
+        "ctime": 1745566953,
+        "mtime": 1745743124,
+        "search_text": "symbol|股票代码;list_date|上榜日期;exchange_amount_purchase_1|营业部买入金额;exchange_amount_sold|营业部卖出金额;exchange_net_amount|营业部净额;exchange_ratio_purchased|营业部买入比例;ranking|买入/卖出金额排名;exchange_ratio_sold|营业部卖出比例;trading_direction|买入/卖出方向;type|营业部类型;name|营业部名称;list_reasons|上榜原因;字段|含义;---------------------------|---------------------;symbol|股票代码;list_date_total|上榜日期;list_times|上榜计数;number_of_purchased_insti_1|买入前5机构数量;number_of_sold_institutio_2|卖出前5机构数量;number_of_list|买/卖前5机构数量;institutions_amount_purch_3|买入前5机构买入金额;institutions_amount_sold__4|卖出前5机构卖出金额;institutions_net_amount_t_5|买/卖前5机构净额;institutions_ratio_purcha_6|买入前5机构买入比例;institutions_ratio_sold|卖出前5机构卖出入比例;字段|含义;-------------------------|----------------------;symbol|股票代码;list_date_total|上榜日期;reasons_total|上榜原因;exchange_amount_purchas_1|营业部买入金额（去重）;exchange_amount_sold_to_2|营业部卖出金额（去重）;exchange_net_amount_tot_3|营业部净额（去重）;",
+        "parentId": "79"
+      },
+      {
+        "id": "558",
+        "title": "日频资金流向数据",
+        "content": "记录了日频主动买入、大单特大单等资金流向数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1784118163,
+        "mtime": 1784123042,
+        "search_text": "act_buy_xl|主动买入特大单金额（元）;pas_buy_xl|被动买入特大单金额（元）;act_buy_l|主动买入大单金额（元）;pas_buy_l|被动买入大单金额（元）;act_buy_m|主动买入中单金额（元）;pas_buy_m|被动买入中单金额（元）;act_sell_xl|主动卖出特大单金额（元）;pas_sell_xl|被动卖出特大单金额（元）;act_sell_l|主动卖出大单金额（元）;pas_sell_l|被动卖出大单金额（元）;act_sell_m|主动卖出中单金额（元）;pas_sell_m|被动卖出中单金额（元）;buy_l|小单买入金额（元）;sell_l|小单卖出金额（元）;dde_l|DDE大单净额（元）;net_flow_rate|金额流入率（%）;l_net_value|大单净量;",
+        "parentId": "23"
+      },
+      {
+        "id": "566",
+        "title": "半小时资金流向数据",
+        "content": "记录了半小时级别主动买入、大单特大单等资金流向数据",
+        "order": 2,
+        "type": 0,
+        "ctime": 1784123351,
+        "mtime": 1784123377,
+        "search_text": "act\\_buy\\_xl|主动买入特大单金额（元）;pas\\_buy\\_xl|被动买入特大单金额（元）;act\\_buy\\_l|主动买入大单金额（元）;pas\\_buy\\_l|被动买入大单金额（元）;act\\_buy\\_m|主动买入中单金额（元）;pas\\_buy\\_m|被动买入中单金额（元）;act\\_sell\\_xl|主动卖出特大单金额（元）;pas\\_sell\\_xl|被动卖出特大单金额（元）;act\\_sell\\_l|主动卖出大单金额（元）;pas\\_sell\\_l|被动卖出大单金额（元）;act\\_sell\\_m|主动卖出中单金额（元）;pas\\_sell\\_m|被动卖出中单金额（元）;buy\\_l|小单买入金额（元）;sell\\_l|小单卖出金额（元）;dde\\_l|DDE大单净额（元）;net\\_flow\\_rate|金额流入率（%）;l\\_net\\_value|大单净量;",
+        "parentId": "23"
+      },
+      {
+        "id": "574",
+        "title": "五分钟资金流向数据",
+        "content": "记录了五分钟级别主动买入、大单特大单等资金流向数据",
+        "order": 3,
+        "type": 0,
+        "ctime": 1784123438,
+        "mtime": 1784123461,
+        "search_text": "act_buy_xl|主动买入特大单金额（元）;pas_buy_xl|被动买入特大单金额（元）;act_buy_l|主动买入大单金额（元）;pas_buy_l|被动买入大单金额（元）;act_buy_m|主动买入中单金额（元）;pas_buy_m|被动买入中单金额（元）;act_sell_xl|主动卖出特大单金额（元）;pas_sell_xl|被动卖出特大单金额（元）;act_sell_l|主动卖出大单金额（元）;pas_sell_l|被动卖出大单金额（元）;act_sell_m|主动卖出中单金额（元）;pas_sell_m|被动卖出中单金额（元）;buy_l|小单买入金额（元）;sell_l|小单卖出金额（元）;dde_l|DDE大单净额（元）;net_flow_rate|金额流入率（%）;l_net_value|大单净量;",
+        "parentId": "23"
+      }
+    ]
+  },
+  "state": {
+    "$sdataplatformDir": [
+      {
+        "id": "1",
+        "name": "股票",
+        "order": 0,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "2",
+        "name": "期货",
+        "order": 1,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "3",
+        "name": "期权",
+        "order": 2,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "4",
+        "name": "基金",
+        "order": 3,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "5",
+        "name": "指数",
+        "order": 4,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "6",
+        "name": "债券",
+        "order": 5,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "7",
+        "name": "外汇",
+        "order": 6,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "8",
+        "name": "风险模型",
+        "order": 7,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "9",
+        "name": "因子数据",
+        "order": 8,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "11",
+        "name": "A股",
+        "order": 0,
+        "parentId": "1",
+        "levelId": 2
+      },
+      {
+        "id": "14",
+        "name": "基本信息(A股)",
+        "order": 0,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "15",
+        "name": "交易日历(A股)",
+        "order": 1,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "16",
+        "name": "行情数据(A股)",
+        "order": 2,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "17",
+        "name": "高频行情数据(A股)",
+        "order": 3,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "18",
+        "name": "行业分类",
+        "order": 7,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "19",
+        "name": "同花顺概念(A股)",
+        "order": 8,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "20",
+        "name": "上市公司财务数据",
+        "order": 5,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "21",
+        "name": "分析师一致预期",
+        "order": 9,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "22",
+        "name": "上市公司资料",
+        "order": 6,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "23",
+        "name": "市场资金数据",
+        "order": 4,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "33",
+        "name": "内地期货",
+        "order": 0,
+        "parentId": "2",
+        "levelId": 2
+      },
+      {
+        "id": "34",
+        "name": "延期交收合约(T+D合约)",
+        "order": 0,
+        "parentId": "2",
+        "levelId": 2
+      },
+      {
+        "id": "35",
+        "name": "金融期权",
+        "order": 0,
+        "parentId": "3",
+        "levelId": 2
+      },
+      {
+        "id": "36",
+        "name": "场内基金",
+        "order": 0,
+        "parentId": "4",
+        "levelId": 2
+      },
+      {
+        "id": "37",
+        "name": "场外基金",
+        "order": 0,
+        "parentId": "4",
+        "levelId": 2
+      },
+      {
+        "id": "38",
+        "name": "可转债",
+        "order": 0,
+        "parentId": "6",
+        "levelId": 2
+      },
+      {
+        "id": "44",
+        "name": "iFinD数据接口",
+        "order": 12,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "48",
+        "name": "期货基本信息",
+        "order": 0,
+        "parentId": "33",
+        "levelId": 3
+      },
+      {
+        "id": "49",
+        "name": "期货交易日历",
+        "order": 1,
+        "parentId": "33",
+        "levelId": 3
+      },
+      {
+        "id": "50",
+        "name": "期货行情数据",
+        "order": 2,
+        "parentId": "33",
+        "levelId": 3
+      },
+      {
+        "id": "51",
+        "name": "TD合约基本信息",
+        "order": 0,
+        "parentId": "34",
+        "levelId": 3
+      },
+      {
+        "id": "52",
+        "name": "TD合约交易日历",
+        "order": 0,
+        "parentId": "34",
+        "levelId": 3
+      },
+      {
+        "id": "53",
+        "name": "TD合约行情数据",
+        "order": 0,
+        "parentId": "34",
+        "levelId": 3
+      },
+      {
+        "id": "54",
+        "name": "期权基本信息",
+        "order": 0,
+        "parentId": "35",
+        "levelId": 3
+      },
+      {
+        "id": "55",
+        "name": "期权交易日历",
+        "order": 0,
+        "parentId": "35",
+        "levelId": 3
+      },
+      {
+        "id": "56",
+        "name": "期权行情数据",
+        "order": 0,
+        "parentId": "35",
+        "levelId": 3
+      },
+      {
+        "id": "57",
+        "name": "可转债基本信息",
+        "order": 0,
+        "parentId": "38",
+        "levelId": 3
+      },
+      {
+        "id": "58",
+        "name": "可转债行情",
+        "order": 0,
+        "parentId": "38",
+        "levelId": 3
+      },
+      {
+        "id": "59",
+        "name": "可转债条款信息",
+        "order": 0,
+        "parentId": "38",
+        "levelId": 3
+      },
+      {
+        "id": "60",
+        "name": "CNE5风险模型",
+        "order": 0,
+        "parentId": "8",
+        "levelId": 2
+      },
+      {
+        "id": "65",
+        "name": "基金基本信息",
+        "order": 0,
+        "parentId": "36",
+        "levelId": 3
+      },
+      {
+        "id": "66",
+        "name": "基金净值数据",
+        "order": 0,
+        "parentId": "36",
+        "levelId": 3
+      },
+      {
+        "id": "67",
+        "name": "基金行情数据",
+        "order": 0,
+        "parentId": "36",
+        "levelId": 3
+      },
+      {
+        "id": "68",
+        "name": "基金基本信息",
+        "order": 0,
+        "parentId": "37",
+        "levelId": 3
+      },
+      {
+        "id": "69",
+        "name": "基金净值数据",
+        "order": 0,
+        "parentId": "37",
+        "levelId": 3
+      },
+      {
+        "id": "70",
+        "name": "基金持仓情况",
+        "order": 0,
+        "parentId": "37",
+        "levelId": 3
+      },
+      {
+        "id": "73",
+        "name": "指数基本信息",
+        "order": 0,
+        "parentId": "5",
+        "levelId": 2
+      },
+      {
+        "id": "74",
+        "name": "指数行情数据",
+        "order": 1,
+        "parentId": "5",
+        "levelId": 2
+      },
+      {
+        "id": "75",
+        "name": "指数成分股数据",
+        "order": 1,
+        "parentId": "5",
+        "levelId": 2
+      },
+      {
+        "id": "76",
+        "name": "外汇基本信息",
+        "order": 0,
+        "parentId": "7",
+        "levelId": 2
+      },
+      {
+        "id": "77",
+        "name": "外汇交易日历",
+        "order": 0,
+        "parentId": "7",
+        "levelId": 2
+      },
+      {
+        "id": "78",
+        "name": "外汇行情数据",
+        "order": 0,
+        "parentId": "7",
+        "levelId": 2
+      },
+      {
+        "id": "79",
+        "name": "另类数据",
+        "order": 10,
+        "parentId": "11",
+        "levelId": 3
+      },
+      {
+        "id": "80",
+        "name": "i问财接口",
+        "order": 9,
+        "parentId": "0",
+        "levelId": 1
+      },
+      {
+        "id": "84",
+        "name": "期货市场信息",
+        "order": 3,
+        "parentId": "33",
+        "levelId": 3
+      }
+    ],
+    "$stotalDataDoc": [
+      {
+        "id": "1",
+        "title": "股票基本信息(A股)",
+        "content": "全市场股票基本信息数据，包含股票代码、中文简称、上市日期、退市日期等数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685359306,
+        "mtime": 1756297471,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "14"
+      },
+      {
+        "id": "5",
+        "title": "交易日历(A股)",
+        "content": "沪京深交易所交易日历数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685360434,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "15"
+      },
+      {
+        "id": "8",
+        "title": "股票日行情数据(A股)",
+        "content": "A股股票日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685361813,
+        "mtime": 1714109131,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);turnover_rate|换手率(%);is_paused|是否停牌;high_limit|涨停价(元);low_limit|跌停价(元);avg_price|均价(元);prev_close|前收盘价(元);quote_rate|涨跌幅(%);amp_rate|振幅(%);is_st|是否st;",
+        "parentId": "16"
+      },
+      {
+        "id": "12",
+        "title": "股票分钟行情数据(A股)",
+        "content": "A股股票分钟行情数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685363246,
+        "mtime": 1714109140,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);turnover_rate|换手率(%);is_paused|是否停牌;",
+        "parentId": "16"
+      },
+      {
+        "id": "16",
+        "title": "历史行情快照(A股)",
+        "content": "A股历史行情快照数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685363659,
+        "mtime": 1769425196,
+        "search_text": "trade_date|时间;prev_close|前收盘价;open|开盘价;high|最高价;low|最低价;current|现价;volume|成交量;amount|成交金额;cjcs|成交次数;b1_p|买一价;b1_v|买一量;b2_p|买二价;b2_v|买二量;b3_p|买三价;b3_v|买三量;b4_p|买四价;b4_v|买四量;b5_p|买五价;b5_v|买五量;a1_p|卖一价;a1_v|卖一量;a2_p|卖二价;a2_v|卖二量;a3_p|卖三价;a3_v|卖三量;a4_p|卖四价;a4_v|卖四量;a5_p|卖五价;a5_v|卖五量;",
+        "parentId": "17"
+      },
+      {
+        "id": "20",
+        "title": "实时行情快照(A股)",
+        "content": "股票实时行情快照接口",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685363982,
+        "mtime": 1769425815,
+        "search_text": "prev_close|前收盘价;open|开盘价;high|最高价;low|最低价;current|现价;volume|成交量;amount|成交金额;cjcs|成交次数;b1_p|买一价;b1_v|买一量;b2_p|买二价;b2_v|买二量;b3_p|买三价;b3_v|买三量;b4_p|买四价;b4_v|买四量;b5_p|买五价;b5_v|买五量;a1_p|卖一价;a1_v|卖一量;a2_p|卖二价;a2_v|卖二量;a3_p|卖三价;a3_v|卖三量;a4_p|卖四价;a4_v|卖四量;a5_p|卖五价;a5_v|卖五量;high_limit|涨停价(元);low_limit|跌停价(元);",
+        "parentId": "17"
+      },
+      {
+        "id": "24",
+        "title": "行业分类信息",
+        "content": "同花顺一级行业分类信息",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685364454,
+        "mtime": 1714283309,
+        "search_text": "industry\\_name|行业名称;available\\_date|行业可用日;disabled\\_date|行业删除日;industry\\_index|行业对应指数代码;industry\\_rank|行业等级;industry\\_symbol|行业代码;industry\\_thscode|行业代码(同花顺);industry\\_type|行业分类类型;industry\\_typecode|行业分类类型代码;",
+        "parentId": "18"
+      },
+      {
+        "id": "64",
+        "title": "资产负债表",
+        "content": "A股上市公司合并资产负债表数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685365697,
+        "mtime": 1714269635,
+        "search_text": "-|**基本信息**;symbol|股票代码;date|查询日期;report_date|公布日期;spec_conv_id|特殊转换标识;is_report_publish|报表是否公布值;spec_cond_desc|特殊情况说明;stat_date|报告期;reporttypecode|报表类型编码;change_id|报表变动记录标识;-|**流动资产**;cash|货币资金;tradable_financial_assets|交易性金融资产;notes_receivable|应收票据;accounts_receivable|应收账款;advance_payment|预付款项;interest_receivable|应收利息;dividends_receivable|应收股利;receivable_other|其他应收款;inventory|存货;noncurrent_asset_due_within1y|一年内到期的非流动资产;other_current_assets|其他流动资产;current_assets_si|流动资产特殊科目;balance_of_current_assets|流动资产平衡科目;total_current_assets|流动资产合计;funds_lent|拆出资金;insurance_premiums_receivable|应收保费;cession_premiums_receivable|应收分保账款;provision_of_cession_receivable|应收分保合同准备金;-|**非流动金融资产**;available_financial_assets|可供出售金融资产;held_to_maturity_investment|持有至到期投资;long_term_receivables|长期应收款;long_term_equity_investment|长期股权投资;investment_property|投资性房地产;fixed_asset|固定资产;cip_project|在建工程;engineering_material|工程物资;disposal_of_fixed_assets|固定资产清理;biological_assets|生产性生物资产;oil_and_gas_assets|油气资产;intangible_assets|无形资产;rd_cost|开发支出;goodwill|商誉;long_term_prepaid_expenses|长期待摊费用;deferred_tax_assets|递延所得税资产;other_non_current_assets|其他非流动资产;noncurrent_assets_si|非流动资产特殊科目;noncurrent_assets_bi|非流动资产平衡科目;total_non_current_assets|非流动资产合计;loans_and_payments_on_behalf|发放贷款和垫款;-|**其他资产**;cash_and_deposit_of_central_bank|现金及存放中央银行款项;deposit_interbank_payments|存放同业款项;precious_metal|贵金属;derivative_financial_assets|衍生金融资产;buy_resale_fnncl_assets|买入返售金融资产;other_assets|其他资产;subrogation_recourse_fee|应收代位追偿款;reinundueliabilityreserve|应收分保未到期责任准备金;outstanding_loss_reserve|应收分保未决赔款准备金;life_insurance_liability_reserve|应收分保寿险责任准备金;receivable_deposit_of_lt_hi|应收分保长期健康险责任准备金;policy_holder_pledge_loans|保户质押贷款;fixed_deposit|定期存款;refundable_capital_deposit|存出资本保证金;independent_accounts_of_assets|独立账户资产;client_provisions|客户备付金;refundable_deposits|存出保证金;transaction_placement_fee|交易席位费;money_loan|融出资金;receivables|应收款项;asset_special_account|资产特殊科目;asset_balance_account|资产平衡科目;total_assets|资产总计;-|**流动负债**;short_term_loan|短期借款;tradable_fnncl_liab|交易性金融负债;notes_payable|应付票据;account_payable|应付账款;deposit_received|预收账款;accrued_wages|应付职工薪酬;taxes_and_dues|应交税费;interest_payable|应付利息;dividend_payable|应付股利;other_payable|其他应付款;noncurrent_liab_due_in1y|一年内到期的非流动负债;other_current_liability|其他流动负债;current_liab_si|流动负债特殊科目;balance_of_current_liabilities|流动负债平衡科目;current_liabilities|流动负债合计;borrowing_from_central_bank|向中央银行借款;deposit_funds|拆入资金;fnncl_assets_sold_for_repur|卖出回购金融资产款;customer_brokerage_deposits|代理买卖证券款;act_underwriting_sec|代理承销证券款;saving_and_interbank_deposit|吸收存款及同业存放;insurance_contract_reserve|保险合同准备金;current_liab_di|流动负债递延收益;st_bond_payable|应付短期债券;-|**非流动负债**;long_term_loan|长期借款;bonds_payable|应付债券;long_term_payable|长期应付款;account_payable_special_funds|专项应付款;estimated_liabilities|预计负债;deferred_tax_liability|递延所得税负债;other_non_current_liabilities|其他非流动负债;non_current_liabilities|非流动负债特殊科目;noncurrent_liab_bi|非流动负债平衡科目;totalnon_current_liabilities|非流动负债合计;noncurrent_liab_di|非流动负债递延收益;lt_staff_salary_payable|长期应付职工薪酬;-|**其他负债**;interbank_deposit_etc|同业及其他金融机构存放款项;derivative_financial_liabilities|衍生金融负债;accept_money_deposits|吸收存款;other_liabilities|其他负债;advance_premium|预收保费;charge_and_commi_payable|应付手续费及佣金;rein_payable|应付分保账款;claims_payable|应付赔付款;policyholder_dividends_payable|应付保单红利;assured_saving_and_invest|保户储金及投资款;unearned_premium_reserve|未到期责任准备金;outstanding_claims_reserve|未决赔款准备金;life_insurance_reserve|寿险责任准备金;health_insurance_reserve|长期健康险责任准备金;independent_account_liab|独立账户负债;pledged_loan|其中：质押借款;guarantee_deposits|存入保证金;short_term_financing_payable|应付短期融资款;accounts_payable|应付款项;special_account_of_liabilities|负债特殊科目;balance_account_of_liabilities|负债平衡科目;total_liabilities|负债合计;-|**所有者权益**;equity|实收资本（或股本）;capital_reserve|资本公积金;stock_reduction_unit|库存股;special_reserves|专项储备;surplus_reserve|盈余公积;general_risk_preparation|一般风险准备;undistributed_profits|未分配利润;frgn_currency_convert_diff|外币报表折算差额;holders_equity_si|股东权益特殊科目;holders_equity_bi|股东权益平衡科目;total_quity_atsopc|归属于母公司股东权益合计;minority_equity|少数股东权益;total_equity|股东权益合计;total_share_capital|股本总数;other_consolidated_income|其他综合收益;other_equity_instrument|其他权益工具;preferred_equity|其他权益工具：优先股;perpetual_bond|其他权益工具：永续债;transaction_risk_reserve|交易风险准备;total_liab_and_holders_equity|负债和股东权益总计;",
+        "parentId": "20"
+      },
+      {
+        "id": "66",
+        "title": "同花顺概念分类",
+        "content": "同花顺概念分类数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685414547,
+        "mtime": 1700130130,
+        "search_text": "concept_name|概念名称;concept_symbol|概念代码;concept_code|概念代码（同花顺）;concept_level|概念分类代码;concept_levelname|概念分类名称;concept_rank|概念等级;available_date|概念可用日;disabled_date|概念删除日;",
+        "parentId": "19"
+      },
+      {
+        "id": "70",
+        "title": "概念股数据(A股)",
+        "content": "A股概念股数据，可跟据概念代码查询相关概念股",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685414805,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "19"
+      },
+      {
+        "id": "73",
+        "title": "个股概念数据",
+        "content": "A股个股概念数据表，可根据股票代码与日期查询股票所属全部概念",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685415086,
+        "mtime": 1700130130,
+        "search_text": "symbol|股票代码;date|日期;concept|概念名称;",
+        "parentId": "19"
+      },
+      {
+        "id": "77",
+        "title": "分析师一致预期(A股)",
+        "content": "分析师一致预期数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685415527,
+        "mtime": 1700130130,
+        "search_text": "symbol|股票代码;trade\\_date|查询日期;income\\_forecast\\_basic\\_eps\\_1|预测每股收益（本年度）;income\\_forecast\\_basic\\_eps\\_2|预测每股收益（次年）;income\\_forecast\\_net\\_profit\\_1|预测净利润（本年度）;income\\_forecast\\_net\\_profit\\_2|预测净利润（次年）;income\\_forecast\\_operating\\_income\\_1|预测营业收入（本年度）;income\\_forecast\\_operating\\_income\\_2|预测营业收入（次年）;valuation\\_forecast\\_pe\\_1|预测市盈率（本年度）;valuation\\_forecast\\_pe\\_2|预测市盈率（次年）;rating\\_agency\\_count\\_6m|六个月内评级机构家数;composite\\_rating\\_6m|六个月内综合评级（数值）;",
+        "parentId": "21"
+      },
+      {
+        "id": "81",
+        "title": "公司更名信息",
+        "content": "记录A股上市公司简称变更情况，可用来判断ST、退市情况",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685416325,
+        "mtime": 1700137296,
+        "search_text": "symbol|同花顺代码;report_date|公布日;change_date|截至日;stock_name|证券简称;original_name|原证券简称;stock_name_en|证券简称(英文);original_name_en|原证券简称(英文);",
+        "parentId": "22"
+      },
+      {
+        "id": "85",
+        "title": "公司员工数量表",
+        "content": "记录公司在职、退休员工数量",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685417198,
+        "mtime": 1700130130,
+        "search_text": "symbol|同花顺代码;report_date|公布日;stat_date|实际变更日;total_employees|在职员工总数;retired_employees|退休员工数;total_employees_subsidiaries|主要子公司在职员工数;total_employees_receiving|当期领取薪酬的总员工数;total_employees_parent|母公司在职员工数;",
+        "parentId": "22"
+      },
+      {
+        "id": "89",
+        "title": "十大股东信息表",
+        "content": "记录A股上市公司十大股东信息",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685417338,
+        "mtime": 1700130130,
+        "search_text": "symbol|股票代码;report_date|公布日;end_date|截止日期;shareholder_rank|股东名次;shareholder_name|股东名称;shareholder_id|股东ID;shareholder_type|股东类别;holding_num|持有数量;holding_ratio|持有比例;frozen_num|冻结数量;pledge_num|质押数量;limit_num|限售数量;action_mark|一致行动人标志;change_type|变动类型;",
+        "parentId": "22"
+      },
+      {
+        "id": "93",
+        "title": "十大流通股东信息表",
+        "content": "记录A股上市公司十大流通股东信息",
+        "order": 3,
+        "type": 0,
+        "ctime": 1685417463,
+        "mtime": 1715579700,
+        "search_text": "symbol|同花顺代码;report\\_date|公布日;end\\_date|截止日期;shareholder\\_rank|股东名次;shareholder\\_name|股东名称;shareholder\\_id|股东ID;shareholder\\_type|股东类别;holding\\_num|持有数量;holding\\_ratio|持有比例;frozen\\_num|冻结数量;pledge\\_num|质押数量;action\\_mark|一致行动人标志;",
+        "parentId": "22"
+      },
+      {
+        "id": "97",
+        "title": "上市公司所在地",
+        "content": "记录了A股上市公司所在的省(自治区、直辖市)、市、县(区)",
+        "order": 4,
+        "type": 0,
+        "ctime": 1685417631,
+        "mtime": 1700130130,
+        "search_text": "symbol|同花顺代码;report\\_date|公布日;province|省、直辖市;city|地级市;county|县、市、区;",
+        "parentId": "22"
+      },
+      {
+        "id": "101",
+        "title": "公司股本变动表",
+        "content": "记录了公司股本变动情况，可根据此计算市值等数据",
+        "order": 5,
+        "type": 0,
+        "ctime": 1685417720,
+        "mtime": 1700130130,
+        "search_text": "symbol|标的代码;report\\_date|公布日;change\\_date|变动日;limit\\_share|限售股本;limit\\_share\\_ashare|限售A股;limit\\_share\\_bshare|限售B股;limit\\_share\\_hshare|限售H股;negotiable\\_share|流通股本;negotiable\\_share\\_ashare|流通A股;negotiable\\_share\\_bshare|流通B股;negotiable\\_share\\_hshare|流通H股;total\\_share|总股本;total\\_share\\_ashare|A股总股本;nontrade\\_share|非流通股本;",
+        "parentId": "22"
+      },
+      {
+        "id": "105",
+        "title": "机构股东持股情况表",
+        "content": "记录了A股上市公司机构股东持股数据",
+        "order": 6,
+        "type": 0,
+        "ctime": 1685417932,
+        "mtime": 1700130130,
+        "search_text": "symbol|股票代码;report\\_date|公布日;end\\_date|截止日期;institution\\_name|机构/基金名称;institution\\_id|机构/基金id;institution\\_type|机构类型;holding\\_num|持股数量;holding\\_size|持股市值;holding\\_ratio|占流通股比例;",
+        "parentId": "22"
+      },
+      {
+        "id": "109",
+        "title": "解禁明细表",
+        "content": "记录A股上市公司限售股解禁明细数据",
+        "order": 7,
+        "type": 0,
+        "ctime": 1685418044,
+        "mtime": 1700130130,
+        "search_text": "symbol|股票代码;report\\_date|公布日;unlimited\\_date|可流通日期;limit\\_date|限售开始日期;unlimited\\_num|本期流通数量;negotiable\\_num|已流通数量;unlimited\\_num\\_pub|本期公布流通数量;limited\\_num|待流通数量;limited\\_reasom|流通股份类型;holding\\_cost|持股成本;",
+        "parentId": "22"
+      },
+      {
+        "id": "113",
+        "title": "配股信息表",
+        "content": "记录上市公司配股信息",
+        "order": 8,
+        "type": 0,
+        "ctime": 1685418154,
+        "mtime": 1700130130,
+        "search_text": "symbol|股票代码;date_of_record|配股股权登记日;number|每股配股数;",
+        "parentId": "22"
+      },
+      {
+        "id": "117",
+        "title": "分红送股信息",
+        "content": "记录A股上市公司历史分红送股数据",
+        "order": 9,
+        "type": 0,
+        "ctime": 1685418239,
+        "mtime": 1737632919,
+        "search_text": "symbol|标的代码;date|报告期;plan_announcement_day|预案公告日;per_share_bonus|每股红股;per_share_capital_stock|每股转增股本;bonus_shares_trading_day|红股上市交易日;announcement_date_of_gmos|股东大会公告日;cash_dividend_ratio|现金分红比例;ex_dividend_date|除权除息日;dividend_announcement_date|分红实施公告日;date_payable|派息日;date_of_record|股权登记日;pre_disclosure_announcement_date|预披露公告日期;字段|含义;----------------|------------;ex_date|除权除息日;symbol|标的代码;cash_dividends |每股现金红利;give_stock|每股红股;transfer_stock|每股转增股本;",
+        "parentId": "22"
+      },
+      {
+        "id": "121",
+        "title": "融资融券数据",
+        "content": "获取A股融资融券数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685424767,
+        "mtime": 1700130130,
+        "search_text": "fin\\_value|融资余额(元);fin\\_buy\\_value|融资买入额(元);fin\\_refund\\_value|融资偿还额(元);sec\\_value|融券余额(元);sec\\_sell\\_value|融券卖出额(元);sec\\_refund\\_value|融券偿还额(元);fin\\_sec\\_value|融资融券余额(元);",
+        "parentId": "23"
+      },
+      {
+        "id": "159",
+        "title": "期货基本信息(商品)",
+        "content": "商品期货基本信息，包含合约代码、中文简称、上市日期、退市日期等数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685434643,
+        "mtime": 1700130130,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "48"
+      },
+      {
+        "id": "160",
+        "title": "期货基本信息(金融)",
+        "content": "金融期货基本信息，包含合约代码、中文简称、上市日期、退市日期等数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685434699,
+        "mtime": 1700130130,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "48"
+      },
+      {
+        "id": "161",
+        "title": "期货基本信息(国债)",
+        "content": "国债期货基本信息，包含合约代码、中文简称、上市日期、退市日期等数据",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685434722,
+        "mtime": 1700130130,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "48"
+      },
+      {
+        "id": "171",
+        "title": "期货交易日历",
+        "content": "内地期货交易所交易日历",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436218,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "49"
+      },
+      {
+        "id": "174",
+        "title": "期货日频行情数据",
+        "content": "期货日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436304,
+        "mtime": 1700130130,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;volume|成交量;turnover|成交金额(元);open_interest|持仓;high_limit|涨停价(元);low_limit|跌停价(元);settle|结算价(元);change|涨跌(元);quote_rate|涨跌幅(%);amp_rate|振幅(%);pos_change|仓差;",
+        "parentId": "50"
+      },
+      {
+        "id": "178",
+        "title": "TD合约基本信息",
+        "content": "T+D合约基本信息，包含合约代码、中文简称、上市日期、退市日期等数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436415,
+        "mtime": 1700130130,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "51"
+      },
+      {
+        "id": "182",
+        "title": "TD合约交易日历",
+        "content": "T+D合约交易日历",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436484,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "52"
+      },
+      {
+        "id": "185",
+        "title": "TD合约日频行情数据",
+        "content": "T+D合约日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436585,
+        "mtime": 1700130130,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;volume|成交量;turnover|成交金额(元);weighted_avg_price|加权平均价(元);",
+        "parentId": "53"
+      },
+      {
+        "id": "189",
+        "title": "期权基本信息",
+        "content": "沪深交易所期权合约基本信息，包含合约代码、合约简称、合约上市时间、退市时间等信息",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436787,
+        "mtime": 1700130130,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "54"
+      },
+      {
+        "id": "193",
+        "title": "期权交易日历",
+        "content": "沪深交易所交易日历",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436916,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "55"
+      },
+      {
+        "id": "196",
+        "title": "期权日频行情数据",
+        "content": "沪深交易所ETF期权日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685436980,
+        "mtime": 1700130130,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;volume|成交量;",
+        "parentId": "56"
+      },
+      {
+        "id": "197",
+        "title": "期权分钟行情数据",
+        "content": "沪深交易所ETF期权分钟行情数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685437002,
+        "mtime": 1700130130,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;volume|成交量;",
+        "parentId": "56"
+      },
+      {
+        "id": "204",
+        "title": "可转债基本信息",
+        "content": "包含可转债代码、简称、上市日期、退市日期等数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685437650,
+        "mtime": 1700130130,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "57"
+      },
+      {
+        "id": "208",
+        "title": "可转债日行情数据",
+        "content": "沪深交易所上市可转债日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685437972,
+        "mtime": 1700130130,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);is_paused|是否停牌;avg_price|均价(元);prev_close|前收盘价(元);quote_rate|涨跌幅(%);amp_rate|振幅(%);",
+        "parentId": "58"
+      },
+      {
+        "id": "209",
+        "title": "可转债分钟行情数据",
+        "content": "沪深交易所上市可转债分钟行情数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685437998,
+        "mtime": 1700130130,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);is_paused|是否停牌;",
+        "parentId": "58"
+      },
+      {
+        "id": "210",
+        "title": "可转债实时行情快照",
+        "content": "沪深交易所上市可转债实时行情快照",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685438034,
+        "mtime": 1700137296,
+        "search_text": "prev_close|前收盘价;open|开盘价;high|最高价;low|最低价;current|现价;volume|成交量;amount|成交金额;cjcs|成交次数;b1_p|买一价;b1_v|买一量;b2_p|买二价;b2_v|买二量;b3_p|买三价;b3_v|买三量;b4_p|买四价;b4_v|买四量;b5_p|买五价;b5_v|买五量;b6_p|买六价;b6_v|买六量;b7_p|买七价;b7_v|买七量;b8_p|买八价;b8_v|买八量;b9_p|买九价;b9_v|买九量;b10_p|买十价;b10_v|买十量;a1_p|卖一价;a1_v|卖一量;a2_p|卖二价;a2_v|卖二量;a3_p|卖三价;a3_v|卖三量;a4_p|卖四价;a4_v|卖四量;a5_p|卖五价;a5_v|卖五量;a6_p|卖六价;a6_v|卖六量;a7_p|卖七价;a7_v|卖七量;a8_p|卖八价;a8_v|卖八量;a9_p|卖九价;a9_v|卖九量;a10_p|卖十价;a10_v|卖十量;total_bid|十档委买总量;average_bid|十档委买均价;total_ask|十档委卖总量;average_ask|十档委卖均价;",
+        "parentId": "58"
+      },
+      {
+        "id": "211",
+        "title": "可转债历史行情快照",
+        "content": "沪深交易所上市可转债历史行情快照",
+        "order": 3,
+        "type": 0,
+        "ctime": 1685438082,
+        "mtime": 1700137296,
+        "search_text": "trade_date|时间;prev_close|前收盘价;open|开盘价;high|最高价;low|最低价;current|现价;volume|成交量;amount|成交金额;cjcs|成交次数;b1_p|买一价;b1_v|买一量;b2_p|买二价;b2_v|买二量;b3_p|买三价;b3_v|买三量;b4_p|买四价;b4_v|买四量;b5_p|买五价;b5_v|买五量;b6_p|买六价;b6_v|买六量;b7_p|买七价;b7_v|买七量;b8_p|买八价;b8_v|买八量;b9_p|买九价;b9_v|买九量;b10_p|买十价;b10_v|买十量;a1_p|卖一价;a1_v|卖一量;a2_p|卖二价;a2_v|卖二量;a3_p|卖三价;a3_v|卖三量;a4_p|卖四价;a4_v|卖四量;a5_p|卖五价;a5_v|卖五量;a6_p|卖六价;a6_v|卖六量;a7_p|卖七价;a7_v|卖七量;a8_p|卖八价;a8_v|卖八量;a9_p|卖九价;a9_v|卖九量;a10_p|卖十价;a10_v|卖十量;total_bid|十档委买总量;average_bid|十档委买均价;total_ask|十档委卖总量;average_ask|十档委卖均价;",
+        "parentId": "58"
+      },
+      {
+        "id": "224",
+        "title": "可转债条款信息",
+        "content": "记录可转债条款数据，包含日期条款、利率条款、转股价下修条款、赎回条款、回售条款数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685438731,
+        "mtime": 1700189624,
+        "search_text": "symbol|可转债代码;display_name|可转债简称;stock\\_symbol|正股代码;pub\\_startdate|上市日期;pub\\_enddate|摘牌日期;transaction\\_enddate|最后交易日;conversion\\_startdate|转股起始日;conversion\\_enddate|转股截止日;interest\\_startdate|起息日;interest\\_enddate|预计兑付日;interest\\_rate\\_1y|第一年利率;interest\\_rate\\_2y|第二年利率;interest\\_rate\\_3y|第三年利率;interest\\_rate\\_4y|第四年利率;interest\\_rate\\_5y|第五年利率;interest\\_rate\\_6y|第六年利率;revise\\_down\\_trem|是否有转股价下修条款;revise\\_down\\_ratio|向下修正触发比例;revise\\_down\\_trem\\_startdate|特别向下修正起始时间;revise\\_down\\_trem\\_enddate|特别向下修正结束时间;revise\\_down\\_daterange\\_max|向下修正重设触发计算最大时间区间;revise\\_down\\_daterange|向下修正重设触发计算时间区间;revise\\_down\\_timeslimit|向下修正次数限制;redeem\\_trem\\_startdate|赎回条款起始时间;redeem\\_trem\\_enddate|赎回条款结束时间;redeem\\_daterange\\_max|赎回条款触发计算最大时间区间;redeem\\_daterange|赎回条款触发计算时间区间;redeem\\_ratio|赎回条款触发比例;redeem\\_remaining|赎回条款触发余额;resale\\_trem\\_startdate|回售条款起始时间;resale\\_trem\\_enddate|回售条款结束时间;resale\\_daterange\\_max|回售条款触发计算最大时间区间;resale\\_daterange|回售条款触发计算时间区间;resale\\_ratio|回售条款触发比例;",
+        "parentId": "59"
+      },
+      {
+        "id": "228",
+        "title": "可转债转股价变更表",
+        "content": "记录可转债历史转股价变更信息",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685438829,
+        "mtime": 1700137296,
+        "search_text": "symbol|可转债代码;report\\_date|公布日;change\\_date|实际变更日;conversion\\_price|转股价;conversion\\_reason|变更原因;",
+        "parentId": "59"
+      },
+      {
+        "id": "229",
+        "title": "可转债余额变动表",
+        "content": "记录可转债余额变动情况以及变动原因",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685438892,
+        "mtime": 1700137296,
+        "search_text": "symbol|可转债代码;change\\_date|变更日;remaining|可转债余额;change\\_reason|变动原因;",
+        "parentId": "59"
+      },
+      {
+        "id": "230",
+        "title": "可转债转股数量表",
+        "content": "记录可转债转股数量、户数、价格数据",
+        "order": 3,
+        "type": 0,
+        "ctime": 1685438931,
+        "mtime": 1700137296,
+        "search_text": "symbol|可转债代码;report\\_date|报告日;end\\_date|截止日;convert\\_stocks\\_cum|累计转股数量;convert\\_stocks\\_current|当期转股数量;convert\\_holder\\_current|当期转股户数;convert\\_bondvalue\\_current|当期转股面值;convert\\_bondvalue\\_cum|累计转股面值;convert\\_ratio\\_cum|累计转股比例;convert\\_price\\_current|当期转股价格;",
+        "parentId": "59"
+      },
+      {
+        "id": "231",
+        "title": "可转债特殊条款预计价格表",
+        "content": "可转债特殊条款预计执行价格数据",
+        "order": 4,
+        "type": 0,
+        "ctime": 1685438961,
+        "mtime": 1700137296,
+        "search_text": "symbol|同花顺代码;change\\_date|预计变更日;term\\_type|条款类型;term\\_price|条款价格;",
+        "parentId": "59"
+      },
+      {
+        "id": "244",
+        "title": "CNE5风险模型",
+        "content": "支持获取CNE5版本风险因子暴露数据、因子收益、特质收益率数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685439626,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "60"
+      },
+      {
+        "id": "249",
+        "title": "场内基金基本信息",
+        "content": "场内基金(ETF、LOF等)基本信息，包括代码、简称、上市日期、退市日期等数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685451675,
+        "mtime": 1700137296,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "65"
+      },
+      {
+        "id": "253",
+        "title": "基金净值数据",
+        "content": "场内基金对应场外基金净值数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685451844,
+        "mtime": 1700137296,
+        "search_text": "unit_net_value|单位净值(元/份);acc_net_value|累计净值(元/份);pre_net_value|复权净值(元/份);",
+        "parentId": "66"
+      },
+      {
+        "id": "257",
+        "title": "基金日频行情数据",
+        "content": "场内基金日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685451980,
+        "mtime": 1700137296,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);turnover_rate|换手率(%);is_paused|是否停牌;high_limit|涨停价(元);low_limit|跌停价(元);avg_price|均价(元);prev_close|前收盘价(元);quote_rate|涨跌幅(%);amp_rate|振幅(%);",
+        "parentId": "67"
+      },
+      {
+        "id": "258",
+        "title": "基金分钟行情数据",
+        "content": "场内基金分钟行情数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685452005,
+        "mtime": 1700137296,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);turnover_rate|换手率(%);",
+        "parentId": "67"
+      },
+      {
+        "id": "259",
+        "title": "基金实时行情数据",
+        "content": "场内基金实时行情数据",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685452023,
+        "mtime": 1700137296,
+        "search_text": "prev_close|前收盘价;open|开盘价;high|最高价;low|最低价;current|现价;volume|成交量;amount|成交金额;cjcs|成交次数;b1_p|买一价;b1_v|买一量;b2_p|买二价;b2_v|买二量;b3_p|买三价;b3_v|买三量;b4_p|买四价;b4_v|买四量;b5_p|买五价;b5_v|买五量;b6_p|买六价;b6_v|买六量;b7_p|买七价;b7_v|买七量;b8_p|买八价;b8_v|买八量;b9_p|买九价;b9_v|买九量;b10_p|买十价;b10_v|买十量;a1_p|卖一价;a1_v|卖一量;a2_p|卖二价;a2_v|卖二量;a3_p|卖三价;a3_v|卖三量;a4_p|卖四价;a4_v|卖四量;a5_p|卖五价;a5_v|卖五量;a6_p|卖六价;a6_v|卖六量;a7_p|卖七价;a7_v|卖七量;a8_p|卖八价;a8_v|卖八量;a9_p|卖九价;a9_v|卖九量;a10_p|卖十价;a10_v|卖十量;total_bid|十档委买总量;average_bid|十档委买均价;total_ask|十档委卖总量;average_ask|十档委卖均价;",
+        "parentId": "67"
+      },
+      {
+        "id": "269",
+        "title": "场外基金基本信息",
+        "content": "场外基金基本信息数据，包括代码、简称、发行日期、解散日期等数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685452582,
+        "mtime": 1700137296,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "68"
+      },
+      {
+        "id": "273",
+        "title": "基金净值数据",
+        "content": "场外基金净值数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685452712,
+        "mtime": 1700137296,
+        "search_text": "unit_net_value|单位净值(元/份);acc_net_value|累计净值(元/份);pre_net_value|复权净值(元/份);",
+        "parentId": "69"
+      },
+      {
+        "id": "277",
+        "title": "基金十大持仓",
+        "content": "基金季报披露的十大持仓数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685452811,
+        "mtime": 1700137296,
+        "search_text": "symbol|基金代码;position\\_symbol|持仓代码;name|持仓名称;type|类型;amount|数量;value|市值;change|持仓变动;value\\_percent|证券投资市值比;net\\_value\\_percent|基金资产净值比;report\\_date|公告日期;stat\\_date|报告截止日期;",
+        "parentId": "70"
+      },
+      {
+        "id": "278",
+        "title": "基金持仓明细",
+        "content": "基金半年报、年报披露的持仓明细数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685452837,
+        "mtime": 1700137296,
+        "search_text": "symbol|基金代码;position\\_symbol|持仓代码;name|持仓名称;type|类型;amount|数量;value|市值;change|持仓变动;value\\_percent|证券投资市值比;net\\_value\\_percent|基金资产净值比;report\\_date|公告日期;stat\\_date|报告截止日期;",
+        "parentId": "70"
+      },
+      {
+        "id": "285",
+        "title": "技术因子",
+        "content": "常见量价指标类因子",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685453014,
+        "mtime": 1700137296,
+        "search_text": "symbol|股票代码;date|录入日期;bbi|多空指数;dma|平均线差;ma|简单移动平均;expma|指数平均数;macd|指数平滑异同平均;mtm|动力指标;priceosc|价格振荡指标;trix|三重指数平滑平均;ddi|方向标准差偏离指数;bias|乖离率;cci|顺势指标;dbcd|异同离差乖离率;dpo|区间震荡线;kdj|随机指标;lwr|L威廉指标;roc|变动速率;rsi|相对强弱指标;si|摆动指标;srdm|动向速度比率;vroc|量变动速率;vrsi|量相对强弱指标;wr|威廉指标;arbr|人气意愿指标;cr|能量指标;psy|心理指标;vr_rate|成交量比率;wad|威廉聚散指标;mfi|资金流向指标;obv|能量潮;pvt|量价趋势指标;wvad|威廉变异离散量;bbiboll|BBI多空布林线;boll|布林线MID;cdp|逆势操作;env|ENV指标;mike|麦克指标;vr|量比;vma|量简单移动平均;vmacd|量指数平滑异同平均;vosc|成交量震荡;tapi|加权指数成交值;vstd|成交量标准差;adtm|动态买卖气指标;mi|动量指标;micd|异同离差动力指数;rc|变化率指数;rccd|异同离差变化率指数;srmi|SRMIMI修正指标;dptb|大盘同步指标;jdqs|阶段强势指标;jdrs|阶段弱势指标;zdzb|筑底指标;atr|真实波幅;mass|梅丝线;std|标准差;vhf|纵横指标;cvlt|佳庆离散指标;up_n|连涨天数;down_n|连跌天数;",
+        "parentId": "9"
+      },
+      {
+        "id": "289",
+        "title": "基本面因子",
+        "content": "常见的财务指标因子",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685453792,
+        "mtime": 1700137296,
+        "search_text": "symbol|股票代码;date|录入日期;pe|市盈率;pe_ttm|市盈率TTM;pb|市净率;pcf_cash_flow_ttm|市现率PCF;ps|市销率;ps_ttm|市销率TTM;dividend_rate|股息率;dividend_rate_12_months|过去12个月的加权股息率;market_cap|总市值;capitalization|总股本;current_market_cap|流通市值;circulating_cap|流通股本;weighted_roe|净资产收益率roe加权;overall_assets_net_income_ratio|总资产净利率roa;roa|总资产报酬率roa;net_profit_margin_on_sales|销售净利率;gross_sales_profits|销售毛利率;ratio_of_sales_to_cost|销售成本率;net_profit_div_income|净利润／营业总收入;opt_profit_div_income|营业利润／营业总收入;before_tax_profit_div_income|息税前利润／营业总收入;opt_cost_div_income|营业总成本／营业总收入;sale_cost_div_income|销售费用／营业总收入;administration_cost_div_income|管理费用／营业总收入;financing_cost_div_income|财务费用／营业总收入;impairment_loss_div_income|资产减值损失／营业总收入;basic_pey_ear_growth_ratio|基本每股收益同比增长率;diluted_peg_rowth_ratio|稀释每股收益同比增长率;net_cashflow_psg_rowth_ratio|每股经营活动产生的现金流量净额同比增长率;overall_income_growth_ratio|营业总收入同比增长率;opt_income_growth_ratio|营业收入同比增长率;opt_profit_growth_ratio|营业利润同比增长率;total_profit_growth_ratio|利润总额同比增长率;net_profit_growth_ratio|净利润同比增长率;parent_company_profit_growth_ratio|归属母公司股东的净利润同比增长率;parent_company_share_holders_net_profit_growth_ratio|归属母公司股东的净利润-扣除非经常损益同比增长率;net_cashflow_from_opt_act_growth_ratio|经营活动产生的现金流量净额同比增长率;diluted_net_asset_growth_ratio|净资产收益率摊薄同比增长率;cash_cycle|现金循环周期;days_sales_of_inventory|存货周转天数;days_sales_outstanding|应收账款周转天数;days_payable_outstanding|应付账款周转天数;turnover_days_of_current_assets|流动资产周转天数;inventory_turnover_ratio|存货周转率;turnover_ratio_of_receivable|应收账款周转率;turnover_ratio_of_account_payable|应付账款周转率;turnover_of_current_assets|流动资产周转率;turnover_of_fixed_assets|固定资产周转率;turnover_of_overall_assets|总资产周转率;current_ratio|流动比率;quick_ratio|速动比率;conservative_quick_ratio|保守速动比率;equity_ratio|产权比率负债合计／归属母公司股东的权益;equity_liabilities_attributable_to_shareholders_of_parent_company|归属母公司股东的权益／负债合计;equity_int_liabilities_attributable_to_shareholders_of_parent_company|归属母公司股东的权益／带息债务;tangible_assets_liabilities|有形资产／负债合计;tangible_assets_int_liabilities|有形资产／带息债务;tangible_assets_net_liabilities|有形资产／净债务;ebitda_liabilities|息税折旧摊销前利润／负债合计;netcashflows_from_opt_act_int_liabilities|经营活动产生的现金流量净额／带息债务;netcashflows_from_opt_act_net_liabilities|经营活动产生的现金流量净额／净债务;long_term_debt_to_opt_capital_ratio|长期债务与营运资金比率;net_debt_equity|净债务／股权价值;int_debt_equity|带息债务／股权价值;",
+        "parentId": "9"
+      },
+      {
+        "id": "293",
+        "title": "指数基本信息",
+        "content": "主流指数基本信息，包括代码、简称、启用日期等数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685521185,
+        "mtime": 1700137296,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "73"
+      },
+      {
+        "id": "295",
+        "title": "常用股票型指数",
+        "content": "记录了常用股票型指数代码",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685535031,
+        "mtime": 1703818815,
+        "search_text": null,
+        "parentId": "73"
+      },
+      {
+        "id": "296",
+        "title": "指数日行情数据",
+        "content": "常用指数日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685535099,
+        "mtime": 1700137296,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);turnover_rate|换手率(%);is_paused|是否停牌;high_limit|涨停价(元);low_limit|跌停价(元);avg_price|均价(元);prev_close|前收盘价(元);quote_rate|涨跌幅(%);amp_rate|振幅(%);is_st|是否st;",
+        "parentId": "74"
+      },
+      {
+        "id": "297",
+        "title": "指数分钟行情数据",
+        "content": "常用指数分钟频行情数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685535122,
+        "mtime": 1700137296,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;factor|复权因子;volume|成交量;turnover|成交金额(元);turnover_rate|换手率(%);is_paused|是否停牌;",
+        "parentId": "74"
+      },
+      {
+        "id": "298",
+        "title": "指数实时行情快照",
+        "content": "常用指数实时行情快照数据",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685535142,
+        "mtime": 1700137296,
+        "search_text": "prev_close|前收盘价;open|开盘价;high|最高价;low|最低价;current|现价;volume|成交量;amount|成交金额;cjcs|成交次数;b1_p|买一价;b1_v|买一量;b2_p|买二价;b2_v|买二量;b3_p|买三价;b3_v|买三量;b4_p|买四价;b4_v|买四量;b5_p|买五价;b5_v|买五量;b6_p|买六价;b6_v|买六量;b7_p|买七价;b7_v|买七量;b8_p|买八价;b8_v|买八量;b9_p|买九价;b9_v|买九量;b10_p|买十价;b10_v|买十量;a1_p|卖一价;a1_v|卖一量;a2_p|卖二价;a2_v|卖二量;a3_p|卖三价;a3_v|卖三量;a4_p|卖四价;a4_v|卖四量;a5_p|卖五价;a5_v|卖五量;a6_p|卖六价;a6_v|卖六量;a7_p|卖七价;a7_v|卖七量;a8_p|卖八价;a8_v|卖八量;a9_p|卖九价;a9_v|卖九量;a10_p|卖十价;a10_v|卖十量;total_bid|十档委买总量;average_bid|十档委买均价;total_ask|十档委卖总量;average_ask|十档委卖均价;",
+        "parentId": "74"
+      },
+      {
+        "id": "300",
+        "title": "指数成分股及权重",
+        "content": "包含了常见加权指数的成分股权重",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685535206,
+        "mtime": 1703817602,
+        "search_text": "`symbol`|股票代码;`weight`|股票所占权重（百分比）;",
+        "parentId": "75"
+      },
+      {
+        "id": "324",
+        "title": "外汇日行情数据",
+        "content": "外汇日频行情数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685537467,
+        "mtime": 1700137296,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;",
+        "parentId": "78"
+      },
+      {
+        "id": "325",
+        "title": "外汇分钟行情数据",
+        "content": "外汇分钟频行情数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685537502,
+        "mtime": 1700137296,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;",
+        "parentId": "78"
+      },
+      {
+        "id": "332",
+        "title": "外汇基本信息",
+        "content": "记录了外汇(中国银行双向宝合约)的基本信息",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685537659,
+        "mtime": 1700137296,
+        "search_text": "symbol|标的代码;display_name|中文简称;name|拼音简称;start_date|上市日期;end_date|退市日期;type|种类;exchange|交易所;",
+        "parentId": "76"
+      },
+      {
+        "id": "336",
+        "title": "外汇交易日历",
+        "content": "中国银行双向宝合约交易日历数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1685537743,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "77"
+      },
+      {
+        "id": "341",
+        "title": "利润表",
+        "content": "A股上市公司合并利润表数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1685599378,
+        "mtime": 1714270070,
+        "search_text": "|**基本信息**;symbol|股票代码;date|查询日期;report_date|数据发布日期;spec_conv_id|特殊转换标识;is_report_publish|报表是否公布值;spec_cond_desc|特殊情况说明;stat_date|季度日期;reporttypecode|报表类型编码;change_id|报表变动记录标识;|**营业总收入**;overall_income|营业总收入;operating_income|加：营业收入;interests_net_income|加：利息净收入;interests_income|（其中）利息收入;interests_expenses|（其中）利息支出;commi_net_income|加：手续费及佣金净收入;charges_and_commissions_income|（其中）手续费及佣金收入;charges_and_commissions_expenses|（其中）手续费及佣金支出;other_business_income|加：其他业务收入;insurance_premiums_earned|加：已赚保费;insurance_income|加：保险业务收入;cession_income|（其中）分保费收入;reinsurance_premium_ceded|（其中）分出保费;unearned_premium_reserve|加：提取未到期责任准备金;net_income_from_brokerage|加：经纪业务手续费净收入;net_income_from_invest_bank|加：投资银行业务手续费净收入;net_income_from_custody|加：资产管理业务手续费净收入;overall_income_account|营业总收入差额（特殊科目）;bal_account_of_overall_income|营业总收入差额（平衡科目）;|**营业总成本**;overall_costs|营业总成本;operations_costs|加：营业成本;operations_taxes_and_surcharges|加：营业税金及附加;sales_fee|加：销售费用;manage_fee|加：管理费用;financial_expenses|加：财务费用;impairment_loss_on_assets|加：资产减值损失;operating_expenses|加：营业支出;business_and_manage_fee|加：业务及管理费;other_business_expense|加：其他业务成本;refund_of_insurance_premiums|加：退保金;payments_for_insurance_claims|加：赔付支出;reinsurers_share_claims_paid|减：摊回赔付支出;draw_duty_deposit|加：提取保险责任准备金;amortized_deposit_for_duty|减：摊回保险责任准备金;commi_on_insurance_policy|加：保单红利支出;cession_charges|加：分保费用;amortized_rein_expenditure|减：摊回分保费用;operating_total_cost_si|加：营业总成本特殊科目;fv_chg_income|加：公允价值变动收益;investment_income|加：投资收益;ii_from_jc_etc|（其中）对联营企业和合营企业的投资收益;exchange_gain|加：汇兑收益;bal_account_of_overall_cost|营业总成本差额（平衡科目）;|**营业利润**;profit_from_operations|营业利润;op_diff_sri|营业利润差额（特殊科目）;bal_account_of_operating_profit|营业利润差额（平衡科目）;non_operating_profit|加：营业外收入;non_operating_expenses|减：营业外支出;noncurrent_asset_dispose_gain|（其中）非流动资产处置利得;noncurrent_asset_dispose_loss|（其中）非流动资产处置损失;|**利润总额**;profit_before_tax|利润总额;total_profit_diff_sri|利润总额差额（特殊科目）;bal_account_of_overall_profit|利润总额差额（平衡科目）;minus_income_tax_expenses|减：所得税费用;|**净利润**;net_profit|净利润;special_account_of_net_profit|净利润差额（特殊科目）;bal_account_of_net_profit|净利润差额（平衡科目）;np_atsopc|归属于母公司股东的净利润;minority_interest_income|少数股东损益;other_comprehensive_income|其他综合收益;othrcompre_income_atoopc|归属母公司所有者的其他综合收益;othrcompre_income_atms|归属于少数股东的其他综合收益;total_comprehensive_income|综合收益总额;total_compre_income_atsopc|归属于母公司股东的综合收益总额;total_compre_income_atms|归属于少数股东的综合收益总额;basic_eps|基本每股收益;diluted_eps|稀释每股收益;|**其他**;extraordinary_atsopc|归属于母公司的非经常性损益;income_from_main_business|主营业务收入;cost_of_main_business|主营业务成本;profit_of_main_business|主营业务利润;othr_ci_nonreclassi_into_gal|（一）以后不能重分类进损益的其他综合收益;net_debt_or_na_chg_reclac|1.重新计量设定受益计划净负债或净资产的变动;unclass_other_profit_share|2.权益法下在被投资单位不能重分类进损益的其他综合收益中享有的份额;other3|3.其他;classify_other_profit|（二）以后将重分类进损益的其他综合收益;will_reclassi_equity_method|1.权益法下在被投资单位以后将重分类进损益的其他综合收益中享有的份额;saleable_fnncl_asset_fvc_gal|2.可供出售金融资产公允价值变动损益;htm_saleable_fnncl_asset_gal|3.持有至到期投资重分类为可供出售金融资产损益;cash_flow_gal_valid_part|4.现金流量套期损益的有效部分;translation_reserve|5.外币财务报表折算差额;other6|6.其他;",
+        "parentId": "20"
+      },
+      {
+        "id": "342",
+        "title": "现金流量表",
+        "content": "A股上市公司合并现金流量表数据",
+        "order": 2,
+        "type": 0,
+        "ctime": 1685599471,
+        "mtime": 1714270630,
+        "search_text": "-|**基本信息**;symbol|股票代码;date|查询日期;report_date|数据发布日期;spec_conv_id|特殊转换标识;is_report_publish|报表是否公布值;spec_cond_desc|特殊情况说明;stat_date|季度日期;reporttypecode|报表类型编码;change_id|报表变动记录标识;-|**经营活动产生的现金流量**;cash_received_from_sales|销售商品、提供劳务收到的现金;receipts_of_tax_refunds|收到的税费返还;other_cash_received_from_op_act|收到其他与经营活动有关的现金;net_increase_in_deposits|客户存款和同业存放款项净增加额;net_increase_in_loan_from_central_bank|向中央银行借款净增加额;lending_net_add_other_org|向其他金融机构拆入资金净增加额;cash_received_of_interest_etc|收取利息、手续费及佣金的现金;cash_received_from_orig_ic|收到原保险合同保费取得的现金;cash_received_from_re_insurance|收到再保业务现金净额;naaassured_saving_and_invest|保户储金及投资款净增加额;naa_of_disposal_fnncl_assets|处置交易性金融资产净增加额;net_increase_in_funds_deposit|拆入资金净增加额;net_add_in_repur_capital|回购业务资金净增加额;oa_cash_inflow_diff_sri|经营活动现金流入差额（特殊科目）;sub_total_of_ci_from_oa|经营活动现金流入小计;goods_buy_and_service_cash_pay|购买商品、接受劳务支付的现金;employees_cash_payments|支付给职工以及为职工支付的现金;payments_of_taxes|支付的各项税费;other_cash_paid_related_to_oa|支付其他与经营活动有关的现金;loan_and_advancenet_add|客户贷款及垫款净增加额;naa_of_cb_and_interbank|存放中央银行和同业款项净增加额;cash_paid_for_interests_etc|支付利息、手续费及佣金的现金;cash_of_orig_ic_indemnity|支付原保险合同赔付款项的现金;cash_paid_for_pd|支付保单红利的现金;cash_outflows_from_opt_act|经营活动现金流出差额（特殊科目）;sub_total_of_cos_from_oa|经营活动现金流出小计;net_cash_flows_from_opt_act|经营活动产生的现金流量净额;cashin_flows_from_business_act|经营活动现金流入差额（平衡科目）;cashout_flows_from_business_act|经营活动现金流出差额（平衡科目）;oa_ncf_special_balance|经营活动产生的现金流量净额特殊科目;net_decrease_in_capital|融出资金净减少额;acting_sec_received_net_cash|代理买卖证券收到的现金净额;net_increase_in_capital|融出资金净增加额;acting_td_sec_paied_net_cash|代理买卖证券支付的现金净额;-|**投资活动产生的现金流量**;cash_received_of_dspsl_invest|收回投资收到的现金;investment_income_cash|取得投资收益收到的现金;net_cash_received_from_disposals|处置固定资产、无形资产和其他长期资产收回的现金净额;net_cash_of_disposal_branch|处置子公司及其他营业单位收到的现金净额;cash_received_of_other_fa|收到其他与投资活动有关的现金;cashin_flows_from_investing_act|投资活动现金流入特殊科目;sub_total_of_ci_from_ia|投资活动现金流入小计;cash_paid_for_assets|购建固定资产、无形资产和其他长期资产支付的现金;invest_paid_cash|投资支付的现金;net_cash_amt_from_branch|取得子公司及其他营业单位支付的现金净额;other_cash_paid_related_to_ia|支付其他与投资活动有关的现金;net_increase_in_secured_loans|质押贷款净增加额;cashout_flows_from_investing_act|投资活动现金流出差额（特殊项目）;sub_total_of_cos_fromia|投资活动现金流出小计;net_cashflows_from_investing_act|投资活动产生的现金流量净额;cashin_flows_from_invest_act|投资活动现金流入差额（平衡科目）;cashout_flows_from_invest_act|投资活动现金流出差额（平衡科目）;ncf_from_ia_si|投资活动产生的现金流量净额特殊科目;-|**筹资活动产生的现金流量**;cash_received_from_investors|吸收投资收到的现金;cr_from_minority_holders|子公司吸收少数股东投资收到的现金;cash_received_from_borrowings|取得借款收到的现金;cash_received_of_othr_fa|收到其他与筹资活动有关的现金;proceeds_from_issuance_of_bonds|发行债券收到的现金;fa_cash_in_flow_diff_sri|筹资活动现金流入差额（特殊项目）;sub_total_of_ci_from_fa|筹资活动现金流入小计;cash_pay_for_debt|偿还债务支付的现金;cash_paid_of_distribution|分配股利、利润或偿付利息支付的现金;dap_paid_to_minority_holder|子公司支付给少数股东的股利;othrcash_paid_relating_to_fa|支付其他与筹资活动有关的现金;cashout_flows_from_financing_act|筹资活动现金流出差额（特殊项目）;sub_total_of_cos_from_fa|筹资活动现金流出小计;ncf_from_fa|筹资活动产生的现金流量净额;cashin_flows_from_financing_act|筹资活动现金流入差额（平衡科目）;fa_cash_out_flow_diff_tbi|筹资活动现金流出差额（平衡科目）;ncf_from_fa_si|筹资活动产生的现金流量净额特殊科目;effect_of_exchange_chg_on_cce|汇率变动对现金及现金等价物的影响;net_increase_in_cce|现金及现金等价物净增加额;initial_cce_balance|期初现金及现金等价物余额;cash_and_cash_equivalents_at_end|期末现金及现金等价物余额;-|**补充资料**;net_profit|现金流量表-净利润;reserve_for_assets_impairment|资产减值准备;depreciation_etc|固定资产折旧、油气资产折耗、生产性生物资产折旧;intangible_assets|无形资产摊销;long_term_deferred_expenses|长期待摊费用摊销;disposal_of_fixed_assets_loss|处置固定资产、无形资产和其他长期资产的损失;fixed_asset_abnd_loss|固定资产报废损失;fair_value_change_loss|公允价值变动损失;financing_expenses|现金流量表-财务费用;investment_loss|投资损失;dt_assets_decrease|递延所得税资产减少;dt_liab_increase|递延所得税负债增加;inventory_reduction|存货的减少;operating_receivables_reduction|经营性应收项目的减少;operating_payable_increase|经营性应付项目的增加;other|其他;cashflows_from_operating_act|间接法-经营活动现金流量净额差额（特殊科目）;net_cashflows_from_operating_act|间接法-经营活动产生的现金流量净额;conversion_of_debt_into_capital|债务转为资本;cb_due_within1y|一年内到期的可转换公司债券;finance_lease_fixed_assets|融资租入固定资产;cash_at_end_of_year|现金的期末余额;minus_cash_at_beginning_of_year|现金的期初余额;final_balance_of_cce|现金等价物的期末余额;initial_balance_of_cce|现金等价物的期初余额;net_increase_in_cce_im|间接法-现金及现金等价物净增加额;cce_net_add_amt_diff_sri_dm|直接法-现金及现金等价物净增加额差额（特殊科目）;cce_net_add_amt_diff_tbi_dm|直接法-现金及现金等价物净增加额差额（平衡科目）;bal_cashflows_from_operating_act|间接法-经营活动现金流量净额平衡科目;decrease_in_prepaid_expenses|待摊费用减少;increase_in_prepaid_expenses|预提费用增加;cce_net_special_bi_im|间接法-现金及现金等价物净增加额特殊科目;cce_net_special_bi_im|间接法-现金及现金等价物净增加额平衡科目;final_cce_balance_si|期末现金及现金等价物余额特殊科目;final_cce_balance_bi|期末现金及现金等价物余额平衡科目;exchange_loss|汇兑损失;",
+        "parentId": "20"
+      },
+      {
+        "id": "343",
+        "title": "业绩快报",
+        "content": "A股上市公司业绩快报数据",
+        "order": 3,
+        "type": 0,
+        "ctime": 1685599515,
+        "mtime": 1714109173,
+        "search_text": "symbol|股票代码;report_date|公布日;stat_date|报告期;income_from_main_business|主营业务收入;profit_of_main_business|主营业务利润;total_profit|利润总额;parent_net_profit|归属母公司股东的净利润;diluted_eps|摊薄每股收益EPS;basic_eps|基本每股收益EPS;diluted_roe|全面摊薄净资产收益率ROE;weighted_roe|加权净资产收益率ROE;asset|总资产;net_asset|净资产;brief_report|业绩快报简要说明;parent_net_profit_excl|归属母公司股东的扣非净利润;",
+        "parentId": "20"
+      },
+      {
+        "id": "344",
+        "title": "业绩预告",
+        "content": "A股上市公司业绩预告数据",
+        "order": 4,
+        "type": 0,
+        "ctime": 1685599530,
+        "mtime": 1776930643,
+        "search_text": "symbol|股票代码;stat_date|报告期;report_date|报告公布日;profit_type|业绩预告类型;np_change_range|预告净利润变动;np_change_lower|预告净利润变动下限;np_change_upper|预告净利润变动上限;np_lower|预告净利润下限;np_upper|预告净利润上限;eps_upper|预告eps上限;eps_lower|预告eps下限;eps_change_upper|预告eps变动上限;eps_change_lower|预告eps变动下限;operating_income_excl_upper|预告扣除后营业收入上限;operating_income_excl_lower|预告扣除后营业收入上限;np_excl_upper|预告扣非净利润上限;np_excl_lower|预告扣非净利润下限;np_excl_change_upper|预告扣非净利润变动上限;np_excl_change_lower|预告扣非净利润变动下限;operating_income_upper_limit|预告营业收入上限;operating_income_lower_limit|预告营业收入下限;",
+        "parentId": "20"
+      },
+      {
+        "id": "345",
+        "title": "估值指标表",
+        "content": "A股上市公司估值相关计算财务指标",
+        "order": 5,
+        "type": 0,
+        "ctime": 1685599637,
+        "mtime": 1714273001,
+        "search_text": "date|日期;symbol|股票代码;pe\\_lyr|市盈率LYR;pe\\_mrq|市盈率MRQ;pe\\_ttm|市盈率TTM;fore\\_pe\\_his|预测市盈率(PE,历史预测);fore\\_pe\\_in12m|预测市盈率(PE,未来12个月);static\\_pe\\_csi|静态市盈率(中证发布);auto\\_pe\\_csi|滚动市盈率(中证发布);his\\_peg|历史PEG;fore\\_peg|预测PEG;pb\\_mrq|市净率MRQ;pb\\_csi|市净率(中证发布);pcf\\_operate\\_cash\\_flow\\_lyr|市现率(PCF,经营现金流)LYR;pcf\\_operate\\_cash\\_flow\\_ttm|市现率(PCF,经营现金流)TTM;pcf\\_net\\_cash\\_flow\\_lyr|市现率(PCF,现金净流量)LYR;pcf\\_net\\_cash\\_flow\\_ttm|市现率(PCF,现金净流量)TTM;ps\\_lyr|市销率LYR;ps\\_mrq|市销率MRQ;ps\\_ttm|市销率TTM;dividend\\_rate\\_ttm|股息率TTM;total\\_mv|总市值(元);total\\_mv\\_object|总市值(面向对象)(元);total\\_mv\\_csrc|总市值(证监会算法)(元);float\\_mv|流通市值(元);ev1|企业价值(含货币资金)(元);ev2|企业价值(剔除货币资金)(元);ev2\\_to\\_ebitda|企业倍数;total\\_shares|总股本(股);float\\_shares|流通股本(股);ashare\\_total\\_shares|A股总股本(股);ashare\\_float\\_shares|A股流通股本(股);字段|含义;--------------------------|---------------------------;date|日期;symbol|股票代码;pe|市盈率LYR;pe\\_ttm|市盈率TTM;history\\_forecast\\_pe|预测市盈率(PE,历史预测);forecast\\_pe|预测市盈率(PE,未来12个月);static\\_pe|静态市盈率(中证发布);history\\_peg|历史PEG;pb|市净率MRQ;published\\_pb|市净率(中证发布);pcf|市现率(PCF,经营现金流)LYR;pcf\\_ttm|市现率(PCF,经营现金流)TTM;pcf\\_cash\\_flow|市现率(PCF,现金净流量)LYR;pcf\\_cash\\_flow\\_ttm|市现率(PCF,现金净流量)TTM;ps|市销率LYR;ps\\_ttm|市销率TTM;dividend\\_rate\\_12\\_months|股息率TTM;market\\_cap|总市值(元);market\\_cap\\_csrc|总市值(证监会算法)(元);current\\_market\\_cap|流通市值(元);ev1|企业价值(含货币资金)(元);ev2|企业价值(剔除货币资金)(元);ev\\_times|企业倍数;capitalization|A股总股本(股);circulating\\_cap|A股流通股本(股);",
+        "parentId": "20"
+      },
+      {
+        "id": "346",
+        "title": "偿还能力表",
+        "content": "A股上市公司偿还能力相关计算财务指标",
+        "order": 6,
+        "type": 0,
+        "ctime": 1685599683,
+        "mtime": 1714118852,
+        "search_text": "date|日期;report\\_date|公告日期;stat\\_date|报告期;symbol|股票代码;current\\_ratio\\_mrq|流动比率MRQ;quick\\_ratio\\_mrq|速动比率MRQ;conservative\\_quick\\_ratio\\_ttm|保守速动比率MRQ;cash\\_ratio\\_mrq|现金比率MRQ;equity\\_ratio\\_mrq|产权比率MRQ;equity\\_atsopc\\_to\\_liab\\_mrq|归属母公司股东的权益／负债合计MRQ;equity\\_atsopc\\_to\\_dwi\\_mrq|归属母公司股东的权益／带息债务MRQ;ta\\_to\\_total\\_debt\\_mrq|有形资产／负债合计MRQ;ta\\_to\\_debt\\_with\\_interest\\_mrq|有形资产／带息债务MRQ;ta\\_to\\_net\\_debt\\_mrq|有形资产／净债务MRQ;ebitda\\_to\\_total\\_liab\\_mrq|息税折旧摊销前利润／负债合计MRQ;ncf\\_of\\_oa\\_to\\_dwi\\_mrq|经营活动产生的现金流量净额／带息债务MRQ;ncf\\_of\\_oa\\_to\\_net\\_debt\\_mrq|经营活动产生的现金流量净额／净债务MRQ;lt\\_debt\\_and\\_oc\\_ratio\\_mrq|长期债务与营运资金比率MRQ;net\\_debt\\_to\\_equity\\_value\\_mrq|净债务／总市值MRQ;dwi\\_to\\_equity\\_value\\_mrq|带息债务／总市值MRQ;字段|含义;-----------------------------------------------------------|---------------------------------------;date|日期;report\\_date|公告日期;stat\\_date|报告期;symbol|股票代码;current\\_ratio|流动比率MRQ;quick\\_ratio|速动比率MRQ;conservative\\_quick\\_ratio|保守速动比率MRQ;equity\\_ratio|产权比率MRQ;equity\\_liabilities\\_attributable\\_to\\_shareholders\\_of\\_pa|归属母公司股东的权益／负债合计MRQ;equity\\_int\\_liabilities\\_attributable\\_to\\_shareholders\\_o|归属母公司股东的权益／带息债务MRQ;tangible_assets_liabilities|有形资产／负债合计MRQ;tangible\\_assets\\_int\\_liabilities|有形资产／带息债务MRQ;tangible_assets_net_liabilities|有形资产／净债务MRQ;ebitda_liabilities|息税折旧摊销前利润／负债合计MRQ;netcashflows_from_opt_act_int_liabilities|经营活动产生的现金流量净额／带息债务MRQ;netcashflows_from_opt_act_net_liabilities|经营活动产生的现金流量净额／净债务MRQ;long_term_debt_to_opt_capital_ratio|长期债务与营运资金比率MRQ;net_debt_equity|净债务／总市值MRQ;int_debt_equity|带息债务／总市值MRQ;",
+        "parentId": "20"
+      },
+      {
+        "id": "355",
+        "title": "运营能力表",
+        "content": "A股上市公司运营能力相关计算财务指标",
+        "order": 7,
+        "type": 0,
+        "ctime": 1685623459,
+        "mtime": 1714112644,
+        "search_text": "date|日期;report\\_date|公告日期;stat\\_date|报告期;symbol|股票代码;inventory\\_turnover\\_ttm|存货周转率TTM;account\\_receive\\_turnover\\_ttm|应收账款周转率TTM;accounts\\_payable\\_turnover\\_ttm|应付账款周转率TTM;operation\\_capital\\_ttm|营运资本周转率TTM;float\\_asset\\_turnover\\_ttm|流动资产周转率TTM;unfloat\\_asset\\_turnover\\_ttm|非流动资产周转率TTM;fixed\\_asset\\_turnover\\_ttm|固定资产周转率TTM;total\\_capital\\_turnover\\_ttm|总资产周转率TTM;字段|含义;-----------------------------------|----------------;date|日期;report\\_date|公告日期;stat\\_date|报告期;symbol|股票代码;operating\\_cycle|营业周期;cash\\_cycle|现金循环周期;days\\_sales\\_of\\_inventory|存货周转天数;days\\_sales\\_outstanding|应收账款周转天数;days\\_payable\\_outstanding|应付账款周转天数;turnover\\_days\\_of\\_current\\_assets|流动资产周转天数;inventory_turnover_ratio|存货周转率;turnover\\_ratio\\_of\\_receivable|应收账款周转率;turnover_ratio_of_account_payable|应付账款周转率;turnover_of_current_assets|流动资产周转率;turnover\\_of\\_fixed\\_assets|固定资产周转率;turnover\\_of\\_overall\\_assets|总资产周转率;",
+        "parentId": "20"
+      },
+      {
+        "id": "356",
+        "title": "盈利能力表",
+        "content": "A股上市公司盈利能力计算财务指标\n",
+        "order": 8,
+        "type": 0,
+        "ctime": 1685623587,
+        "mtime": 1714118328,
+        "search_text": "date|日期;report_date|公告日期;stat_date|报告期;symbol|股票代码;roe_ttm|股东权益收益率(ROE)TTM;ebit_on_total_assets_ttm|总资产报酬率（扣非）TTM;roa_ttm|总资产收益率(ROA)TTM;roic_ttm|投入资本回报率(ROIC)TTM;net_sales_rate_ttm|销售净利率TTM;gross_sales_rate_ttm|销售毛利率TTM;sales_dur_fee_rate_ttm|销售期间费用率TTM;sales_fee_rate_ttm|销售费用率TTM;manage_fee_rate_ttm|管理费用率TTM;finance_fee_rate_ttm|财务费用率TTM;operating_profit_rate_ttm|营业利润率TTM;ebit_rate_ttm|息税前利润率（扣非）TTM;cost_to_revenue_ttm|营业总成本／营业总收入TTM;字段|含义;-----------------------------------------------|----------------------------------;date|日期;report\\_date|公告日期;stat\\_date|报告期;symbol|股票代码;roe_ths|净资产收益率-平均(%);weighted_roe|净资产收益率-加权(%);diluted_roe|净资产收益率-摊薄(%);deduct_diluted_roe|净资产收益率-扣除/摊薄(%);non_recurring_gains_and_losses_roe|净资产收益率-扣除非经常损益(%);additional_share_offering_roe|净资产收益率-增发条件(%);overall_assets_net_income_ratio|总资产净利率(%);roa|总资产报酬率(%);roic|投入资本回报率(%);annualized_rate_of_return_on_net_assets|净资产收益率-年化(%);annualized_rate_of_return_on_overall_assets|总资产报酬率-年化(%);annualized_rate_of_net_profit_on_overall_assets|总资产净利率-年化(%);net\\_profit\\_margin\\_on\\_sales|销售净利率(%);gross_sales_profits|销售毛利率(%);ratio_of_sales_to_cost|销售成本率(%);cost_of_sales_period|销售期间费用率(%);net_profit_div_income|净利润／营业总收入(%);opt_profit_div_income|营业利润／营业总收入(%);before_tax_profit_div_income|息税前利润／营业总收入(%);opt_cost_div_income|营业总成本／营业总收入(%);sale_cost_div_income|销售费用／营业总收入(%);administration_cost_div_income|(管理费用+研发费用)／营业总收入(%);financing_cost_div_income|财务费用／营业总收入(%);impairment_loss_div_income|资产减值损失／营业总收入(%);deduct_weighted_roe|净资产收益率-扣除／加权(%);",
+        "parentId": "20"
+      },
+      {
+        "id": "357",
+        "title": "成长能力表",
+        "content": "A股上市公司成长能力计算财务指标",
+        "order": 9,
+        "type": 0,
+        "ctime": 1685623647,
+        "mtime": 1714273436,
+        "search_text": "symbol|股票代码;date|查询日期;report_date|报告期;stat_date|季度日期;basic_eps_year_growth_ratio|基本每股收益(同比增长率);diluted_eps_growth_ratio|稀释每股收益(同比增长率);net_cashflow_psg_growth_ratio|每股经营活动产生的现金流量净额(同比增长率);overall_income_growth_ratio|营业总收入(同比增长率);opt_income_growth_ratio|营业收入(同比增长率);opt_profit_growth_ratio|营业利润(同比增长率);total_profit_growth_ratio|利润总额(同比增长率);net_profit_growth_ratio|净利润(同比增长率);np_atsopc_yoy|归属母公司股东的净利润(同比增长率);np_atsopc_dnrgal_yoy|归属母公司股东的净利润-扣除非经常损益(同比增长率);ncf_of_oa_yoy|经营活动产生的现金流量净额(同比增长率);diluted_net_asset_growth_ratio|净资产收益率(摊薄)(同比增长率);net_asset_growth_ratio|净资产(同比增长率);overall_liabilities_growth_ratio|总负债(同比增长率);overall_assets_growth_ratio|总资产(同比增长率);net_cash_flow_growth_ratio|现金净流量(同比增长率);opt_income_compound_growth_ratio|营业总收入复合年增长率;net_profit_compound_growth_ratio|净利润复合增长率;np_atsopc_compound_growth|归属母公司股东的净利润复合年增长率;bvps_growth_ratio|每股净资产(相对年初增长率);total_assets_growth_ratio|资产总计(相对年初增长率);equity_atsopc_growth_boy|归属母公司股东的权益(相对年初增长率);total_revenue_growth_3y|营业总收入(3年,增长率);overall_cost_years_growth_ratio|营业总成本(3年,增长率);opt_income_years_growth_ratio|营业收入(3年,增长率);opt_profit_years_growth_ratio|营业利润(3年,增长率);oa_net_income_growth_3y|经营活动净收益(3年,增长率);value_chg_growth_3y|价值变动净收益(3年,增长率);total_profit_growth_3y|利润总额(3年,增长率);net_profit_years_growth_ratio|净利润(3年,增长率);net_profit_atsopc_growth_3y|归属母公司股东的净利润(3年,增长率);opt_cash_flow_years_growth_ratio|经营活动产生的现金流量净额(3年,增长率);total_assets_growth_3y|资产总计(3年,增长率);holder_equity_growth_3y|股东权益(3年,增长率);equity_atsopc_growth_nearly3y|归属母公司股东的权益(3年,增长率);roe_years_growth_ratio|净资产收益率(3年,增长率);",
+        "parentId": "20"
+      },
+      {
+        "id": "358",
+        "title": "成长能力表(单季度)",
+        "content": "A股上市公司单季度成长能力计算财务指标数据",
+        "order": 13,
+        "type": 0,
+        "ctime": 1685623719,
+        "mtime": 1714275066,
+        "search_text": "overall_income_growth_ratio|营业总收入(同比增长率);opt_income_growth_ratio|营业收入(同比增长率);opt_profit_growth_ratio|营业利润(同比增长率);net_profit_growth_ratio|净利润(同比增长率);np_atsopc_yoy|归属母公司股东的净利润(同比增长率);",
+        "parentId": "20"
+      },
+      {
+        "id": "359",
+        "title": "现金流量表(单季度)",
+        "content": "A股上市公司单季度合并现金流量表数据都",
+        "order": 11,
+        "type": 0,
+        "ctime": 1685624561,
+        "mtime": 1714274762,
+        "search_text": "-|**经营活动产生的现金流量**;cash_received_from_sales|销售商品、提供劳务收到的现金;receipts_of_tax_refunds|收到的税费返还;other_cash_received_from_op_act|收到其他与经营活动有关的现金;net_increase_in_deposits|客户存款和同业存放款项净增加额;borrowing_net_add_central_bank|向中央银行借款净增加额;net_add_finan_org|向其他金融机构拆入资金净增加额;cash_received_of_interest_etc|收取利息、手续费及佣金的现金;premium_receive_of_orig_ic|收到原保险合同保费取得的现金;cash_received_from_re_insurance|收到再保业务现金净额;net_add_in_deposits_etc|保户储金及投资款净增加额;disposal_net_add_etc|处置交易性金融资产净增加额;net_increase_in_funds_deposit|拆入资金净增加额;net_add_in_repur_capital|回购业务资金净增加额;oa_net_ci_si|经营活动现金流入特殊科目;sub_total_of_ci_from_oa|经营活动现金流入小计;sq_cash_pay_for_goods_etc|购买商品、接受劳务支付的现金;employees_cash_payments|支付给职工以及为职工支付的现金;payments_of_taxes|支付的各项税费;other_cash_paid_related_to_oa|支付其他与经营活动有关的现金;net_add_in_loans_etc|客户贷款及垫款净增加额;deposit_net_add_etc|存放中央银行和同业款项净增加额;cp_for_interests_etc|支付利息、手续费及佣金的现金;cash_of_orig_ic_indemnity|支付原保险合同赔付款项的现金;cash_paid_for_pd|支付保单红利的现金;cash_outflows_from_opt_act|经营活动现金流出特殊科目;sub_total_of_cos_from_oa|经营活动现金流出小计;net_cash_flows_from_opt_act|经营活动产生的现金流量净额;-|**投资活动产生的现金流量**;cr_from_disposal_of_invest|收回投资收到的现金;investment_income_cash|取得投资收益收到的现金;net_cash_received_from_disposals|处置固定资产、无形资产和其他长期资产收回的现金净额;net_cr_from_disposal|处置子公司及其他营业单位收到的现金净额;other_cr_related_to_ia|收到其他与投资活动有关的现金;cashin_flows_from_investing_act|投资活动现金流入特殊科目;sub_total_of_ci_from_ia|投资活动现金流入小计;cash_paid_for_assets|购建固定资产、无形资产和其他长期资产支付的现金;invest_paid_cash|投资支付的现金;nc_of_branch_etc|取得子公司及其他营业单位支付的现金净额;othercp_related_to_ia|支付其他与投资活动有关的现金;net_increase_in_secured_loans|质押贷款净增加额;cashout_flows_from_investing_act|投资活动现金流出特殊科目;sub_total_of_cos_from_ia|投资活动现金流出小计;net_cashflows_from_investing_act|投资活动产生的现金流量净额;-|**筹资活动产生的现金流量**;cash_received_from_investors|吸收投资收到的现金;cash_received_from_investor|其中：子公司吸收少数股东投资收到的现金;cash_received_from_borrowings|取得借款收到的现金;other_cr_related_to_fa|收到其他与筹资活动有关的现金;proceeds_from_issuance_of_bonds|发行债券收到的现金;ci_from_fa_si|筹资活动现金流入特殊科目;sub_total_of_ci_from_fa|筹资活动现金流入小计;cash_pay_for_debt|偿还债务支付的现金;dividend_etc_cp|分配股利、利润或偿付利息支付的现金;branch_paid_to_minority_holder|其中：子公司支付给少数股东的股利;othercp_related_to_fa|支付其他与筹资活动有关的现金;cashout_flows_from_financing_act|筹资活动现金流出特殊科目;sub_total_of_co_from_fa|筹资活动现金流出小计;ncf_from_fa|筹资活动产生的现金流量净额;-|**其他**;effect_of_erc_on_cce|汇率变动对现金及现金等价物的影响;net_increase_in_cce|现金及现金等价物净增加额;initial_balance_of_cce|加：期初现金及现金等价物余额;cash_and_cash_equivalents_at_end|期末现金及现金等价物余额;net_profit|净利润;reserve_for_assets_impairment|加：资产减值准备;depreciation_etc|固定资产折旧、油气资产折耗、生产性生物资产折旧;intangible_assets|无形资产摊销;long_term_deferred_expenses|长期待摊费用摊销;disposal_of_fixed_assets_loss|处置固定资产、无形资产和其他长期资产的损失;fixed_asset_abnd_loss|固定资产报废损失;fair_value_change_loss|公允价值变动损失;financing_expenses|cfs_财务费用;investment_loss|投资损失;dt_assets_decrease|递延所得税资产减少;dt_liab_increase|递延所得税负债增加;inventory_reduction|存货的减少;operating_receivables_reduction|经营性应收项目的减少;operating_payable_increase|经营性应付项目的增加;other|其他;net_cashflows_from_operating_act|间接法-经营活动产生的现金流量净额;conversion_of_debt_into_capital|债务转为资本;cb_due_within1year|一年内到期的可转换公司债券;finance_lease_fixed_assets|融资租入固定资产;cash_at_end_of_year|现金的期末余额;minus_cash_at_beginning_of_year|减：现金的期初余额;final_balance_of_ce|加：现金等价物的期末余额;initial_balance_of_ce|减：现金等价物的期初余额;net_increase_in_cce_im|间接法-现金及现金等价物净增加额;spec_conv_id|cfs_特殊转换标识;is_report_publish|cfs_报表是否公布值;cashin_flows_from_business_act|经营活动现金流入平衡科目;cashout_flows_from_business_act|经营活动现金流出平衡科目;cashin_flows_from_invest_act|投资活动现金流入平衡科目;cashout_flows_from_invest_act|投资活动现金流出平衡科目;cashin_flows_from_financing_act|筹资活动现金流入平衡科目;cos_from_fa_bi|筹资活动现金流出平衡科目;net_increase_in_cce_si|现金及现金等价物净增加额特殊科目;net_increase_in_cce_bi|现金及现金等价物净增加额平衡科目;decrease_in_prepaid_expenses|待摊费用减少;increase_in_prepaid_expenses|预提费用增加;oa_ncf_special_balance|经营活动产生的现金流量净额特殊科目;ncf_from_ia_si|投资活动产生的现金流量净额特殊科目;ncf_from_fa_si|筹资活动产生的现金流量净额特殊科目;cce_net_special_bi_im|间接法-现金及现金等价物净增加额特殊科目;cce_net_add_bi_im|间接法-现金及现金等价物净增加额平衡科目;final_cce_balance_si|期末现金及现金等价物余额特殊科目;final_cce_balance_bi|期末现金及现金等价物余额平衡科目;net_decrease_in_capital|融出资金净减少额;acting_sec_received_net_cash|代理买卖证券收到的现金净额;net_increase_in_capital|融出资金净增加额;acting_td_sec_paied_net_cash|代理买卖证券支付的现金净额;exchange_loss|汇兑损失;",
+        "parentId": "20"
+      },
+      {
+        "id": "360",
+        "title": "盈利能力表(单季度)",
+        "content": "A股上市公司单季度盈利能力计算财务指标数据",
+        "order": 12,
+        "type": 0,
+        "ctime": 1685624605,
+        "mtime": 1714274997,
+        "search_text": "roe_dnrgal|净资产收益率roe-扣除非经常损益;overall_assets_net_income_ratio|总资产净利率roa;net_profit_margin_on_sales|销售净利率;gross_sales_profits|销售毛利率;net_profit_div_income|净利润／营业总收入;opt_profit_div_income|营业利润／营业总收入;opt_cost_div_income|营业总成本／营业总收入;administration_cost_div_income|管理费用／营业总收入;roe|净资产收益率roe（累计）;roe_one_season|净资产收益率roe（单季度）;",
+        "parentId": "20"
+      },
+      {
+        "id": "361",
+        "title": "利润表(单季度)",
+        "content": "A股上市公司单季度利润表",
+        "order": 10,
+        "type": 0,
+        "ctime": 1685624636,
+        "mtime": 1714274365,
+        "search_text": "-|**一、营业总收入**;overall_income|营业总收入;operating_income|营业收入;interests_net_income|利息净收入;interests_income|利息收入;interests_expenses|利息支出;commi_net_income|手续费及佣金净收入;charges_and_commissions_income|手续费及佣金收入;charges_and_commissions_expenses|手续费及佣金支出;other_business_income|其他业务收入;insurance_premiums_earned|已赚保费;insurance_income|保险业务收入;cession_income|其中：分保费收入;reinsurance_premium_ceded|减：分出保费;unearned_premium_reserve|提取未到期责任准备金;net_income_from_brokerage|其中：经纪业务手续费净收入;net_income_from_invest_bank|投资银行业务手续费净收入;net_income_from_custody|资产管理业务手续费净收入;overall_income_account|营业总收入特殊科目;-|**二、营业总成本**;overall_costs|营业总成本;operations_costs|其中：营业成本;operations_taxes_and_surcharges|营业税金及附加;sales_fee|销售费用;manage_fee|管理费用;financial_expenses|is_财务费用;impairment_loss_on_assets|资产减值损失;operating_expenses|营业支出;business_and_manage_fee|业务及管理费;other_business_expense|其他业务成本;refund_of_insurance_premiums|退保金;payments_for_insurance_claims|赔付支出;reinsurers_share_claims_paid|减：摊回赔付支出;draw_duty_deposit|提取保险责任准备金;amortized_deposit_for_duty|减：摊回保险责任准备金;commi_on_insurance_policy|保单红利支出;cession_charges|分保费用;amortized_rein_expenditure|减：摊回分保费用;operating_total_cost_si|营业总成本特殊科目;income_from_chg_in_fv|加：公允价值变动收益;investment_income|投资收益;invest_incomes_from_rr|其中：对联营企业和合营企业的投资收益;exchange_gain|汇兑收益;-|**三、营业利润**;profit_from_operations|营业利润;non_operating_profit|加：营业外收入;non_operating_expenses|减：营业外支出;noncurrent_asset_disposal_loss|其中：非流动资产处置损失;-|**四、利润总额**;profit_before_tax|利润总额;minus_income_tax_expenses|减：所得税费用;-|**五、净利润**;net_profit|净利润;np_atsopc|归属于母公司股东的净利润;minority_interest_income|少数股东损益;other_comprehensive_income|其他综合收益;total_comprehensive_income|综合收益总额;total_compre_income_atsopc|归属于母公司股东的综合收益总额;total_compre_income_atms|归属于少数股东的综合收益总额;spec_conv_id|特殊转换标识;income_from_main_business|主营业务收入;cost_of_main_business|主营业务成本;profit_of_main_business|主营业务利润;is_report_publish|报表是否公布值;bal_account_of_overall_income|营业总收入平衡科目;bal_account_of_overall_cost|营业总成本平衡科目;op_si|营业利润特殊科目;bal_account_of_operating_profit|营业利润平衡科目;total_profit_si|利润总额特殊科目;bal_account_of_overall_profit|利润总额平衡科目;special_account_of_net_profit|净利润特殊科目;bal_account_of_net_profit|净利润平衡科目;basic_eps|基本每股收益;diluted_eps|稀释每股收益;noncurrent_assets_dispose_gain|其中：非流动资产处置利得;other_compre_income_atoopc|归属母公司所有者的其他综合收益;othr_ci_nonreclassi_into_gal|（一）以后不能重分类进损益的其他综合收益;net_debt_or_na_chg_reclac|1.重新计量设定受益计划净负债或净资产的变动;unclass_other_profit_share|2.权益法下在被投资单位不能重分类进损益的其他综合收益中享有的份额;classify_other_profit|（二）以后将重分类进损益的其他综合收益;will_reclassi_equity_method|1.权益法下在被投资单位以后将重分类进损益的其他综合收益中享有的份额;saleable_fnncl_asset_fvc_gal|2.可供出售金融资产公允价值变动损益;htm_saleable_fnncl_asset_gal|3.持有至到期投资重分类为可供出售金融资产损益;cash_flow_gal_valid_part|4.现金流量套期损益的有效部分;translation_reserve|5.外币财务报表折算差额;other3|6.其他;other_compre_income_atms|归属于少数股东的其他综合收益;other6|3.其他;",
+        "parentId": "20"
+      },
+      {
+        "id": "393",
+        "title": "新闻评级数据",
+        "content": "记录了新闻标题、新闻来源、新闻评级、新闻发布时间、新闻评级时间、对应股票代码数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1686120798,
+        "mtime": 1700137296,
+        "search_text": "symbol|股票代码;ctime|新闻发布时间;rtime|审核评级时间;title|文章标题;source|文章来源;nature|新闻评级;",
+        "parentId": "79"
+      },
+      {
+        "id": "394",
+        "title": "举牌事件",
+        "content": "记录了A股上市公司举牌事件数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1686128527,
+        "mtime": 1700137296,
+        "search_text": "symbol|股票代码;report\\_date|举牌公告日期;name|举牌方;start\\_date|举牌起始日期;end\\_date|举牌截止日期;add\\_quantity|本次举牌增持数量;add\\_quantity\\_ratio|本次举牌增持数量占总股本比例;",
+        "parentId": "79"
+      },
+      {
+        "id": "395",
+        "title": "实控人变更事件",
+        "content": "记录A股上市公司实控人变更事件相关数据",
+        "order": 2,
+        "type": 0,
+        "ctime": 1686129751,
+        "mtime": 1700137296,
+        "search_text": "symbol|股票代码;after\\_name|实控人变更后名称;before\\_name|实控人变更前名称;date|实控人变更时间;",
+        "parentId": "79"
+      },
+      {
+        "id": "396",
+        "title": "定向增发事件",
+        "content": "记录了A股上市公司定向增发事件相关数据",
+        "order": 3,
+        "type": 0,
+        "ctime": 1686129983,
+        "mtime": 1700137296,
+        "search_text": "plan\\_date|增发预案日;rate|增发进度;plan\\_low\\_price|增发预案发行价格下限;plan\\_high\\_price|增发预案发行价格上限;quantity|增发预案募集数量;amount|增发预案募集金额;stock\\_buying\\_pattern|增发认购方式;",
+        "parentId": "79"
+      },
+      {
+        "id": "397",
+        "title": "机构调研数据",
+        "content": "记录A股上市公司机构调研事件相关数据",
+        "order": 4,
+        "type": 0,
+        "ctime": 1686130230,
+        "mtime": 1700137296,
+        "search_text": "symbol|同花顺代码;declare\\_date|调研公告日期;investigation\\_date|调研时间;institutions\\_cnt|调研机构家数;institutions|调研机构名称;investigation\\_type|调研类型;investigation\\_place|调研地点;pe\\_cnt|调研私募家数;pe|调研私募名称;fund\\_cnt|调研基金家数;fund|调研基金名称;security\\_cnt|调研券商家数;security|调研券商名称;insurance\\_cnt|调研保险家数;insurance|调研保险名称;qfii\\_cnt|调研qfii家数;qfii|调研qfii名称;overseas\\_cnt|调研海外机构家数;overseas|调研海外机构名称;others\\_cnt|调研其他类别家数;others|调研其他类别名称;",
+        "parentId": "79"
+      },
+      {
+        "id": "398",
+        "title": "query_iwencai",
+        "content": "问财接口服务，结果与问财网页版相同",
+        "order": 0,
+        "type": 0,
+        "ctime": 1686130848,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "80"
+      },
+      {
+        "id": "399",
+        "title": "get_iwencai",
+        "content": "自然语言选股接口服务，选股结果与问财backtest等同。仅支持在股票策略初始化阶段调用。",
+        "order": 1,
+        "type": 0,
+        "ctime": 1686131065,
+        "mtime": 1686131214,
+        "search_text": null,
+        "parentId": "80"
+      },
+      {
+        "id": "419",
+        "title": "iFinD数据接口",
+        "content": "iFinD金融数据终端提供Python数据接口",
+        "order": 0,
+        "type": 0,
+        "ctime": 1686191265,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "44"
+      },
+      {
+        "id": "422",
+        "title": "期货分钟行情数据",
+        "content": "记录了内地交易所期货分钟频行情数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1686201599,
+        "mtime": 1700137296,
+        "search_text": "open|开盘价;high|最高价;low|最低价;close|收盘价;volume|成交量;turnover|成交金额(元);open_interest|持仓;",
+        "parentId": "50"
+      },
+      {
+        "id": "426",
+        "title": "期货日交易排名",
+        "content": "期货日交易排名表，包含持仓龙虎榜、多头持仓龙虎榜、空头持仓龙虎榜数据",
+        "order": 0,
+        "type": 0,
+        "ctime": 1686202480,
+        "mtime": 1700137296,
+        "search_text": "symbol|品种代码;date|日期;name|排名类型;rank|排名;member|经纪商名字;amount|持仓数量;amount_delta|持仓数量变动;",
+        "parentId": "84"
+      },
+      {
+        "id": "427",
+        "title": "期货库存情况",
+        "content": "期货库存情况表，包含库存量、库存变动、注册仓单数量、注册仓单变动、可用库存量、可用库存变动数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1686202590,
+        "mtime": 1700137296,
+        "search_text": "symbol|品种代码;date|日期;name|仓库名称;unit|单位;amount|库存量;amount\\_delta|库存变动;register|注册仓单数量;register_delta|注册仓单变动;available|可用库容量;available_delta|可用库容量变动;",
+        "parentId": "84"
+      },
+      {
+        "id": "435",
+        "title": "开盘竞价成交信息",
+        "content": "记录A股开盘集合竞价成交信息数据",
+        "order": 2,
+        "type": 0,
+        "ctime": 1686663895,
+        "mtime": 1714109211,
+        "search_text": "price|成交价;turnover|成交金额;",
+        "parentId": "16"
+      },
+      {
+        "id": "488",
+        "title": "常用基金型指数",
+        "content": "记录了常用基金型指数 ",
+        "order": 2,
+        "type": 0,
+        "ctime": 1703819147,
+        "mtime": 1704162893,
+        "search_text": null,
+        "parentId": "73"
+      },
+      {
+        "id": "498",
+        "title": "常用债券型指数",
+        "content": "记录了常用债券型指数",
+        "order": 3,
+        "type": 0,
+        "ctime": 1704162888,
+        "mtime": 1704163161,
+        "search_text": null,
+        "parentId": "73"
+      },
+      {
+        "id": "504",
+        "title": "常用期货型指数",
+        "content": "记录了常用期货型指数",
+        "order": 4,
+        "type": 0,
+        "ctime": 1704163154,
+        "mtime": 1704165034,
+        "search_text": null,
+        "parentId": "73"
+      },
+      {
+        "id": "510",
+        "title": "常用港股指数",
+        "content": "记录了常用港股指数",
+        "order": 6,
+        "type": 0,
+        "ctime": 1704165010,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "73"
+      },
+      {
+        "id": "512",
+        "title": "常用全球指数",
+        "content": "记录了常用全球指数",
+        "order": 6,
+        "type": 0,
+        "ctime": 1704165028,
+        "mtime": null,
+        "search_text": null,
+        "parentId": "73"
+      },
+      {
+        "id": "538",
+        "title": "龙虎榜",
+        "content": "记录A股上市公司进入龙虎榜相关数据",
+        "order": 5,
+        "type": 0,
+        "ctime": 1745566953,
+        "mtime": 1745743124,
+        "search_text": "symbol|股票代码;list_date|上榜日期;exchange_amount_purchase_1|营业部买入金额;exchange_amount_sold|营业部卖出金额;exchange_net_amount|营业部净额;exchange_ratio_purchased|营业部买入比例;ranking|买入/卖出金额排名;exchange_ratio_sold|营业部卖出比例;trading_direction|买入/卖出方向;type|营业部类型;name|营业部名称;list_reasons|上榜原因;字段|含义;---------------------------|---------------------;symbol|股票代码;list_date_total|上榜日期;list_times|上榜计数;number_of_purchased_insti_1|买入前5机构数量;number_of_sold_institutio_2|卖出前5机构数量;number_of_list|买/卖前5机构数量;institutions_amount_purch_3|买入前5机构买入金额;institutions_amount_sold__4|卖出前5机构卖出金额;institutions_net_amount_t_5|买/卖前5机构净额;institutions_ratio_purcha_6|买入前5机构买入比例;institutions_ratio_sold|卖出前5机构卖出入比例;字段|含义;-------------------------|----------------------;symbol|股票代码;list_date_total|上榜日期;reasons_total|上榜原因;exchange_amount_purchas_1|营业部买入金额（去重）;exchange_amount_sold_to_2|营业部卖出金额（去重）;exchange_net_amount_tot_3|营业部净额（去重）;",
+        "parentId": "79"
+      },
+      {
+        "id": "558",
+        "title": "日频资金流向数据",
+        "content": "记录了日频主动买入、大单特大单等资金流向数据",
+        "order": 1,
+        "type": 0,
+        "ctime": 1784118163,
+        "mtime": 1784123042,
+        "search_text": "act_buy_xl|主动买入特大单金额（元）;pas_buy_xl|被动买入特大单金额（元）;act_buy_l|主动买入大单金额（元）;pas_buy_l|被动买入大单金额（元）;act_buy_m|主动买入中单金额（元）;pas_buy_m|被动买入中单金额（元）;act_sell_xl|主动卖出特大单金额（元）;pas_sell_xl|被动卖出特大单金额（元）;act_sell_l|主动卖出大单金额（元）;pas_sell_l|被动卖出大单金额（元）;act_sell_m|主动卖出中单金额（元）;pas_sell_m|被动卖出中单金额（元）;buy_l|小单买入金额（元）;sell_l|小单卖出金额（元）;dde_l|DDE大单净额（元）;net_flow_rate|金额流入率（%）;l_net_value|大单净量;",
+        "parentId": "23"
+      },
+      {
+        "id": "566",
+        "title": "半小时资金流向数据",
+        "content": "记录了半小时级别主动买入、大单特大单等资金流向数据",
+        "order": 2,
+        "type": 0,
+        "ctime": 1784123351,
+        "mtime": 1784123377,
+        "search_text": "act\\_buy\\_xl|主动买入特大单金额（元）;pas\\_buy\\_xl|被动买入特大单金额（元）;act\\_buy\\_l|主动买入大单金额（元）;pas\\_buy\\_l|被动买入大单金额（元）;act\\_buy\\_m|主动买入中单金额（元）;pas\\_buy\\_m|被动买入中单金额（元）;act\\_sell\\_xl|主动卖出特大单金额（元）;pas\\_sell\\_xl|被动卖出特大单金额（元）;act\\_sell\\_l|主动卖出大单金额（元）;pas\\_sell\\_l|被动卖出大单金额（元）;act\\_sell\\_m|主动卖出中单金额（元）;pas\\_sell\\_m|被动卖出中单金额（元）;buy\\_l|小单买入金额（元）;sell\\_l|小单卖出金额（元）;dde\\_l|DDE大单净额（元）;net\\_flow\\_rate|金额流入率（%）;l\\_net\\_value|大单净量;",
+        "parentId": "23"
+      },
+      {
+        "id": "574",
+        "title": "五分钟资金流向数据",
+        "content": "记录了五分钟级别主动买入、大单特大单等资金流向数据",
+        "order": 3,
+        "type": 0,
+        "ctime": 1784123438,
+        "mtime": 1784123461,
+        "search_text": "act_buy_xl|主动买入特大单金额（元）;pas_buy_xl|被动买入特大单金额（元）;act_buy_l|主动买入大单金额（元）;pas_buy_l|被动买入大单金额（元）;act_buy_m|主动买入中单金额（元）;pas_buy_m|被动买入中单金额（元）;act_sell_xl|主动卖出特大单金额（元）;pas_sell_xl|被动卖出特大单金额（元）;act_sell_l|主动卖出大单金额（元）;pas_sell_l|被动卖出大单金额（元）;act_sell_m|主动卖出中单金额（元）;pas_sell_m|被动卖出中单金额（元）;buy_l|小单买入金额（元）;sell_l|小单卖出金额（元）;dde_l|DDE大单净额（元）;net_flow_rate|金额流入率（%）;l_net_value|大单净量;",
+        "parentId": "23"
+      }
+    ],
+    "$sdataplatformFilterDir": [],
+    "$sdataplatformDocId": "",
+    "$sisRegisterPhone": false
+  },
+  "_errors": {
+    "75tzC8eXN9": null,
+    "TR86KYn1yh": null
+  },
+  "serverRendered": true,
+  "path": "/dataplatform",
+  "pinia": {}
+}

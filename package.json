@@ -2,14 +2,13 @@
   "name": "chat-quant",
   "private": true,
   "scripts": {
-    "dev:start": "bash scripts/dev-start.sh",
-    "dev:stop": "bash scripts/dev-stop.sh",
-    "dev:api": "uv run --project apps/api uvicorn app.main:app --reload --app-dir apps/api",
-    "dev:web": "npm --prefix apps/web run dev",
-    "dev:desktop": "npm --prefix apps/desktop run dev",
+    "dev:web-start": "bash scripts/dev-web-start.sh",
+    "dev:web-stop": "bash scripts/dev-web-stop.sh",
+    "dev:desktop-start": "bash scripts/dev-desktop-start.sh",
+    "dev:desktop-stop": "bash scripts/dev-desktop-stop.sh",
     "build:desktop": "npm --prefix apps/desktop run build",
     "pack:desktop": "npm --prefix apps/desktop run pack",
-    "lint:api": "uv run --project apps/api ruff check apps/api/app",
+    "lint:api": "UV_CACHE_DIR=${TMPDIR:-/tmp}/chat-quant-uv-cache uv run --project apps/api ruff check apps/api/app",
     "lint:web": "npm --prefix apps/web run lint"
   }
 }

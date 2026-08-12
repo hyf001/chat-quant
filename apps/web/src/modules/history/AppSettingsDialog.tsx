@@ -61,21 +61,37 @@ export function AppSettingsDialog({ isOpen, onClose }: AppSettingsDialogProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isProviderSaving, setIsProviderSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [modelMessage, setModelMessage] = useState<string | null>(null);
   const [providerMessage, setProviderMessage] = useState<string | null>(null);
   const [testedProviderSignature, setTestedProviderSignature] = useState<string | null>(null);
+
+  const loadProviderModels = useCallback(async (providerId: string) => {
+    try {
+      const response = await listProviderModels(providerId);
+      setModels(response.models);
+      setModelMessage(null);
+      return response.models;
+    } catch (caught) {
+      setModels([]);
+      setModelMessage(
+        `模型列表加载失败：${caught instanceof Error ? caught.message : "Provider 不可用"}`,
+      );
+      return [];
+    }
+  }, []);
 
   const loadSettings = useCallback(async (selectedProviderId?: string | null) => {
     setIsLoading(true);
     setMessage(null);
     setProviderMessage(null);
+    setModelMessage(null);
     try {
       const [nextConfig, providerResponse] = await Promise.all([
         getAppConfig(),
         listModelProviders(),
       ]);
       const providerId = nextConfig.settings.agent.provider_id;
-      const modelResponse = providerId ? await listProviderModels(providerId) : null;
-      const nextModels = modelResponse?.models ?? [];
+      const nextModels = providerId ? await loadProviderModels(providerId) : [];
       const nextSettings =
         nextModels.length > 0 &&
         !nextModels.some((model) => model.id === nextConfig.settings.agent.model)
@@ -104,7 +120,7 @@ export function AppSettingsDialog({ isOpen, onClose }: AppSettingsDialogProps) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [loadProviderModels]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -117,37 +133,28 @@ export function AppSettingsDialog({ isOpen, onClose }: AppSettingsDialogProps) {
     const providerId = draft?.agent.provider_id;
     if (!providerId) {
       setModels([]);
+      setModelMessage(null);
       return;
     }
-    listProviderModels(providerId)
-      .then((response) => {
-        setModels(response.models);
+    loadProviderModels(providerId)
+      .then((nextModels) => {
         setDraft((current) => {
           if (!current || current.agent.provider_id !== providerId) {
             return current;
           }
-          if (response.models.some((model) => model.id === current.agent.model)) {
+          if (nextModels.length === 0 || nextModels.some((model) => model.id === current.agent.model)) {
             return current;
           }
           return {
             ...current,
             agent: {
               ...current.agent,
-              model: response.models[0]?.id ?? "",
+              model: nextModels[0].id,
             },
           };
         });
-      })
-      .catch(() => {
-        setModels([]);
-        setDraft((current) => {
-          if (!current || current.agent.provider_id !== providerId) {
-            return current;
-          }
-          return { ...current, agent: { ...current.agent, model: "" } };
-        });
       });
-  }, [draft?.agent.provider_id]);
+  }, [draft?.agent.provider_id, loadProviderModels]);
 
   if (!isOpen) {
     return null;
@@ -327,6 +334,7 @@ export function AppSettingsDialog({ isOpen, onClose }: AppSettingsDialogProps) {
                 <AgentForm
                   draft={draft}
                   models={models}
+                  modelMessage={modelMessage}
                   providerDraft={providerDraft}
                   providerMessage={providerMessage}
                   providers={providers}
@@ -344,6 +352,10 @@ export function AppSettingsDialog({ isOpen, onClose }: AppSettingsDialogProps) {
               {activeTab === "system" ? <SystemForm draft={draft} onChange={setDraft} /> : null}
               {activeTab === "logging" ? <LoggingForm draft={draft} onChange={setDraft} /> : null}
             </div>
+          ) : null}
+
+          {!isLoading && !draft && message ? (
+            <StatusMessage message={message} />
           ) : null}
         </section>
 
@@ -373,6 +385,7 @@ function AgentForm({
   draft,
   providers,
   models,
+  modelMessage,
   providerDraft,
   providerMessage,
   isProviderSaving,
@@ -388,6 +401,7 @@ function AgentForm({
   draft: AppSettings;
   providers: ModelProvider[];
   models: ProviderModel[];
+  modelMessage: string | null;
   providerDraft: ProviderDraft;
   providerMessage: string | null;
   isProviderSaving: boolean;
@@ -417,9 +431,10 @@ function AgentForm({
           value={agent.model}
           disabled={models.length === 0}
           options={models.map((model) => ({ label: model.name, value: model.id }))}
-          placeholder={models.length === 0 ? "先测试 Provider 获取模型" : undefined}
+          placeholder={models.length === 0 ? agent.model || "先测试 Provider 获取模型" : undefined}
           onChange={(model) => onChange({ ...draft, agent: { ...agent, model } })}
         />
+        {modelMessage ? <StatusMessage message={modelMessage} /> : null}
       </FormSection>
 
       <div className="grid gap-3 border-t border-line pt-4">

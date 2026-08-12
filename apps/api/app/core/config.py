@@ -6,7 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 JsonPrimitive = str | int | bool | None
@@ -200,15 +200,12 @@ class DatabaseConfig(BaseSettings):
 
 
 class Settings(BaseModel):
-    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+    model_config = ConfigDict(extra="ignore")
 
     app_name: str = "Chat-Quant API"
     api_prefix: str = "/api"
     config_file_path: Path = Path(".env")
-    database_path: Path = Field(
-        default=Path("data/chat-quant.db"),
-        validation_alias=AliasChoices("database_path", "CHATQ_DATABASE_PATH"),
-    )
+    database_path: Path = Path("data/chat-quant.db")
     environment: str = "development"
     log_level: str = "INFO"
     log_format: Literal["text", "json"] = "text"
@@ -223,18 +220,8 @@ class Settings(BaseModel):
     ]
     agent_provider_id: str = DEFAULT_MODEL_PROVIDER_ID
     agent_model: str = "claude-sonnet-4"
-    agent_base_url: str | None = Field(
-        default=None,
-        validation_alias=AliasChoices("agent_base_url", "ANTHROPIC_BASE_URL"),
-    )
-    agent_api_token: str | None = Field(
-        default=None,
-        validation_alias=AliasChoices(
-            "agent_api_token",
-            "ANTHROPIC_AUTH_TOKEN",
-            "ANTHROPIC_API_KEY",
-        ),
-    )
+    agent_base_url: str | None = None
+    agent_api_token: str | None = None
     agent_max_turns: int = 8
     agent_turn_timeout_seconds: int = 300
     agent_first_token_timeout_seconds: int = 15

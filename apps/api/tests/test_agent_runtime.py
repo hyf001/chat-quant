@@ -112,7 +112,7 @@ def test_runtime_uses_fixed_plugin_dir_skills_without_copying_into_cwd(
     project_dir = tmp_path / "user-project"
     project_dir.mkdir()
     runtime = ClaudeAgentRuntime(
-        settings=Settings(_env_file=None),
+        settings=Settings(),
         sdk_query=fake_sdk_query,
     )
     command = AgentExecutionCommand(
@@ -250,9 +250,8 @@ def test_settings_filters_system_managed_skill_tool() -> None:
 def test_sdk_env_maps_configured_token_to_claude_code_api_key() -> None:
     runtime = ClaudeAgentRuntime(
         settings=Settings(
-            _env_file=None,
-            ANTHROPIC_BASE_URL="https://api.example.test",
-            ANTHROPIC_AUTH_TOKEN="secret_token",
+            agent_base_url="https://api.example.test",
+            agent_api_token="secret_token",
         ),
         sdk_query=fake_sdk_query,
     )
@@ -270,7 +269,6 @@ def test_sdk_env_maps_configured_token_to_claude_code_api_key() -> None:
 
     assert sdk_options.env == {
         "ANTHROPIC_API_KEY": "secret_token",
-        "ANTHROPIC_AUTH_TOKEN": "secret_token",
         "ANTHROPIC_BASE_URL": "https://api.example.test",
     }
 
@@ -370,7 +368,7 @@ async def _run_system_event_session_id_assertions() -> None:
 
 
 async def _run_first_token_timeout_assertions() -> None:
-    settings = Settings(_env_file=None)
+    settings = Settings()
     settings.agent_first_token_timeout_seconds = 0.01  # type: ignore[assignment]
     runtime = ClaudeAgentRuntime(
         settings=settings,
@@ -399,7 +397,7 @@ async def _run_first_token_timeout_assertions() -> None:
 
 async def _run_sdk_stderr_error_assertions() -> None:
     runtime = ClaudeAgentRuntime(
-        settings=Settings(_env_file=None, ANTHROPIC_AUTH_TOKEN="secret_token"),
+        settings=Settings(agent_api_token="secret_token"),
         sdk_query=fake_stderr_error_sdk_query,
     )
 

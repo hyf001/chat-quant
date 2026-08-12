@@ -266,7 +266,6 @@ def _sdk_env(settings: Settings) -> dict[str, str]:
         env["ANTHROPIC_BASE_URL"] = settings.agent_base_url
     if settings.agent_api_token:
         env["ANTHROPIC_API_KEY"] = settings.agent_api_token
-        env["ANTHROPIC_AUTH_TOKEN"] = settings.agent_api_token
     return env
 
 

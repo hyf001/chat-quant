@@ -42,7 +42,7 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
 
   if (!response.ok) {
     const message = await response.text();
-    throw new Error(message || `Request failed: ${response.status}`);
+    throw new Error(errorMessageFromResponse(message, response.status));
   }
 
   if (response.status === 204) {
@@ -50,6 +50,31 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
   }
 
   return response.json() as Promise<T>;
+}
+
+function errorMessageFromResponse(body: string, status: number): string {
+  if (!body) {
+    return `Request failed: ${status}`;
+  }
+
+  try {
+    const payload = JSON.parse(body) as unknown;
+    if (
+      typeof payload === "object" &&
+      payload !== null &&
+      "detail" in payload
+    ) {
+      const detail = (payload as { detail: unknown }).detail;
+      if (typeof detail === "string") {
+        return detail;
+      }
+      return JSON.stringify(detail);
+    }
+  } catch {
+    return body;
+  }
+
+  return body;
 }
 
 export function apiGet<T>(path: string): Promise<T> {

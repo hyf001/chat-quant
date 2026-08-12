@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "mindgo": {
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\ABSOLUTE\\PATH\\mindgo-mcp-portable\\scripts\\run_mcp.ps1"
+      ]
+    }
+  }
+}

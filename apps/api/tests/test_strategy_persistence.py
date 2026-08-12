@@ -14,7 +14,7 @@ from tests.test_strategy_api import strategy_create_payload
 async def test_strategy_service_persists_strategy_across_instances(
     tmp_path: Path,
 ) -> None:
-    settings = Settings(_env_file=None, CHATQ_DATABASE_PATH=tmp_path / "chat-quant.db")
+    settings = Settings(database_path=tmp_path / "chat-quant.db")
     ensure_database_schema(settings)
 
     session_factory = make_session_factory(make_engine(settings))

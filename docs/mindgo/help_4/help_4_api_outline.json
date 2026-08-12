@@ -1,0 +1,2017 @@
+{
+  "source_url": "https://quant.10jqka.com.cn/view/help/4",
+  "title": "API 文档",
+  "heading_count": 171,
+  "code_block_count": 288,
+  "headings": [
+    {
+      "level": 1,
+      "title": "API文档",
+      "line": 1
+    },
+    {
+      "level": 2,
+      "title": "回测引擎专用API",
+      "line": 42
+    },
+    {
+      "level": 3,
+      "title": "[重要！！]写在最前面",
+      "line": 53
+    },
+    {
+      "level": 3,
+      "title": "基本函数",
+      "line": 61
+    },
+    {
+      "level": 4,
+      "title": "初始化函数 init",
+      "line": 82
+    },
+    {
+      "level": 4,
+      "title": "按交易频率调用函数 handle_bar",
+      "line": 106
+    },
+    {
+      "level": 4,
+      "title": "tick行情数据变化时调用 handle_tick",
+      "line": 130
+    },
+    {
+      "level": 4,
+      "title": "集合竞价后(9:26)调用 open_auction",
+      "line": 155
+    },
+    {
+      "level": 4,
+      "title": "开盘前半小时调用 before_trading",
+      "line": 178
+    },
+    {
+      "level": 4,
+      "title": "收盘后半小时调用 after_trading",
+      "line": 199
+    },
+    {
+      "level": 4,
+      "title": "委托回调函数 on_order",
+      "line": 220
+    },
+    {
+      "level": 4,
+      "title": "成交回调函数 on_trade",
+      "line": 241
+    },
+    {
+      "level": 3,
+      "title": "自定义运行函数",
+      "line": 262
+    },
+    {
+      "level": 4,
+      "title": "每日定时运行函数：run_daily",
+      "line": 264
+    },
+    {
+      "level": 4,
+      "title": "每周定时运行函数：run_weekly",
+      "line": 299
+    },
+    {
+      "level": 4,
+      "title": "每月定时运行函数：run_monthly",
+      "line": 330
+    },
+    {
+      "level": 3,
+      "title": "设置函数",
+      "line": 361
+    },
+    {
+      "level": 4,
+      "title": "设置基准收益：set_benchmark",
+      "line": 363
+    },
+    {
+      "level": 4,
+      "title": "设置策略滑点：set_slippage",
+      "line": 385
+    },
+    {
+      "level": 4,
+      "title": "设置交易手续费：set_commission",
+      "line": 407
+    },
+    {
+      "level": 4,
+      "title": "设置回测策略账户初始持仓：set_holding_stocks",
+      "line": 432
+    },
+    {
+      "level": 4,
+      "title": "设置设置子账户：set_subportfolios",
+      "line": 457
+    },
+    {
+      "level": 4,
+      "title": "设置最大成交比例：set_volume_limit",
+      "line": 485
+    },
+    {
+      "level": 4,
+      "title": "设置下单后延迟成交时间：set_trade_delay",
+      "line": 510
+    },
+    {
+      "level": 4,
+      "title": "设置log输出级别：set_log_level",
+      "line": 536
+    },
+    {
+      "level": 4,
+      "title": "设置回测成交机制：set_execution",
+      "line": 562
+    },
+    {
+      "level": 4,
+      "title": "调整handle_bar运行时间：enable_open_bar",
+      "line": 589
+    },
+    {
+      "level": 4,
+      "title": "定义列式计算的信号名以及计算方式：reg_signal",
+      "line": 619
+    },
+    {
+      "level": 4,
+      "title": "设置某一品种的保证金比例：set_margin_rate",
+      "line": 648
+    },
+    {
+      "level": 4,
+      "title": "设置期权手续费：set_option_commission",
+      "line": 669
+    },
+    {
+      "level": 4,
+      "title": "设置期权交易滑点：set_option_slippage",
+      "line": 692
+    },
+    {
+      "level": 4,
+      "title": "设置场外基金申购折扣率：set_discount_rate",
+      "line": 715
+    },
+    {
+      "level": 4,
+      "title": "设置场外基金申购折扣率：set_dividend_mode",
+      "line": 738
+    },
+    {
+      "level": 4,
+      "title": "设置中国银行”双向宝“合约交易的保证金比例：set_margin_rate_fx",
+      "line": 766
+    },
+    {
+      "level": 4,
+      "title": "设置\"双向宝\"交易手续费：set_commission_fx",
+      "line": 790
+    },
+    {
+      "level": 4,
+      "title": "设置最大成交比例：set_volume_limit_fx",
+      "line": 816
+    },
+    {
+      "level": 4,
+      "title": "设置滑点：set_spread（不推荐使用）",
+      "line": 840
+    },
+    {
+      "level": 4,
+      "title": "风险度阈值设置函数：set_risk_border_fx",
+      "line": 864
+    },
+    {
+      "level": 4,
+      "title": "设置贵金属T+D合约的保证金比例：set_margin_rate_td",
+      "line": 888
+    },
+    {
+      "level": 4,
+      "title": "设置T+D合约交易手续费：set_commission_td",
+      "line": 916
+    },
+    {
+      "level": 4,
+      "title": "设置最大成交比例：set_volume_limit_td",
+      "line": 942
+    },
+    {
+      "level": 4,
+      "title": "设置T+D合约交易滑点：set_slippage_td",
+      "line": 966
+    },
+    {
+      "level": 4,
+      "title": "风险度阈值设置函数：set_risk_border_td",
+      "line": 991
+    },
+    {
+      "level": 3,
+      "title": "数据函数",
+      "line": 1015
+    },
+    {
+      "level": 4,
+      "title": "订阅标的：subscribe",
+      "line": 1017
+    },
+    {
+      "level": 4,
+      "title": "取消订阅标的：unsubscribe",
+      "line": 1046
+    },
+    {
+      "level": 4,
+      "title": "获取当前bar的时间：get_datetime",
+      "line": 1073
+    },
+    {
+      "level": 4,
+      "title": "获取上一个bar的时间：get_last_datetime",
+      "line": 1098
+    },
+    {
+      "level": 4,
+      "title": "获取股票历史行情：history",
+      "line": 1123
+    },
+    {
+      "level": 4,
+      "title": "当前bar行情数据：get_current",
+      "line": 1167
+    },
+    {
+      "level": 4,
+      "title": "获取期货历史行情：history_future",
+      "line": 1189
+    },
+    {
+      "level": 4,
+      "title": "获取历史tick行情快照：history_ticks",
+      "line": 1229
+    },
+    {
+      "level": 4,
+      "title": "获取中国银行'双向宝'合约历史行情：history_fx",
+      "line": 1272
+    },
+    {
+      "level": 4,
+      "title": "获取当前bar的时间：get_datetime_fx",
+      "line": 1314
+    },
+    {
+      "level": 4,
+      "title": "获取上一个bar的时间：get_last_datetime_fx",
+      "line": 1344
+    },
+    {
+      "level": 4,
+      "title": "获取T+D合约历史行情：history_td",
+      "line": 1368
+    },
+    {
+      "level": 4,
+      "title": "获取当前bar的时间：get_datetime_td",
+      "line": 1410
+    },
+    {
+      "level": 4,
+      "title": "获取上一个bar的时间：get_last_datetime_td",
+      "line": 1440
+    },
+    {
+      "level": 3,
+      "title": "交易函数",
+      "line": 1466
+    },
+    {
+      "level": 4,
+      "title": "股票",
+      "line": 1468
+    },
+    {
+      "level": 5,
+      "title": "下单函数，根据数量下单：order",
+      "line": 1470
+    },
+    {
+      "level": 5,
+      "title": "下单函数，根据金额下单：order_value",
+      "line": 1502
+    },
+    {
+      "level": 5,
+      "title": "下单函数，根据比例下单：order_percent",
+      "line": 1533
+    },
+    {
+      "level": 5,
+      "title": "下单函数，根据目标持仓下单：order_target",
+      "line": 1564
+    },
+    {
+      "level": 5,
+      "title": "下单函数，根据目标持有金额下单：order_target_value",
+      "line": 1595
+    },
+    {
+      "level": 5,
+      "title": "下单函数，根据目标持仓比例下单：order_target_percent",
+      "line": 1626
+    },
+    {
+      "level": 5,
+      "title": "获得委托详情：get_orders",
+      "line": 1657
+    },
+    {
+      "level": 5,
+      "title": "获取当日所有未完成委托详情：get_open_orders",
+      "line": 1681
+    },
+    {
+      "level": 5,
+      "title": "获取当日所有成交详情：get_tradelogs",
+      "line": 1705
+    },
+    {
+      "level": 5,
+      "title": "撤销未完成委托订单：cancel_order",
+      "line": 1733
+    },
+    {
+      "level": 5,
+      "title": "撤销所有未完成委托订单：cancel_order_all",
+      "line": 1757
+    },
+    {
+      "level": 4,
+      "title": "期货",
+      "line": 1779
+    },
+    {
+      "level": 5,
+      "title": "下单函数，根据数量下单：order_future",
+      "line": 1781
+    },
+    {
+      "level": 5,
+      "title": "下单函数，平今仓单：order_close_today",
+      "line": 1811
+    },
+    {
+      "level": 4,
+      "title": "期权",
+      "line": 1842
+    },
+    {
+      "level": 5,
+      "title": "下单函数，根据数量下单：order_option",
+      "line": 1844
+    },
+    {
+      "level": 4,
+      "title": "外汇",
+      "line": 1879
+    },
+    {
+      "level": 5,
+      "title": "下单函数：order_fx",
+      "line": 1881
+    },
+    {
+      "level": 5,
+      "title": "获取订单详情：get_order_fx",
+      "line": 1920
+    },
+    {
+      "level": 5,
+      "title": "获取当日所有未完成订单：get_open_orders_fx",
+      "line": 1949
+    },
+    {
+      "level": 5,
+      "title": "撤销未完成委托订单：cancel_order_fx",
+      "line": 1962
+    },
+    {
+      "level": 4,
+      "title": "T+D",
+      "line": 1992
+    },
+    {
+      "level": 5,
+      "title": "下单函数，根据数量下单：order_td",
+      "line": 1994
+    },
+    {
+      "level": 5,
+      "title": "获取订单详情：get_order_td",
+      "line": 2033
+    },
+    {
+      "level": 5,
+      "title": "获取当日所有未完成订单：get_open_orders_td",
+      "line": 2064
+    },
+    {
+      "level": 5,
+      "title": "撤销未完成委托订单：cancel_order_td",
+      "line": 2077
+    },
+    {
+      "level": 4,
+      "title": "场外基金",
+      "line": 2109
+    },
+    {
+      "level": 5,
+      "title": "申购基金：order_fund",
+      "line": 2111
+    },
+    {
+      "level": 5,
+      "title": "赎回基金：redeem_fund",
+      "line": 2141
+    },
+    {
+      "level": 3,
+      "title": "枚举常量",
+      "line": 2173
+    },
+    {
+      "level": 4,
+      "title": "ORDER_STATUS - 委托状态",
+      "line": 2175
+    },
+    {
+      "level": 4,
+      "title": "ORDER_TYPE - 委托类型",
+      "line": 2187
+    },
+    {
+      "level": 4,
+      "title": "SIDE- 交易方向",
+      "line": 2195
+    },
+    {
+      "level": 4,
+      "title": "POSITION_EFFECT - 仓位类型",
+      "line": 2203
+    },
+    {
+      "level": 3,
+      "title": "重要对象",
+      "line": 2215
+    },
+    {
+      "level": 4,
+      "title": "上下文对象",
+      "line": 2217
+    },
+    {
+      "level": 5,
+      "title": "context",
+      "line": 2219
+    },
+    {
+      "level": 5,
+      "title": "run_info",
+      "line": 2258
+    },
+    {
+      "level": 5,
+      "title": "portfolio",
+      "line": 2270
+    },
+    {
+      "level": 5,
+      "title": "StockPosition类",
+      "line": 2288
+    },
+    {
+      "level": 5,
+      "title": "stock_account",
+      "line": 2307
+    },
+    {
+      "level": 5,
+      "title": "FuturePosition类",
+      "line": 2319
+    },
+    {
+      "level": 5,
+      "title": "future_account",
+      "line": 2344
+    },
+    {
+      "level": 4,
+      "title": "订阅行情对象",
+      "line": 2363
+    },
+    {
+      "level": 5,
+      "title": "bar_dict",
+      "line": 2365
+    },
+    {
+      "level": 5,
+      "title": "Bar类",
+      "line": 2387
+    },
+    {
+      "level": 4,
+      "title": "订单对象：Order类",
+      "line": 2409
+    },
+    {
+      "level": 4,
+      "title": "成交对象：Trade类",
+      "line": 2451
+    },
+    {
+      "level": 4,
+      "title": "全局变量对象：g",
+      "line": 2494
+    },
+    {
+      "level": 3,
+      "title": "辅助函数",
+      "line": 2513
+    },
+    {
+      "level": 4,
+      "title": "日志函数：log",
+      "line": 2515
+    },
+    {
+      "level": 4,
+      "title": "画图函数：record",
+      "line": 2547
+    },
+    {
+      "level": 4,
+      "title": "性能分析函数：enable_profile",
+      "line": 2578
+    },
+    {
+      "level": 2,
+      "title": "工具函数",
+      "line": 2624
+    },
+    {
+      "level": 3,
+      "title": "股票代码格式转换：normalize_symbol",
+      "line": 2625
+    },
+    {
+      "level": 3,
+      "title": "保存文件函数：write_file",
+      "line": 2662
+    },
+    {
+      "level": 3,
+      "title": "读取文件函数：read_file",
+      "line": 2691
+    },
+    {
+      "level": 3,
+      "title": "查询研究环境指定路径下的文件：list_file",
+      "line": 2730
+    },
+    {
+      "level": 3,
+      "title": "复制/剪贴文件或文件夹：copy_file",
+      "line": 2766
+    },
+    {
+      "level": 3,
+      "title": "删除文件或文件夹：remove_file",
+      "line": 2794
+    },
+    {
+      "level": 3,
+      "title": "消息推送函数：notify_push",
+      "line": 2820
+    },
+    {
+      "level": 3,
+      "title": "自选板块：custom_sector",
+      "line": 2875
+    },
+    {
+      "level": 3,
+      "title": "文件加密：compile_pyfile",
+      "line": 2909
+    },
+    {
+      "level": 1,
+      "title": "编译加密py文件",
+      "line": 2926
+    },
+    {
+      "level": 2,
+      "title": "行情资金数据接口",
+      "line": 2938
+    },
+    {
+      "level": 3,
+      "title": "行情数据：get_price",
+      "line": 2939
+    },
+    {
+      "level": 3,
+      "title": "开盘竞价成交信息：get_call_auction",
+      "line": 3030
+    },
+    {
+      "level": 3,
+      "title": "期货行情数据：get_price_future",
+      "line": 3068
+    },
+    {
+      "level": 3,
+      "title": "蜡烛图数据：get_candle_stick",
+      "line": 3180
+    },
+    {
+      "level": 3,
+      "title": "获取实时行情快照数据：get_last_tick",
+      "line": 3240
+    },
+    {
+      "level": 3,
+      "title": "获取历史行情快照数据：get_tick",
+      "line": 3279
+    },
+    {
+      "level": 3,
+      "title": "统计涨跌区间个股数量：get_stats",
+      "line": 3313
+    },
+    {
+      "level": 3,
+      "title": "压力支撑位数据：get_resistance_support",
+      "line": 3337
+    },
+    {
+      "level": 3,
+      "title": "获取基金净值数据：get_extras",
+      "line": 3408
+    },
+    {
+      "level": 3,
+      "title": "融资融券数据：get_mtss",
+      "line": 3477
+    },
+    {
+      "level": 3,
+      "title": "获取历史资金数据：get_money_flow_step",
+      "line": 3541
+    },
+    {
+      "level": 2,
+      "title": "证券信息数据接口",
+      "line": 3652
+    },
+    {
+      "level": 3,
+      "title": "获取单只证券的基本信息：get_security_info",
+      "line": 3653
+    },
+    {
+      "level": 3,
+      "title": "获取所有证券信息：get_all_securities",
+      "line": 3686
+    },
+    {
+      "level": 3,
+      "title": "获取期货期权品种相关信息：get_futures_info",
+      "line": 3761
+    },
+    {
+      "level": 3,
+      "title": "获取主力合约代码：get_futures_dominate",
+      "line": 3797
+    },
+    {
+      "level": 3,
+      "title": "获取指定品种所有可交易的合约：get_future_code",
+      "line": 3817
+    },
+    {
+      "level": 3,
+      "title": "获取可交易的期权合约列表：get_option_code",
+      "line": 3848
+    },
+    {
+      "level": 3,
+      "title": "获取指数成份股：get_index_stocks",
+      "line": 3876
+    },
+    {
+      "level": 3,
+      "title": "获取指数成份股权重：get_index_weight",
+      "line": 3909
+    },
+    {
+      "level": 3,
+      "title": "获取指数列表：get_index_list",
+      "line": 3948
+    },
+    {
+      "level": 3,
+      "title": "获取行业成份股：get_industry_stocks",
+      "line": 3974
+    },
+    {
+      "level": 3,
+      "title": "获取行业分类信息：get_industry_relate",
+      "line": 3999
+    },
+    {
+      "level": 3,
+      "title": "获取股票所属行业数据：get_symbol_industry",
+      "line": 4039
+    },
+    {
+      "level": 3,
+      "title": "获取所有同花顺概念成分股：get_concept_stocks",
+      "line": 4063
+    },
+    {
+      "level": 3,
+      "title": "获取所有同花顺概念信息：get_concept_relate",
+      "line": 4090
+    },
+    {
+      "level": 3,
+      "title": "获取指定时间段交易日：get_trade_days",
+      "line": 4123
+    },
+    {
+      "level": 3,
+      "title": "获取所有交易日：get_all_trade_days",
+      "line": 4156
+    },
+    {
+      "level": 3,
+      "title": "获取因子数据：get_sfactor_data",
+      "line": 4183
+    },
+    {
+      "level": 2,
+      "title": "表数据接口",
+      "line": 4228
+    },
+    {
+      "level": 4,
+      "title": "构建数据表查询对象：query",
+      "line": 4229
+    },
+    {
+      "level": 4,
+      "title": "取表数据：run_query",
+      "line": 4316
+    },
+    {
+      "level": 4,
+      "title": "取财务表数据：get_fundamentals",
+      "line": 4361
+    },
+    {
+      "level": 2,
+      "title": "问财接口",
+      "line": 4442
+    },
+    {
+      "level": 3,
+      "title": "问财接口使用前必读",
+      "line": 4443
+    },
+    {
+      "level": 3,
+      "title": "问财实时数据：query_iwencai (研究环境使用)",
+      "line": 4455
+    },
+    {
+      "level": 3,
+      "title": "问财昨日数据：get_iwencai(回测环境使用)",
+      "line": 4495
+    },
+    {
+      "level": 3,
+      "title": "问财接口是否支持本地接口调用？",
+      "line": 4551
+    },
+    {
+      "level": 3,
+      "title": "市面ZUI全！一文讲透问财语句深度使用技巧（含50个案例）",
+      "line": 4555
+    },
+    {
+      "level": 2,
+      "title": "组合优化器",
+      "line": 4560
+    },
+    {
+      "level": 3,
+      "title": "构造组合优化",
+      "line": 4562
+    },
+    {
+      "level": 4,
+      "title": "初始化组合优化器",
+      "line": 4564
+    },
+    {
+      "level": 4,
+      "title": "添加约束条件",
+      "line": 4607
+    },
+    {
+      "level": 4,
+      "title": "组合优化器应用示例",
+      "line": 4642
+    },
+    {
+      "level": 1,
+      "title": "从中证500中随机选取50股票，模拟中证500走势，周频调仓",
+      "line": 4645
+    },
+    {
+      "level": 1,
+      "title": "Stratified Sampling 方法优点：",
+      "line": 4646
+    }
+  ],
+  "code_blocks": [
+    {
+      "language": "python",
+      "code": "from mindgo_api import *"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context): ..."
+    },
+    {
+      "language": "python",
+      "code": "    from mindgo_api import *\n\n    def init(context):   \n        #设置要交易的标的(平安银行) ,命名的时候注意不要覆盖系统变量\n        context.stock = '000001.SZ'"
+    },
+    {
+      "language": "python",
+      "code": "  def handle_bar(context, bar_dict): ..."
+    },
+    {
+      "language": "python",
+      "code": "    # 每个交易频率买入100股平安银行\n    def handle_bar(context, bar_dict):\n        order('000001.SZ', 100)"
+    },
+    {
+      "language": "python",
+      "code": "  def handle_tick(context, tick): ..."
+    },
+    {
+      "language": "python",
+      "code": "    # 打印当前推送tick行情的股票代码，并下单买入100股\n    def handle_tick(context, tick):\n        log.info(tick.order_book_id)\n        order(tick.order_book_id, 100)"
+    },
+    {
+      "language": "python",
+      "code": "  def open_auction(context, bar_dict): ..."
+    },
+    {
+      "language": "python",
+      "code": "    # 下单买入100股平安银行\n    def open_auction(context, bar_dict):\n        order('000001.SZ', 100)"
+    },
+    {
+      "language": "python",
+      "code": "  def before_trading(context): ..."
+    },
+    {
+      "language": "python",
+      "code": "    # 每个交易日开市前，打印出目前的账户信息\n    def before_trading(context):\n        log.info(context.portfolio)"
+    },
+    {
+      "language": "python",
+      "code": "  def after_trading(context): ..."
+    },
+    {
+      "language": "python",
+      "code": "    # 交易日结束后，打印组合盈亏\n    def after_trading(context):\n        log.info(context.portfolio.pnl)"
+    },
+    {
+      "language": "python",
+      "code": "  def on_order(context, odr): ..."
+    },
+    {
+      "language": "python",
+      "code": "    # 打印委托对象信息\n    def on_order(context, odr):\n        log.info(odr)"
+    },
+    {
+      "language": "python",
+      "code": "  def on_trade(context, trade): ..."
+    },
+    {
+      "language": "python",
+      "code": "    # 打印成交对象信息\n    def on_trade(context, trade):\n        log.info(trade)"
+    },
+    {
+      "language": "python",
+      "code": "  run_daily(func, time_rule='every_bar', hours=None, minutes=None, reference_security=None)"
+    },
+    {
+      "language": "python",
+      "code": "    def init(context):\n        # 每个交易日开盘后30分执行一次\n        run_daily(func=test_day, time_rule='after_open', hours=0, minutes=30, reference_security='000856.SZ')\n\n    def test_day(context, bar_dict):\n        log.info('定时运行')"
+    },
+    {
+      "language": "python",
+      "code": "  run_weekly(func, date_rule, reference_security=None)"
+    },
+    {
+      "language": "python",
+      "code": "    def init(context):\n        # 每周第一个交易日执行\n        run_weekly(func=test_week, date_rule=1, reference_security='000001.SZ')\n\n    def test_week(context, bar_dict):\n        log.info('定时运行')"
+    },
+    {
+      "language": "python",
+      "code": "  run_monthly(func, date_rule, reference_security=None)"
+    },
+    {
+      "language": "python",
+      "code": "    def init(context):\n        # 每月第5个交易日执行\n        run_monthly(func=test_month, date_rule=5, reference_security='000001.SZ')\n\n    def test_month(context, bar_dict):\n        log.info('定时运行')"
+    },
+    {
+      "language": "python",
+      "code": "  set_benchmark(symbol)"
+    },
+    {
+      "language": "python",
+      "code": "    def init(context):\n        # 初始化策略时设置基准为沪深300指数\n        set_benchmark('000300.SH')"
+    },
+    {
+      "language": "python",
+      "code": "  set_slippage(slippage)"
+    },
+    {
+      "language": "python",
+      "code": "    def init(context):\n        #设置可变滑点2%，表示买入价为实际价格乘101%，卖出价为实际价格乘99%\n        set_slippage(PriceSlippage(0.02))"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #设置股票手续费为交易额的0.01%(万一)，最低手续费为0元(免5)\n      set_commission(PerShare(type='stock',cost=0.0001,min_trade_cost=0.0))"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #设置策略初始持仓\n      set_holding_stocks({'000001.SZ': 200,'300033.SZ': 500,'600519.SH': 700})"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #设置子账户,股票账户50万，期货账户50万.\n      set_subportfolios([{'cash':500000,'type':'stock'},{'cash':500000,'type':'future'}])"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #设置最大成交比例日级成交量比例50%,分钟级成交量比例50%\n      set_volume_limit(daily=0.5, minute=0.5)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #下单后推迟3分钟/交易日成交\n      set_trade_delay(delay_time=3)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #设置日志级别:warn\n      set_log_level(level='warn')"
+    },
+    {
+      "language": "python",
+      "code": "def init(context):\n    #初始化策略时设置撮合机制为下一个bar的open\n    set_execution('next_open')"
+    },
+    {
+      "language": "python",
+      "code": "  # 股票策略模版\n  # 初始化函数,全局只运行一次\n  def init(context):\n      enable_open_bar()\n\n  #每日开盘前9:00被调用一次,用于储存自定义参数、全局变量,执行盘前选股等\n  def before_trading(context):\n      pass\n\n  ## 开盘时运行函数\n  def handle_bar(context, bar_dict):\n      order(\"300033.SZ\", 100)\n\n  ## 收盘后运行函数,用于储存自定义参数、全局变量,执行盘后选股等\n  def after_trading(context):\n      pass"
+    },
+    {
+      "language": "python",
+      "code": "#定义一个名为’big’的信号，算法为tick数据大于10等于True，否则等于False.\ndef init(context):\n    reg_signal('big',get_big)\n\ndef get_big(data):\n    return data[‘current’]>10"
+    },
+    {
+      "language": "python",
+      "code": "  # 设置螺纹钢的保证金比例为9%\n  def init(context):\n      set_margin_rate('RB',0.09,0.09)"
+    },
+    {
+      "language": "python",
+      "code": "  # 设置期权手续费为10元/张\n  def init(context):\n      set_option_commission(10)"
+    },
+    {
+      "language": "python",
+      "code": "  # 设置期权交易滑点为双边0.004(单边0.002)\n  def init(context):\n      set_option_slippage(0.004)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      # 初始化策略时设置折扣率10%\n      set_discount_rate(0.1)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #初始化策略时设置分红模式为红利再投资\n      set_dividend_mode(invest)"
+    },
+    {
+      "language": "python",
+      "code": "  #设置双向宝合约保证金比例设为50%\n  def init(context):\n      set_margin_rate_fx(rate=50)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #初始化策略时设置双向宝交易手续费为交易额的0.02%\n      set_commission_fx(PerShare(cost=0.0002))"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #设置\"双向宝\"最大成交比例25%\n      set_volume_limit_fx(0.25)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #设置买卖价差比例为千分之五\n      set_spread(0.005)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #设置风险度上限为150%\n      set_risk_border_fx(1.5)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #设置Au(T+D)合约保证金比例设为9.8%\n      #mAu(T+D)合约保证金比例设为9.8%\n      #Ag(T+D)合约保证金比例设为12.6%\n      set_margin_rate_td(autd=9.8, mautd=9.8, agtd=12.6)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #初始化策略时设置T+D合约交易手续费为交易额的0.02%\n      set_commission_td(PerShare(cost=0.0002))"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #设置T+D合约回测最大成交比例25%\n      set_volume_limit_td(0.25)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #设置可变滑点2%\n      set_slippage_td(PriceSlippage(0.02))"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #设置风险度上限为150%\n      set_risk_border_td(1.5)"
+    },
+    {
+      "language": "python",
+      "code": "  subscribe(id_or_symbols)"
+    },
+    {
+      "language": "python",
+      "code": "    def init(context):\n        #订阅螺纹主力合约\n        subscribe('RB9999')"
+    },
+    {
+      "language": "python",
+      "code": "    None"
+    },
+    {
+      "language": "python",
+      "code": "  unsubscribe(id_or_symbols)"
+    },
+    {
+      "language": "python",
+      "code": "    # 取消订阅螺纹主力合约\n    unsubscribe('RB9999')\n\n    # 批量取消订阅多个合约\n    unsubscribe(['RB9999', 'HC9999'])"
+    },
+    {
+      "language": "python",
+      "code": "    None\n    None"
+    },
+    {
+      "language": "python",
+      "code": "  get_datetime()"
+    },
+    {
+      "language": "python",
+      "code": "    time = get_datetime()"
+    },
+    {
+      "language": "python",
+      "code": "    datetime.datetime(2024, 11, 13, 9, 31)"
+    },
+    {
+      "language": "python",
+      "code": "  get_last_datetime()"
+    },
+    {
+      "language": "python",
+      "code": "    last_datetime = get_last_datetime()"
+    },
+    {
+      "language": "python",
+      "code": "    Timestamp('2024-11-12 09:31:00')"
+    },
+    {
+      "language": "python",
+      "code": "  history(symbol_list, fields, bar_count, fre_step, skip_paused=False, fq='pre', df=True, is_panel=False)"
+    },
+    {
+      "language": "python",
+      "code": "    history('000001.SZ',['close'],5,'1m',False,'pre',True,True)"
+    },
+    {
+      "language": "python",
+      "code": "    close\n    2024-11-15 14:57:00  11.44\n    2024-11-15 14:58:00  11.44\n    2024-11-15 14:59:00  11.44\n    2024-11-15 15:00:00  11.44\n    2024-11-18 09:31:00  11.69"
+    },
+    {
+      "language": "python",
+      "code": "  get_current(inst_id_list)"
+    },
+    {
+      "language": "python",
+      "code": "    get_current(inst_id_list=['300033.SZ'])"
+    },
+    {
+      "language": "python",
+      "code": "    {'300033.SZ': Bar(symbol: '300033.SZ', datetime: datetime.datetime(2024, 11, 18, 9, 31), open: 271.0, high: 275.55, low: 270.3, close: 275.2, volume: 2021272.0, turnover: 550619639.86, high_limit: 327.0, low_limit: 218.0, prev_close: 272.5, avg_price: 272.41244120534003, is_st: False, is_paused: False)}"
+    },
+    {
+      "language": "python",
+      "code": "  history_future(symbol_list, fields, bar_count, fre_step, skip_paused=False, fq='pre', is_panel=False)"
+    },
+    {
+      "language": "python",
+      "code": "    history_future('RB8888', ['close'], 5, '1m', False, 'pre')"
+    },
+    {
+      "language": "python",
+      "code": "    {'RB8888':                          close\n    2024-11-18 09:28:00  3283.0085\n    2024-11-18 09:29:00  3283.1423\n    2024-11-18 09:30:00  3284.7830\n    2024-11-18 09:31:00  3285.0599\n    2024-11-18 09:32:00  3284.9491}"
+    },
+    {
+      "language": "python",
+      "code": "  history_ticks(\n      symbol_list,\n      fields,\n      bar_count, \n      is_panel=0\n  )"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #设定标的代码\n      context.symbol = ['000001.SZ']\n      subscribe(context.symbol)\n\n  def handle_tick(context,tick):\n      price=history_ticks(context.symbol, ['open','prev_close'], 10, is_panel=0)\n      log.info(price)"
+    },
+    {
+      "language": "python",
+      "code": "  history_fx(\n      symbol_list,\n      fields,\n      bar_count, \n      fre_step,\n      is_panel=0\n  )"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #设定期货品种代码\n      subscribe('XAUUSD')\n  \n  def handle_bar(context,bar_dict):\n      price = history_fx(['USDJPY','XAUUSD'], ['open','close'], 3, '1d', is_panel=0)\n      log.info(price['XAUUSD'])"
+    },
+    {
+      "language": "python",
+      "code": "  from datetime import timedelta as td\n  \n  def init(context):\n      subscribe('USDJPY') \n  \n  def handle_bar(context,bar_dict):\n      # 获取当前bar的时间\n      time = get_datetime()\n      log.info(time)\n      # 获取回测前一天日期\n      yesterday_time = get_datetime_fx()-td(days=1)\n      yesterday_date = yesterday_time.strftime(\"%Y%m%d\")\n      log.info(yesterday_date)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      subscribe('USDJPY')\n  \n  def handle_bar(context,bar_dict):\n      # 获取上一个bar的时间\n      last_datetime = get_last_datetime_fx()\n      log.info('回测前一个handle_bar调用时间：'+str(last_datetime))"
+    },
+    {
+      "language": "python",
+      "code": "  history_td(\n      symbol_list,\n      fields,\n      bar_count, \n      fre_step,\n      is_panel=0\n  )"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      #设定期货品种代码\n      subscribe('AUTD')\n  \n  def handle_bar(context,bar_dict):\n      price = history_td(['AUTD','AGTD'], ['open','close'], 3, '1d', is_panel=0)\n      log.info(price['AUTD'])"
+    },
+    {
+      "language": "python",
+      "code": "  from datetime import timedelta as td\n  \n  def init(context):\n      subscribe('AUTD') \n  \n  def handle_bar(context,bar_dict):\n      # 获取当前bar的时间\n      time = get_datetime()\n      log.info(time)\n      # 获取回测前一天日期\n      yesterday_time = get_datetime_td()-td(days=1)\n      yesterday_date = yesterday_time.strftime(\"%Y%m%d\")\n      log.info(yesterday_date)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      subscribe('AUTD')  \n  \n  def handle_bar(context,bar_dict):\n      # 获取上一个bar的时间\n      last_datetime = get_last_datetime_td()\n      log.info('回测前一个handle_bar调用时间：'+str(last_datetime))"
+    },
+    {
+      "language": "python",
+      "code": "  order(id_or_ins, amount, price=None)"
+    },
+    {
+      "language": "python",
+      "code": "    order('510300.SH', 100, price=2.8)"
+    },
+    {
+      "language": "python",
+      "code": "    'ord8a8d6e4bad7441679eb1f34164c9c6dd'"
+    },
+    {
+      "language": "python",
+      "code": "  order_value(id_or_ins, cash_amount, price=None)"
+    },
+    {
+      "language": "python",
+      "code": "    order_value('510300.SH', 100000, price=2.8)"
+    },
+    {
+      "language": "python",
+      "code": "    'ord8a8d6e4bad7441679eb1f34164c9c6dd'"
+    },
+    {
+      "language": "python",
+      "code": "  order_percent(id_or_ins, percent, price=None)"
+    },
+    {
+      "language": "python",
+      "code": "    order_percent('510300.SH', 0.1, price=2.8)"
+    },
+    {
+      "language": "python",
+      "code": "    'ord8a8d6e4bad7441679eb1f34164c9c6dd'"
+    },
+    {
+      "language": "python",
+      "code": "  order_target(id_or_ins, amount, price=None)"
+    },
+    {
+      "language": "python",
+      "code": "    order_target('510300.SH', 1000, price=2.8)"
+    },
+    {
+      "language": "python",
+      "code": "    'ord8a8d6e4bad7441679eb1f34164c9c6dd'"
+    },
+    {
+      "language": "python",
+      "code": "  order_target_value(id_or_ins, cash_amount, price=None)"
+    },
+    {
+      "language": "python",
+      "code": "    order_target_value('510300.SH', 100000, price=2.8)"
+    },
+    {
+      "language": "python",
+      "code": "    'ord8a8d6e4bad7441679eb1f34164c9c6dd'"
+    },
+    {
+      "language": "python",
+      "code": "  order_target_percent(id_or_ins, percent, price=None)"
+    },
+    {
+      "language": "python",
+      "code": "    order_target_percent('510300.SH', 0.1, price=2.8)"
+    },
+    {
+      "language": "python",
+      "code": "    'ord8a8d6e4bad7441679eb1f34164c9c6dd'"
+    },
+    {
+      "language": "python",
+      "code": "  get_orders(order_id=None, order_book_id=None)"
+    },
+    {
+      "language": "python",
+      "code": "    odr_id = order('000001.SZ', 200)\n    print(get_orders(odr_id))"
+    },
+    {
+      "language": "python",
+      "code": "    [Order({'order_id': 'aade994938b64871a4191971e8501eaf', 'symbol': '000001.SZ', 'created': datetime.datetime(2024, 11, 18, 9, 31), 'order_type': 'LONG', 'limit_price': 0, 'amount': 8500, 'filled_amount': 8500, 'type': ORDER_TYPE.MARKET, 'transaction_cost': 19.820427500000005, 'avg_price': 11.659075000000001, 'status': ORDER_STATUS.FILLED, 'datetime': datetime.datetime(2024, 11, 18, 9, 31), 'offset_flag': None})]"
+    },
+    {
+      "language": "python",
+      "code": "  get_open_orders(order_id=None, order_book_id=None)"
+    },
+    {
+      "language": "python",
+      "code": "    odr_id = order('000001.SZ', 200)\n    print(get_open_orders(odr_id))"
+    },
+    {
+      "language": "python",
+      "code": "    [Order({'order_id': 'aade994938b64871a4191971e8501eaf', 'symbol': '000001.SZ', 'created': datetime.datetime(2024, 11, 18, 9, 31), 'order_type': 'LONG', 'limit_price': 0, 'amount': 8500, 'filled_amount': 8500, 'type': ORDER_TYPE.MARKET, 'transaction_cost': 19.820427500000005, 'avg_price': 11.659075000000001, 'status': ORDER_STATUS.FILLED, 'datetime': datetime.datetime(2024, 11, 18, 9, 31), 'offset_flag': None})]"
+    },
+    {
+      "language": "python",
+      "code": "get_tradelogs(order_id=None, order_book_id=None)"
+    },
+    {
+      "language": "python",
+      "code": "    def init(context):   \n        pass\n\n    def handle_bar(context, bar_dict):\n        odr_id_1 = order('000001.SZ', 200)\n        log.info(get_tradelogs())"
+    },
+    {
+      "language": "python",
+      "code": "    [Trade({'order_book_id': '000001.SZ', 'trading_datetime': datetime.datetime(2024, 11, 19, 9, 31), 'datetime': datetime.datetime(2024, 11, 19, 9, 31), 'order_id': '97ae3e30206d4d3fa5d28a15d0b08018', 'last_price': 11.779375, 'last_quantity': 8400, 'commission': 19.789350000000002, 'tax': 0, 'transaction_cost': 19.789350000000002, 'side': SIDE.BUY, 'position_effect': None, 'exec_id': 'e4815a0f45954586b221d4a2ae4530d1', 'frozen_price': 11.75, 'close_today_amount': 0, 'pnl': None})]"
+    },
+    {
+      "language": "python",
+      "code": "  cancel_order(order)"
+    },
+    {
+      "language": "python",
+      "code": "    # 以开盘价买入平安银行股票1000股  \n    oid = order('000001.SZ', 1000)\n    cancel_order(orders)"
+    },
+    {
+      "language": "python",
+      "code": "    None # 委托已经成交，撤单失败，返回None"
+    },
+    {
+      "language": "python",
+      "code": "  cancel_order_all()"
+    },
+    {
+      "language": "python",
+      "code": "    # 以开盘价买入平安银行股票1000股  \n    oid = order('000001.SZ', 1000)\n    cancel_order_all()"
+    },
+    {
+      "language": "python",
+      "code": "    None # 委托已经成交，撤单失败，返回None"
+    },
+    {
+      "language": "python",
+      "code": "  #初始化账户  \n  def init(context):  \n      set_subportfolios([{'type':'FUTURE','cash':10000000}])\n      #设定期货品种代码  \n      context.symbol = 'RB1812'  \n\n  def handle_bar(context,bar_dict):  \n      #下单10手螺纹钢1812合约，开多仓\n      order_future(context.symbol,10,\"open\",\"long\",limit_price=None)"
+    },
+    {
+      "language": "python",
+      "code": "  #初始化账户  \n  def init(context):  \n      set_subportfolios([{'type':'FUTURE','cash':10000000}])\n      #设定期货品种代码  \n      context.symbol=    'RB1812'  \n\n  def handle_bar(context,bar_dict):  \n      #下单10手螺纹钢1812合约，开多仓\n      order_future(context.symbol,10,\"open\",\"long\")\n      #平今仓5手螺纹钢1812合约\n      order_close_today(context.symbol, 5,'long',limit_price=None)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      set_subportfolios([{'cash': 100000, 'type': 'option'}])\n      set_option_commission(5)        # 默认也是5\n      g.ins= '10001485.SH'            # 看跌，20181128行权价2.7\n      g.day = 1\n\n  def handle_bar(context, bar_dict):\n      if g.day == 1:\n          order_option(g.ins, 10, 'buy', 'open')\n      elif g.day == 2:\n          order_option(g.ins, 10, 'sell', 'close')\n      g.day += 1"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):   \n      #设置要交易的合约(美日货币对合约) \n      g.contract = 'USDJPY'  \n      subscribe(g.contract)\n  \n  #设置买卖条件，每个交易频率（日/分钟）调用一次   \n  def handle_bar(context, bar_dict):\n      #做多开仓买入1手\n      order_fx(g.contract, 1, 'buy', 'open')"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):   \n      #设置要交易的合约  \n      subscribe(id_or_symbols = ['USDJPY', 'AUDUSD'])\n  \n  #设置买卖条件，每个交易频率（日/分钟/tick）调用一次   \n  def handle_bar(context, bar_dict):   \n      order_id = order_fx('AUDUSD', 10, 'buy', 'open')\n      log.info(get_order_fx(order_id))"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):  \n      #设置要交易的合约  \n      g.contract = 'USDJPY'  \n      subscribe('USDJPY')\n  \n  #设置买卖条件，每个交易频率（日/分钟/tick）调用一次  \n  def handle_bar(context, bar_dict):  \n      order_id = order_fx(g.contract, 1, 'buy', 'open', price=0.1)\n      log.info(get_open_orders_fx(order_id))\n      cancel_order_fx(order_id)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):   \n      #设置要交易的合约(AuT+D合约)   \n      g.contract = 'AUTD'   \n      subscribe('AUTD')\n  \n  #设置买卖条件，每个交易频率（日/分钟）调用一次   \n  def handle_bar(context, bar_dict):\n      #做多开仓买入1手Au(T+D)合约\n      order_td(g.contract, 1, 'buy', 'open')"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):   \n      #设置要交易的合约(AuT+D合约)   \n      g.contract = 'AUTD'   \n      subscribe('AUTD')\n  \n  #设置买卖条件，每个交易频率（日/分钟）调用一次   \n  def handle_bar(context, bar_dict):\n      #做多开仓买入1手Au(T+D)合约\n      order_id = order_td(g.contract, 1, 'buy', 'open')\n      log.info(get_order_td(order_id))"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):  \n      #设置要交易的合约  \n      g.contract = 'AUTD'  \n      subscribe('AUTD')\n  \n  #设置买卖条件，每个交易频率（日/分钟/tick）调用一次  \n  def handle_bar(context, bar_dict):  \n      order_id = order_td(g.contract, 1, 'buy', 'open', price=0.1)\n      log.info(get_open_orders_td(order_id))\n      cancel_order_td(order_id)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      # 设置3个子账户，股票，期货，场外基金初始资金都为100000\n      set_subportfolios([{'cash': 100000, 'type': 'fund'}, {'cash': 100000, 'type': 'future'}, {'cash': 100000, 'type': 'stock'}])\n      context.ins = '000717.OF'\n\n  def handle_bar(context, bar_dict):\n      order_id = order_fund(context.ins, 1000)\n      log.info('申购', order_id)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      # 设置3个子账户，股票，期货，场外基金初始资金都为100000\n      set_subportfolios([{'cash': 100000, 'type': 'fund'}, {'cash': 100000, 'type': 'future'}, {'cash': 100000, 'type': 'stock'}])\n      context.ins = '000717.OF'\n\n  def handle_bar(context, bar_dict):\n      order_id = order_fund(context.ins, 1000)\n      log.info('申购', order_id)\n      order_id = redeem_fund(context.ins, 500)\n      log.info('赎回', order_id)"
+    },
+    {
+      "language": "python",
+      "code": "def init(context):\n    context.fired=True\n    log.info(context.run_info)\n    log.info(context.portfolio)\n    log.info(context.fired)\n  \ndef handle_bar(context,bar_dict):\n    if context.fired:\n        odr_id = order('000001.SZ',100)\n        context.fired = False\n        log.info(context.run_info)\n        log.info(context.portfolio)\n        log.info(context.fired)\n  \n        log.info(context.portfolio.positions) #输出看起来像个列表,实际类似于字典\n        log.info(context.portfolio.stock_account.positions)\n  \n        log.info(context.portfolio.positions['000001.SZ'])\n        log.info(context.portfolio.stock_account.positions['000001.SZ'])"
+    },
+    {
+      "language": "python",
+      "code": "def init(context):\n    subscribe('IF9999')\n\ndef handle_bar(context, bar_dict):\n    print(bar_dict['IF9999'].open)"
+    },
+    {
+      "language": "python",
+      "code": "def init(context):\n    g.fired = True\n\ndef handle_bar(context,bar_dict):\n    if g.fired:\n        odr_id = order('000001.SZ',100)\n        print(get_order(odr_id))\n        g.fired=False\n\ndef on_order(context,odr):\n    print(odr)"
+    },
+    {
+      "language": "python",
+      "code": "def init(context):\n    g.fired = True\n\ndef handle_bar(context,bar_dict):\n    if g.fired:\n        odr_id = order('000001.SZ',100)\n        print(get_tradelogs())\n        g.fired=False\n\ndef on_trade(context,trade):\n    print(trade)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):   \n      #设置要交易的股票 \n      g.contract = '300033.SZ'\n\n  def handle_bar(context, bar_dict):\n      order(g.contract, 1000)"
+    },
+    {
+      "language": "python",
+      "code": "  log.info(content)\n  log.warn(content)\n  log.error(content)"
+    },
+    {
+      "language": "python",
+      "code": "  def init(context):\n      pass\n\n  def handle_bar(context,bar_dict):\n      # 获得当前Bar时间\n      time =get_datetime()\n      log.info('目前Bar时间:'+str(time))"
+    },
+    {
+      "language": "python",
+      "code": "  record(**kwargs)"
+    },
+    {
+      "language": "python",
+      "code": "  #画出平安银行的5.10.20日均线走势图.\n  def init(context):\n      pass\n\n  def handle_bar(context,bar_dict):\n      value = history('000001.SZ', ['close'], 20, '1d', True, fq='pre')\n      MA5=value['close'].iloc[-5:].mean()\n      MA10=value['close'].iloc[-10:].mean()\n      MA20=value['close'].iloc[-20:].mean()\n      record(MA5=MA5, MA10=MA10,MA20=MA20)"
+    },
+    {
+      "language": "python",
+      "code": "  enable_profile(func_list)"
+    },
+    {
+      "language": "python",
+      "code": "#将初始双均线策略进行函数性能分析.\n#初始化账户\ndef init(context):\n    context.security = '600519.SH'\n\ndef handle_bar(context,bar_dict):\n    close = history(context.security, ['close'], 20, '1d')\n    MA5 = close.values[-5:].mean()\n    MA20 = close.values.mean()\n    if MA5 > MA20:\n        order_target_percent(context.security,1)\n    if MA5 < MA20:\n        order_target(context.security,0)\n\nenable_profile()"
+    },
+    {
+      "language": "python",
+      "code": "  normalize_symbol(symbol, ty=None)"
+    },
+    {
+      "language": "python",
+      "code": "    # 指定类型转换\n    normalize_symbol('300033', ty='stock')\n    \n    # 使用默认参数转换\n    normalize_symbol('300033')"
+    },
+    {
+      "language": "",
+      "code": "    '300033.SZ'"
+    },
+    {
+      "language": "python",
+      "code": "  write_file(path, content, append=False)"
+    },
+    {
+      "language": "python",
+      "code": "    write_file('log.txt', 'Hello, this is a log message.')"
+    },
+    {
+      "language": "python",
+      "code": "    24"
+    },
+    {
+      "language": "python",
+      "code": "  read_file(path)"
+    },
+    {
+      "language": "python",
+      "code": "    # 首先，创建一个文件用于读取\n    write_file('example.txt', '你好，世界')\n    \n    # 调用 read_file 读取文件\n    data = read_file('example.txt')\n    \n    # 打印查看返回值类型和内容\n    print(type(data))\n    print(data)\n    \n    # 如果需要字符串，可以解码\n    print(data.decode('utf-8'))"
+    },
+    {
+      "language": "",
+      "code": "    <class 'bytes'>\n    b'\\xe4\\xbd\\xa0\\xe5\\xa5\\xbd\\xef\\xbc\\x8c\\xe4\\xb8\\x96\\xe7\\x95\\x8c'\n    你好，世界"
+    },
+    {
+      "language": "python",
+      "code": "  list_file(path, isfile=None, isdir=None, abspath=False)"
+    },
+    {
+      "language": "python",
+      "code": "    list_file('')"
+    },
+    {
+      "language": "python",
+      "code": "    ['crontabs/requirements.txt', 'crontabs/infer_daban (every 1minutes from 7.00am to 7.00am).html', 'crontabs/c4 (every 1minutes from 9.01am to 9.01am).py.output.txt', 'crontabs/crontabs.log', 'crontabs/model.toml', 'crontabs/c4 (every 1minutes from 9.01am to 9.01am).py', ... ]"
+    },
+    {
+      "language": "python",
+      "code": "  copy_file(src, dst, move=False)"
+    },
+    {
+      "language": "python",
+      "code": "    copy_file('test.txt', 'new_folder/abc.txt', move=True)"
+    },
+    {
+      "language": "python",
+      "code": "    'test.txt'"
+    },
+    {
+      "language": "python",
+      "code": "  remove_file(path, trash=True)"
+    },
+    {
+      "language": "python",
+      "code": "    remove_file('test.txt')"
+    },
+    {
+      "language": "",
+      "code": "    None"
+    },
+    {
+      "language": "python",
+      "code": "  notify_push(\n      content, \n      channel='wxpusher', \n      subject='SuperMind消息提醒', \n      email_list=None, \n      uids=None, \n      topic_ids=None, \n      group_id=None,\n      url=None,\n      payload=None,\n  )"
+    },
+    {
+      "language": "python",
+      "code": "try:\n    raise\nexcept:\n    # 微信推送\n    notify_push(\n        '程序报错', \n        channel='wxpusher', \n        subject='SuperMind消息提醒', \n        uids='XXXXXX',\n    )\n    # 钉钉webhook推送\n    notify_push(\n        '程序报错', \n        channel='webhook',   \n        url='XXXXXX',\n        payload={\"msgtype\": \"text\", \"text\": {\"content\": \"$content\"}},\n    )"
+    },
+    {
+      "language": "python",
+      "code": "  custom_sector(name=None, action='query', symbol=None, rename=None)"
+    },
+    {
+      "language": "python",
+      "code": "custom_sector() # 返回所有板块的dataframe\n\ncustom_sector('板块1') # 返回 板块1 的属性和股票\n\ncustom_sector('板块1', 'insert', ['000001.SZ']) # 新建板块1的股票列表\n\ncustom_sector('板块1', 'update', ['000001.SZ'], '新名字') # 更新板块1的股票列表或名字\n\ncustom_sector('板块1', 'append', ['000001.SZ']) # 增加板块1的股票列表\n\ncustom_sector('板块1', 'pop', ['000001.SZ']) # 移除板块1的股票\n\ncustom_sector('板块1', 'remove') # 删除板块1"
+    },
+    {
+      "language": "python",
+      "code": "  open_api = get_open_api('public')\n  open_api.compile_pyfile('xxx.py')\n  open_api.import_cpyfile('xxx.cpython-38-x86_64-linux-gnu.cpy')"
+    },
+    {
+      "language": "python",
+      "code": "# 编译加密py文件\nopen_api = get_open_api('public')\nopen_api.compile_pyfile('untitled1.py')\n\n#初始化cpy加密文件，该操作仅需执行一次，之后即可通过 import untitled1 进行调用\nopen_api = get_open_api('public') \nopen_api.import_cpyfile('untitled1.cpython-38-x86_64-linux-gnu.cpy')"
+    },
+    {
+      "language": "python",
+      "code": "  get_price(\n      securities,\n      start_date,\n      end_date,\n      fre_step,\n      fields,\n      skip_paused=False,\n      fq='pre',\n      bar_count=0,\n      is_panel=False,\n  )"
+    },
+    {
+      "language": "python",
+      "code": "    get_price(['000001.SZ','000002.SZ'], None, '20230201', '1d', ['close', 'high', 'low'], True, None, 3)"
+    },
+    {
+      "language": "python",
+      "code": "    {'000001.SZ':             close   high    low\n    2023-01-30  15.15  15.74  14.89\n    2023-01-31  14.99  15.51  14.96\n    2023-02-01  14.70  15.08  14.51, '000002.SZ':             close   high    low\n    2023-01-30  18.09  19.00  18.00\n    2023-01-31  18.29  18.35  17.95\n    2023-02-01  18.19  18.28  17.90}"
+    },
+    {
+      "language": "python",
+      "code": "    get_price(['000001.SZ','000002.SZ'], None, '20230201', '1d', ['close', 'high', 'low'], True, None, 3, is_panel=True)"
+    },
+    {
+      "language": "python",
+      "code": "    <class 'pd.Panel'>\n    Dimensions: 3 (items) x 3 (major_axis) x 2 (minor_axis)\n    Items axis: close to low\n    Major_axis axis: 2023-01-30T00:00:00.000000000 to 2023-02-01T00:00:00.000000000\n    Minor_axis axis: 000001.SZ to 000002.SZ"
+    },
+    {
+      "language": "python",
+      "code": "    get_price('000001.SZ', None, '20230201', '1d', ['close', 'high', 'low'], True, None, 3)"
+    },
+    {
+      "language": "python",
+      "code": "    close   high    low\n    2023-01-30  15.15  15.74  14.89\n    2023-01-31  14.99  15.51  14.96\n    2023-02-01  14.70  15.08  14.51"
+    },
+    {
+      "language": "python",
+      "code": "  get_call_auction(symbol, dt=None)"
+    },
+    {
+      "language": "python",
+      "code": "    get_call_auction(['000001.SZ', '600000.SH'], '20230613')"
+    },
+    {
+      "language": "python",
+      "code": "    price   turnover\n    symbol         \n    600000.SH   7.43   704364.0\n    000001.SZ  11.76  3988992.0"
+    },
+    {
+      "language": "python",
+      "code": "    get_call_auction('000001.SZ', '20230613')"
+    },
+    {
+      "language": "python",
+      "code": "    price   turnover\n    symbol         \n    000001.SZ  11.76  3988992.0"
+    },
+    {
+      "language": "python",
+      "code": "  get_price_future(\n      symbol_list,\n      start_date,\n      end_date,\n      fre_step,\n      fields,\n      skip_paused=False,\n      fq=None,\n      bar_count=0,\n      is_panel=0,\n  )"
+    },
+    {
+      "language": "python",
+      "code": "    # 获取IC2304、IF2304两个标的在2023年4月6日前3天的收盘价、最高价、最低价，返回Panel格式\n    value_panel = get_price_future(\n        symbol_list=['IC2304', 'IF2304'],\n        start_date=None,\n        end_date='20230406',\n        fre_step='1d',\n        fields=['close', 'high', 'low'],\n        bar_count=3,\n        is_panel=1\n    )\n    print(value_panel)"
+    },
+    {
+      "language": "python",
+      "code": "    <class 'mgquant_mod_mindgo.utils.compat.panel.pd_Panel'>\n    Dimensions: 3 (items) x 3 (major_axis) x 2 (minor_axis)\n    Items axis: close to low\n    Major_axis axis: 2023-04-03T00:00:00.000000000 to 2023-04-06T00:00:00.000000000\n    Minor_axis axis: IC2304 to IF2304"
+    },
+    {
+      "language": "python",
+      "code": "    # 获取IC2304、IF2304两个标的在2023年4月6日前3天的收盘价、最高价、最低价，返回字典格式\n    value_dict = get_price_future(\n        symbol_list=['IC2304', 'IF2304'],\n        start_date=None,\n        end_date='20230406',\n        fre_step='1d',\n        fields=['close', 'high', 'low'],\n        bar_count=3,\n        is_panel=0\n    )\n    print(value_dict)"
+    },
+    {
+      "language": "python",
+      "code": "    {'IC2304':               close    high     low\n     2023-04-03  6406.0  6429.6  6353.0\n     2023-04-04  6415.0  6417.2  6382.2\n     2023-04-06  6411.4  6427.2  6391.0, 'IF2304':               close    high     low\n     2023-04-03  4091.2  4104.4  4063.8\n     2023-04-04  4111.8  4114.0  4082.0\n     2023-04-06  4098.0  4105.8  4085.6}"
+    },
+    {
+      "language": "python",
+      "code": "    # 获取单个标的IC2304在2023年4月6日前3天的收盘价、最高价、最低价\n    value_df = get_price_future(\n        symbol_list='IC2304',\n        start_date=None,\n        end_date='20230406',\n        fre_step='1d',\n        fields=['close', 'high', 'low'],\n        bar_count=3\n    )\n    print(value_df)"
+    },
+    {
+      "language": "python",
+      "code": "    close    high     low\n    2023-04-03  6406.0  6429.6  6353.0\n    2023-04-04  6415.0  6417.2  6382.2\n    2023-04-06  6411.4  6427.2  6391.0"
+    },
+    {
+      "language": "python",
+      "code": "  get_candle_stick(\n      securities,\n      end_date='20180101',\n      fre_step='1d',\n      fields=None,\n      skip_paused=False,\n      fq='pre',\n      bar_count=0,\n      is_panel=False,\n  )"
+    },
+    {
+      "language": "python",
+      "code": "  # 获取600519.SH、000002.SZ两个标的在2023年8月1日前3个月线的行情数据\n  data = get_candle_stick(\n      ['600519.SH','000002.SZ'], \n      end_date='20230801',\n      fre_step='month',\n      fields=['open', 'close', 'high', 'low', 'volume'],\n      skip_paused=False,\n      fq='pre',\n      bar_count=3,\n      is_panel=0\n  )\n  # 打印收盘价数据\n  print(value['close'])"
+    },
+    {
+      "language": "python",
+      "code": "  get_last_tick(securities, fields, level=None)"
+    },
+    {
+      "language": "python",
+      "code": "    from mindgo_api import *\n    data = get_last_tick('000001.SZ', ['current'])"
+    },
+    {
+      "language": "python",
+      "code": "    id_stock  current\n    0  000001.SZ     11.7"
+    },
+    {
+      "language": "python",
+      "code": "    from mindgo_api import *\n    data = get_last_tick(['000001.SZ', '600000.SH'], ['current'])"
+    },
+    {
+      "language": "python",
+      "code": "    id_stock  current\n    0  000001.SZ    11.70\n    1  600000.SH    11.66"
+    },
+    {
+      "language": "python",
+      "code": "  get_tick(securities, start_date, end_date, fields, level=None)"
+    },
+    {
+      "language": "python",
+      "code": "    data = get_tick('000001.SZ', '20230801 09:23', '20230801 09:30', ['current'])"
+    },
+    {
+      "language": "python",
+      "code": "    id_stock          trade_date  current\n    0   000001.SZ 2023-08-01 09:23:00    12.28\n    1   000001.SZ 2023-08-01 09:23:09    12.28\n    2   000001.SZ 2023-08-01 09:23:18    12.28\n    ...\n    15  000001.SZ 2023-08-01 09:30:00    12.26"
+    },
+    {
+      "language": "python",
+      "code": "  get_stats(date=None)"
+    },
+    {
+      "language": "python",
+      "code": "    data = get_stats('20230810')"
+    },
+    {
+      "language": "python",
+      "code": "    [10, 2, 5, 13, 13, 26, 76, 113, 418, 1175, 222, 1706, 737, 245, 106, 77, 28, 18, 8, 3, 31]"
+    },
+    {
+      "language": "python",
+      "code": "  get_resistance_support(\n      symbol_list,\n      start_date,\n      end_date,\n      fre_step,\n      fields,\n      bar_count=0,\n      is_panel=0,\n  )"
+    },
+    {
+      "language": "python",
+      "code": "    data_dict = get_resistance_support(\n        symbol_list=['600000.SH', '000001.SZ'],\n        start_date='20230801',\n        end_date='20230810',\n        fields=['support_line', 'resistance_line'],\n        is_panel=0\n    )"
+    },
+    {
+      "language": "python",
+      "code": "    {'600000.SH':             support_line  resistance_line\n    trade_date                     \n    2023-08-01          6.82             7.85\n    2023-08-02          6.82             7.63, '000001.SZ':             support_line  resistance_line\n    trade_date                     \n    2023-08-01         11.15           12.500\n    2023-08-02         11.15           12.500}"
+    },
+    {
+      "language": "python",
+      "code": "    panel_data = get_resistance_support(\n        symbol_list=['600000.SH', '000001.SZ'],\n        start_date='20230801',\n        end_date='20230810',\n        fields=['support_line', 'resistance_line'],\n        is_panel=1\n    )"
+    },
+    {
+      "language": "python",
+      "code": "    <class 'mgquant_mod_mindgo.utils.compat.panel.pd_Panel'>\n    Dimensions: 2 (items) x 8 (major_axis) x 2 (minor_axis)\n    Items axis: support_line to resistance_line\n    Major_axis axis: 2023-08-01T00:00:00.000000000 to 2023-08-10T00:00:00.000000000\n    Minor_axis axis: 600000.SH to 000001.SZ"
+    },
+    {
+      "language": "python",
+      "code": "  get_extras(\n      security_list,\n      start_date,\n      end_date,\n      fields,\n      count=None,\n      is_panel=False,\n  )"
+    },
+    {
+      "language": "python",
+      "code": "    # 获取沪深300ETF和中证500ETF在指定日期的单位净值和累计净值，返回字典格式\n    data = get_extras(['510300.SH', '510500.SH'], start_date='20230801', end_date='20230805', fields=['unit_net_value', 'acc_net_value'])"
+    },
+    {
+      "language": "python",
+      "code": "    {'510300.SH':             unit_net_value  acc_net_value\n    2023-08-01          4.0679         1.7316\n    2023-08-02          4.0396         1.7211\n    2023-08-03          4.0750         1.7342\n    2023-08-04          4.0911         1.7402, '510500.SH':             unit_net_value  acc_net_value\n    2023-08-01          6.2086         1.9935\n    2023-08-02          6.1866         1.9864\n    2023-08-03          6.2080         1.9933\n    2023-08-04          6.2400         2.0035}"
+    },
+    {
+      "language": "python",
+      "code": "    # 获取沪深300ETF和中证500ETF在指定日期的单位净值和累计净值，返回Panel格式\n    panel_data = get_extras(['510300.SH', '510500.SH'], start_date='20230801', end_date='20230805', fields=['unit_net_value', 'acc_net_value'], is_panel=True)"
+    },
+    {
+      "language": "python",
+      "code": "    <class 'mgquant_mod_mindgo.utils.compat.panel.pd_Panel'>\n    Dimensions: 2 (items) x 4 (major_axis) x 2 (minor_axis)\n    Items axis: unit_net_value to acc_net_value\n    Major_axis axis: 2023-08-01 00:00:00 to 2023-08-04 00:00:00\n    Minor_axis axis: 510300.SH to 510500.SH"
+    },
+    {
+      "language": "python",
+      "code": "  get_mtss(\n      security_list,\n      start_date,\n      end_date,\n      fields,\n      count=None,\n      is_panel=False,\n  )"
+    },
+    {
+      "language": "python",
+      "code": "    # 获取单只股票过去20天的融资融券数据\n    data = get_mtss(['000001.SZ'], end_date='20230801', fields=['fin_value', 'sec_value'], count=20)"
+    },
+    {
+      "language": "python",
+      "code": "    # {'000001.SZ':                fin_value   sec_value\n    # 2023-07-05  4.303148e+09  28070628.0\n    # 2023-07-06  4.311947e+09  30216087.0\n    # 2023-07-07  4.321500e+09  30577837.0\n    # ...}"
+    },
+    {
+      "language": "python",
+      "code": "    # 获取多只股票的融资融券Panel数据\n    panel_data = get_mtss(['000001.SZ', '600000.SH'], end_date='20230801', fields=['fin_value', 'sec_value'], count=20, is_panel=True)"
+    },
+    {
+      "language": "python",
+      "code": "    # <class 'pd_Panel'>\n    # Dimensions: 2 (items) x 20 (major_axis) x 2 (minor_axis)\n    # Items axis: fin_value to sec_value\n    # Major_axis axis: 2023-07-05 00:00:00 to 2023-08-01 00:00:00\n    # Minor_axis axis: 000001.SZ to 600000.SH"
+    },
+    {
+      "language": "python",
+      "code": "  get_money_flow_step(\n      security_list,\n      start_date,\n      end_date,\n      fre_step,\n      fields,\n      count=None,\n      is_panel=False\n  )"
+    },
+    {
+      "language": "python",
+      "code": "    data = get_money_flow_step(\n        security_list=['000001.SZ', '600000.SH'],\n        start_date='20230801',\n        end_date='20230810',\n        fields=['act_buy_xl'],\n        is_panel=False\n    )"
+    },
+    {
+      "language": "python",
+      "code": "    {'000001.SZ':              act_buy_xl\n    2023-08-01   77794210.0\n    2023-08-02  144867230.0\n    2023-08-03  271395280.0\n    2023-08-04  174036910.0\n    2023-08-07   26917745.0\n    2023-08-08   72404551.0\n    2023-08-09   90129986.0\n    2023-08-10   29415443.0, '600000.SH':             act_buy_xl\n    2023-08-01  18543544.0\n    2023-08-02  28330619.0\n    2023-08-03  19100554.0\n    2023-08-04  16758347.0\n    2023-08-07   3185453.0\n    2023-08-08   6347852.0\n    2023-08-09   5820379.6\n    2023-08-10   7758793.8}"
+    },
+    {
+      "language": "python",
+      "code": "    data = get_money_flow_step(\n        security_list=['000001.SZ', '600000.SH'],\n        start_date='20230801',\n        end_date='20230810',\n        fields=['act_buy_xl'],\n        is_panel=True\n    )"
+    },
+    {
+      "language": "python",
+      "code": "    <class 'pd_Panel'>\n    Dimensions: 1 (items) x 8 (major_axis) x 2 (minor_axis)\n    Items axis: act_buy_xl to act_buy_xl\n    Major_axis axis: 2023-08-01T00:00:00.000000000 to 2023-08-10T00:00:00.000000000\n    Minor_axis axis: 000001.SZ to 600000.SH"
+    },
+    {
+      "language": "",
+      "code": "  get_security_info(symbol)"
+    },
+    {
+      "language": "python",
+      "code": "    data = get_security_info('000001.SZ')"
+    },
+    {
+      "language": "python",
+      "code": "    Instrument(benchmark=None, de_listed_date=datetime.datetime(2200, 1, 1, 0, 0), display_name='平安银行', end_date=datetime.datetime(2200, 1, 1, 0, 0), exchange='深交所', listed_date=datetime.datetime(1991, 4, 3, 0, 0), market1='212100', market2='001001', market_hq='33', min_round_lot=0, name='payh', order_book_id='000001.SZ', parent='nan', price_limit=0.0, round_lot=100, start_date=datetime.datetime(1991, 4, 3, 0, 0), symbol='000001.SZ', symbol_hq='000001', type='stock', underlying_symbol=None)"
+    },
+    {
+      "language": "",
+      "code": "  get_all_securities(ty=None, date=None)"
+    },
+    {
+      "language": "python",
+      "code": "    #查询2023年8月1日处于上市状态的沪京深股票信息\n    data = get_all_securities('stock','20230801')\n    print(data)"
+    },
+    {
+      "language": "",
+      "code": "    benchmark de_listed_date display_name   end_date exchange  \\\n    symbol                                                  \n    002789.SZ      None     2200-01-01        *ST建艺 2200-01-01      深交所   \n    600562.SH      None     2200-01-01         国睿科技 2200-01-01      上交所   \n    ...             ...            ...          ...        ...      ...   \n    \n             listed_date market1 market2 market_hq  min_round_lot  name  \\\n    symbol                                                   \n    002789.SZ  2016-03-11  212100  001001        33              0  stjy   \n    600562.SH  2003-01-28  212001  001001        17              0  grkj   \n    ...               ...     ...     ...       ...            ...   ...   \n    \n             order_book_id parent  price_limit  round_lot start_date symbol_hq  \\\n    symbol                                                          \n    002789.SZ     002789.SZ    nan         0.00        100 2016-03-11    002789   \n    600562.SH     600562.SH    nan         0.00        100 2003-01-28    600562   \n    ...                 ...    ...          ...        ...        ...       ...   \n    \n                type underlying_symbol  \n    symbol                \n    002789.SZ  stock              None  \n    600562.SH  stock              None  \n    ...          ...               ...  \n    \n    [5453 rows x 19 columns]"
+    },
+    {
+      "language": "",
+      "code": "  get_futures_info(symbol, date=None)"
+    },
+    {
+      "language": "python",
+      "code": "    # 查询螺纹钢期货的2023年8月1日的品种信息\n    data = get_futures_info('RB', '20230801')"
+    },
+    {
+      "language": "python",
+      "code": "    {'symbol': 'RB', 'name': '螺纹钢', 'commission': 0.0001, 'margin_rate': 0.05, 'contract_multiplier': 10.0, 'exchange': '上海期货交易所', 'unit': 1.0}"
+    },
+    {
+      "language": "",
+      "code": "  get_futures_dominate(symbol, date=None, seq=0)"
+    },
+    {
+      "language": "python",
+      "code": "  get_future_code(underlying_symbol, date=None)"
+    },
+    {
+      "language": "python",
+      "code": "    future_code_all = get_future_code('RB', '20180910')"
+    },
+    {
+      "language": "python",
+      "code": "    ['RB1809', 'RB1810', 'RB1811', 'RB1812', 'RB1901', 'RB1902', 'RB1903', 'RB1904', 'RB1905', 'RB1906', 'RB1907', 'RB1908']"
+    },
+    {
+      "language": "python",
+      "code": "  get_option_code(date=None)"
+    },
+    {
+      "language": "python",
+      "code": "    # 获取指定日期的期权合约代码\n    options_all = get_option_code('20230801')"
+    },
+    {
+      "language": "python",
+      "code": "    symbol month\n    0    90001832.SZ  None\n    1    90001824.SZ  None\n    2    90002275.SZ  None\n    3    90002114.SZ  None\n    4    90002105.SZ  None"
+    },
+    {
+      "language": "python",
+      "code": "  get_index_stocks(symbol, date=None)"
+    },
+    {
+      "language": "python",
+      "code": "    stock_list = get_index_stocks('000016.SH', '20230801')"
+    },
+    {
+      "language": "python",
+      "code": "    ['600436.SH', '603288.SH', '600519.SH', '601857.SH', '600036.SH', '600050.SH', '603260.SH', '601288.SH', '601166.SH', '600900.SH', '601012.SH', '600309.SH', '600406.SH', '600031.SH', '600010.SH', '600048.SH', '600809.SH', '688111.SH', '601088.SH', '603799.SH', '601398.SH', '601066.SH', '600887.SH', '600111.SH', '601669.SH', '601318.SH', '600690.SH', '600276.SH', '600028.SH', '603501.SH', '600745.SH', '601888.SH', '601728.SH', '600905.SH', '600438.SH', '603986.SH', '600089.SH', '601919.SH', '600030.SH', '601668.SH', '603259.SH', '601390.SH', '601225.SH', '601628.SH', '600893.SH', '600104.SH', '601899.SH', '601633.SH', '688599.SH', '600196.SH']"
+    },
+    {
+      "language": "python",
+      "code": "  get_index_weight(symbol, date=None)"
+    },
+    {
+      "language": "python",
+      "code": "    weight = get_index_weight('000016.SH', '20230801')"
+    },
+    {
+      "language": "python",
+      "code": "    symbol  weight\n    0  600309.SH   2.627\n    1  600104.SH   1.033\n    2  600030.SH   3.356\n    ...\n    49 600893.SH   0.769"
+    },
+    {
+      "language": "python",
+      "code": "  get_index_list(suffix, date=None)"
+    },
+    {
+      "language": "python",
+      "code": "    index_list = get_index_list('TI', '20230801')"
+    },
+    {
+      "language": "python",
+      "code": "    ['885760.TI', '883400.TI', '885423.TI', ...]"
+    },
+    {
+      "language": "python",
+      "code": "  get_industry_stocks(symbol, date=None)"
+    },
+    {
+      "language": "python",
+      "code": "    index_list = get_industry_stocks('CI311000', '20230801')"
+    },
+    {
+      "language": "python",
+      "code": "    ['600693.SH', '601366.SH', '600694.SH', '002251.SZ', '601116.SH', '000759.SZ', '600697.SH', '601010.SH', '000564.SZ', '002561.SZ', '002336.SZ', '600712.SH', '600280.SH', '603031.SH', '002419.SZ', '600729.SH', '002187.SZ', '603123.SH', '600738.SH', '600628.SH', '000501.SZ', '605188.SH', '600778.SH', '603708.SH', '603101.SH', '002697.SZ', '600785.SH', '601086.SH', '000419.SZ', '600814.SH', '000417.SZ', '600306.SH', '600824.SH', '600827.SH', '600828.SH', '600838.SH', '000679.SZ', '600858.SH', '600859.SH', '600861.SH', '000715.SZ', '600865.SH', '000882.SZ', '002277.SZ', '601933.SH', '002264.SZ']"
+    },
+    {
+      "language": "python",
+      "code": "  get_industry_relate(date='now', types='industryid1', fields=None)"
+    },
+    {
+      "language": "python",
+      "code": "    # 查询2023年8月1日中信二级行业分类信息\n    industry_info = get_industry_relate(date='20230801', types='ci_industryid2')\n    print(industry_info.head())"
+    },
+    {
+      "language": "python",
+      "code": "    available_date disabled_date industry_index  industry_rank  \\\n    industry_name\n    一般零售                    None          None       CI005811            2.0\n    专业市场经营Ⅱ           2019-12-02          None       CI005815            2.0\n    专用机械                    None          None       CI005805            2.0\n    专用材料Ⅱ             2019-12-02          None       CI005800            2.0\n    专营连锁              2019-12-02          None       CI005813            2.0\n    \n                                  industry_symbol industry_thscode industry_type industry_typecode\n    industry_name\n    一般零售                 CI311000      CI005811.CI          中信行业            002012\n    专业市场经营Ⅱ              CI315000      CI005815.CI          中信行业            002012\n    专用机械                 CI262000      CI005805.CI          中信行业            002012\n    专用材料Ⅱ                CI246000      CI005800.CI          中信行业            002012\n    专营连锁                 CI313000      CI005813.CI          中信行业            002012"
+    },
+    {
+      "language": "python",
+      "code": "  get_symbol_industry(symbol, date=None)"
+    },
+    {
+      "language": "python",
+      "code": "    # 查询指定股票在特定日期的行业分类信息\n    get_symbol_industry('300033.SZ', date='20230801')"
+    },
+    {
+      "language": "python",
+      "code": "    Symbol_Industry(date=Timestamp('2023-08-01 00:00:00'), industryid1='T10', industryid2='T1003', industryid3='T100301', s_industryid1='S71', s_industryid2='S7104', s_industryid3='S710401', c_industryid='69', c_industryid2='J', ci_industryid1='CI620000', ci_industryid2='CI625000', ci_industryid3='CI625010', gi_industryid1='45', gi_industryid2='4510', gi_industryid3='451030', gi_industryid4='45103010')"
+    },
+    {
+      "language": "python",
+      "code": "  get_concept_stocks(symbol, date=None)"
+    },
+    {
+      "language": "python",
+      "code": "    stock_list = get_concept_stocks('886031.TI', date='20230801')"
+    },
+    {
+      "language": "python",
+      "code": "    ['300235.SZ', '002722.SZ', '300229.SZ', '688609.SH', ...]"
+    },
+    {
+      "language": "python",
+      "code": "  get_concept_relate(date='now', levels=None, fields=None)"
+    },
+    {
+      "language": "python",
+      "code": "    concept_info = get_concept_relate(date='20230801')"
+    },
+    {
+      "language": "python",
+      "code": "    concept_symbol concept_code ... concept_thscode available_date\n    concept_name                                          ...                         \n    2021年送转填权概念              308986     00090126 ...       883402.TI     2022-07-01\n    3D打印                         301963     00060044 ...            None           None\n    3D打印                         300127     00030035 ...       885537.TI     2014-04-25\n    3D打印[US]                     306516     00040130 ...       865045.TI     2019-01-28\n    3D玻璃                         302116     00032341 ...            None           None"
+    },
+    {
+      "language": "python",
+      "code": "  get_trade_days(start_date=None, end_date='20180101', count=None)"
+    },
+    {
+      "language": "python",
+      "code": "    tdays_list = get_trade_days('20230101', '20230801')"
+    },
+    {
+      "language": "python",
+      "code": "    DatetimeIndex(['2023-01-03', '2023-01-04', '2023-01-05', '2023-01-06',\n                   '2023-01-09', '2023-01-10', '2023-01-11', '2023-01-12',\n                   '2023-01-13', '2023-01-16',\n                   ...\n                   '2023-07-19', '2023-07-20', '2023-07-21', '2023-07-24',\n                   '2023-07-25', '2023-07-26', '2023-07-27', '2023-07-28',\n                   '2023-07-31', '2023-08-01'],\n                  dtype='datetime64[ns]', length=140, freq=None)"
+    },
+    {
+      "language": "python",
+      "code": "  get_all_trade_days()"
+    },
+    {
+      "language": "python",
+      "code": "    tdays = get_all_trade_days()"
+    },
+    {
+      "language": "python",
+      "code": "    DatetimeIndex(['1990-12-19', '1990-12-20', '1990-12-21', '1990-12-24',\n                   '1990-12-25', '1990-12-26', '1990-12-27', '1990-12-28',\n                   '1990-12-31', '1991-01-02',\n                   ...\n                   '2028-12-18', '2028-12-19', '2028-12-20', '2028-12-21',\n                   '2028-12-22', '2028-12-25', '2028-12-26', '2028-12-27',\n                   '2028-12-28', '2028-12-29'],\n                  dtype='datetime64[ns]', length=9285, freq=None)"
+    },
+    {
+      "language": "python",
+      "code": "  get_sfactor_data(start_date, end_date, stocks, factor_names)"
+    },
+    {
+      "language": "python",
+      "code": "    start_date, end_date = '20230801', '20230805'\n    stocks, factor_names = ['600519.SH','300033.SZ'], ['macd']\n    result = get_sfactor_data(start_date, end_date, stocks, factor_names)"
+    },
+    {
+      "language": "python",
+      "code": "    {'macd':            2023-08-01  2023-08-02  2023-08-03  2023-08-04\n    600519.SH     32.4820     28.7126     24.1070     21.2735\n    300033.SZ      6.0546      5.8856      6.6241      6.9331}"
+    },
+    {
+      "language": "",
+      "code": "  query(*args, **kwargs)"
+    },
+    {
+      "language": "python",
+      "code": "    #取concept_classification表\n    q = query(concept_classification)"
+    },
+    {
+      "language": "python",
+      "code": "    #只取concept_classification表的symbol、date、concept三个字段\n    q = query(\n        concept_classification.symbol,#格式为：表名.字段\n        concept_classification.date,\n        concept_classification.concept\n    )"
+    },
+    {
+      "language": "python",
+      "code": "    #只取concept_classification表的symbol、date、concept三个字段，并只取同花顺2023年2月1日之后的数据\n    q = query(\n        concept_classification.symbol,#格式为：表名.字段\n        concept_classification.date,\n        concept_classification.concept\n    ).filter(\n        concept_classification.symbol=='300033.SZ',\n        concept_classification.date>'20230201'\n    )"
+    },
+    {
+      "language": "python",
+      "code": "    #只取concept_classification表的symbol、date、concept三个字段，并取同花顺、贵州茅台在2023年2月1日当天的数据\n    q = query(\n        concept_classification.symbol,#格式为：表名.字段\n        concept_classification.date,\n        concept_classification.concept\n    ).filter(\n        concept_classification.symbol.in_(['300033.SZ','600519.SH']),\n        concept_classification.date=='20230201'\n    )"
+    },
+    {
+      "language": "python",
+      "code": "    #只取concept_classification表的symbol、date、concept三个字段的前10行\n    q = query(\n        concept_classification.symbol,#格式为：表名.字段\n        concept_classification.date,\n        concept_classification.concept\n    ).limit(10)"
+    },
+    {
+      "language": "python",
+      "code": "    #只取concept_classification表的symbol、date、concept，并跟据date降序排列\n    q = query(\n        concept_classification.symbol,#格式为：表名.字段\n        concept_classification.date,\n        concept_classification.concept\n    ).order_by(\n        concept_classification.date.desc()\n    )"
+    },
+    {
+      "language": "",
+      "code": "  run_query(query_object)"
+    },
+    {
+      "language": "",
+      "code": "    data = run_query(query(concept_classification).limit(5))"
+    },
+    {
+      "language": "",
+      "code": "    concept_classification_symbol concept_classification_date\n    0                     000001.SZ                    20130221\n    1                     000001.SZ                    20130225\n    2                     000001.SZ                    20130227\n    3                     000001.SZ                    20130304\n    4                     000001.SZ                    20130306\n    \n    concept_classification_concept\n    0                           融资融券\n    1                           融资融券\n    2                     融资融券,转融券标的\n    3                     融资融券,转融券标的\n    4                     融资融券,转融券标的"
+    },
+    {
+      "language": "",
+      "code": "  get_fundamentals(query_object, date=None, statDate=None, latest=False)"
+    },
+    {
+      "language": "python",
+      "code": "    #查询2023年8月1日的总市值数据，并降序排列\n    data = get_fundamentals(\n    \tquery(\n    \t\tvaluation.symbol,\n    \t\tvaluation.market_cap\n    \t).order_by(\n    \t\tvaluation.market_cap.desc()\n    \t),\n    \tdate = '20230810'\n    )\n    print(data.head())"
+    },
+    {
+      "language": "python",
+      "code": "    valuation_symbol  valuation_market_cap\n    0        600519.SH          2.355371e+12\n    1        601398.SH          1.550490e+12\n    2        601857.SH          1.396562e+12\n    3        600941.SH          1.212461e+12\n    4        601288.SH          1.199709e+12"
+    },
+    {
+      "language": "python",
+      "code": "  query_iwencai(query, domain='股票', timeout=6, df=True)"
+    },
+    {
+      "language": "python",
+      "code": "    query_iwencai(\"市值>1000亿，日成交额>30亿，换手率大于4.5%\")"
+    },
+    {
+      "language": "python",
+      "code": "    股票代码     股票简称     总市值       成交额       换手率\n    0  301308.SZ  江波龙  1.517310e+12   4395865700.00   4.52\n    1  000988.SZ  华工科技  1.221896e+12   9411697100.00   7.85\n    2  688525.SH  佰维存储  1.156106e+12   5972511300.00   5.15"
+    },
+    {
+      "language": "python",
+      "code": "    query_iwencai(\"市值>1000亿，日成交额>30亿，换手率大于4.5%\", df=False)"
+    },
+    {
+      "language": "python",
+      "code": "    [{'股票代码': '301308.SZ', '股票简称': '江波龙','总市值': 123398012088.76, '成交额': '4346865700.00', '换手率: '4.52'}]"
+    },
+    {
+      "language": "python",
+      "code": "  get_iwencai(question, set_attr='iwencai_securities', version=None)"
+    },
+    {
+      "language": "python",
+      "code": "    def init(context):\n        # 选出非ST且市值大于100亿的股票\n        get_iwencai('非ST，市值大于100亿')\n    \n    def handle_bar(context, bar_dict):\n        # 打印前一日收盘后的选股结果\n        log.info(context.iwencai_securities)"
+    },
+    {
+      "language": "python",
+      "code": "    # 假设选出的股票如下\n    ['000001.SZ', '600519.SH']"
+    },
+    {
+      "language": "python",
+      "code": "    # 研究环境中使用get_iwencai\n    get_iwencai = get_open_api('public').get_iwencai\n    stk_pool = get_iwencai('净利润增长大于20%,股价位于20日均线上方','20230701','20230801',version='stable')"
+    },
+    {
+      "language": "python",
+      "code": "    {'20230710': ['301292.SZ', '300780.SZ', '301192.SZ', '301016.SZ', '301398.SZ'], '20230707': ['300817.SZ', '301192.SZ', '300657.SZ', '301488.SZ', '301141.SZ'], '20230706': ['301202.SZ', '920505.BJ', '300128.SZ', '300127.SZ', '301141.SZ'], '20230705': ['301488.SZ', '920533.BJ', '301007.SZ', '301255.SZ', '301221.SZ'], '20230704': ['920204.BJ', '300827.SZ', '300254.SZ', '300282.SZ', '688663.SH'], '20230703': ['688582.SH', '300769.SZ', '300503.SZ', '688609.SH', '300412.SZ'], '20230630': ['688429.SH', '920378.BJ', '920663.BJ', '920221.BJ', '300780.SZ']}"
+    },
+    {
+      "language": "python",
+      "code": "  OptimizePort(stock_return, trade_date, return_expect, opt_focus='UI', benchmark='000905.SH', loss_aversion=0.5, cost=0.003, period='d', holds=0, long_short='long-only')"
+    },
+    {
+      "language": "python",
+      "code": "opt.add_constraint(con_type, args=())"
+    },
+    {
+      "language": "python",
+      "code": "# 从中证500中随机选取50股票，模拟中证500走势，周频调仓\n# Stratified Sampling 方法优点：\n#1.当指数标的过多时，完全复制的资金量要求较高\n#2.指数标的中很多股票的成交量过小，交易成本较高，甚至无法完全复制中证500标的成分股权重\nimport random\ndef init(context):\n    # 设置基准收益：中证500指数\n    set_benchmark('000905.SH')\n    # 打印日志\n    log.info('策略开始运行,初始化函数全局只运行一次')\n    # 设置股票每笔交易的手续费为万分之二(手续费在买卖成交后扣除,不包括税费,税费在卖出成交后扣除)\n    set_commission(PerShare(type='stock',cost=0.0002))\n    # 设置股票交易滑点0.5%,表示买入价为实际价格乘1.005,卖出价为实际价格乘0.995\n    set_slippage(PriceSlippage(0.002))\n    # 设置日级最大成交比例25%,分钟级最大成交比例50%\n    # 日频运行时，下单数量超过当天真实成交量25%,则全部不成交\n    # 分钟频运行时，下单数量超过当前分钟真实成交量50%,则全部不成交\n    set_volume_limit(0.25,0.5)\n    # 从中证500中随机选取50股票\n    stocks=random.sample(list(get_index_stocks('000905.SH','2017-12-21')), 50)\n    #构建股票列表，形式为dict，以便后续使用组合优化器\n    context.security={ia:0 for ia in stocks} \n    #构建初始股票权重\n    context.hold={ia:0 for ia in stocks}\n    #股票权重限制\n    context.weight={ia :[0.0,100.0] for ia in stocks}\n    #周频调仓\n    run_weekly(func=optmize, date_rule=1, reference_security='000001.SZ')\n\ndef optmize(context, bar_dict):\n    time=get_datetime().strftime('%Y%m%d')\n    #构造组合优化器，优化目标设置为最大化效用，使用历史收益率作为预期收益率\n    opt=OptimizePort(context.security, '2017-12-21', True, opt_focus='UI', benchmark='000905.SH', period='w', holds=context.hold, long_short='long-only')\n    opt.add_constraint('stock_weight',context.weight)\n    #添加跟踪误差约束\n    opt.add_constraint('tracking_error',(-0.02,0.02))\n    # opt.add_constraint('industry','industry_neutralize')\n    #使用组合优化器进行求解\n    stock_weight = opt.optimized_weight()\n    #根据组合优化器结果进行权重调整\n    for ia in stock_weight.keys():\n        order_target_percent(ia, stock_weight[ia]/100)"
+    }
+  ]
+}

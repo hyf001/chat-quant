@@ -38,8 +38,6 @@ if ! grep -q '^DOMAIN=' "$APP_DIR/.env"; then
     echo "DOMAIN=${DOMAIN}" >> "$APP_DIR/.env"
 fi
 
-sed -i '/^CHATQ_API_CORS_ORIGINS=/d' "$APP_DIR/.env"
-
 info "Installing Python dependencies"
 if [[ ! -d "$VENV_DIR" ]]; then
     python3.12 -m venv "$VENV_DIR"
