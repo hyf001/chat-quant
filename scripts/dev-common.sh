@@ -20,6 +20,7 @@ WATCHFILES_FORCE_POLLING="${WATCHFILES_FORCE_POLLING:-true}"
 mkdir -p "$PID_DIR" "$LOG_DIR" "$UV_CACHE_DIR"
 export UV_CACHE_DIR
 export WATCHFILES_FORCE_POLLING
+export CHATQ_API_LOG_FILE="$LOG_DIR/web-api.log"
 
 is_running() {
   local pid_file="$1"

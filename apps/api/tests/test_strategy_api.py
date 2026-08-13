@@ -1,12 +1,13 @@
+import logging
+
 import pytest
-from app.core.logging import clear_log_entries
 from fastapi.testclient import TestClient
 
 pytestmark = pytest.mark.usefixtures("project_test")
 
 
-def test_create_strategy_returns_draft_first_version(client: TestClient) -> None:
-    clear_log_entries()
+def test_create_strategy_returns_draft_first_version(client: TestClient, caplog) -> None:
+    caplog.set_level(logging.INFO, logger="app.service.strategy.service")
 
     response = client.post(
         "/api/strategies",
@@ -18,13 +19,12 @@ def test_create_strategy_returns_draft_first_version(client: TestClient) -> None
     assert data["strategy_id"].startswith("str_")
     assert set(data) == {"strategy_id"}
 
-    logs = client.get("/api/logs?category=business&limit=10").json()["items"]
     assert any(
-        item["level"] == "INFO"
-        and item["logger"] == "app.service.strategy.service"
-        and item["message"] == "strategy created"
-        and item["strategy_id"] == data["strategy_id"]
-        for item in logs
+        record.levelname == "INFO"
+        and record.name == "app.service.strategy.service"
+        and record.message == "strategy created"
+        and record.strategy_id == data["strategy_id"]
+        for record in caplog.records
     )
 
 

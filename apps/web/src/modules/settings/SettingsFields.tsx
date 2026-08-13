@@ -1,4 +1,4 @@
-import { Check, Copy, X } from "lucide-react";
+import { Check, Copy, Save, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { emptyToNull, linesToList } from "./settingsUtils";
@@ -98,21 +98,40 @@ export function NumberField({
   label,
   value,
   onChange,
+  onCommit,
+  disabled = false,
 }: {
   label: string;
   value: number;
   onChange: (value: number) => void;
+  onCommit?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <label className="grid gap-1.5">
       <span className="text-xs font-semibold text-graphite">{label}</span>
-      <input
-        className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
-        min={0}
-        type="number"
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-      />
+      <span className="flex h-10 items-center rounded-md border border-line bg-panel focus-within:border-signal">
+        <input
+          className="min-h-0 min-w-0 flex-1 bg-transparent px-2.5 text-xs text-ink outline-none disabled:cursor-not-allowed disabled:text-muted"
+          min={0}
+          type="number"
+          value={value}
+          disabled={disabled}
+          onChange={(event) => onChange(Number(event.target.value))}
+        />
+        {onCommit ? (
+          <button
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-soft hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            title={`保存${label}`}
+            aria-label={`保存${label}`}
+            disabled={disabled}
+            onClick={onCommit}
+          >
+            <Save className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
+      </span>
     </label>
   );
 }
@@ -215,21 +234,26 @@ export function ChipListField({
   value,
   options,
   onChange,
+  disabled = false,
 }: {
   label: string;
   value: string[];
   options: string[];
   onChange: (value: string[]) => void;
+  disabled?: boolean;
 }) {
   const availableOptions = options.filter((option) => !value.includes(option));
   const [selectedOption, setSelectedOption] = useState("");
 
   const removeItem = (item: string) => {
+    if (disabled) {
+      return;
+    }
     onChange(value.filter((current) => current !== item));
   };
 
   const addSelectedOption = () => {
-    if (!selectedOption || value.includes(selectedOption)) {
+    if (disabled || !selectedOption || value.includes(selectedOption)) {
       return;
     }
     onChange([...value, selectedOption]);
@@ -252,6 +276,7 @@ export function ChipListField({
                 type="button"
                 aria-label={`移除 ${item}`}
                 title={`移除 ${item}`}
+                disabled={disabled}
                 onClick={() => removeItem(item)}
               >
                 <X className="h-3 w-3" />
@@ -266,7 +291,7 @@ export function ChipListField({
           <select
             className="h-9 min-w-0 flex-1 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal disabled:cursor-not-allowed disabled:bg-soft disabled:text-muted"
             value={selectedOption}
-            disabled={availableOptions.length === 0}
+            disabled={disabled || availableOptions.length === 0}
             onChange={(event) => setSelectedOption(event.target.value)}
           >
             <option value="">
@@ -281,7 +306,7 @@ export function ChipListField({
           <button
             className="inline-flex h-9 items-center rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-60"
             type="button"
-            disabled={!selectedOption}
+            disabled={disabled || !selectedOption}
             onClick={addSelectedOption}
           >
             添加

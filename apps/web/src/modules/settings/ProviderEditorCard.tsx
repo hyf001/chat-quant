@@ -1,14 +1,13 @@
 import { Check, Loader2, PlugZap, Save, Trash2, X } from "lucide-react";
 
 import type { ModelProvider } from "../../shared/api";
-import { ApiKeyField, StatusMessage, TextField, ToggleField } from "./SettingsFields";
+import { ApiKeyField, TextField, ToggleField } from "./SettingsFields";
 import { emptyToNull } from "./settingsUtils";
 import type { ProviderDraft, ProviderTestResult } from "./types";
 
 type ProviderEditorCardProps = {
   provider: ModelProvider | null;
   providerDraft: ProviderDraft;
-  providerMessage: string | null;
   isActive: boolean;
   isProviderSaving: boolean;
   isProviderTested: boolean;
@@ -26,7 +25,6 @@ type ProviderEditorCardProps = {
 export function ProviderEditorCard({
   provider,
   providerDraft,
-  providerMessage,
   isActive,
   isProviderSaving,
   isProviderTested,
@@ -103,7 +101,6 @@ export function ProviderEditorCard({
             checked={providerDraft.enabled}
             onChange={(enabled) => onProviderDraftChange({ ...providerDraft, enabled })}
           />
-          {providerMessage ? <StatusMessage message={providerMessage} /> : null}
           <div className="flex flex-wrap items-center justify-end gap-2 sm:col-span-2">
             {provider && !isActive ? (
               <button

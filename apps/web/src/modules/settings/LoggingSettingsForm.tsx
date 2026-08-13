@@ -6,6 +6,7 @@ import { FormSection, SelectField } from "./SettingsFields";
 
 type LoggingSettingsFormProps = {
   draft: AppSettings;
+  isLoggingSaving: boolean;
   onChange: (settings: AppSettings) => void;
   onLoggingChange: (logging: AppSettings["logging"]) => void;
 };
@@ -17,6 +18,7 @@ const logCategoryOptions: Array<{ label: string; value: LogCategory }> = [
 
 export function LoggingSettingsForm({
   draft,
+  isLoggingSaving,
   onChange,
   onLoggingChange,
 }: LoggingSettingsFormProps) {
@@ -49,6 +51,7 @@ export function LoggingSettingsForm({
         <SelectField
           label="级别"
           value={logging.level}
+          disabled={isLoggingSaving}
           options={["DEBUG", "INFO", "WARNING", "ERROR"]}
           onChange={(level) => {
             const nextLogging = {

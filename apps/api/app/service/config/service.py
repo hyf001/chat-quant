@@ -14,10 +14,12 @@ from app.core.config import (
     coerce_config_value,
     get_settings,
 )
+from app.core.logging import configure_logging
 from app.model.config import AppSettingRow, ModelProviderRow
 from app.schema.config import (
     AgentSettingsPayload,
     AgentThinkingSettingsPayload,
+    AppSettingsUpdatePayload,
     AppConfigResponse,
     AppSettingsPayload,
     BootstrapConfigResponse,
@@ -78,6 +80,7 @@ class AppConfigService:
 
         await self._db.commit()
         get_settings.cache_clear()
+        configure_logging(get_settings())
         return await self.get_config()
 
     async def _validate_agent_provider(self, provider_id: str) -> None:
@@ -153,19 +156,36 @@ def _payload_from_settings(settings: Settings) -> AppSettingsPayload:
     )
 
 
-def _flatten_payload(payload: AppSettingsPayload) -> dict[str, ConfigValue]:
-    return {
-        "environment": payload.system.environment,
-        "access_log_enabled": payload.system.access_log_enabled,
-        "access_log_slow_threshold_ms": payload.system.access_log_slow_threshold_ms,
-        "log_level": payload.logging.level,
-        "agent_provider_id": payload.agent.provider_id,
-        "agent_model": payload.agent.model,
-        "agent_max_turns": payload.agent.max_turns,
-        "agent_turn_timeout_seconds": payload.agent.turn_timeout_seconds,
-        "agent_first_token_timeout_seconds": payload.agent.first_token_timeout_seconds,
-        "agent_include_partial_messages": payload.agent.include_partial_messages,
-        "agent_thinking_type": payload.agent.thinking.type,
-        "agent_thinking_budget_tokens": payload.agent.thinking.budget_tokens,
-        "agent_available_tools": payload.agent.available_tools,
-    }
+def _flatten_payload(payload: AppSettingsUpdatePayload) -> dict[str, ConfigValue]:
+    values: dict[str, ConfigValue] = {}
+    if payload.system is not None:
+        if payload.system.environment is not None:
+            values["environment"] = payload.system.environment
+        if payload.system.access_log_enabled is not None:
+            values["access_log_enabled"] = payload.system.access_log_enabled
+        if payload.system.access_log_slow_threshold_ms is not None:
+            values["access_log_slow_threshold_ms"] = payload.system.access_log_slow_threshold_ms
+    if payload.logging is not None:
+        if payload.logging.level is not None:
+            values["log_level"] = payload.logging.level
+    if payload.agent is not None:
+        if payload.agent.provider_id is not None:
+            values["agent_provider_id"] = payload.agent.provider_id
+        if payload.agent.model is not None:
+            values["agent_model"] = payload.agent.model
+        if payload.agent.max_turns is not None:
+            values["agent_max_turns"] = payload.agent.max_turns
+        if payload.agent.turn_timeout_seconds is not None:
+            values["agent_turn_timeout_seconds"] = payload.agent.turn_timeout_seconds
+        if payload.agent.first_token_timeout_seconds is not None:
+            values["agent_first_token_timeout_seconds"] = payload.agent.first_token_timeout_seconds
+        if payload.agent.include_partial_messages is not None:
+            values["agent_include_partial_messages"] = payload.agent.include_partial_messages
+        if payload.agent.thinking is not None:
+            if payload.agent.thinking.type is not None:
+                values["agent_thinking_type"] = payload.agent.thinking.type
+            if payload.agent.thinking.budget_tokens is not None:
+                values["agent_thinking_budget_tokens"] = payload.agent.thinking.budget_tokens
+        if payload.agent.available_tools is not None:
+            values["agent_available_tools"] = payload.agent.available_tools
+    return values

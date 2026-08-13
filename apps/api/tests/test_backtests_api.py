@@ -1,9 +1,9 @@
+import logging
 from datetime import date
 from decimal import Decimal
 
 import pandas as pd
 import pytest
-from app.core.logging import clear_log_entries
 from app.schema.backtest import StrategyBacktestConfig
 from fastapi.testclient import TestClient
 from tests.test_strategy_api import strategy_create_payload, strategy_version_payload
@@ -91,9 +91,9 @@ def test_strategy_backtest_protocol_is_documented(client: TestClient) -> None:
     )
 
 
-def test_backtest_strategy_returns_backtest_result(client: TestClient) -> None:
+def test_backtest_strategy_returns_backtest_result(client: TestClient, caplog) -> None:
     created = create_strategy(client)
-    clear_log_entries()
+    caplog.set_level(logging.INFO, logger="app.service.backtest.service")
 
     response = client.post(
         f"/api/strategies/{created['strategy_id']}/backtest",
@@ -127,12 +127,11 @@ def test_backtest_strategy_returns_backtest_result(client: TestClient) -> None:
 
     detail = client.get(f"/api/backtests/{data['backtest']['id']}").json()
     assert detail["result"]["id"] == data["result"]["id"]
-    logs = client.get("/api/logs?category=business&limit=20").json()["items"]
     assert [
-        item["message"]
-        for item in logs
-        if item["logger"] == "app.service.backtest.service"
-        and item["backtest_id"] == data["backtest"]["id"]
+        record.message
+        for record in caplog.records
+        if record.name == "app.service.backtest.service"
+        and record.backtest_id == data["backtest"]["id"]
     ] == [
         "strategy backtest created",
         "strategy backtest started",

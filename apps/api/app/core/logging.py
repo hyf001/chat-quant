@@ -5,7 +5,6 @@ import logging
 import sys
 import time
 import traceback
-from collections import deque
 from contextvars import ContextVar
 from datetime import UTC, datetime
 from typing import Any
@@ -20,8 +19,6 @@ REQUEST_ID_HEADER = "X-Request-Id"
 _request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
 _MANAGED_HANDLER_ATTR = "_chatq_managed_handler"
 _RESERVED_LOG_RECORD_FIELDS = frozenset(logging.makeLogRecord({}).__dict__)
-_LOG_BUFFER_MAXLEN = 500
-_log_buffer: deque[dict[str, Any]] = deque(maxlen=_LOG_BUFFER_MAXLEN)
 LogCategory = str
 
 
@@ -47,10 +44,6 @@ def configure_logging(settings: Settings) -> None:
     handler.setFormatter(JsonLogFormatter())
 
     root_logger.addHandler(handler)
-    memory_handler = InMemoryLogHandler()
-    setattr(memory_handler, _MANAGED_HANDLER_ATTR, True)
-    memory_handler.addFilter(RequestIdFilter())
-    root_logger.addHandler(memory_handler)
     root_logger.setLevel(level)
 
     for logger_name in (
@@ -106,6 +99,7 @@ class JsonLogFormatter(logging.Formatter):
             "function": record.funcName,
             "line": record.lineno,
             "request_id": getattr(record, "request_id", "-"),
+            "category": _log_category(record),
         }
         payload.update(extra)
         if record.levelno >= logging.WARNING:
@@ -116,66 +110,6 @@ class JsonLogFormatter(logging.Formatter):
         if stack:
             payload["stack"] = stack
         return json.dumps(payload, ensure_ascii=False, default=str)
-
-
-class InMemoryLogHandler(logging.Handler):
-    _exception_formatter = logging.Formatter()
-
-    def emit(self, record: logging.LogRecord) -> None:
-        try:
-            payload: dict[str, Any] = {
-                "timestamp": datetime.now(UTC).isoformat(),
-                "level": record.levelname,
-                "logger": record.name,
-                "message": record.getMessage(),
-                "request_id": getattr(record, "request_id", "-"),
-                "category": _log_category(record),
-            }
-            extra = _record_extra(record)
-            if record.levelno >= logging.WARNING:
-                payload["error"] = _record_error(record, extra)
-            if "method" in extra:
-                payload["method"] = extra["method"]
-            if "path" in extra:
-                payload["path"] = extra["path"]
-            if "status_code" in extra:
-                payload["status_code"] = extra["status_code"]
-            if "duration_ms" in extra:
-                payload["duration_ms"] = extra["duration_ms"]
-            if "client_host" in extra:
-                payload["client_host"] = extra["client_host"]
-            if "error" in extra:
-                payload["error"] = extra["error"]
-            payload.update(
-                {
-                    key: _log_extra_value(value)
-                    for key, value in extra.items()
-                    if key not in payload
-                }
-            )
-            if record.exc_info:
-                payload["exception"] = self._exception_formatter.formatException(record.exc_info)
-            stack = _record_stack(self._exception_formatter, record)
-            if stack:
-                payload["stack"] = stack
-            _log_buffer.append(payload)
-        except Exception:
-            self.handleError(record)
-
-
-def recent_log_entries(
-    limit: int = 100,
-    category: LogCategory | None = None,
-) -> list[dict[str, Any]]:
-    bounded_limit = min(max(limit, 1), _LOG_BUFFER_MAXLEN)
-    entries = list(_log_buffer)
-    if category is not None:
-        entries = [entry for entry in entries if entry.get("category") == category]
-    return entries[-bounded_limit:]
-
-
-def clear_log_entries() -> None:
-    _log_buffer.clear()
 
 
 class RequestLoggingMiddleware:
@@ -227,22 +161,37 @@ class RequestLoggingMiddleware:
             raise
         else:
             duration_ms = _duration_ms(started_at)
-            if self.enabled and duration_ms >= self.slow_threshold_ms:
-                self.logger.warning(
-                    "slow request completed",
-                    extra={
-                        "method": str(scope.get("method") or ""),
-                        "path": str(scope.get("path") or ""),
-                        "status_code": status_code,
-                        "duration_ms": duration_ms,
-                        "client_host": _client_host(scope),
-                        "error": (
-                            f"request duration {duration_ms}ms exceeded "
-                            f"{self.slow_threshold_ms}ms threshold"
-                        ),
-                    },
-                    stack_info=True,
-                )
+            if self.enabled:
+                request_extra = {
+                    "method": str(scope.get("method") or ""),
+                    "path": str(scope.get("path") or ""),
+                    "status_code": status_code,
+                    "duration_ms": duration_ms,
+                    "client_host": _client_host(scope),
+                }
+                if status_code >= 400:
+                    self.logger.warning(
+                        "request completed with error status",
+                        extra={
+                            **request_extra,
+                            "error": f"request returned HTTP {status_code}",
+                        },
+                        stack_info=True,
+                    )
+                elif duration_ms >= self.slow_threshold_ms:
+                    self.logger.warning(
+                        "slow request completed",
+                        extra={
+                            **request_extra,
+                            "error": (
+                                f"request duration {duration_ms}ms exceeded "
+                                f"{self.slow_threshold_ms}ms threshold"
+                            ),
+                        },
+                        stack_info=True,
+                    )
+                else:
+                    self.logger.info("request completed", extra=request_extra)
         finally:
             _request_id.reset(token)
 

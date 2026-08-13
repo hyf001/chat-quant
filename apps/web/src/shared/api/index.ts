@@ -38,6 +38,7 @@ export type {
   AgentSettings,
   AppConfig,
   AppSettings,
+  AppSettingsUpdate,
   BootstrapConfig,
   ConfigFieldDefinition,
   ExecutionResult,

@@ -1,3 +1,5 @@
+import logging
+
 from app.core.config import get_settings
 from app.main import create_app
 from fastapi.testclient import TestClient
@@ -58,6 +60,26 @@ def test_config_api_updates_sqlite_backed_settings(client: TestClient) -> None:
     assert updated["agent"]["available_tools"] == ["Bash", "Read"]
     assert get_settings().agent_model == "claude-test-model"
     assert get_settings().agent_available_tools == ["Bash", "Read"]
+
+
+def test_config_api_updates_single_setting_without_touching_other_groups(client: TestClient) -> None:
+    response = client.put("/api/config", json={"settings": {"agent": {"max_turns": 7}}})
+
+    assert response.status_code == 200
+    updated = response.json()["settings"]
+    assert updated["agent"]["max_turns"] == 7
+    assert updated["logging"]["level"] == "INFO"
+    assert get_settings().agent_max_turns == 7
+    assert get_settings().log_level == "INFO"
+
+
+def test_config_api_applies_logging_level_immediately(client: TestClient) -> None:
+    response = client.put("/api/config", json={"settings": {"logging": {"level": "ERROR"}}})
+
+    assert response.status_code == 200
+    assert response.json()["settings"]["logging"]["level"] == "ERROR"
+    assert logging.getLogger().level == logging.ERROR
+    assert logging.getLogger("app").level == logging.ERROR
 
 
 def test_config_api_rejects_unknown_agent_provider(client: TestClient) -> None:

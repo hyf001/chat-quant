@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from datetime import UTC, datetime
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -24,6 +25,8 @@ from app.schema.model_provider import (
     ProviderModelListResponse,
     ProviderModelResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ModelProviderService:
@@ -107,7 +110,7 @@ class ModelProviderService:
             )
         return ProviderModelListResponse(
             provider_id=row.id,
-            models=await _require_models_from_row(row),
+            models=await _require_models_from_row(row, operation="list_models"),
         )
 
     async def test_provider(self, provider_id: str) -> ProviderConnectionTestResponse:
@@ -117,6 +120,7 @@ class ModelProviderService:
         try:
             models = await _fetch_models_from_row(row)
         except ProviderModelFetchError as exc:
+            _log_model_fetch_failure(row, exc, operation="test_provider")
             return ProviderConnectionTestResponse(ok=False, message=str(exc))
         return ProviderConnectionTestResponse(
             ok=True,
@@ -190,10 +194,15 @@ async def _fetch_models_from_row(row: ModelProviderRow) -> list[ProviderModelRes
     )
 
 
-async def _require_models_from_row(row: ModelProviderRow) -> list[ProviderModelResponse]:
+async def _require_models_from_row(
+    row: ModelProviderRow,
+    *,
+    operation: str,
+) -> list[ProviderModelResponse]:
     try:
         return await _fetch_models_from_row(row)
     except ProviderModelFetchError as exc:
+        _log_model_fetch_failure(row, exc, operation=operation)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
@@ -317,3 +326,22 @@ def _models_from_payload(payload: Any) -> list[ProviderModelResponse]:
             )
         )
     return models
+
+
+def _log_model_fetch_failure(
+    row: ModelProviderRow,
+    exc: ProviderModelFetchError,
+    *,
+    operation: str,
+) -> None:
+    logger.warning(
+        "model provider model list fetch failed",
+        extra={
+            "provider_id": row.id,
+            "provider_name": row.name,
+            "base_url": row.base_url,
+            "operation": operation,
+            "error": str(exc),
+        },
+        stack_info=True,
+    )

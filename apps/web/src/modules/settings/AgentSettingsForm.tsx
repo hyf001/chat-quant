@@ -6,25 +6,27 @@ import {
   FormSection,
   NumberField,
   SelectField,
-  StatusMessage,
   ToggleField,
 } from "./SettingsFields";
 import { ProviderEditorCard } from "./ProviderEditorCard";
 import { providerSignature } from "./settingsUtils";
 import type { ProviderDraft, ProviderTestResult } from "./types";
 
+type AgentFieldPatch = Partial<Omit<AppSettings["agent"], "thinking">> & {
+  thinking?: Partial<AppSettings["agent"]["thinking"]>;
+};
+
 type AgentSettingsFormProps = {
   draft: AppSettings;
   providers: ModelProvider[];
   models: ProviderModel[];
-  modelMessage: string | null;
   providerDraft: ProviderDraft;
-  providerMessage: string | null;
   availableToolOptions: string[];
   isProviderSaving: boolean;
   testedProviderSignature: string | null;
   providerTestResult: ProviderTestResult | null;
   onChange: (settings: AppSettings) => void;
+  onSaveAgentField: (patch: AgentFieldPatch, message: string) => void;
   onCreateProvider: () => void;
   onDeleteProvider: (provider: ModelProvider) => void;
   onProviderDraftChange: (provider: ProviderDraft) => void;
@@ -39,14 +41,13 @@ export function AgentSettingsForm({
   draft,
   providers,
   models,
-  modelMessage,
   providerDraft,
-  providerMessage,
   availableToolOptions,
   isProviderSaving,
   testedProviderSignature,
   providerTestResult,
   onChange,
+  onSaveAgentField,
   onCreateProvider,
   onDeleteProvider,
   onProviderDraftChange,
@@ -60,6 +61,21 @@ export function AgentSettingsForm({
   const enabledProviders = providers.filter((provider) => provider.enabled);
   const isProviderTested = testedProviderSignature === providerSignature(providerDraft);
 
+  const updateAgent = (patch: AgentFieldPatch) =>
+    onChange({
+      ...draft,
+      agent: {
+        ...agent,
+        ...patch,
+        thinking: patch.thinking ? { ...agent.thinking, ...patch.thinking } : agent.thinking,
+      },
+    });
+
+  const updateAndSaveAgent = (patch: AgentFieldPatch, message: string) => {
+    updateAgent(patch);
+    onSaveAgentField(patch, message);
+  };
+
   return (
     <div className="grid gap-5">
       <FormSection title="Agent 模型">
@@ -67,7 +83,7 @@ export function AgentSettingsForm({
           label="Provider"
           value={agent.provider_id}
           options={enabledProviders.map((provider) => ({ label: provider.name, value: provider.id }))}
-          onChange={(provider_id) => onChange({ ...draft, agent: { ...agent, provider_id } })}
+          onChange={(provider_id) => updateAndSaveAgent({ provider_id }, "Provider 选择已保存")}
         />
         <SelectField
           label="模型"
@@ -75,9 +91,8 @@ export function AgentSettingsForm({
           disabled={models.length === 0}
           options={models.map((model) => ({ label: model.name, value: model.id }))}
           placeholder={models.length === 0 ? agent.model || "先测试 Provider 获取模型" : undefined}
-          onChange={(model) => onChange({ ...draft, agent: { ...agent, model } })}
+          onChange={(model) => updateAndSaveAgent({ model }, "模型已保存")}
         />
-        {modelMessage ? <StatusMessage message={modelMessage} /> : null}
       </FormSection>
 
       <div className="grid gap-3 border-t border-line pt-4">
@@ -98,7 +113,6 @@ export function AgentSettingsForm({
             <ProviderEditorCard
               provider={null}
               providerDraft={providerDraft}
-              providerMessage={providerMessage}
               isActive={false}
               isProviderSaving={isProviderSaving}
               isProviderTested={isProviderTested}
@@ -111,7 +125,7 @@ export function AgentSettingsForm({
               onCloseProviderTestResult={onCloseProviderTestResult}
               testResult={providerTestResult}
               onUseProvider={(provider) =>
-                onChange({ ...draft, agent: { ...agent, provider_id: provider.id } })
+                updateAndSaveAgent({ provider_id: provider.id }, "Provider 选择已保存")
               }
             />
           ) : null}
@@ -123,7 +137,6 @@ export function AgentSettingsForm({
               key={provider.id}
               provider={provider}
               providerDraft={providerDraft}
-              providerMessage={providerDraft.id === provider.id ? providerMessage : null}
               onDeleteProvider={onDeleteProvider}
               onProviderDraftChange={onProviderDraftChange}
               onSaveProvider={onSaveProvider}
@@ -133,7 +146,7 @@ export function AgentSettingsForm({
               onCloseProviderTestResult={onCloseProviderTestResult}
               testResult={providerDraft.id === provider.id ? providerTestResult : null}
               onUseProvider={(provider) =>
-                onChange({ ...draft, agent: { ...agent, provider_id: provider.id } })
+                updateAndSaveAgent({ provider_id: provider.id }, "Provider 选择已保存")
               }
             />
           ))}
@@ -144,20 +157,29 @@ export function AgentSettingsForm({
         <NumberField
           label="最大轮数"
           value={agent.max_turns}
-          onChange={(max_turns) => onChange({ ...draft, agent: { ...agent, max_turns } })}
+          onChange={(max_turns) => updateAgent({ max_turns })}
+          onCommit={() => onSaveAgentField({ max_turns: agent.max_turns }, "最大轮数已保存")}
         />
         <NumberField
           label="执行超时 秒"
           value={agent.turn_timeout_seconds}
-          onChange={(turn_timeout_seconds) =>
-            onChange({ ...draft, agent: { ...agent, turn_timeout_seconds } })
+          onChange={(turn_timeout_seconds) => updateAgent({ turn_timeout_seconds })}
+          onCommit={() =>
+            onSaveAgentField(
+              { turn_timeout_seconds: agent.turn_timeout_seconds },
+              "执行超时已保存",
+            )
           }
         />
         <NumberField
           label="首包超时 秒"
           value={agent.first_token_timeout_seconds}
-          onChange={(first_token_timeout_seconds) =>
-            onChange({ ...draft, agent: { ...agent, first_token_timeout_seconds } })
+          onChange={(first_token_timeout_seconds) => updateAgent({ first_token_timeout_seconds })}
+          onCommit={() =>
+            onSaveAgentField(
+              { first_token_timeout_seconds: agent.first_token_timeout_seconds },
+              "首包超时已保存",
+            )
           }
         />
         <SelectField
@@ -165,29 +187,25 @@ export function AgentSettingsForm({
           value={agent.thinking.type}
           options={["disabled", "adaptive", "enabled"]}
           onChange={(type) =>
-            onChange({
-              ...draft,
-              agent: {
-                ...agent,
+            updateAndSaveAgent(
+              {
                 thinking: {
-                  ...agent.thinking,
                   type: type as AppSettings["agent"]["thinking"]["type"],
                 },
               },
-            })
+              "思考模式已保存",
+            )
           }
         />
         <NumberField
           label="思考预算"
           value={agent.thinking.budget_tokens}
-          onChange={(budget_tokens) =>
-            onChange({
-              ...draft,
-              agent: {
-                ...agent,
-                thinking: { ...agent.thinking, budget_tokens },
-              },
-            })
+          onChange={(budget_tokens) => updateAgent({ thinking: { budget_tokens } })}
+          onCommit={() =>
+            onSaveAgentField(
+              { thinking: { budget_tokens: agent.thinking.budget_tokens } },
+              "思考预算已保存",
+            )
           }
         />
         <ToggleField
@@ -195,7 +213,7 @@ export function AgentSettingsForm({
           description="保存模型流式输出中的中间片段，便于排查运行过程。"
           checked={agent.include_partial_messages}
           onChange={(include_partial_messages) =>
-            onChange({ ...draft, agent: { ...agent, include_partial_messages } })
+            updateAndSaveAgent({ include_partial_messages }, "保留增量消息已保存")
           }
         />
         <ChipListField
@@ -203,7 +221,7 @@ export function AgentSettingsForm({
           value={agent.available_tools}
           options={availableToolOptions}
           onChange={(available_tools) =>
-            onChange({ ...draft, agent: { ...agent, available_tools } })
+            updateAndSaveAgent({ available_tools }, "可用工具已保存")
           }
         />
       </FormSection>

@@ -2,11 +2,10 @@ import {
   ArrowLeft,
   Loader2,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AgentSettingsForm } from "../modules/settings/AgentSettingsForm";
 import { LoggingSettingsForm } from "../modules/settings/LoggingSettingsForm";
-import { StatusMessage } from "../modules/settings/SettingsFields";
 import { SystemSettingsForm } from "../modules/settings/SystemSettingsForm";
 import {
   blankProviderDraft,
@@ -26,6 +25,7 @@ import {
   updateModelProvider,
   type AppConfig,
   type AppSettings,
+  type AppSettingsUpdate,
   type ModelProvider,
   type ModelProviderPayload,
   type ProviderModel,
@@ -33,6 +33,11 @@ import {
 
 type AppSettingsPageProps = {
   onBack: () => void;
+};
+
+type ToastState = {
+  message: string;
+  tone: "success" | "error" | "info";
 };
 
 const tabs: Array<{ id: SettingsTab; label: string }> = [
@@ -49,42 +54,55 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
   const [models, setModels] = useState<ProviderModel[]>([]);
   const [providerDraft, setProviderDraft] = useState<ProviderDraft>(blankProviderDraft);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isLoggingSaving, setIsLoggingSaving] = useState(false);
   const [isProviderSaving, setIsProviderSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [modelMessage, setModelMessage] = useState<string | null>(null);
-  const [providerMessage, setProviderMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
   const [testedProviderSignature, setTestedProviderSignature] = useState<string | null>(null);
   const [providerTestResult, setProviderTestResult] = useState<ProviderTestResult | null>(null);
+  const modelRequestSeqRef = useRef(0);
+
+  const showToast = useCallback((message: string, tone: ToastState["tone"] = "info") => {
+    setToast({ message, tone });
+  }, []);
 
   const loadProviderModels = useCallback(async (providerId: string) => {
+    const requestSeq = modelRequestSeqRef.current + 1;
+    modelRequestSeqRef.current = requestSeq;
     try {
       const response = await listProviderModels(providerId);
-      setModels(response.models);
-      setModelMessage(null);
-      return response.models;
+      const isCurrent = requestSeq === modelRequestSeqRef.current;
+      if (isCurrent) {
+        setModels(response.models);
+      }
+      return { models: response.models, isCurrent };
     } catch (caught) {
-      setModels([]);
-      setModelMessage(
-        `模型列表加载失败：${caught instanceof Error ? caught.message : "Provider 不可用"}`,
-      );
-      return [];
+      const isCurrent = requestSeq === modelRequestSeqRef.current;
+      if (isCurrent) {
+        setModels([]);
+        showToast(
+          `模型列表加载失败：${caught instanceof Error ? caught.message : "Provider 不可用"}`,
+          "error",
+        );
+      }
+      return { models: [], isCurrent };
     }
-  }, []);
+  }, [showToast]);
 
   const loadSettings = useCallback(async (selectedProviderId?: string | null) => {
     setIsLoading(true);
-    setMessage(null);
-    setProviderMessage(null);
-    setModelMessage(null);
+    setToast(null);
     try {
       const [nextConfig, providerResponse] = await Promise.all([
         getAppConfig(),
         listModelProviders(),
       ]);
       const providerId = nextConfig.settings.agent.provider_id;
-      const nextModels = providerId ? await loadProviderModels(providerId) : [];
+      const modelLoadResult = providerId
+        ? await loadProviderModels(providerId)
+        : { models: [], isCurrent: true };
+      const nextModels = modelLoadResult.models;
       const nextSettings =
+        modelLoadResult.isCurrent &&
         nextModels.length > 0 &&
         !nextModels.some((model) => model.id === nextConfig.settings.agent.model)
           ? {
@@ -102,12 +120,18 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
       setConfig(nextConfig);
       setDraft(nextSettings);
       setProviders(providerResponse.providers);
-      setModels(nextModels);
+      if (!providerId) {
+        setModels([]);
+      }
       setProviderDraft(selectedProvider ? providerToDraft(selectedProvider) : blankProviderDraft);
       setTestedProviderSignature(null);
-      return { config: nextConfig, providers: providerResponse.providers, models: nextModels };
+      return {
+        config: nextConfig,
+        providers: providerResponse.providers,
+        models: modelLoadResult.isCurrent ? nextModels : [],
+      };
     } catch (caught) {
-      setMessage(caught instanceof Error ? caught.message : "设置加载失败");
+      showToast(caught instanceof Error ? caught.message : "设置加载失败", "error");
       return null;
     } finally {
       setIsLoading(false);
@@ -119,14 +143,26 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
   }, [loadSettings]);
 
   useEffect(() => {
-    const providerId = draft?.agent.provider_id;
-    if (!providerId) {
-      setModels([]);
-      setModelMessage(null);
+    if (!toast) {
       return;
     }
+    const timeoutId = window.setTimeout(() => setToast(null), 2500);
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
+
+  useEffect(() => {
+    const providerId = draft?.agent.provider_id;
+    if (!providerId) {
+      modelRequestSeqRef.current += 1;
+      setModels([]);
+      return;
+    }
+    setModels([]);
     loadProviderModels(providerId)
-      .then((nextModels) => {
+      .then(({ models: nextModels, isCurrent }) => {
+        if (!isCurrent) {
+          return;
+        }
         setDraft((current) => {
           if (!current || current.agent.provider_id !== providerId) {
             return current;
@@ -145,27 +181,57 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
       });
   }, [draft?.agent.provider_id, loadProviderModels]);
 
-  const handleSaveLogging = async (logging: AppSettings["logging"]) => {
-    setIsSaving(true);
-    setMessage(null);
+  const saveSettingsPatch = async (patch: AppSettingsUpdate, successMessage: string) => {
+    const nextConfig = await updateAppConfig(patch);
+    setConfig(nextConfig);
+    setDraft((current) => {
+      if (!current) {
+        return nextConfig.settings;
+      }
+      return {
+        ...current,
+        system: patch.system ? nextConfig.settings.system : current.system,
+        logging: patch.logging ? nextConfig.settings.logging : current.logging,
+        agent: patch.agent
+          ? {
+              ...current.agent,
+              ...patch.agent,
+              thinking: patch.agent.thinking
+                ? {
+                    ...current.agent.thinking,
+                    ...patch.agent.thinking,
+                  }
+                : current.agent.thinking,
+            }
+          : current.agent,
+      };
+    });
+    showToast(successMessage, "success");
+    return nextConfig;
+  };
+
+  const saveSettingsField = async (patch: AppSettingsUpdate, successMessage: string) => {
     try {
-      const currentConfig = await getAppConfig();
-      const nextConfig = await updateAppConfig({
-        ...currentConfig.settings,
-        logging,
-      });
-      await loadSettings(nextConfig.settings.agent.provider_id);
-      setMessage("日志级别切换成功");
+      await saveSettingsPatch(patch, successMessage);
     } catch (caught) {
-      setMessage(caught instanceof Error ? caught.message : "日志设置保存失败");
+      showToast(caught instanceof Error ? caught.message : "设置保存失败", "error");
+    }
+  };
+
+  const handleSaveLogging = async (logging: AppSettings["logging"]) => {
+    setIsLoggingSaving(true);
+    try {
+      await saveSettingsPatch({ logging: { level: logging.level } }, "日志级别已保存");
+    } catch (caught) {
+      showToast(caught instanceof Error ? caught.message : "日志设置保存失败", "error");
     } finally {
-      setIsSaving(false);
+      setIsLoggingSaving(false);
     }
   };
 
   const updateProviderDraft = (nextDraft: ProviderDraft) => {
     setProviderDraft(nextDraft);
-    setProviderMessage(null);
+    setToast(null);
     setProviderTestResult(null);
     setTestedProviderSignature(null);
   };
@@ -181,23 +247,21 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
     if (!provider.has_api_key) {
       return;
     }
-    setProviderMessage(null);
     try {
       const response = await getModelProviderApiKey(provider.id);
       if (!response.api_key) {
-        setProviderMessage("API Key 为空");
+        showToast("API Key 为空", "info");
         return;
       }
       await navigator.clipboard.writeText(response.api_key);
-      setProviderMessage("API Key 已复制");
+      showToast("API Key 已复制", "success");
     } catch (caught) {
-      setProviderMessage(caught instanceof Error ? caught.message : "API Key 复制失败");
+      showToast(caught instanceof Error ? caught.message : "API Key 复制失败", "error");
     }
   };
 
   const handleTestProviderDraft = async () => {
     setIsProviderSaving(true);
-    setProviderMessage(null);
     try {
       const response = await testModelProviderPayload(providerPayload(), providerDraft.id);
       setProviderTestResult({
@@ -234,11 +298,10 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
 
   const handleSaveProvider = async () => {
     if (testedProviderSignature !== providerSignature(providerDraft)) {
-      setProviderMessage("请先测试 Provider");
+      showToast("请先测试 Provider", "info");
       return;
     }
     setIsProviderSaving(true);
-    setProviderMessage(null);
     try {
       const payload = providerPayload();
       const savedProvider = providerDraft.id
@@ -259,7 +322,6 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
           ? currentConfig.settings.agent.model
           : modelResponse.models[0]?.id ?? "";
         await updateAppConfig({
-          ...currentConfig.settings,
           agent: {
             ...currentConfig.settings.agent,
             provider_id: savedProvider.id,
@@ -268,9 +330,9 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
         });
       }
       await loadSettings(savedProvider.id);
-      setProviderMessage("Provider 已保存");
+      showToast("Provider 已保存", "success");
     } catch (caught) {
-      setProviderMessage(caught instanceof Error ? caught.message : "Provider 保存失败");
+      showToast(caught instanceof Error ? caught.message : "Provider 保存失败", "error");
     } finally {
       setIsProviderSaving(false);
     }
@@ -280,13 +342,12 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
     if (!window.confirm(`删除 Provider ${provider.name}？`)) {
       return;
     }
-    setProviderMessage(null);
     try {
       await deleteModelProvider(provider.id);
       await loadSettings();
-      setProviderMessage("Provider 已删除");
+      showToast("Provider 已删除", "success");
     } catch (caught) {
-      setProviderMessage(caught instanceof Error ? caught.message : "Provider 删除失败");
+      showToast(caught instanceof Error ? caught.message : "Provider 删除失败", "error");
     }
   };
 
@@ -312,7 +373,6 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
             </p>
           </div>
         </div>
-        {message ? <StatusMessage message={message} /> : null}
       </header>
 
       <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
@@ -354,13 +414,14 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
                 <AgentSettingsForm
                   draft={draft}
                   models={models}
-                  modelMessage={modelMessage}
                   providerDraft={providerDraft}
-                  providerMessage={providerMessage}
                   providers={providers}
                   availableToolOptions={availableToolOptions}
                   isProviderSaving={isProviderSaving}
                   onChange={setDraft}
+                  onSaveAgentField={(patch, saveMessage) =>
+                    void saveSettingsField({ agent: patch }, saveMessage)
+                  }
                   onCreateProvider={() => updateProviderDraft(blankProviderDraft)}
                   onDeleteProvider={handleDeleteProvider}
                   onProviderDraftChange={updateProviderDraft}
@@ -374,11 +435,18 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
                 />
               ) : null}
               {activeTab === "system" ? (
-                <SystemSettingsForm draft={draft} onChange={setDraft} />
+                <SystemSettingsForm
+                  draft={draft}
+                  onChange={setDraft}
+                  onSaveSystemField={(patch, saveMessage) =>
+                    void saveSettingsField({ system: patch }, saveMessage)
+                  }
+                />
               ) : null}
               {activeTab === "logging" ? (
                 <LoggingSettingsForm
                   draft={draft}
+                  isLoggingSaving={isLoggingSaving}
                   onChange={setDraft}
                   onLoggingChange={(logging) => void handleSaveLogging(logging)}
                 />
@@ -386,15 +454,32 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
             </div>
           ) : null}
 
-          {!isLoading && !draft && message ? (
-            <StatusMessage message={message} />
-          ) : null}
-
           <div className="pb-4 text-xs leading-5 text-muted">
             配置保存在 SQLite；配置文件只负责定位数据库。
           </div>
         </div>
       </div>
+
+      {toast ? <SettingsToast toast={toast} /> : null}
     </section>
+  );
+}
+
+function SettingsToast({ toast }: { toast: ToastState }) {
+  const toneClass =
+    toast.tone === "success"
+      ? "border-brand/25 bg-gainSoft text-brand"
+      : toast.tone === "error"
+        ? "border-risk/25 bg-riskSoft text-risk"
+        : "border-line bg-panel text-muted";
+
+  return (
+    <div
+      className={`fixed right-4 top-4 z-50 max-w-sm rounded-md border px-3 py-2 text-xs shadow-xl ${toneClass}`}
+      role="status"
+      aria-live="polite"
+    >
+      {toast.message}
+    </div>
   );
 }

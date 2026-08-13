@@ -164,6 +164,14 @@ export type AppSettings = {
   agent: AgentSettings;
 };
 
+export type AppSettingsUpdate = {
+  system?: Partial<SystemSettings>;
+  logging?: Partial<LoggingSettings>;
+  agent?: Partial<Omit<AgentSettings, "thinking">> & {
+    thinking?: Partial<AgentSettings["thinking"]>;
+  };
+};
+
 export type ConfigFieldDefinition = {
   namespace: string;
   key: string;
@@ -263,7 +271,7 @@ export async function listSystemLogs(
   return requestJson<LogListResponse>(`/api/logs?${searchParams.toString()}`);
 }
 
-export async function updateAppConfig(settings: AppSettings): Promise<AppConfig> {
+export async function updateAppConfig(settings: AppSettingsUpdate): Promise<AppConfig> {
   return requestJson<AppConfig>("/api/config", {
     method: "PUT",
     body: { settings },

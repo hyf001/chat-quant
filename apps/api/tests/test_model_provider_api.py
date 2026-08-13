@@ -2,7 +2,7 @@ from app.core.config import get_settings
 from app.schema.model_provider import ProviderModelResponse
 from app.service import model_provider as model_provider_service
 from fastapi.testclient import TestClient
-from pytest import MonkeyPatch
+from pytest import LogCaptureFixture, MonkeyPatch
 
 
 def test_model_provider_api_lists_default_provider_and_models(
@@ -103,6 +103,35 @@ def test_model_provider_save_requires_model_endpoint(
     )
 
     assert response.status_code == 502
+
+
+def test_model_provider_model_fetch_failure_is_logged(
+    client: TestClient,
+    monkeypatch: MonkeyPatch,
+    caplog: LogCaptureFixture,
+) -> None:
+    def failing_fetch_models(*, base_url: str | None, api_key: str | None) -> list[object]:
+        del base_url, api_key
+        raise model_provider_service.ProviderModelFetchError("model endpoint timed out")
+
+    monkeypatch.setattr(
+        model_provider_service,
+        "fetch_anthropic_models",
+        failing_fetch_models,
+    )
+
+    with caplog.at_level("WARNING", logger="app.service.model_provider"):
+        response = client.get("/api/model-providers/provider_anthropic_default/models")
+
+    assert response.status_code == 502
+    record = next(
+        item
+        for item in caplog.records
+        if item.message == "model provider model list fetch failed"
+    )
+    assert record.provider_id == "provider_anthropic_default"
+    assert record.operation == "list_models"
+    assert record.error == "model endpoint timed out"
 
 
 def test_anthropic_provider_model_fetch_falls_back_for_deepseek_anthropic_base_url(

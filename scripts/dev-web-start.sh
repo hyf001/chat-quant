@@ -12,7 +12,7 @@ start_service \
   "$LOG_DIR/web-api.log" \
   "http://$API_HOST:$API_PORT/api/health" \
   60 \
-  uv run --project apps/api uvicorn app.main:app --reload --reload-dir apps/api/app --app-dir apps/api --host "$API_HOST" --port "$API_PORT"
+  uv run --project apps/api uvicorn app.main:app --reload --reload-dir apps/api/app --app-dir apps/api --host "$API_HOST" --port "$API_PORT" --no-access-log
 
 start_service \
   "web" \
