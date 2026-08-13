@@ -87,6 +87,13 @@ async def test_stock_a_daily_price_schema_contract() -> None:
         "name",
         "open",
     ]
+    result_field_names = [field.name for field in schema.result_schema]
+    assert "uid" not in result_field_names
+    assert "query_id" not in result_field_names
+    fields_param = next(param for param in schema.query_params if param.name == "fields")
+    field_options = [option.value for option in fields_param.options]
+    assert "uid" not in field_options
+    assert "query_id" not in field_options
 
 
 async def test_stock_a_daily_price_query_uses_remote_runner_and_returns_dataframe() -> None:
@@ -223,6 +230,8 @@ def test_normalize_stock_a_daily_price_maps_query_1014_columns_to_standard_colum
             "change": -0.3,
         },
     ]
+    assert "uid" not in frame.columns
+    assert "query_id" not in frame.columns
 
 
 async def test_stock_a_daily_price_sync_writes_daily_partitions_with_storage_protocol() -> None:

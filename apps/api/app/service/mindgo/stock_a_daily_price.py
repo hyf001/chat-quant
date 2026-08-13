@@ -59,8 +59,6 @@ STOCK_A_DAILY_PRICE_FIELDS = [
     ("turnover_rate", "换手", "number"),
     ("amplitude", "振幅", "number"),
     ("change", "涨跌", "number"),
-    ("uid", "UID", "string"),
-    ("query_id", "查询 ID", "string"),
 ]
 DEFAULT_QUERY_FIELDS = [name for name, _, _ in STOCK_A_DAILY_PRICE_FIELDS]
 RAW_TO_STANDARD_FIELD = {
@@ -216,7 +214,7 @@ def stock_a_daily_price_schema() -> MindgoDatasetSchema:
                     name=name,
                     label=label,
                     value_type=value_type,
-                    required=name in {"symbol", "trade_date", "query_id", "uid"},
+                    required=name in {"symbol", "trade_date"},
                 )
                 for name, label, value_type in STOCK_A_DAILY_PRICE_FIELDS
             ],
@@ -496,10 +494,6 @@ def _normalize_row(row: dict[str, Any]) -> dict[str, Any]:
     }
     if "trade_date" in normalized:
         normalized["trade_date"] = _date_text(normalized["trade_date"])
-    if "query_id" in normalized and normalized["query_id"] is not None:
-        normalized["query_id"] = str(normalized["query_id"])
-    if "uid" in normalized and normalized["uid"] is not None:
-        normalized["uid"] = str(normalized["uid"])
     if "symbol" in normalized and normalized["symbol"] is not None:
         normalized["symbol"] = str(normalized["symbol"])
     if "name" in normalized and normalized["name"] is not None:

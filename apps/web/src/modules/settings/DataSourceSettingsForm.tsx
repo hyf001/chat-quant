@@ -2,11 +2,9 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Database,
   Download,
   Loader2,
   Play,
-  RefreshCw,
   Save,
   Settings,
   Server,
@@ -297,16 +295,6 @@ export function DataSourceSettingsForm({
                 <span className="text-[11px] leading-4 text-muted">
                   {dataset.category_path.join(" / ")}
                 </span>
-                <span className="flex flex-wrap gap-1 pt-1">
-                  {dataset.actions.map((action) => (
-                    <span
-                      className="rounded border border-line bg-soft px-1.5 py-0.5 font-mono text-[10px] text-muted"
-                      key={action}
-                    >
-                      {action}
-                    </span>
-                  ))}
-                </span>
               </button>
             ))}
           </div>
@@ -323,15 +311,6 @@ export function DataSourceSettingsForm({
                   {selectedDataset?.description ?? "选择一个数据集后开始查询。"}
                 </p>
               </div>
-              <button
-                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
-                type="button"
-                disabled={!selectedDatasetId || isLoadingSchema}
-                onClick={() => void loadSchema(selectedDatasetId)}
-              >
-                {isLoadingSchema ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                Schema
-              </button>
             </div>
 
             {schema ? (
@@ -388,7 +367,6 @@ export function DataSourceSettingsForm({
             </div>
           </section>
 
-          {schema ? <SchemaDictionary schema={schema} /> : null}
           {queryResult ? (
             <QueryResultTable
               result={queryResult}
@@ -550,36 +528,6 @@ function ParamField({
         }}
       />
     </label>
-  );
-}
-
-function SchemaDictionary({ schema }: { schema: MindgoDatasetSchema }) {
-  return (
-    <details className="group rounded-md border border-line bg-panel p-3" open>
-      <summary className="flex cursor-pointer items-center justify-between gap-3">
-        <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
-          <Database className="h-4 w-4 text-brandBlue" />
-          数据字典
-        </span>
-        <ChevronDown className="h-4 w-4 text-muted transition-transform group-open:rotate-180" />
-      </summary>
-      <div className="mt-3 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-        {schema.result_schema.map((field) => (
-          <div
-            className="rounded-md border border-line bg-soft px-2.5 py-2"
-            key={field.name}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <span className="text-xs font-semibold text-ink">{field.label}</span>
-              <span className="rounded border border-line bg-panel px-1.5 py-0.5 font-mono text-[10px] text-muted">
-                {field.value_type}
-              </span>
-            </div>
-            <div className="mt-1 truncate font-mono text-[11px] text-muted">{field.name}</div>
-          </div>
-        ))}
-      </div>
-    </details>
   );
 }
 
