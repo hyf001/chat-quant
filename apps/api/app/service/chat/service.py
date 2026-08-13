@@ -98,6 +98,15 @@ class ChatApplicationService:
             deadline_seconds=self.runtime.settings.agent_turn_timeout_seconds,
             user_prompt=request.message,
         )
+        logger.debug(
+            "chat message accepted",
+            extra={
+                "chat_session_id": chat_session_id,
+                "project_id": request.project_id,
+                "sdk_session_id": sdk_session_id,
+                "user_message_id": user_message_id,
+            },
+        )
         self._pending_executions[chat_session_id] = command
         self._session_state[chat_session_id] = ChatExecutionState(
             title=title,
@@ -195,6 +204,14 @@ class ChatApplicationService:
 
         latest_sdk_session_id = command.sdk_session_id
         session_index_synced = False
+        logger.debug(
+            "agent execution starting",
+            extra={
+                "chat_session_id": chat_session_id,
+                "project_id": command.project_id,
+                "sdk_session_id": command.sdk_session_id,
+            },
+        )
         async for envelope in self.runtime.stream_messages(command):
             event_session_id = envelope.sdk_session_id or extract_sdk_session_id(envelope.sdk_event)
             if event_session_id:
@@ -224,6 +241,14 @@ class ChatApplicationService:
                 latest_sdk_session_id,
                 None,
             )
+        logger.debug(
+            "agent execution finished",
+            extra={
+                "chat_session_id": chat_session_id,
+                "project_id": command.project_id,
+                "sdk_session_id": latest_sdk_session_id,
+            },
+        )
 
     async def cancel_session(self, chat_session_id: str, reason: str) -> bool:
         removed = self._pending_executions.pop(chat_session_id, None)
@@ -267,6 +292,7 @@ class ChatApplicationService:
             logger.warning(
                 "failed to read sdk messages",
                 extra={"sdk_session_id": sdk_session_id, "error": str(exc)},
+                exc_info=True,
             )
             return []
 

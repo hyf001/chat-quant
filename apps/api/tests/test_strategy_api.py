@@ -1,10 +1,13 @@
 import pytest
+from app.core.logging import clear_log_entries
 from fastapi.testclient import TestClient
 
 pytestmark = pytest.mark.usefixtures("project_test")
 
 
 def test_create_strategy_returns_draft_first_version(client: TestClient) -> None:
+    clear_log_entries()
+
     response = client.post(
         "/api/strategies",
         json=strategy_create_payload(),
@@ -14,6 +17,15 @@ def test_create_strategy_returns_draft_first_version(client: TestClient) -> None
     data = response.json()
     assert data["strategy_id"].startswith("str_")
     assert set(data) == {"strategy_id"}
+
+    logs = client.get("/api/logs?category=business&limit=10").json()["items"]
+    assert any(
+        item["level"] == "INFO"
+        and item["logger"] == "app.service.strategy.service"
+        and item["message"] == "strategy created"
+        and item["strategy_id"] == data["strategy_id"]
+        for item in logs
+    )
 
 
 def test_create_strategy_rejects_missing_project(client: TestClient) -> None:

@@ -136,7 +136,6 @@ def _payload_from_settings(settings: Settings) -> AppSettingsPayload:
         ),
         logging=LoggingSettingsPayload(
             level=settings.log_level,  # type: ignore[arg-type]
-            format=settings.log_format,
         ),
         agent=AgentSettingsPayload(
             provider_id=settings.agent_provider_id,
@@ -150,7 +149,6 @@ def _payload_from_settings(settings: Settings) -> AppSettingsPayload:
                 budget_tokens=settings.agent_thinking_budget_tokens,
             ),
             available_tools=settings.agent_available_tools,
-            env_allowlist=settings.agent_env_allowlist,
         ),
     )
 
@@ -161,7 +159,6 @@ def _flatten_payload(payload: AppSettingsPayload) -> dict[str, ConfigValue]:
         "access_log_enabled": payload.system.access_log_enabled,
         "access_log_slow_threshold_ms": payload.system.access_log_slow_threshold_ms,
         "log_level": payload.logging.level,
-        "log_format": payload.logging.format,
         "agent_provider_id": payload.agent.provider_id,
         "agent_model": payload.agent.model,
         "agent_max_turns": payload.agent.max_turns,
@@ -171,5 +168,4 @@ def _flatten_payload(payload: AppSettingsPayload) -> dict[str, ConfigValue]:
         "agent_thinking_type": payload.agent.thinking.type,
         "agent_thinking_budget_tokens": payload.agent.thinking.budget_tokens,
         "agent_available_tools": payload.agent.available_tools,
-        "agent_env_allowlist": payload.agent.env_allowlist,
     }

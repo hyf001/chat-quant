@@ -16,9 +16,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 
 import type { ChatSession, Project } from "../../shared/api";
-import { AppSettingsDialog } from "./AppSettingsDialog";
-
-export type PrimaryRoute = "new-task" | "strategies";
+import type { PrimaryRoute } from "../../shared/routes";
 
 type HistoryPanelProps = {
   projects: Project[];
@@ -65,7 +63,6 @@ export function HistoryPanel({
   const [isProjectManagementOpen, setIsProjectManagementOpen] = useState(false);
   const [isProjectSwitcherOpen, setIsProjectSwitcherOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const hasActiveProject = activeProjectId !== null;
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
 
@@ -295,11 +292,15 @@ export function HistoryPanel({
             <CircleHelp className="h-4 w-4" />
           </button>
           <button
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-soft hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+            className={`grid h-8 w-8 shrink-0 place-items-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-signal/20 ${
+              activeRoute === "settings"
+                ? "bg-ink text-panel"
+                : "text-muted hover:bg-soft hover:text-ink"
+            }`}
             type="button"
             aria-label="设置"
             title="设置"
-            onClick={() => setIsSettingsOpen(true)}
+            onClick={() => onNavigateRoute("settings")}
           >
             <Settings className="h-4 w-4" />
           </button>
@@ -476,7 +477,6 @@ export function HistoryPanel({
           </div>
         </div>
       ) : null}
-      <AppSettingsDialog isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </>
   );
 }

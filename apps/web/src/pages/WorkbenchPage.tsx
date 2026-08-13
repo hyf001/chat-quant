@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FolderOpen, Plus } from "lucide-react";
 
+import { AppSettingsPage } from "./AppSettingsPage";
 import { Composer } from "../modules/composer";
 import { ConversationShell } from "../modules/conversation";
-import { HistoryPanel, type PrimaryRoute } from "../modules/history";
+import { HistoryPanel } from "../modules/history";
 import { InsightPanel } from "../modules/insight";
 import { StrategyList } from "../modules/strategy";
 import { WorkspaceLayout } from "../modules/workspace";
@@ -31,10 +32,12 @@ import {
   type SDKStreamEnvelope,
   type SdkMessage,
 } from "../shared/api";
+import type { PrimaryRoute } from "../shared/routes";
 
 const routePaths: Record<PrimaryRoute, string> = {
   "new-task": "/tasks/new",
   strategies: "/strategies",
+  settings: "/settings",
 };
 
 type ComposerModelState = {
@@ -263,6 +266,14 @@ export function WorkbenchPage() {
     }
   };
 
+  const handleBackFromSettings = () => {
+    const nextRoute: PrimaryRoute = "new-task";
+    setActiveRoute(nextRoute);
+    if (window.location.pathname !== routePaths[nextRoute]) {
+      window.history.pushState({}, "", routePaths[nextRoute]);
+    }
+  };
+
   const handleSelectSession = (chatSessionId: string) => {
     setActiveRoute("new-task");
     if (window.location.pathname !== routePaths["new-task"]) {
@@ -405,6 +416,14 @@ export function WorkbenchPage() {
     void loadComposerModelState();
   };
 
+  if (activeRoute === "settings") {
+    return (
+      <main className="workbench-surface h-screen overflow-y-auto p-5 font-sans text-ink lg:p-7">
+        <AppSettingsPage onBack={handleBackFromSettings} />
+      </main>
+    );
+  }
+
   return (
     <WorkspaceLayout
       history={
@@ -542,6 +561,9 @@ async function selectOpenProjectPath(): Promise<string | null> {
 }
 
 function routeFromPath(pathname: string): PrimaryRoute {
+  if (pathname.endsWith(routePaths.settings)) {
+    return "settings";
+  }
   return pathname.endsWith(routePaths.strategies) ? "strategies" : "new-task";
 }
 

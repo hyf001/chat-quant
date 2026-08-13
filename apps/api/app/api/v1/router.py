@@ -6,6 +6,7 @@ from app.api.v1 import (
     chat_session_api,
     config_api,
     health_api,
+    log_api,
     model_provider_api,
     project_api,
     runtime_api,
@@ -18,6 +19,7 @@ api_router.include_router(chat_api.router, prefix="/chat", tags=["chat"])
 api_router.include_router(chat_session_api.router, prefix="/chat-sessions", tags=["chat-sessions"])
 api_router.include_router(config_api.router, prefix="/config", tags=["config"])
 api_router.include_router(health_api.router, tags=["health"])
+api_router.include_router(log_api.router, prefix="/logs", tags=["logs"])
 api_router.include_router(
     model_provider_api.router,
     prefix="/model-providers",

@@ -142,7 +142,6 @@ export type SystemSettings = {
 
 export type LoggingSettings = {
   level: "DEBUG" | "INFO" | "WARNING" | "ERROR";
-  format: "text" | "json";
 };
 
 export type AgentSettings = {
@@ -157,7 +156,6 @@ export type AgentSettings = {
     budget_tokens: number;
   };
   available_tools: string[];
-  env_allowlist: string[];
 };
 
 export type AppSettings = {
@@ -174,6 +172,29 @@ export type ConfigFieldDefinition = {
   description: string;
   options: string[];
   is_secret: boolean;
+};
+
+export type LogCategory = "access" | "business";
+
+export type LogEntry = {
+  timestamp: string;
+  level: string;
+  logger: string;
+  message: string;
+  request_id: string;
+  category: LogCategory | "system";
+  method: string | null;
+  path: string | null;
+  status_code: number | null;
+  duration_ms: number | null;
+  client_host: string | null;
+  error: string | null;
+  exception: string | null;
+  stack: string | null;
+};
+
+export type LogListResponse = {
+  items: LogEntry[];
 };
 
 export type AppConfig = {
@@ -229,6 +250,17 @@ export async function getHealth(): Promise<{ status: string; service?: string }>
 
 export async function getAppConfig(): Promise<AppConfig> {
   return requestJson<AppConfig>("/api/config");
+}
+
+export async function listSystemLogs(
+  limit = 100,
+  category?: LogCategory,
+): Promise<LogListResponse> {
+  const searchParams = new URLSearchParams({ limit: String(limit) });
+  if (category) {
+    searchParams.set("category", category);
+  }
+  return requestJson<LogListResponse>(`/api/logs?${searchParams.toString()}`);
 }
 
 export async function updateAppConfig(settings: AppSettings): Promise<AppConfig> {

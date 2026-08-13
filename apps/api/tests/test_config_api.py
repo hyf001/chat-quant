@@ -37,6 +37,9 @@ def test_config_api_returns_structured_settings(client: TestClient) -> None:
     assert any(field["key"] == "agent_provider_id" for field in payload["fields"])
     assert any(field["key"] == "agent_model" for field in payload["fields"])
     assert any(field["key"] == "agent_available_tools" for field in payload["fields"])
+    tool_field = next(field for field in payload["fields"] if field["key"] == "agent_available_tools")
+    assert "Bash" in tool_field["options"]
+    assert "Read" in tool_field["options"]
 
 
 def test_config_api_updates_sqlite_backed_settings(client: TestClient) -> None:

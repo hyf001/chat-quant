@@ -80,6 +80,15 @@ class ClaudeAgentRuntime:
         saw_terminal_event = False
         sequence = 0
         turn_tracker = SDKTurnTracker()
+        logger.debug(
+            "agent runtime stream starting",
+            extra={
+                "chat_session_id": command.chat_session_id,
+                "project_id": command.project_id,
+                "sdk_session_id": command.sdk_session_id,
+                "model": self.settings.agent_model,
+            },
+        )
 
         try:
             def collect_sdk_stderr(line: str) -> None:
@@ -110,6 +119,14 @@ class ClaudeAgentRuntime:
                     if _is_effective_agent_event(event) and not saw_effective_event:
                         saw_effective_event = True
                         timeout.reschedule(execution_deadline)
+                        logger.debug(
+                            "agent runtime first effective event",
+                            extra={
+                                "chat_session_id": command.chat_session_id,
+                                "project_id": command.project_id,
+                                "event_type": str(event.get("type") or ""),
+                            },
+                        )
 
                     event_session_id = extract_sdk_session_id(event)
                     if event_session_id:
@@ -119,6 +136,18 @@ class ClaudeAgentRuntime:
                         saw_terminal_event = True
 
                     turn_id = turn_tracker.annotate(event)
+                    for tool_event in _extract_tool_use_events(event):
+                        logger.debug(
+                            "agent runtime tool use",
+                            extra={
+                                "chat_session_id": command.chat_session_id,
+                                "project_id": command.project_id,
+                                "sdk_session_id": current_sdk_session_id,
+                                "turn_id": turn_id,
+                                "tool_name": tool_event.get("name"),
+                                "tool_use_id": tool_event.get("id"),
+                            },
+                        )
                     sequence += 1
                     yield _make_envelope(
                         sequence=sequence,
@@ -143,6 +172,17 @@ class ClaudeAgentRuntime:
                     f"{self.settings.agent_first_token_timeout_seconds} 秒内没有返回首个有效输出，"
                     "本轮已中止。后台调用可能仍在耗时，请稍后重试，或切换模型/Provider。"
                 )
+            )
+            logger.warning(
+                "agent runtime timed out",
+                extra={
+                    "chat_session_id": command.chat_session_id,
+                    "project_id": command.project_id,
+                    "sdk_session_id": current_sdk_session_id,
+                    "error": timeout_message,
+                    "timeout_code": timeout_code.value,
+                },
+                stack_info=True,
             )
             sequence += 1
             yield _make_envelope(
@@ -181,6 +221,16 @@ class ClaudeAgentRuntime:
             )
         else:
             if not saw_terminal_event:
+                logger.warning(
+                    "agent runtime stream ended without result message",
+                    extra={
+                        "chat_session_id": command.chat_session_id,
+                        "project_id": command.project_id,
+                        "sdk_session_id": current_sdk_session_id,
+                        "error": "agent sdk stream ended without result message",
+                    },
+                    stack_info=True,
+                )
                 sequence += 1
                 yield _make_envelope(
                     sequence=sequence,
@@ -192,6 +242,16 @@ class ClaudeAgentRuntime:
                         "code": RuntimeErrorCode.SDK_UNAVAILABLE.value,
                         "message": "agent sdk stream ended without result message",
                         "retryable": True,
+                    },
+                )
+            else:
+                logger.debug(
+                    "agent runtime stream finished",
+                    extra={
+                        "chat_session_id": command.chat_session_id,
+                        "project_id": command.project_id,
+                        "sdk_session_id": current_sdk_session_id,
+                        "event_count": sequence,
                     },
                 )
 

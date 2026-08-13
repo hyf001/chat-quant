@@ -5,7 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 JsonPrimitive = str | int | bool | None
 ConfigValue = JsonPrimitive | list[str]
@@ -73,15 +73,6 @@ APP_CONFIG_DEFINITIONS: tuple[ConfigDefinition, ...] = (
         "INFO",
         "API 日志输出级别。",
         ("DEBUG", "INFO", "WARNING", "ERROR"),
-    ),
-    ConfigDefinition(
-        "log_format",
-        "日志格式",
-        "logging",
-        "select",
-        "text",
-        "日志格式。",
-        ("text", "json"),
     ),
     ConfigDefinition(
         "access_log_enabled",
@@ -171,14 +162,7 @@ APP_CONFIG_DEFINITIONS: tuple[ConfigDefinition, ...] = (
         "list",
         DEFAULT_AGENT_TOOLS,
         "传给 Agent SDK 的可用工具列表；删除某项即禁用该工具。",
-    ),
-    ConfigDefinition(
-        "agent_env_allowlist",
-        "环境变量白名单",
-        "agent",
-        "list",
-        ["CHATQ_API_BASE", "CHATQ_AGENT_TOKEN"],
-        "允许透传给 Agent 的环境变量名。",
+        tuple(DEFAULT_AGENT_TOOLS),
     ),
 )
 
@@ -196,7 +180,6 @@ class Settings(BaseModel):
     web_port: int = DEFAULT_WEB_PORT
     environment: str = "development"
     log_level: str = "INFO"
-    log_format: Literal["text", "json"] = "text"
     access_log_enabled: bool = True
     access_log_slow_threshold_ms: int = 1000
     agent_provider_id: str = DEFAULT_MODEL_PROVIDER_ID
@@ -210,9 +193,8 @@ class Settings(BaseModel):
     agent_thinking_type: Literal["disabled", "adaptive", "enabled"] = "disabled"
     agent_thinking_budget_tokens: int = 2048
     agent_available_tools: list[str] = DEFAULT_AGENT_TOOLS
-    agent_env_allowlist: list[str] = ["CHATQ_API_BASE", "CHATQ_AGENT_TOKEN"]
 
-    @field_validator("agent_available_tools", "agent_env_allowlist", mode="before")
+    @field_validator("agent_available_tools", mode="before")
     @classmethod
     def split_csv_values(cls, value: str | list[str]) -> list[str]:
         if isinstance(value, str):

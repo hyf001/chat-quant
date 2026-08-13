@@ -22,7 +22,6 @@ class SystemSettingsPayload(BaseModel):
 
 class LoggingSettingsPayload(BaseModel):
     level: Literal["DEBUG", "INFO", "WARNING", "ERROR"]
-    format: Literal["text", "json"]
 
 
 class AgentThinkingSettingsPayload(BaseModel):
@@ -39,7 +38,6 @@ class AgentSettingsPayload(BaseModel):
     include_partial_messages: bool
     thinking: AgentThinkingSettingsPayload
     available_tools: list[str]
-    env_allowlist: list[str]
 
 
 class AppSettingsPayload(BaseModel):

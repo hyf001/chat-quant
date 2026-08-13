@@ -4,6 +4,8 @@ import json
 import logging
 import sys
 import time
+import traceback
+from collections import deque
 from contextvars import ContextVar
 from datetime import UTC, datetime
 from typing import Any
@@ -18,6 +20,9 @@ REQUEST_ID_HEADER = "X-Request-Id"
 _request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
 _MANAGED_HANDLER_ATTR = "_chatq_managed_handler"
 _RESERVED_LOG_RECORD_FIELDS = frozenset(logging.makeLogRecord({}).__dict__)
+_LOG_BUFFER_MAXLEN = 500
+_log_buffer: deque[dict[str, Any]] = deque(maxlen=_LOG_BUFFER_MAXLEN)
+LogCategory = str
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -39,12 +44,13 @@ def configure_logging(settings: Settings) -> None:
     handler = logging.StreamHandler(sys.stdout)
     setattr(handler, _MANAGED_HANDLER_ATTR, True)
     handler.addFilter(RequestIdFilter())
-    if settings.log_format == "json":
-        handler.setFormatter(JsonLogFormatter())
-    else:
-        handler.setFormatter(TextLogFormatter())
+    handler.setFormatter(JsonLogFormatter())
 
     root_logger.addHandler(handler)
+    memory_handler = InMemoryLogHandler()
+    setattr(memory_handler, _MANAGED_HANDLER_ATTR, True)
+    memory_handler.addFilter(RequestIdFilter())
+    root_logger.addHandler(memory_handler)
     root_logger.setLevel(level)
 
     for logger_name in (
@@ -74,9 +80,23 @@ class TextLogFormatter(logging.Formatter):
             datefmt="%Y-%m-%dT%H:%M:%S%z",
         )
 
+    def format(self, record: logging.LogRecord) -> str:
+        message = super().format(record)
+        if record.levelno < logging.WARNING:
+            return message
+        extra = _record_extra(record)
+        error = _record_error(record, extra)
+        if error and f"error={error}" not in message:
+            message = f"{message}\nerror={error}"
+        if record.exc_info or record.stack_info:
+            return message
+        stack = _record_stack(self, record)
+        return f"{message}\n{stack}" if stack else message
+
 
 class JsonLogFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
+        extra = _record_extra(record)
         payload: dict[str, Any] = {
             "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
@@ -87,12 +107,75 @@ class JsonLogFormatter(logging.Formatter):
             "line": record.lineno,
             "request_id": getattr(record, "request_id", "-"),
         }
-        payload.update(_record_extra(record))
+        payload.update(extra)
+        if record.levelno >= logging.WARNING:
+            payload.setdefault("error", _record_error(record, extra))
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
-        if record.stack_info:
-            payload["stack"] = self.formatStack(record.stack_info)
+        stack = _record_stack(self, record)
+        if stack:
+            payload["stack"] = stack
         return json.dumps(payload, ensure_ascii=False, default=str)
+
+
+class InMemoryLogHandler(logging.Handler):
+    _exception_formatter = logging.Formatter()
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            payload: dict[str, Any] = {
+                "timestamp": datetime.now(UTC).isoformat(),
+                "level": record.levelname,
+                "logger": record.name,
+                "message": record.getMessage(),
+                "request_id": getattr(record, "request_id", "-"),
+                "category": _log_category(record),
+            }
+            extra = _record_extra(record)
+            if record.levelno >= logging.WARNING:
+                payload["error"] = _record_error(record, extra)
+            if "method" in extra:
+                payload["method"] = extra["method"]
+            if "path" in extra:
+                payload["path"] = extra["path"]
+            if "status_code" in extra:
+                payload["status_code"] = extra["status_code"]
+            if "duration_ms" in extra:
+                payload["duration_ms"] = extra["duration_ms"]
+            if "client_host" in extra:
+                payload["client_host"] = extra["client_host"]
+            if "error" in extra:
+                payload["error"] = extra["error"]
+            payload.update(
+                {
+                    key: _log_extra_value(value)
+                    for key, value in extra.items()
+                    if key not in payload
+                }
+            )
+            if record.exc_info:
+                payload["exception"] = self._exception_formatter.formatException(record.exc_info)
+            stack = _record_stack(self._exception_formatter, record)
+            if stack:
+                payload["stack"] = stack
+            _log_buffer.append(payload)
+        except Exception:
+            self.handleError(record)
+
+
+def recent_log_entries(
+    limit: int = 100,
+    category: LogCategory | None = None,
+) -> list[dict[str, Any]]:
+    bounded_limit = min(max(limit, 1), _LOG_BUFFER_MAXLEN)
+    entries = list(_log_buffer)
+    if category is not None:
+        entries = [entry for entry in entries if entry.get("category") == category]
+    return entries[-bounded_limit:]
+
+
+def clear_log_entries() -> None:
+    _log_buffer.clear()
 
 
 class RequestLoggingMiddleware:
@@ -153,7 +236,12 @@ class RequestLoggingMiddleware:
                         "status_code": status_code,
                         "duration_ms": duration_ms,
                         "client_host": _client_host(scope),
+                        "error": (
+                            f"request duration {duration_ms}ms exceeded "
+                            f"{self.slow_threshold_ms}ms threshold"
+                        ),
                     },
+                    stack_info=True,
                 )
         finally:
             _request_id.reset(token)
@@ -185,9 +273,52 @@ def _coerce_log_level(level_name: str) -> int:
     return logging.INFO
 
 
+def _log_category(record: logging.LogRecord) -> LogCategory:
+    if record.name in {"app.request", "uvicorn.access"}:
+        return "access"
+    if record.name.startswith("app."):
+        return "business"
+    return "system"
+
+
 def _record_extra(record: logging.LogRecord) -> dict[str, Any]:
     return {
         key: value
         for key, value in record.__dict__.items()
         if key not in _RESERVED_LOG_RECORD_FIELDS and key != "request_id"
     }
+
+
+def _record_error(record: logging.LogRecord, extra: dict[str, Any]) -> str:
+    error = extra.get("error")
+    if error is not None:
+        return str(error)
+    if record.exc_info and record.exc_info[1] is not None:
+        return str(record.exc_info[1])
+    return record.getMessage()
+
+
+def _record_stack(formatter: logging.Formatter, record: logging.LogRecord) -> str | None:
+    if record.stack_info:
+        return formatter.formatStack(record.stack_info)
+    if record.levelno < logging.WARNING:
+        return None
+    return "".join(
+        traceback.StackSummary.from_list(
+            [
+                traceback.FrameSummary(
+                    record.pathname,
+                    record.lineno,
+                    record.funcName,
+                )
+            ]
+        ).format()
+    )
+
+
+def _log_extra_value(value: Any) -> Any:
+    try:
+        json.dumps(value)
+    except TypeError:
+        return str(value)
+    return value

@@ -5,6 +5,7 @@ from uuid import uuid4
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.logging import get_logger
 from app.model.strategy import StrategyRow, StrategyVersionRow
 from app.schema.strategy import (
     StrategyCreate,
@@ -25,6 +26,8 @@ from app.service.strategy.validation import (
     StrategyAvailabilityError,
     validate_strategy_availability,
 )
+
+logger = get_logger(__name__)
 
 
 class StrategyError(Exception):
@@ -80,6 +83,17 @@ class StrategyService:
 
         await self._save_strategy(strategy)
         await self._save_version(version)
+        logger.info(
+            "strategy created",
+            extra={
+                "strategy_id": strategy.id,
+                "strategy_version_id": version.id,
+                "project_id": project_id,
+                "strategy_name": strategy.name,
+                "strategy_mode": version.strategy_mode.value,
+                "version": version.version,
+            },
+        )
         return StrategyCreateResult(
             strategy_id=strategy.id,
         )
@@ -114,6 +128,16 @@ class StrategyService:
         self._db.add(_version_to_row(version))
         await self._db.merge(_strategy_to_row(updated_strategy))
         await self._db.commit()
+        logger.info(
+            "strategy version created",
+            extra={
+                "strategy_id": strategy_id,
+                "strategy_version_id": version.id,
+                "strategy_name": strategy.name,
+                "strategy_mode": version.strategy_mode.value,
+                "version": version.version,
+            },
+        )
         return version
 
     async def switch_current_version(

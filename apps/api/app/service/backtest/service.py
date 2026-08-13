@@ -5,6 +5,7 @@ from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.logging import get_logger
 from app.db.payloads import StrategyBacktestPayload
 from app.model.strategy import StrategyBacktestRow
 from app.schema.backtest import (
@@ -25,6 +26,8 @@ from app.schema.strategy import (
 from app.service.backtest.backtrader import BacktraderStrategyBacktestEngine
 from app.service.backtest.execution import StrategyBacktestEngine, StrategyBacktestError
 from app.service.strategy.service import StrategyError, StrategyService
+
+logger = get_logger(__name__)
 
 
 class BacktestError(Exception):
@@ -137,6 +140,17 @@ class BacktestService:
             config=config,
         )
         await self._save_backtest(backtest)
+        logger.info(
+            "strategy backtest created",
+            extra={
+                "backtest_id": backtest.id,
+                "strategy_id": strategy.id,
+                "strategy_version_id": version.id,
+                "project_id": project_id,
+                "strategy_mode": config.strategy_mode.value,
+                "symbols": config.symbols,
+            },
+        )
         return backtest
 
     async def _execute_backtest(
@@ -165,6 +179,16 @@ class BacktestService:
             }
         )
         await self._save_backtest(running)
+        logger.info(
+            "strategy backtest started",
+            extra={
+                "backtest_id": running.id,
+                "strategy_id": running.strategy_id,
+                "strategy_version_id": running.strategy_version_id,
+                "project_id": running.project_id,
+                "execution_engine": engine.name,
+            },
+        )
 
         try:
             result = engine.execute(backtest=running, version=version)
@@ -181,6 +205,19 @@ class BacktestService:
                 }
             )
             await self._save_backtest(failed)
+            logger.warning(
+                "strategy backtest failed",
+                extra={
+                    "backtest_id": failed.id,
+                    "strategy_id": failed.strategy_id,
+                    "strategy_version_id": failed.strategy_version_id,
+                    "project_id": failed.project_id,
+                    "execution_engine": engine.name,
+                    "error": exc.message,
+                    "failure_code": exc.error_code,
+                },
+                exc_info=True,
+            )
             return StrategyBacktestDetail(backtest=failed)
 
         completed_at = utc_now()
@@ -194,6 +231,17 @@ class BacktestService:
         )
         await self._save_backtest_result(result)
         await self._save_backtest(succeeded)
+        logger.info(
+            "strategy backtest succeeded",
+            extra={
+                "backtest_id": succeeded.id,
+                "strategy_id": succeeded.strategy_id,
+                "strategy_version_id": succeeded.strategy_version_id,
+                "project_id": succeeded.project_id,
+                "execution_engine": engine.name,
+                "result_id": result.id,
+            },
+        )
         return StrategyBacktestDetail(backtest=succeeded, result=result)
 
     async def _require_strategy_version(self, version_id: str) -> StrategyVersionRecord:
