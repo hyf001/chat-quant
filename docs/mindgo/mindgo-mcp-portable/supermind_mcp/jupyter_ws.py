@@ -54,6 +54,7 @@ async def execute_code_ws(
         ws_url,
         additional_headers=headers,
         ssl=_ssl_context_for_ws_url(ws_url),
+        max_size=None,
     ) as websocket:
         await websocket.send(json.dumps(message))
         try:

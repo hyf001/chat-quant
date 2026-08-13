@@ -7,6 +7,7 @@ from app.api.v1 import (
     config_api,
     health_api,
     log_api,
+    mindgo_api,
     model_provider_api,
     project_api,
     runtime_api,
@@ -20,6 +21,7 @@ api_router.include_router(chat_session_api.router, prefix="/chat-sessions", tags
 api_router.include_router(config_api.router, prefix="/config", tags=["config"])
 api_router.include_router(health_api.router, tags=["health"])
 api_router.include_router(log_api.router, prefix="/logs", tags=["logs"])
+api_router.include_router(mindgo_api.router, prefix="/mindgo", tags=["mindgo"])
 api_router.include_router(
     model_provider_api.router,
     prefix="/model-providers",

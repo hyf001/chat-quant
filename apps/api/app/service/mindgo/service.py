@@ -1,0 +1,202 @@
+from __future__ import annotations
+
+import math
+from typing import Any
+
+import pandas as pd
+
+from app.core.config import get_settings
+from app.schema.mindgo import (
+    MindgoConnectionConfig,
+    MindgoConnectionTestRequest,
+    MindgoConnectionTestResponse,
+    MindgoDatasetListResponse,
+    MindgoDatasetQueryRequest,
+    MindgoDatasetQueryResponse,
+    MindgoDatasetSchema,
+    MindgoDatasetSummary,
+    MindgoDatasetSyncRequest,
+    MindgoDatasetSyncResult,
+)
+from app.service.mindgo.jupyter_runner import (
+    DEFAULT_MINDGO_AUTH_SCHEME,
+    DEFAULT_MINDGO_NOTEBOOK_PATH,
+    MindgoJupyterConfig,
+    MindgoJupyterRunner,
+)
+from app.service.mindgo.protocol import MindgoDatasetAdapter
+from app.service.mindgo.stock_a_daily_price import (
+    STOCK_A_DAILY_PRICE_DATASET_ID,
+    StockADailyPriceAdapter,
+)
+
+MINDGO_CONNECTION_TEST_MARKER_START = "MINDGO_CONNECTION_TEST_JSON_START"
+MINDGO_CONNECTION_TEST_MARKER_END = "MINDGO_CONNECTION_TEST_JSON_END"
+
+
+class MindgoDatasetNotFoundError(ValueError):
+    def __init__(self, dataset_id: str) -> None:
+        super().__init__(f"MindGo dataset not found: {dataset_id}")
+        self.dataset_id = dataset_id
+
+
+async def list_datasets() -> MindgoDatasetListResponse:
+    summaries = []
+    for dataset_id in _dataset_ids():
+        schema = await _schema_for_dataset(dataset_id)
+        summaries.append(
+            MindgoDatasetSummary(
+                id=dataset_id,
+                name=schema.name,
+                category_path=schema.category_path,
+                description=schema.description,
+                actions=["get_schema", "query", "sync"],
+            )
+        )
+    return MindgoDatasetListResponse(datasets=summaries)
+
+
+async def get_schema(dataset_id: str) -> MindgoDatasetSchema:
+    return await _schema_for_dataset(dataset_id)
+
+
+async def test_connection(request: MindgoConnectionTestRequest) -> MindgoConnectionTestResponse:
+    _ = request
+    connection = _connection_from_settings()
+    if not connection.url.strip():
+        return MindgoConnectionTestResponse(ok=False, message="请填写 Notebook 地址")
+    if not (connection.token or "").strip():
+        return MindgoConnectionTestResponse(ok=False, message="请填写访问 Token")
+    if connection.execution_mode != "jupyter":
+        return MindgoConnectionTestResponse(ok=False, message="暂只支持 Jupyter 执行方式")
+    runner = _runner_from_connection(connection)
+    if runner is None:
+        return MindgoConnectionTestResponse(ok=False, message="连接参数不完整")
+    try:
+        payload = await runner.run_json(
+            _connection_test_code(),
+            marker_start=MINDGO_CONNECTION_TEST_MARKER_START,
+            marker_end=MINDGO_CONNECTION_TEST_MARKER_END,
+        )
+    except Exception as error:  # noqa: BLE001
+        return MindgoConnectionTestResponse(ok=False, message=f"连接失败：{error}")
+    if payload.get("ok") is True:
+        return MindgoConnectionTestResponse(ok=True, message="MindGo Jupyter 连接可用")
+    return MindgoConnectionTestResponse(ok=False, message="连接失败：远端返回异常")
+
+
+async def query_dataset(
+    dataset_id: str,
+    request: MindgoDatasetQueryRequest,
+) -> MindgoDatasetQueryResponse:
+    adapter = _adapter_for_dataset(dataset_id)
+    schema = await adapter.get_schema()
+    frame = await adapter.query(request)
+    rows = _frame_to_json_rows(frame)
+    page = request.page
+    page_size = request.page_size
+    total = len(rows)
+    start = (page - 1) * page_size
+    end = start + page_size
+    return MindgoDatasetQueryResponse(
+        dataset_id=dataset_id,
+        page=page,
+        page_size=page_size,
+        total=total,
+        total_pages=math.ceil(total / page_size) if total else 0,
+        columns=schema.result_schema,
+        rows=rows[start:end],
+    )
+
+
+async def sync_dataset(
+    dataset_id: str,
+    request: MindgoDatasetSyncRequest,
+) -> MindgoDatasetSyncResult:
+    adapter = _adapter_for_dataset(dataset_id)
+    return await adapter.sync(request)
+
+
+def _dataset_ids() -> tuple[str, ...]:
+    return (STOCK_A_DAILY_PRICE_DATASET_ID,)
+
+
+async def _schema_for_dataset(dataset_id: str) -> MindgoDatasetSchema:
+    adapter = _adapter_for_dataset(dataset_id, allow_missing_runner=True)
+    return await adapter.get_schema()
+
+
+def _adapter_for_dataset(
+    dataset_id: str,
+    *,
+    allow_missing_runner: bool = False,
+) -> MindgoDatasetAdapter:
+    if dataset_id != STOCK_A_DAILY_PRICE_DATASET_ID:
+        raise MindgoDatasetNotFoundError(dataset_id)
+    connection = _connection_from_settings()
+    runner = None if allow_missing_runner else _runner_from_connection(connection)
+    return StockADailyPriceAdapter(runner)
+
+
+def _connection_from_settings() -> MindgoConnectionConfig:
+    get_settings.cache_clear()
+    settings = get_settings()
+    return MindgoConnectionConfig(
+        execution_mode="jupyter",
+        url=settings.mindgo_jupyter_url or "",
+        auth_scheme=settings.mindgo_auth_scheme or DEFAULT_MINDGO_AUTH_SCHEME,
+        token=settings.mindgo_jupyter_token,
+        notebook_path=settings.mindgo_notebook_path,
+        kernel_id=settings.mindgo_kernel_id,
+        timeout_seconds=settings.mindgo_timeout_seconds,
+    )
+
+
+def _runner_from_connection(connection: MindgoConnectionConfig | None):
+    if connection is None or not connection.url.strip():
+        return None
+    return MindgoJupyterRunner(
+        MindgoJupyterConfig(
+            url=connection.url.strip(),
+            token=connection.token.strip() if connection.token else None,
+            auth_scheme=connection.auth_scheme.strip() or "Bearer",
+            notebook_path=connection.notebook_path.strip() or DEFAULT_MINDGO_NOTEBOOK_PATH,
+            kernel_id=connection.kernel_id.strip() if connection.kernel_id else None,
+            timeout_seconds=connection.timeout_seconds,
+        )
+    )
+
+
+def _connection_test_code() -> str:
+    return f"""
+import json
+
+print({MINDGO_CONNECTION_TEST_MARKER_START!r})
+print(json.dumps({{"ok": True}}, ensure_ascii=False, separators=(",", ":")))
+print({MINDGO_CONNECTION_TEST_MARKER_END!r})
+"""
+
+
+def _frame_to_json_rows(frame: pd.DataFrame) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in frame.to_dict(orient="records"):
+        rows.append({str(key): _json_value(value) for key, value in row.items()})
+    return rows
+
+
+def _json_value(value: Any) -> Any:
+    if value is None:
+        return None
+    if hasattr(value, "item"):
+        value = value.item()
+    if isinstance(value, (str, int, float, bool)):
+        if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+            return None
+        return value
+    if isinstance(value, list | tuple):
+        return [_json_value(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): _json_value(item) for key, item in value.items()}
+    if pd.isna(value):
+        return None
+    return str(value)

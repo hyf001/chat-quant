@@ -158,10 +158,20 @@ export type AgentSettings = {
   available_tools: string[];
 };
 
+export type MindgoSettings = {
+  jupyter_url: string | null;
+  auth_scheme: string;
+  jupyter_token: string | null;
+  notebook_path: string;
+  kernel_id: string | null;
+  timeout_seconds: number;
+};
+
 export type AppSettings = {
   system: SystemSettings;
   logging: LoggingSettings;
   agent: AgentSettings;
+  mindgo: MindgoSettings;
 };
 
 export type AppSettingsUpdate = {
@@ -170,6 +180,7 @@ export type AppSettingsUpdate = {
   agent?: Partial<Omit<AgentSettings, "thinking">> & {
     thinking?: Partial<AgentSettings["thinking"]>;
   };
+  mindgo?: Partial<MindgoSettings>;
 };
 
 export type ConfigFieldDefinition = {
@@ -250,6 +261,93 @@ export type ProviderConnectionTestResponse = {
   ok: boolean;
   message: string;
   models: ProviderModel[];
+};
+
+export type MindgoJsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | MindgoJsonValue[]
+  | { [key: string]: MindgoJsonValue };
+
+export type MindgoParameterOption = {
+  label: string;
+  value: string | number | boolean | null;
+};
+
+export type MindgoParameterSpec = {
+  name: string;
+  label: string;
+  value_type: "string" | "string[]" | "integer" | "number" | "boolean" | "enum" | "date";
+  required: boolean;
+  default: MindgoJsonValue;
+  options: MindgoParameterOption[];
+  description: string;
+  validation: Record<string, MindgoJsonValue>;
+};
+
+export type MindgoFieldSpec = {
+  name: string;
+  label: string;
+  value_type: "string" | "integer" | "number" | "boolean" | "date";
+  required: boolean;
+  description: string;
+};
+
+export type MindgoDatasetSchema = {
+  name: string;
+  category_path: string[];
+  description: string;
+  mindgo_function: string;
+  sync_table_name: string;
+  query_params: MindgoParameterSpec[];
+  result_schema: MindgoFieldSpec[];
+};
+
+export type MindgoDatasetSummary = {
+  id: string;
+  name: string;
+  category_path: string[];
+  description: string;
+  actions: Array<"get_schema" | "query" | "sync">;
+};
+
+export type MindgoDatasetListResponse = {
+  datasets: MindgoDatasetSummary[];
+};
+
+export type MindgoDatasetQueryPayload = {
+  params: Record<string, MindgoJsonValue>;
+  page: number;
+  page_size: number;
+};
+
+export type MindgoDatasetQueryResponse = {
+  dataset_id: string;
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+  columns: MindgoFieldSpec[];
+  rows: Array<Record<string, MindgoJsonValue>>;
+};
+
+export type MindgoDatasetSyncPayload = {
+  start_date: string;
+  end_date: string;
+  params: Record<string, MindgoJsonValue>;
+};
+
+export type MindgoDatasetSyncResult = {
+  status: "success" | "failed";
+  elapsed_ms: number;
+  synced_count: number;
+};
+
+export type MindgoConnectionTestResponse = {
+  ok: boolean;
+  message: string;
 };
 
 export async function getHealth(): Promise<{ status: string; service?: string }> {
@@ -336,6 +434,43 @@ export async function testModelProviderPayload(
     ? `/api/model-providers/${providerId}/test-payload`
     : "/api/model-providers/test";
   return requestJson<ProviderConnectionTestResponse>(path, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function listMindgoDatasets(): Promise<MindgoDatasetListResponse> {
+  return requestJson<MindgoDatasetListResponse>("/api/mindgo/datasets");
+}
+
+export async function testMindgoConnection(): Promise<MindgoConnectionTestResponse> {
+  return requestJson<MindgoConnectionTestResponse>("/api/mindgo/test", {
+    method: "POST",
+    body: {},
+  });
+}
+
+export async function getMindgoDatasetSchema(
+  datasetId: string,
+): Promise<MindgoDatasetSchema> {
+  return requestJson<MindgoDatasetSchema>(`/api/mindgo/datasets/${datasetId}/schema`);
+}
+
+export async function queryMindgoDataset(
+  datasetId: string,
+  payload: MindgoDatasetQueryPayload,
+): Promise<MindgoDatasetQueryResponse> {
+  return requestJson<MindgoDatasetQueryResponse>(`/api/mindgo/datasets/${datasetId}/query`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function syncMindgoDataset(
+  datasetId: string,
+  payload: MindgoDatasetSyncPayload,
+): Promise<MindgoDatasetSyncResult> {
+  return requestJson<MindgoDatasetSyncResult>(`/api/mindgo/datasets/${datasetId}/sync`, {
     method: "POST",
     body: payload,
   });

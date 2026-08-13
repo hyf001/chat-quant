@@ -66,16 +66,36 @@ class AgentSettingsUpdatePayload(BaseModel):
     available_tools: list[str] | None = None
 
 
+class MindgoSettingsPayload(BaseModel):
+    jupyter_url: str | None = None
+    auth_scheme: str
+    jupyter_token: str | None = None
+    notebook_path: str
+    kernel_id: str | None = None
+    timeout_seconds: int = Field(ge=0)
+
+
+class MindgoSettingsUpdatePayload(BaseModel):
+    jupyter_url: str | None = None
+    auth_scheme: str | None = None
+    jupyter_token: str | None = None
+    notebook_path: str | None = None
+    kernel_id: str | None = None
+    timeout_seconds: int | None = Field(default=None, ge=0)
+
+
 class AppSettingsPayload(BaseModel):
     system: SystemSettingsPayload
     logging: LoggingSettingsPayload
     agent: AgentSettingsPayload
+    mindgo: MindgoSettingsPayload
 
 
 class AppSettingsUpdatePayload(BaseModel):
     system: SystemSettingsUpdatePayload | None = None
     logging: LoggingSettingsUpdatePayload | None = None
     agent: AgentSettingsUpdatePayload | None = None
+    mindgo: MindgoSettingsUpdatePayload | None = None
 
 
 class ConfigFieldDefinitionResponse(BaseModel):

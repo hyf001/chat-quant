@@ -19,12 +19,13 @@ from app.model.config import AppSettingRow, ModelProviderRow
 from app.schema.config import (
     AgentSettingsPayload,
     AgentThinkingSettingsPayload,
-    AppSettingsUpdatePayload,
     AppConfigResponse,
     AppSettingsPayload,
+    AppSettingsUpdatePayload,
     BootstrapConfigResponse,
     ConfigFieldDefinitionResponse,
     LoggingSettingsPayload,
+    MindgoSettingsPayload,
     SystemSettingsPayload,
     UpdateAppConfigRequest,
 )
@@ -153,6 +154,14 @@ def _payload_from_settings(settings: Settings) -> AppSettingsPayload:
             ),
             available_tools=settings.agent_available_tools,
         ),
+        mindgo=MindgoSettingsPayload(
+            jupyter_url=settings.mindgo_jupyter_url,
+            auth_scheme=settings.mindgo_auth_scheme,
+            jupyter_token=settings.mindgo_jupyter_token,
+            notebook_path=settings.mindgo_notebook_path,
+            kernel_id=settings.mindgo_kernel_id,
+            timeout_seconds=settings.mindgo_timeout_seconds,
+        ),
     )
 
 
@@ -188,4 +197,17 @@ def _flatten_payload(payload: AppSettingsUpdatePayload) -> dict[str, ConfigValue
                 values["agent_thinking_budget_tokens"] = payload.agent.thinking.budget_tokens
         if payload.agent.available_tools is not None:
             values["agent_available_tools"] = payload.agent.available_tools
+    if payload.mindgo is not None:
+        if payload.mindgo.jupyter_url is not None:
+            values["mindgo_jupyter_url"] = payload.mindgo.jupyter_url
+        if payload.mindgo.auth_scheme is not None:
+            values["mindgo_auth_scheme"] = payload.mindgo.auth_scheme
+        if payload.mindgo.jupyter_token is not None:
+            values["mindgo_jupyter_token"] = payload.mindgo.jupyter_token
+        if payload.mindgo.notebook_path is not None:
+            values["mindgo_notebook_path"] = payload.mindgo.notebook_path
+        if payload.mindgo.kernel_id is not None:
+            values["mindgo_kernel_id"] = payload.mindgo.kernel_id
+        if payload.mindgo.timeout_seconds is not None:
+            values["mindgo_timeout_seconds"] = payload.mindgo.timeout_seconds
     return values

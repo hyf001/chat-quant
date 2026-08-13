@@ -8,9 +8,11 @@ dependencies = [
   "akshare>=1.18.78",
   "backtrader>=1.9.78.123",
   "claude-agent-sdk>=0.2.127",
+  "duckdb>=1.3.0",
   "fastapi>=0.116.1",
   "greenlet>=3.2.4",
   "pandas>=2.3.0",
+  "socksio>=1.0.0",
   "sqlalchemy>=2.0.51",
   "uvicorn[standard]>=0.35.0",
 ]

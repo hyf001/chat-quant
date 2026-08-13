@@ -15,6 +15,7 @@ DEFAULT_API_HOST = "127.0.0.1"
 DEFAULT_API_PORT = 12345
 DEFAULT_WEB_HOST = "127.0.0.1"
 DEFAULT_WEB_PORT = 12346
+DEFAULT_MINDGO_NOTEBOOK_PATH = "deepsolo_v3/少标的分时实时.ipynb"
 DEFAULT_MODEL_PROVIDER_ID = "provider_anthropic_default"
 DEFAULT_MODEL_PROVIDER_NAME = "Anthropic"
 DEFAULT_AGENT_TOOLS = [
@@ -164,6 +165,57 @@ APP_CONFIG_DEFINITIONS: tuple[ConfigDefinition, ...] = (
         "传给 Agent SDK 的可用工具列表；删除某项即禁用该工具。",
         tuple(DEFAULT_AGENT_TOOLS),
     ),
+    ConfigDefinition(
+        "mindgo_jupyter_url",
+        "MindGo Notebook 地址",
+        "mindgo",
+        "string",
+        "",
+        "MindGo / SuperMind Jupyter Notebook 服务地址。",
+        nullable=True,
+    ),
+    ConfigDefinition(
+        "mindgo_auth_scheme",
+        "MindGo 认证方式",
+        "mindgo",
+        "string",
+        "Bearer",
+        "MindGo Jupyter 认证方式。",
+    ),
+    ConfigDefinition(
+        "mindgo_jupyter_token",
+        "MindGo 访问 Token",
+        "mindgo",
+        "password",
+        "",
+        "MindGo / SuperMind Jupyter 访问 Token。",
+        nullable=True,
+    ),
+    ConfigDefinition(
+        "mindgo_notebook_path",
+        "MindGo Notebook 路径",
+        "mindgo",
+        "string",
+        DEFAULT_MINDGO_NOTEBOOK_PATH,
+        "用于创建或复用 kernel 的远端 Notebook 路径。",
+    ),
+    ConfigDefinition(
+        "mindgo_kernel_id",
+        "MindGo Kernel ID",
+        "mindgo",
+        "string",
+        "",
+        "可选；填写后复用指定 Jupyter kernel。",
+        nullable=True,
+    ),
+    ConfigDefinition(
+        "mindgo_timeout_seconds",
+        "MindGo 超时秒数",
+        "mindgo",
+        "integer",
+        120,
+        "MindGo 远端执行超时秒数。",
+    ),
 )
 
 
@@ -193,6 +245,12 @@ class Settings(BaseModel):
     agent_thinking_type: Literal["disabled", "adaptive", "enabled"] = "disabled"
     agent_thinking_budget_tokens: int = 2048
     agent_available_tools: list[str] = DEFAULT_AGENT_TOOLS
+    mindgo_jupyter_url: str | None = None
+    mindgo_auth_scheme: str = "Bearer"
+    mindgo_jupyter_token: str | None = None
+    mindgo_notebook_path: str = DEFAULT_MINDGO_NOTEBOOK_PATH
+    mindgo_kernel_id: str | None = None
+    mindgo_timeout_seconds: int = 120
 
     @field_validator("agent_available_tools", mode="before")
     @classmethod

@@ -2,9 +2,9 @@
 """Fetch MindGo indexmap data through the remote Jupyter runtime.
 
 The MindGo ``get_arsenal_api`` helper only exists inside the authorized
-MindGo/SuperMind runtime. This script uses the current process environment for
-Jupyter settings, executes a read-only ``query_index`` call remotely, then saves
-the raw JSON and a best-effort tabular CSV locally.
+MindGo/SuperMind runtime. This script uses the hardcoded Jupyter settings below,
+executes a read-only ``query_index`` call remotely, then saves the raw JSON and
+a best-effort tabular CSV locally.
 """
 
 from __future__ import annotations
@@ -12,7 +12,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import os
 import re
 import sys
 from collections.abc import Iterable
@@ -31,7 +30,11 @@ from supermind_mcp.config import resolve_config  # noqa: E402
 from supermind_mcp.jupyter_api import JupyterAPI  # noqa: E402
 from supermind_mcp.jupyter_ws import execute_code_ws  # noqa: E402
 
-DEFAULT_QUERY_ID = "982"
+HARDCODED_JUPYTER_URL = "https://supermind.10jqka.com.cn/notebook/user/599131004"
+HARDCODED_JUPYTER_TOKEN = "ac41892099f146938cb2ab64c3c0b676"
+HARDCODED_JUPYTER_AUTH_SCHEME = "Bearer"
+
+DEFAULT_QUERY_ID = "1014"
 DEFAULT_POD = "cbas-babel-frondend-pod"
 DEFAULT_NOTEBOOK_PATH = "deepsolo_v3/少标的分时实时.ipynb"
 MARKER_START = "MINDGO_INDEXMAP_JSON_START"
@@ -48,9 +51,7 @@ class ParsedIndexmap:
 def main() -> int:
     args = parse_args()
     if not args.notebook_path:
-        args.notebook_path = (
-            os.getenv("MINDGO_INTRADAY_NOTEBOOK_PATH") or DEFAULT_NOTEBOOK_PATH
-        )
+        args.notebook_path = DEFAULT_NOTEBOOK_PATH
 
     try:
         result = asyncio.run(fetch_indexmap(args))
@@ -117,7 +118,13 @@ def parse_args() -> argparse.Namespace:
 
 
 async def fetch_indexmap(args: argparse.Namespace) -> ParsedIndexmap:
-    config = resolve_config()
+    if not HARDCODED_JUPYTER_TOKEN:
+        raise RuntimeError("HARDCODED_JUPYTER_TOKEN is empty; fill it in the script first")
+    config = resolve_config(
+        url=HARDCODED_JUPYTER_URL,
+        token=HARDCODED_JUPYTER_TOKEN,
+        auth_scheme=HARDCODED_JUPYTER_AUTH_SCHEME,
+    )
     async with JupyterAPI(config) as api:
         kernel_id = args.kernel_id or await find_or_create_kernel(
             api,
@@ -130,6 +137,9 @@ async def fetch_indexmap(args: argparse.Namespace) -> ParsedIndexmap:
                 base_day=args.base_day,
                 pod=args.pod,
             ),
+            url=HARDCODED_JUPYTER_URL,
+            token=HARDCODED_JUPYTER_TOKEN,
+            auth_scheme=HARDCODED_JUPYTER_AUTH_SCHEME,
             timeout=args.timeout,
         )
 
@@ -425,7 +435,7 @@ def unique_column_name(label: str, row: dict[str, Any]) -> str:
 
 
 def redact(text: str) -> str:
-    token = os.getenv("JUPYTER_TOKEN", "")
+    token = HARDCODED_JUPYTER_TOKEN
     if token:
         text = text.replace(token, "***")
     return re.sub(r"token=[^&\\s]+", "token=***", text)

@@ -5,6 +5,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AgentSettingsForm } from "../modules/settings/AgentSettingsForm";
+import { DataSourceSettingsForm } from "../modules/settings/DataSourceSettingsForm";
 import { LoggingSettingsForm } from "../modules/settings/LoggingSettingsForm";
 import { SystemSettingsForm } from "../modules/settings/SystemSettingsForm";
 import {
@@ -44,6 +45,7 @@ const tabs: Array<{ id: SettingsTab; label: string }> = [
   { id: "agent", label: "Agent" },
   { id: "system", label: "系统" },
   { id: "logging", label: "日志" },
+  { id: "data", label: "数据源" },
 ];
 
 export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
@@ -192,6 +194,7 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
         ...current,
         system: patch.system ? nextConfig.settings.system : current.system,
         logging: patch.logging ? nextConfig.settings.logging : current.logging,
+        mindgo: patch.mindgo ? nextConfig.settings.mindgo : current.mindgo,
         agent: patch.agent
           ? {
               ...current.agent,
@@ -369,7 +372,7 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
           <div className="min-w-0">
             <h1 className="text-xl font-semibold leading-tight text-ink">设置</h1>
             <p className="mt-1 text-xs text-muted">
-              管理模型供应商、Agent 参数和运行日志。
+              管理模型供应商、Agent 参数、运行日志和数据源。
             </p>
           </div>
         </div>
@@ -377,7 +380,7 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
 
       <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
         <nav className="grid gap-3 rounded-lg border border-line bg-soft p-3 xl:sticky xl:top-0 xl:self-start">
-          <div className="grid grid-cols-3 gap-1 xl:grid-cols-1">
+          <div className="grid grid-cols-2 gap-1 sm:grid-cols-4 xl:grid-cols-1">
             {tabs.map((tab) => (
               <button
                 className={`rounded-md px-2.5 py-2 text-center text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-signal/20 xl:text-left ${
@@ -449,6 +452,16 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
                   isLoggingSaving={isLoggingSaving}
                   onChange={setDraft}
                   onLoggingChange={(logging) => void handleSaveLogging(logging)}
+                />
+              ) : null}
+              {activeTab === "data" ? (
+                <DataSourceSettingsForm
+                  draft={draft}
+                  onChange={setDraft}
+                  onSaveMindgoSettings={(mindgo, message) =>
+                    void saveSettingsField({ mindgo }, message)
+                  }
+                  onToast={showToast}
                 />
               ) : null}
             </div>
