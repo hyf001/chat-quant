@@ -301,7 +301,6 @@ dependencies = [
     { name = "fastapi" },
     { name = "greenlet" },
     { name = "pandas" },
-    { name = "pydantic-settings" },
     { name = "sqlalchemy" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -324,7 +323,6 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.116.1" },
     { name = "greenlet", specifier = ">=3.2.4" },
     { name = "pandas", specifier = ">=2.3.0" },
-    { name = "pydantic-settings", specifier = ">=2.10.1" },
     { name = "sqlalchemy", specifier = ">=2.0.51" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.35.0" },
 ]

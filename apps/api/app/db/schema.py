@@ -135,7 +135,7 @@ def _seed_app_settings(engine: Engine, settings: Settings) -> None:
         return
 
     now = "CURRENT_TIMESTAMP"
-    defaults = default_app_config_values(settings.database_path)
+    defaults = default_app_config_values()
     with engine.begin() as connection:
         for definition in APP_CONFIG_DEFINITIONS:
             count = connection.execute(

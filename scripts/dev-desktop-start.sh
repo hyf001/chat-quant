@@ -9,13 +9,13 @@ start_service \
   "desktop" \
   "$DESKTOP_PID_FILE" \
   "$LOG_DIR/desktop.log" \
-  "http://$DESKTOP_API_HOST:$DESKTOP_API_PORT/api/health" \
+  "http://$API_HOST:$API_PORT/api/health" \
   120 \
   npm --prefix apps/desktop run dev
 
 echo
 echo "Desktop dev app is running:"
-echo "  Desktop API: http://$DESKTOP_API_HOST:$DESKTOP_API_PORT/api/health"
+echo "  Desktop API: http://$API_HOST:$API_PORT/api/health"
 echo
 echo "Logs:"
 echo "  tail -f $LOG_DIR/desktop.log"

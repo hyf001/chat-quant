@@ -1,5 +1,4 @@
 import json
-import os
 import sqlite3
 from dataclasses import dataclass
 from functools import lru_cache
@@ -7,10 +6,15 @@ from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 JsonPrimitive = str | int | bool | None
 ConfigValue = JsonPrimitive | list[str]
+DEFAULT_CONFIG_FILE_PATH = Path("config.json")
+DEFAULT_DATABASE_PATH = Path("data/chat-quant.db")
+DEFAULT_API_HOST = "127.0.0.1"
+DEFAULT_API_PORT = 12345
+DEFAULT_WEB_HOST = "127.0.0.1"
+DEFAULT_WEB_PORT = 12346
 DEFAULT_MODEL_PROVIDER_ID = "provider_anthropic_default"
 DEFAULT_MODEL_PROVIDER_NAME = "Anthropic"
 DEFAULT_AGENT_TOOLS = [
@@ -96,20 +100,6 @@ APP_CONFIG_DEFINITIONS: tuple[ConfigDefinition, ...] = (
         "超过该毫秒数的请求会被标记为慢请求。",
     ),
     ConfigDefinition(
-        "cors_origins",
-        "CORS 来源",
-        "system",
-        "list",
-        [
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "http://localhost:5174",
-            "http://127.0.0.1:5174",
-            "null",
-        ],
-        "允许访问 API 的 Web 来源。",
-    ),
-    ConfigDefinition(
         "agent_provider_id",
         "Agent Provider",
         "agent",
@@ -193,31 +183,22 @@ APP_CONFIG_DEFINITIONS: tuple[ConfigDefinition, ...] = (
 )
 
 
-class DatabaseConfig(BaseSettings):
-    database_path: Path = Field(default=Path("data/chat-quant.db"), alias="CHATQ_DATABASE_PATH")
-
-    model_config = SettingsConfigDict(extra="ignore")
-
-
 class Settings(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     app_name: str = "Chat-Quant API"
     api_prefix: str = "/api"
-    config_file_path: Path = Path(".env")
-    database_path: Path = Path("data/chat-quant.db")
+    config_file_path: Path = DEFAULT_CONFIG_FILE_PATH
+    database_path: Path = DEFAULT_DATABASE_PATH
+    api_host: str = DEFAULT_API_HOST
+    api_port: int = DEFAULT_API_PORT
+    web_host: str = DEFAULT_WEB_HOST
+    web_port: int = DEFAULT_WEB_PORT
     environment: str = "development"
     log_level: str = "INFO"
     log_format: Literal["text", "json"] = "text"
     access_log_enabled: bool = True
     access_log_slow_threshold_ms: int = 1000
-    cors_origins: list[str] = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-        "null",
-    ]
     agent_provider_id: str = DEFAULT_MODEL_PROVIDER_ID
     agent_model: str = "claude-sonnet-4"
     agent_base_url: str | None = None
@@ -230,13 +211,6 @@ class Settings(BaseModel):
     agent_thinking_budget_tokens: int = 2048
     agent_available_tools: list[str] = DEFAULT_AGENT_TOOLS
     agent_env_allowlist: list[str] = ["CHATQ_API_BASE", "CHATQ_AGENT_TOKEN"]
-
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def split_cors_origins(cls, value: str | list[str]) -> list[str]:
-        if isinstance(value, str):
-            return [origin.strip() for origin in value.split(",") if origin.strip()]
-        return value
 
     @field_validator("agent_available_tools", "agent_env_allowlist", mode="before")
     @classmethod
@@ -252,13 +226,11 @@ class Settings(BaseModel):
 
 
 def config_file_path() -> Path:
-    return Path(os.environ.get("CHATQ_CONFIG_FILE", ".env"))
+    return DEFAULT_CONFIG_FILE_PATH
 
 
-def default_app_config_values(database_path: Path) -> dict[str, ConfigValue]:
-    del database_path
-    values = {definition.key: definition.default for definition in APP_CONFIG_DEFINITIONS}
-    return values
+def default_app_config_values() -> dict[str, ConfigValue]:
+    return {definition.key: definition.default for definition in APP_CONFIG_DEFINITIONS}
 
 
 def coerce_config_value(definition: ConfigDefinition, value: object) -> ConfigValue:
@@ -305,16 +277,54 @@ def config_definition_by_key() -> dict[str, ConfigDefinition]:
 @lru_cache
 def get_settings() -> Settings:
     file_path = config_file_path()
-    database_config = DatabaseConfig(_env_file=file_path, _env_file_encoding="utf-8")
-    database_path = database_config.database_path
-    values = default_app_config_values(database_path)
+    file_config = _load_file_config_values(file_path)
+    database_path = _coerce_path(file_config.get("database_path"), DEFAULT_DATABASE_PATH)
+    api_host = _coerce_string(file_config.get("api_host"), DEFAULT_API_HOST)
+    api_port = _coerce_port(file_config.get("api_port"), DEFAULT_API_PORT)
+    web_host = _coerce_string(file_config.get("web_host"), DEFAULT_WEB_HOST)
+    web_port = _coerce_port(file_config.get("web_port"), DEFAULT_WEB_PORT)
+    values = default_app_config_values()
     values.update(_load_sqlite_config_values(database_path))
     values.update(_load_agent_provider_values(database_path, values.get("agent_provider_id")))
     return Settings(
         config_file_path=file_path,
         database_path=database_path,
+        api_host=api_host,
+        api_port=api_port,
+        web_host=web_host,
+        web_port=web_port,
         **values,
     )
+
+
+def _load_file_config_values(file_path: Path) -> dict[str, object]:
+    if not file_path.exists():
+        return {}
+    try:
+        payload = json.loads(file_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _coerce_path(value: object, default: Path) -> Path:
+    if isinstance(value, str) and value.strip():
+        return Path(value).expanduser()
+    return default
+
+
+def _coerce_string(value: object, default: str) -> str:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return default
+
+
+def _coerce_port(value: object, default: int) -> int:
+    try:
+        port = int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
+    return port if 0 < port <= 65535 else default
 
 
 def _load_sqlite_config_values(database_path: Path) -> dict[str, ConfigValue]:

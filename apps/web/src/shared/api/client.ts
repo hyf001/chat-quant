@@ -17,7 +17,7 @@ import type {
 } from "./types";
 
 const API_BASE_URL =
-  window.chatqDesktop?.apiBaseUrl ?? import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+  window.chatqDesktop?.apiBaseUrl ?? __CHATQ_API_BASE_URL__;
 export { API_BASE_URL };
 
 type RequestOptions = {
@@ -128,13 +128,16 @@ export type RuntimeHealth = {
 export type BootstrapConfig = {
   config_file_path: string;
   database_path: string;
+  api_host: string;
+  api_port: number;
+  web_host: string;
+  web_port: number;
 };
 
 export type SystemSettings = {
   environment: "development" | "desktop" | "production";
   access_log_enabled: boolean;
   access_log_slow_threshold_ms: number;
-  cors_origins: string[];
 };
 
 export type LoggingSettings = {

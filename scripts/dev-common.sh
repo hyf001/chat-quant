@@ -5,12 +5,14 @@ STATE_DIR="$ROOT_DIR/.dev"
 PID_DIR="$STATE_DIR/pids"
 LOG_DIR="$STATE_DIR/logs"
 
-API_HOST="${API_HOST:-127.0.0.1}"
-API_PORT="${API_PORT:-8000}"
-WEB_HOST="${WEB_HOST:-127.0.0.1}"
-WEB_PORT="${WEB_PORT:-5173}"
-DESKTOP_API_HOST="${DESKTOP_API_HOST:-127.0.0.1}"
-DESKTOP_API_PORT="${DESKTOP_API_PORT:-${CHATQ_DESKTOP_API_PORT:-12345}}"
+read_config() {
+  (cd "$ROOT_DIR" && python3 "$ROOT_DIR/scripts/read-runtime-config.py" "$1")
+}
+
+API_HOST="$(read_config api_host)"
+API_PORT="$(read_config api_port)"
+WEB_HOST="$(read_config web_host)"
+WEB_PORT="$(read_config web_port)"
 
 UV_CACHE_DIR="${UV_CACHE_DIR:-${TMPDIR:-/tmp}/chat-quant-uv-cache}"
 WATCHFILES_FORCE_POLLING="${WATCHFILES_FORCE_POLLING:-true}"
@@ -18,7 +20,6 @@ WATCHFILES_FORCE_POLLING="${WATCHFILES_FORCE_POLLING:-true}"
 mkdir -p "$PID_DIR" "$LOG_DIR" "$UV_CACHE_DIR"
 export UV_CACHE_DIR
 export WATCHFILES_FORCE_POLLING
-export CHATQ_DESKTOP_API_PORT="$DESKTOP_API_PORT"
 
 is_running() {
   local pid_file="$1"

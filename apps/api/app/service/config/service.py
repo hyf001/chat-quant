@@ -106,6 +106,10 @@ def _response_from_settings(settings: Settings) -> AppConfigResponse:
         bootstrap=BootstrapConfigResponse(
             config_file_path=str(settings.config_file_path),
             database_path=str(settings.database_path),
+            api_host=settings.api_host,
+            api_port=settings.api_port,
+            web_host=settings.web_host,
+            web_port=settings.web_port,
         ),
         settings=_payload_from_settings(settings),
         fields=[
@@ -129,7 +133,6 @@ def _payload_from_settings(settings: Settings) -> AppSettingsPayload:
             environment=settings.environment,  # type: ignore[arg-type]
             access_log_enabled=settings.access_log_enabled,
             access_log_slow_threshold_ms=settings.access_log_slow_threshold_ms,
-            cors_origins=settings.cors_origins,
         ),
         logging=LoggingSettingsPayload(
             level=settings.log_level,  # type: ignore[arg-type]
@@ -157,7 +160,6 @@ def _flatten_payload(payload: AppSettingsPayload) -> dict[str, ConfigValue]:
         "environment": payload.system.environment,
         "access_log_enabled": payload.system.access_log_enabled,
         "access_log_slow_threshold_ms": payload.system.access_log_slow_threshold_ms,
-        "cors_origins": payload.system.cors_origins,
         "log_level": payload.logging.level,
         "log_format": payload.logging.format,
         "agent_provider_id": payload.agent.provider_id,

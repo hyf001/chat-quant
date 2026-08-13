@@ -11,7 +11,6 @@ dependencies = [
   "fastapi>=0.116.1",
   "greenlet>=3.2.4",
   "pandas>=2.3.0",
-  "pydantic-settings>=2.10.1",
   "sqlalchemy>=2.0.51",
   "uvicorn[standard]>=0.35.0",
 ]

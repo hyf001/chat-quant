@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -10,8 +10,13 @@ const require = createRequire(import.meta.url);
 const electron = require("electron");
 const { app, BrowserWindow, dialog, ipcMain } = electron;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const API_HOST = "127.0.0.1";
-const DEFAULT_API_PORT = 12345;
+const DEFAULT_RUNTIME_CONFIG = {
+  database_path: "data/chat-quant.db",
+  api_host: "127.0.0.1",
+  api_port: 12345,
+  web_host: "127.0.0.1",
+  web_port: 12346,
+};
 const API_RUNTIME_FILE_NAME = "api-runtime.json";
 
 let apiProcess = null;
@@ -21,11 +26,11 @@ async function main() {
   await app.whenReady();
   registerDesktopIpc();
 
-  const port = await resolveApiPort();
-  const apiBaseUrl = `http://${API_HOST}:${port}`;
-  const configFilePath = ensureDesktopConfigFile();
+  const configFilePath = desktopConfigFilePath();
+  const runtimeConfig = loadRuntimeConfig(configFilePath);
+  const apiBaseUrl = `http://${runtimeConfig.api_host}:${runtimeConfig.api_port}`;
 
-  apiProcess = startApiSidecar(port, configFilePath);
+  apiProcess = startApiSidecar(runtimeConfig);
   app.on("before-quit", stopApiSidecar);
 
   mainWindow = createWindow(apiBaseUrl);
@@ -33,7 +38,7 @@ async function main() {
 
   try {
     await waitForHealth(`${apiBaseUrl}/api/health`, 120_000);
-    writeApiRuntimeFile(apiBaseUrl, port, configFilePath);
+    writeApiRuntimeFile(apiBaseUrl, runtimeConfig, configFilePath);
     console.log(`Chat Quant API ready at ${apiBaseUrl}`);
     await mainWindow.loadFile(webIndexPath());
   } catch (error) {
@@ -116,11 +121,11 @@ function attachWindowDiagnostics(window) {
   }
 }
 
-function startApiSidecar(port, configFilePath) {
-  const command = sidecarCommand(port);
+function startApiSidecar(runtimeConfig) {
+  const command = sidecarCommand(runtimeConfig);
   const child = spawn(command.executable, command.args, {
     cwd: command.cwd,
-    env: sidecarEnv(configFilePath),
+    env: sidecarEnv(),
     stdio: ["ignore", "pipe", "pipe"],
   });
 
@@ -139,10 +144,9 @@ function startApiSidecar(port, configFilePath) {
   return child;
 }
 
-function sidecarEnv(configFilePath) {
+function sidecarEnv() {
   return {
     ...process.env,
-    CHATQ_CONFIG_FILE: configFilePath,
     PATH: desktopCliPath(),
   };
 }
@@ -184,12 +188,17 @@ function nvmNodeBinDirs(home) {
   }
 }
 
-function sidecarCommand(port) {
+function sidecarCommand(runtimeConfig) {
   const packagedBinary = packagedSidecarPath();
   if (app.isPackaged && packagedBinary) {
     return {
       executable: packagedBinary,
-      args: ["--host", API_HOST, "--port", String(port)],
+      args: [
+        "--host",
+        runtimeConfig.api_host,
+        "--port",
+        String(runtimeConfig.api_port),
+      ],
       cwd: process.resourcesPath,
     };
   }
@@ -205,9 +214,9 @@ function sidecarCommand(port) {
       "-m",
       "app.desktop_entry",
       "--host",
-      API_HOST,
+      runtimeConfig.api_host,
       "--port",
-      String(port),
+      String(runtimeConfig.api_port),
     ],
     cwd: repoRoot,
   };
@@ -273,40 +282,57 @@ function waitForHealth(url, timeoutMs) {
   });
 }
 
-async function resolveApiPort() {
-  const configuredPort = Number.parseInt(process.env.CHATQ_DESKTOP_API_PORT ?? "", 10);
-  if (Number.isInteger(configuredPort) && configuredPort > 0) {
-    return configuredPort;
+function desktopConfigFilePath() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, "config.json");
   }
-  return DEFAULT_API_PORT;
+  return path.resolve(__dirname, "../../..", "config.json");
 }
 
-function ensureDesktopConfigFile() {
-  const userDataPath = app.getPath("userData");
-  const configFilePath = path.join(userDataPath, "chat-quant.env");
-  if (!existsSync(configFilePath)) {
-    mkdirSync(userDataPath, { recursive: true });
-    const databasePath = path.join(userDataPath, "chat-quant.db");
-    writeFileSync(configFilePath, `CHATQ_DATABASE_PATH=${databasePath}\n`, "utf8");
+function loadRuntimeConfig(configFilePath) {
+  let payload = {};
+  try {
+    payload = JSON.parse(readFileSync(configFilePath, "utf8"));
+  } catch {
+    payload = {};
   }
-  return configFilePath;
+  const apiHost = coerceString(payload.api_host, DEFAULT_RUNTIME_CONFIG.api_host);
+  const apiPort = coercePort(payload.api_port, DEFAULT_RUNTIME_CONFIG.api_port);
+  return {
+    config_file_path: configFilePath,
+    database_path: coerceString(payload.database_path, DEFAULT_RUNTIME_CONFIG.database_path),
+    api_host: apiHost,
+    api_port: apiPort,
+    web_host: coerceString(payload.web_host, DEFAULT_RUNTIME_CONFIG.web_host),
+    web_port: coercePort(payload.web_port, DEFAULT_RUNTIME_CONFIG.web_port),
+  };
+}
+
+function coerceString(value, fallback) {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function coercePort(value, fallback) {
+  const port = Number.parseInt(String(value ?? ""), 10);
+  return Number.isInteger(port) && port > 0 && port <= 65535 ? port : fallback;
 }
 
 function apiRuntimeFilePath() {
   return path.join(app.getPath("userData"), API_RUNTIME_FILE_NAME);
 }
 
-function writeApiRuntimeFile(apiBaseUrl, port, configFilePath) {
+function writeApiRuntimeFile(apiBaseUrl, runtimeConfig, configFilePath) {
   const userDataPath = app.getPath("userData");
   mkdirSync(userDataPath, { recursive: true });
   writeFileSync(
     apiRuntimeFilePath(),
     `${JSON.stringify(
       {
-        host: API_HOST,
-        port,
+        host: runtimeConfig.api_host,
+        port: runtimeConfig.api_port,
         base_url: apiBaseUrl,
         api_base_url: `${apiBaseUrl}/api`,
+        database_path: runtimeConfig.database_path,
         pid: apiProcess?.pid ?? null,
         config_file_path: configFilePath,
         updated_at: new Date().toISOString(),

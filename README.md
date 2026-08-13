@@ -15,7 +15,7 @@ Chat-Quant 是一个基于自然语言对话的股票分析与策略验证工作
 ## 技术栈
 
 - Monorepo：根目录统一管理脚本，Python 使用 `uv` workspace。
-- API：FastAPI、SQLAlchemy、aiosqlite、Pydantic Settings。
+- API：FastAPI、SQLAlchemy、aiosqlite、Pydantic。
 - Agent：`claude-agent-sdk`，插件目录位于 `plugin/`。
 - 数据与回测：AKShare、pandas、Backtrader。
 - Web：React 19、Vite、TypeScript、Tailwind CSS、ECharts。
@@ -55,27 +55,21 @@ npm --prefix apps/desktop install
 
 ## 本地配置
 
-复制环境变量模板：
+所有本地运行配置都写在根目录 `config.json`：
 
-```bash
-cp .env.example .env
-```
-
-后端启动只需要用 `.env` 定位 SQLite 数据库：
-
-```bash
-CHATQ_DATABASE_PATH=data/chat-quant.db
+```json
+{
+  "database_path": "data/chat-quant.db",
+  "api_host": "127.0.0.1",
+  "api_port": 12345,
+  "web_host": "127.0.0.1",
+  "web_port": 12346
+}
 ```
 
 系统配置、Agent 参数和模型供应商配置保存在 SQLite，可在 Web 设置页维护。
 
-前端本地配置位于 `apps/web/.env.local`：
-
-```bash
-VITE_API_BASE_URL=http://127.0.0.1:8000
-VITE_CHATQ_USER_ID=
-VITE_CHATQ_PROJECT_ID=
-```
+Web 开发服务、FastAPI 后端和桌面端 sidecar 都只读取这个配置文件里的同名配置项。
 
 ## 开发启动
 
@@ -87,9 +81,9 @@ npm run dev:web-start
 
 默认地址：
 
-- API：`http://127.0.0.1:8000`
-- Web：`http://127.0.0.1:5173`
-- 健康检查：`http://127.0.0.1:8000/api/health`
+- API：`http://127.0.0.1:12345`
+- Web：`http://127.0.0.1:12346`
+- 健康检查：`http://127.0.0.1:12345/api/health`
 
 启动脚本会把进程号和日志写入 `.dev/`：
 
@@ -116,12 +110,8 @@ npm run dev:desktop-start
 npm run dev:desktop-stop
 ```
 
-如需改端口，可通过环境变量覆盖：
+如需改端口，编辑 `config.json` 中的 `api_port` 和 `web_port`，Web 版和桌面版会使用同一组配置。
 
-```bash
-API_PORT=8001 WEB_PORT=5174 npm run dev:web-start
-DESKTOP_API_PORT=12346 npm run dev:desktop-start
-```
 
 ## 常用 API
 
@@ -142,7 +132,7 @@ DESKTOP_API_PORT=12346 npm run dev:desktop-start
 策略 CLI 位于 `cli/chatq_strategy.py`，通过业务 API 操作策略和回测。开发环境下建议显式指定 API 地址：
 
 ```bash
-export CHATQ_API_BASE_URL=http://127.0.0.1:8000
+export CHATQ_API_BASE_URL=http://127.0.0.1:12345
 ```
 
 常用命令：
@@ -239,7 +229,7 @@ Apple Silicon 机器默认会生成 `arm64` 产物；Intel Mac 默认会生成 `
 bash deploy/0_remote_deploy.sh
 ```
 
-部署脚本会在服务器上拉取仓库、安装运行环境、构建前后端、配置 Nginx 与 HTTPS，并启动系统服务。生产环境变量模板位于 `deploy/.env.production`。
+部署脚本会在服务器上拉取仓库、安装运行环境、构建前后端、写入 `config.json`、配置 Nginx 与 HTTPS，并启动系统服务。
 
 ## 相关文档
 

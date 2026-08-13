@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 
+declare const __CHATQ_API_BASE_URL__: string;
+
 interface Window {
   chatqDesktop?: {
     apiBaseUrl: string;

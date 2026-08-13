@@ -33,6 +33,10 @@
         ]
       },
       {
+        "from": "../../config.json",
+        "to": "config.json"
+      },
+      {
         "from": "sidecars",
         "to": "sidecars",
         "filter": [

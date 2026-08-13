@@ -2,9 +2,9 @@
 """Fetch MindGo indexmap data through the remote Jupyter runtime.
 
 The MindGo ``get_arsenal_api`` helper only exists inside the authorized
-MindGo/SuperMind runtime. This script reads Jupyter settings from the repo
-``.env``, executes a read-only ``query_index`` call remotely, then saves the
-raw JSON and a best-effort tabular CSV locally.
+MindGo/SuperMind runtime. This script uses the current process environment for
+Jupyter settings, executes a read-only ``query_index`` call remotely, then saves
+the raw JSON and a best-effort tabular CSV locally.
 """
 
 from __future__ import annotations
@@ -47,7 +47,6 @@ class ParsedIndexmap:
 
 def main() -> int:
     args = parse_args()
-    load_env_file(args.env_file)
     if not args.notebook_path:
         args.notebook_path = (
             os.getenv("MINDGO_INTRADAY_NOTEBOOK_PATH") or DEFAULT_NOTEBOOK_PATH
@@ -96,12 +95,6 @@ def parse_args() -> argparse.Namespace:
         help="Trading date in YYYYMMDD format. Defaults to today.",
     )
     parser.add_argument(
-        "--env-file",
-        type=Path,
-        default=REPO_ROOT / ".env",
-        help="Path to .env containing JUPYTER_URL/JUPYTER_TOKEN.",
-    )
-    parser.add_argument(
         "--notebook-path",
         default=None,
         help="Remote notebook/session path used to create or reuse a kernel.",
@@ -121,31 +114,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timeout", type=float, default=120.0)
     parser.add_argument("--preview-rows", type=int, default=10)
     return parser.parse_args()
-
-
-def load_env_file(path: Path) -> None:
-    if not path.exists():
-        return
-
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if line.startswith("export "):
-            line = line[len("export ") :].strip()
-        if "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = strip_env_value(value.strip())
-        if key and key not in os.environ:
-            os.environ[key] = value
-
-
-def strip_env_value(value: str) -> str:
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
-        return value[1:-1]
-    return value
 
 
 async def fetch_indexmap(args: argparse.Namespace) -> ParsedIndexmap:

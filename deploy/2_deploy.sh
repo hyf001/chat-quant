@@ -13,6 +13,7 @@ DOMAIN="${DOMAIN:-chatq.nanbende.com}"
 SSL_EMAIL="${SSL_EMAIL:-}"
 NGINX_CONF="/etc/nginx/conf.d/${SERVICE_NAME}.conf"
 VENV_DIR="${APP_DIR}/.venv"
+CONFIG_FILE="${APP_DIR}/config.json"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 log()  { echo -e "${GREEN}[✓]${NC} $1"; }
@@ -29,14 +30,28 @@ echo "=============================================="
 
 cd "$APP_DIR"
 
-if [[ ! -f "$APP_DIR/.env" ]]; then
-    cp "$APP_DIR/deploy/.env.production" "$APP_DIR/.env"
-    log "Created backend env file: ${APP_DIR}/.env"
+if [[ ! -f "$CONFIG_FILE" ]]; then
+    cat > "$CONFIG_FILE" <<EOF
+{
+  "database_path": "data/chat-quant.db",
+  "api_host": "127.0.0.1",
+  "api_port": 12345,
+  "web_host": "127.0.0.1",
+  "web_port": 12346
+}
+EOF
+    log "Created runtime config: ${CONFIG_FILE}"
 fi
 
-if ! grep -q '^DOMAIN=' "$APP_DIR/.env"; then
-    echo "DOMAIN=${DOMAIN}" >> "$APP_DIR/.env"
-fi
+read_config() {
+    python3 "$APP_DIR/scripts/read-runtime-config.py" "$1"
+}
+
+API_HOST="$(read_config api_host)"
+API_PORT="$(read_config api_port)"
+WEB_HOST="$(read_config web_host)"
+WEB_PORT="$(read_config web_port)"
+log "Runtime config ready: ${CONFIG_FILE}"
 
 info "Installing Python dependencies"
 if [[ ! -d "$VENV_DIR" ]]; then
@@ -51,12 +66,6 @@ deactivate
 log "Python dependencies installed"
 
 info "Building web frontend"
-cat > "$APP_DIR/apps/web/.env.production" <<EOF
-VITE_API_BASE_URL=
-VITE_CHATQ_USER_ID=local_user
-VITE_CHATQ_PROJECT_ID=local_project
-EOF
-
 npm config set registry https://registry.npmmirror.com
 if [[ -f "$APP_DIR/apps/web/package-lock.json" ]]; then
     npm --prefix "$APP_DIR/apps/web" ci
@@ -80,12 +89,11 @@ Type=exec
 User=${APP_USER}
 Group=${APP_USER}
 WorkingDirectory=${APP_DIR}
-EnvironmentFile=${APP_DIR}/.env
 ExecStart=${VENV_DIR}/bin/gunicorn app.main:app \\
     --chdir ${APP_DIR}/apps/api \\
     --workers 2 \\
     --worker-class uvicorn.workers.UvicornWorker \\
-    --bind 127.0.0.1:8000 \\
+    --bind ${API_HOST}:${API_PORT} \\
     --log-level info \\
     --access-logfile ${APP_DIR}/logs/access.log \\
     --error-logfile ${APP_DIR}/logs/error.log \\
@@ -132,6 +140,7 @@ write_https_nginx_conf() {
     cp "$APP_DIR/deploy/nginx.conf" "$NGINX_CONF"
     sed -i "s/YOUR_DOMAIN/${DOMAIN}/g" "$NGINX_CONF"
     sed -i "s|APP_DIR|${APP_DIR}|g" "$NGINX_CONF"
+    sed -i "s|API_UPSTREAM|http://${API_HOST}:${API_PORT}|g" "$NGINX_CONF"
 }
 
 info "Configuring Nginx and HTTPS"

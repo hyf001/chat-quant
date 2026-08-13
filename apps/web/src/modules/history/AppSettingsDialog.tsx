@@ -702,7 +702,6 @@ function SystemForm({ draft, onChange }: { draft: AppSettings; onChange: (settin
       <SelectField label="运行环境" value={system.environment} options={["development", "desktop", "production"]} onChange={(environment) => onChange({ ...draft, system: { ...system, environment: environment as AppSettings["system"]["environment"] } })} />
       <ToggleField label="访问日志" checked={system.access_log_enabled} onChange={(access_log_enabled) => onChange({ ...draft, system: { ...system, access_log_enabled } })} />
       <NumberField label="慢请求阈值 ms" value={system.access_log_slow_threshold_ms} onChange={(access_log_slow_threshold_ms) => onChange({ ...draft, system: { ...system, access_log_slow_threshold_ms } })} />
-      <ListField label="CORS 来源" value={system.cors_origins} onChange={(cors_origins) => onChange({ ...draft, system: { ...system, cors_origins } })} />
     </FormSection>
   );
 }

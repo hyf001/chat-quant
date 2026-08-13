@@ -7,7 +7,7 @@
 ## 使用
 
 1. 确认域名 `chatq.nanbende.com` 的 A 记录已解析到 `47.95.205.124`。
-2. 确认 `deploy/server.env` 中的 `SSH_KEY_PATH` 指向服务器 root 登录密钥。
+2. 确认 `deploy/server.config` 中的 `SSH_KEY_PATH` 指向服务器 root 登录密钥。
 3. 在项目根目录执行：
 
 ```bash
@@ -27,7 +27,7 @@ systemctl reload nginx
 
 ## 配置文件
 
-- `deploy/server.env`：服务器、SSH 密钥、域名、仓库、应用目录配置。
+- `deploy/server.config`：服务器、SSH 密钥、域名、仓库、应用目录配置。
 - `deploy/server.password`：服务器密码 fallback，本文件已被 `deploy/.gitignore` 忽略。
-- `deploy/.env.production`：后端生产环境变量模板，首次部署会复制为 `/opt/chat-quant/.env`。
+- `/opt/chat-quant/config.json`：运行配置，部署脚本会生成并供后端与前端构建共同使用。
 - `deploy/nginx.conf`：HTTPS Nginx 模板。

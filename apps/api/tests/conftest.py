@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
@@ -14,7 +15,19 @@ from sqlalchemy import create_engine
 
 @pytest.fixture(autouse=True)
 def isolated_database(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    monkeypatch.setenv("CHATQ_DATABASE_PATH", str(tmp_path / "chat-quant.db"))
+    config_file = tmp_path / "config.json"
+    config_file.write_text(
+        json.dumps(
+            {
+                "database_path": str(tmp_path / "chat-quant.db"),
+                "api_port": 18000,
+                "web_port": 15173,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
     _clear_dependency_caches()
     yield
     _clear_dependency_caches()

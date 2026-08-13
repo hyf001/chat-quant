@@ -4,8 +4,6 @@ import argparse
 
 import uvicorn
 
-from app.main import app
-
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the Chat-Quant FastAPI desktop sidecar.")
@@ -13,6 +11,8 @@ def main() -> None:
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--log-level", default="info")
     args = parser.parse_args()
+
+    from app.main import app
 
     uvicorn.run(app, host=args.host, port=args.port, log_level=args.log_level, access_log=False)
 

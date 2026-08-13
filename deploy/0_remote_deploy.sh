@@ -9,7 +9,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="${SCRIPT_DIR}/server.env"
+CONFIG_FILE="${SCRIPT_DIR}/server.config"
 PASSWORD_FILE="${SCRIPT_DIR}/server.password"
 
 if [[ ! -f "$CONFIG_FILE" ]]; then

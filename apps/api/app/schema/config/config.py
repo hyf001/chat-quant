@@ -8,13 +8,16 @@ from pydantic import BaseModel, Field
 class BootstrapConfigResponse(BaseModel):
     config_file_path: str
     database_path: str
+    api_host: str
+    api_port: int
+    web_host: str
+    web_port: int
 
 
 class SystemSettingsPayload(BaseModel):
     environment: Literal["development", "desktop", "production"]
     access_log_enabled: bool
     access_log_slow_threshold_ms: int = Field(ge=0)
-    cors_origins: list[str]
 
 
 class LoggingSettingsPayload(BaseModel):

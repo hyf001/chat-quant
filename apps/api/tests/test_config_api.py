@@ -1,5 +1,20 @@
 from app.core.config import get_settings
+from app.main import create_app
 from fastapi.testclient import TestClient
+
+
+def test_cross_origin_requests_are_allowed() -> None:
+    with TestClient(create_app()) as fresh_client:
+        response = fresh_client.options(
+            "/api/projects",
+            headers={
+                "Origin": "http://example.test",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://example.test"
 
 
 def test_config_api_returns_structured_settings(client: TestClient) -> None:
@@ -8,6 +23,10 @@ def test_config_api_returns_structured_settings(client: TestClient) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["bootstrap"]["database_path"].endswith("chat-quant.db")
+    assert payload["bootstrap"]["api_host"] == "127.0.0.1"
+    assert payload["bootstrap"]["api_port"] == 18000
+    assert payload["bootstrap"]["web_host"] == "127.0.0.1"
+    assert payload["bootstrap"]["web_port"] == 15173
     assert "identity" not in payload["settings"]
     assert "paths" not in payload["settings"]
     assert payload["settings"]["agent"]["provider_id"] == "provider_anthropic_default"
