@@ -31,6 +31,10 @@ class ModelProviderListResponse(BaseModel):
     providers: list[ModelProviderResponse]
 
 
+class ModelProviderApiKeyResponse(BaseModel):
+    api_key: str | None
+
+
 class ProviderModelResponse(BaseModel):
     id: str
     name: str

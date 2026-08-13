@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import DEFAULT_MODEL_PROVIDER_ID, get_settings
 from app.model.config import ModelProviderRow
 from app.schema.model_provider import (
+    ModelProviderApiKeyResponse,
     ModelProviderListResponse,
     ModelProviderPayload,
     ModelProviderResponse,
@@ -34,6 +35,10 @@ class ModelProviderService:
         return ModelProviderListResponse(
             providers=[_provider_response(row) for row in result.scalars()]
         )
+
+    async def get_provider_api_key(self, provider_id: str) -> ModelProviderApiKeyResponse:
+        row = await self._require_provider(provider_id)
+        return ModelProviderApiKeyResponse(api_key=row.api_key)
 
     async def create_provider(self, payload: ModelProviderPayload) -> ModelProviderResponse:
         await _require_models_from_payload(payload)
@@ -242,6 +247,23 @@ def fetch_anthropic_models(
     base_url: str | None,
     api_key: str | None,
 ) -> list[ProviderModelResponse]:
+    try:
+        return _fetch_models_from_endpoint(base_url=base_url, api_key=api_key)
+    except ProviderModelFetchError as exc:
+        fallback_base_url = _anthropic_models_fallback_base_url(base_url)
+        if fallback_base_url is None:
+            raise
+        try:
+            return _fetch_models_from_endpoint(base_url=fallback_base_url, api_key=api_key)
+        except ProviderModelFetchError:
+            raise exc
+
+
+def _fetch_models_from_endpoint(
+    *,
+    base_url: str | None,
+    api_key: str | None,
+) -> list[ProviderModelResponse]:
     endpoint = urljoin((base_url or "https://api.anthropic.com").rstrip("/") + "/", "v1/models")
     headers = {
         "Accept": "application/json",
@@ -263,6 +285,15 @@ def fetch_anthropic_models(
     if not models:
         raise ProviderModelFetchError("Model list response did not contain models")
     return models
+
+
+def _anthropic_models_fallback_base_url(base_url: str | None) -> str | None:
+    if not base_url:
+        return None
+    stripped = base_url.rstrip("/")
+    if not stripped.endswith("/anthropic"):
+        return None
+    return stripped[: -len("/anthropic")] or None
 
 
 def _models_from_payload(payload: Any) -> list[ProviderModelResponse]:

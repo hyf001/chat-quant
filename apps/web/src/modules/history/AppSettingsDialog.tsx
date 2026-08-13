@@ -1,5 +1,6 @@
 import {
   Check,
+  Copy,
   Loader2,
   PlugZap,
   Plus,
@@ -12,6 +13,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   createModelProvider,
   deleteModelProvider,
+  getModelProviderApiKey,
   getAppConfig,
   listModelProviders,
   listProviderModels,
@@ -190,6 +192,24 @@ export function AppSettingsDialog({ isOpen, onClose }: AppSettingsDialogProps) {
     enabled: providerDraft.enabled,
   });
 
+  const handleCopyProviderApiKey = async (provider: ModelProvider) => {
+    if (!provider.has_api_key) {
+      return;
+    }
+    setProviderMessage(null);
+    try {
+      const response = await getModelProviderApiKey(provider.id);
+      if (!response.api_key) {
+        setProviderMessage("API Key 为空");
+        return;
+      }
+      await navigator.clipboard.writeText(response.api_key);
+      setProviderMessage("API Key 已复制");
+    } catch (caught) {
+      setProviderMessage(caught instanceof Error ? caught.message : "API Key 复制失败");
+    }
+  };
+
   const handleTestProviderDraft = async () => {
     setIsProviderSaving(true);
     setProviderMessage(null);
@@ -346,6 +366,7 @@ export function AppSettingsDialog({ isOpen, onClose }: AppSettingsDialogProps) {
                   onSaveProvider={() => void handleSaveProvider()}
                   onSelectProviderDraft={(provider) => updateProviderDraft(providerToDraft(provider))}
                   onTestProviderDraft={() => void handleTestProviderDraft()}
+                  onCopyProviderApiKey={(provider) => void handleCopyProviderApiKey(provider)}
                   testedProviderSignature={testedProviderSignature}
                 />
               ) : null}
@@ -396,6 +417,7 @@ function AgentForm({
   onSaveProvider,
   onSelectProviderDraft,
   onTestProviderDraft,
+  onCopyProviderApiKey,
   testedProviderSignature,
 }: {
   draft: AppSettings;
@@ -412,6 +434,7 @@ function AgentForm({
   onSaveProvider: () => void;
   onSelectProviderDraft: (provider: ModelProvider) => void;
   onTestProviderDraft: () => void;
+  onCopyProviderApiKey: (provider: ModelProvider) => void;
   testedProviderSignature: string | null;
 }) {
   const agent = draft.agent;
@@ -464,6 +487,10 @@ function AgentForm({
               onSaveProvider={onSaveProvider}
               onSelectProviderDraft={onSelectProviderDraft}
               onTestProviderDraft={onTestProviderDraft}
+              onCopyProviderApiKey={onCopyProviderApiKey}
+              onUseProvider={(provider) =>
+                onChange({ ...draft, agent: { ...agent, provider_id: provider.id } })
+              }
             />
           ) : null}
             {providers.map((provider) => (
@@ -480,6 +507,10 @@ function AgentForm({
                 onSaveProvider={onSaveProvider}
                 onSelectProviderDraft={onSelectProviderDraft}
                 onTestProviderDraft={onTestProviderDraft}
+                onCopyProviderApiKey={onCopyProviderApiKey}
+                onUseProvider={(provider) =>
+                  onChange({ ...draft, agent: { ...agent, provider_id: provider.id } })
+                }
               />
             ))}
         </div>
@@ -511,6 +542,8 @@ function ProviderEditorCard({
   onSaveProvider,
   onSelectProviderDraft,
   onTestProviderDraft,
+  onCopyProviderApiKey,
+  onUseProvider,
 }: {
   provider: ModelProvider | null;
   providerDraft: ProviderDraft;
@@ -523,6 +556,8 @@ function ProviderEditorCard({
   onSaveProvider: () => void;
   onSelectProviderDraft: (provider: ModelProvider) => void;
   onTestProviderDraft: () => void;
+  onCopyProviderApiKey: (provider: ModelProvider) => void;
+  onUseProvider: (provider: ModelProvider) => void;
 }) {
   const isEditing = provider === null || providerDraft.id === provider.id;
   const displayName = provider?.name ?? "新 Provider";
@@ -553,15 +588,11 @@ function ProviderEditorCard({
             </span>
           </div>
         )}
-        <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-            provider?.enabled ?? providerDraft.enabled
-              ? "bg-brand/10 text-brand"
-              : "bg-line text-muted"
-          }`}
-        >
-          {provider?.enabled ?? providerDraft.enabled ? "enabled" : "disabled"}
-        </span>
+        {isActive ? (
+          <span className="shrink-0 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">
+            selected
+          </span>
+        ) : null}
       </div>
 
       {isEditing ? (
@@ -578,12 +609,14 @@ function ProviderEditorCard({
               onProviderDraftChange({ ...providerDraft, base_url: emptyToNull(base_url) })
             }
           />
-          <TextField
-            label="API Key"
-            type="password"
-            value={providerDraft.api_key ?? ""}
-            onChange={(api_key) =>
-              onProviderDraftChange({ ...providerDraft, api_key: emptyToNull(api_key) })
+          <ApiKeyField
+            hasSavedApiKey={provider?.has_api_key ?? false}
+            value={providerDraft.api_key}
+            onChange={(api_key) => onProviderDraftChange({ ...providerDraft, api_key })}
+            onCopy={
+              provider?.has_api_key
+                ? () => onCopyProviderApiKey(provider)
+                : undefined
             }
           />
           <ToggleField
@@ -593,6 +626,17 @@ function ProviderEditorCard({
           />
           {providerMessage ? <StatusMessage message={providerMessage} /> : null}
           <div className="flex flex-wrap items-center justify-end gap-2 sm:col-span-2">
+            {provider && !isActive ? (
+              <button
+                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-graphite hover:border-signal disabled:cursor-not-allowed disabled:opacity-60"
+                type="button"
+                disabled={!provider.enabled}
+                onClick={() => onUseProvider(provider)}
+              >
+                <Check className="h-3.5 w-3.5" />
+                使用
+              </button>
+            ) : null}
             <button
               className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-graphite hover:border-signal disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
@@ -615,6 +659,17 @@ function ProviderEditorCard({
         </div>
       ) : (
         <div className="flex items-center gap-2">
+          {provider && !isActive ? (
+            <button
+              className="inline-flex h-7 items-center gap-1 rounded-md border border-line px-2 text-[11px] font-semibold text-graphite hover:border-signal disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!provider.enabled}
+              onClick={() => onUseProvider(provider)}
+            >
+              <Check className="h-3 w-3" />
+              使用
+            </button>
+          ) : null}
           <button
             className="inline-flex h-7 items-center gap-1 rounded-md border border-line px-2 text-[11px] font-semibold text-graphite hover:border-signal"
             type="button"
@@ -676,6 +731,52 @@ function TextField({ label, value, onChange, type = "text" }: { label: string; v
     <label className="grid gap-1.5">
       <span className="text-xs font-semibold text-graphite">{label}</span>
       <input className="h-9 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal" type={type} value={value} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  );
+}
+
+function ApiKeyField({
+  hasSavedApiKey,
+  value,
+  onChange,
+  onCopy,
+}: {
+  hasSavedApiKey: boolean;
+  value: string | null;
+  onChange: (value: string | null) => void;
+  onCopy?: () => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const displayValue = value ?? (hasSavedApiKey && !isEditing ? "***" : "");
+  const isShowingSavedMask = value === null && hasSavedApiKey && !isEditing;
+  return (
+    <label className="grid gap-1.5">
+      <span className="text-xs font-semibold text-graphite">API Key</span>
+      <span className="flex h-9 items-center rounded-md border border-line bg-panel focus-within:border-signal">
+        <input
+          className="min-w-0 flex-1 bg-transparent px-2.5 text-xs text-ink outline-none"
+          type={isShowingSavedMask ? "text" : "password"}
+          value={displayValue}
+          onFocus={() => setIsEditing(true)}
+          onBlur={() => {
+            if (!value) {
+              setIsEditing(false);
+            }
+          }}
+          onChange={(event) => onChange(emptyToNull(event.target.value))}
+        />
+        {onCopy ? (
+          <button
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-soft hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+            type="button"
+            title="复制 API Key"
+            aria-label="复制 API Key"
+            onClick={onCopy}
+          >
+            <Copy className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
+      </span>
     </label>
   );
 }

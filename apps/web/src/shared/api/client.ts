@@ -200,6 +200,10 @@ export type ModelProviderListResponse = {
   providers: ModelProvider[];
 };
 
+export type ModelProviderApiKeyResponse = {
+  api_key: string | null;
+};
+
 export type ProviderModel = {
   id: string;
   name: string;
@@ -252,6 +256,12 @@ export async function updateModelProvider(
     method: "PUT",
     body: payload,
   });
+}
+
+export async function getModelProviderApiKey(
+  providerId: string,
+): Promise<ModelProviderApiKeyResponse> {
+  return requestJson<ModelProviderApiKeyResponse>(`/api/model-providers/${providerId}/api-key`);
 }
 
 export async function deleteModelProvider(providerId: string): Promise<void> {

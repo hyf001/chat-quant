@@ -2,6 +2,7 @@ from fastapi import APIRouter, Response, status
 
 from app.api.v1.dependencies import DatabaseSession
 from app.schema.model_provider import (
+    ModelProviderApiKeyResponse,
     ModelProviderListResponse,
     ModelProviderPayload,
     ModelProviderResponse,
@@ -41,6 +42,14 @@ async def update_model_provider(
     db: DatabaseSession,
 ) -> ModelProviderResponse:
     return await ModelProviderService(db).update_provider(provider_id, payload)
+
+
+@router.get("/{provider_id}/api-key", response_model=ModelProviderApiKeyResponse)
+async def get_model_provider_api_key(
+    provider_id: str,
+    db: DatabaseSession,
+) -> ModelProviderApiKeyResponse:
+    return await ModelProviderService(db).get_provider_api_key(provider_id)
 
 
 @router.post("/{provider_id}/test-payload", response_model=ProviderConnectionTestResponse)

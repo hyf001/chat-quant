@@ -51,6 +51,11 @@ def test_model_provider_can_be_created_and_selected(
     assert create_response.status_code == 201
     provider = create_response.json()
     assert provider["has_api_key"] is True
+    assert "api_key" not in provider
+
+    key_response = client.get(f"/api/model-providers/{provider['id']}/api-key")
+    assert key_response.status_code == 200
+    assert key_response.json()["api_key"] == "secret-token"
 
     current = client.get("/api/config").json()
     settings = current["settings"]
@@ -98,6 +103,36 @@ def test_model_provider_save_requires_model_endpoint(
     )
 
     assert response.status_code == 502
+
+
+def test_anthropic_provider_model_fetch_falls_back_for_deepseek_anthropic_base_url(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    requested_base_urls: list[str | None] = []
+
+    def fetch_models(*, base_url: str | None, api_key: str | None) -> list[ProviderModelResponse]:
+        del api_key
+        requested_base_urls.append(base_url)
+        if base_url == "https://api.deepseek.com/anthropic":
+            raise model_provider_service.ProviderModelFetchError("Model list request failed: HTTP 404")
+        return [ProviderModelResponse(id="deepseek-v4-flash", name="deepseek-v4-flash")]
+
+    monkeypatch.setattr(
+        model_provider_service,
+        "_fetch_models_from_endpoint",
+        fetch_models,
+    )
+
+    models = model_provider_service.fetch_anthropic_models(
+        base_url="https://api.deepseek.com/anthropic",
+        api_key="secret-token",
+    )
+
+    assert requested_base_urls == [
+        "https://api.deepseek.com/anthropic",
+        "https://api.deepseek.com",
+    ]
+    assert models[0].id == "deepseek-v4-flash"
 
 
 def _fake_fetch_models(
