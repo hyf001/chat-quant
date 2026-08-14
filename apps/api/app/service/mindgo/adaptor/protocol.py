@@ -20,8 +20,11 @@ class MindgoDatasetAdapter(Protocol):
     async def get_schema(self) -> MindgoDatasetSchema:
         """Return the dataset schema used by frontend rendering and validation."""
 
-    async def query(self, request: MindgoDatasetQueryRequest) -> pd.DataFrame:
+    async def query_from_mindgo(self, request: MindgoDatasetQueryRequest) -> pd.DataFrame:
         """Run a remote dataset query and return a normalized pandas DataFrame."""
+
+    async def query_from_duckdb(self, sql: str) -> pd.DataFrame:
+        """Run a local DuckDB SQL query and return a pandas DataFrame."""
 
     async def sync(self, request: MindgoDatasetSyncRequest) -> MindgoDatasetSyncResult:
         """Execute dataset synchronization and return status, elapsed time, and count."""

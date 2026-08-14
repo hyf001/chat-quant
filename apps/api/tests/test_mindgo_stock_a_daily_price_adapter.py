@@ -98,7 +98,7 @@ async def test_stock_a_daily_price_schema_contract() -> None:
     assert "query_id" not in field_options
 
 
-async def test_stock_a_daily_price_query_uses_remote_runner_and_returns_dataframe() -> None:
+async def test_stock_a_daily_price_query_from_mindgo_uses_remote_runner_and_returns_dataframe() -> None:
     runner = FakeMindgoRunner(
         {
             "data": [
@@ -135,7 +135,7 @@ async def test_stock_a_daily_price_query_uses_remote_runner_and_returns_datafram
     )
     adapter = StockADailyPriceAdapter(runner)  # type: ignore[arg-type]
 
-    frame = await adapter.query(
+    frame = await adapter.query_from_mindgo(
         MindgoDatasetQueryRequest(
             params={
                 "baseDay": "2026-08-13",
@@ -154,6 +154,14 @@ async def test_stock_a_daily_price_query_uses_remote_runner_and_returns_datafram
     assert runner.calls[0]["marker_end"] == STOCK_A_DAILY_PRICE_MARKER_END
     assert '"baseDay": "2026-08-13"' in runner.calls[0]["code"]
     assert '"1015"' in runner.calls[0]["code"]
+
+
+async def test_stock_a_daily_price_query_from_duckdb_executes_sql() -> None:
+    adapter = StockADailyPriceAdapter()
+
+    frame = await adapter.query_from_duckdb("SELECT '000001.SZ' AS symbol, 14.7 AS close")
+
+    assert frame.to_dict(orient="records") == [{"symbol": "000001.SZ", "close": 14.7}]
 
 
 def test_stock_a_daily_price_remote_code_embeds_query_index_contract() -> None:

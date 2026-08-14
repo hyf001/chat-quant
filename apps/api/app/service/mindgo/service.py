@@ -10,6 +10,7 @@ from app.schema.mindgo import (
     MindgoConnectionConfig,
     MindgoConnectionTestRequest,
     MindgoConnectionTestResponse,
+    MindgoDatasetDuckDBQueryRequest,
     MindgoDatasetListResponse,
     MindgoDatasetQueryRequest,
     MindgoDatasetQueryResponse,
@@ -17,6 +18,7 @@ from app.schema.mindgo import (
     MindgoDatasetSummary,
     MindgoDatasetSyncRequest,
     MindgoDatasetSyncResult,
+    MindgoFieldSpec,
 )
 from app.service.mindgo.jupyter_runner import (
     DEFAULT_MINDGO_AUTH_SCHEME,
@@ -51,7 +53,7 @@ async def list_datasets() -> MindgoDatasetListResponse:
                 name=schema.name,
                 category_path=schema.category_path,
                 description=schema.description,
-                actions=["get_schema", "query", "sync"],
+                storage=schema.storage,
             )
         )
     return MindgoDatasetListResponse(datasets=summaries)
@@ -93,21 +95,31 @@ async def query_dataset(
 ) -> MindgoDatasetQueryResponse:
     adapter = _adapter_for_dataset(dataset_id)
     schema = await adapter.get_schema()
-    frame = await adapter.query(request)
-    rows = _frame_to_json_rows(frame)
-    page = request.page
-    page_size = request.page_size
-    total = len(rows)
-    start = (page - 1) * page_size
-    end = start + page_size
-    return MindgoDatasetQueryResponse(
-        dataset_id=dataset_id,
-        page=page,
-        page_size=page_size,
-        total=total,
-        total_pages=math.ceil(total / page_size) if total else 0,
+    frame = await adapter.query_from_mindgo(request)
+    return _frame_query_response(
+        dataset_id,
+        frame,
         columns=schema.result_schema,
-        rows=rows[start:end],
+        page=request.page,
+        page_size=request.page_size,
+    )
+
+
+async def query_dataset_from_duckdb(
+    dataset_id: str,
+    request: MindgoDatasetDuckDBQueryRequest,
+) -> MindgoDatasetQueryResponse:
+    sql = request.sql.strip()
+    if not sql:
+        raise ValueError("SQL 不能为空")
+    adapter = _adapter_for_dataset(dataset_id, allow_missing_runner=True)
+    frame = await adapter.query_from_duckdb(sql)
+    return _frame_query_response(
+        dataset_id,
+        frame,
+        columns=_columns_from_frame(frame),
+        page=request.page,
+        page_size=request.page_size,
     )
 
 
@@ -193,6 +205,52 @@ def _frame_to_json_rows(frame: pd.DataFrame) -> list[dict[str, Any]]:
     for row in frame.to_dict(orient="records"):
         rows.append({str(key): _json_value(value) for key, value in row.items()})
     return rows
+
+
+def _frame_query_response(
+    dataset_id: str,
+    frame: pd.DataFrame,
+    *,
+    columns: list[MindgoFieldSpec],
+    page: int,
+    page_size: int,
+) -> MindgoDatasetQueryResponse:
+    rows = _frame_to_json_rows(frame)
+    total = len(rows)
+    start = (page - 1) * page_size
+    end = start + page_size
+    return MindgoDatasetQueryResponse(
+        dataset_id=dataset_id,
+        page=page,
+        page_size=page_size,
+        total=total,
+        total_pages=math.ceil(total / page_size) if total else 0,
+        columns=columns,
+        rows=rows[start:end],
+    )
+
+
+def _columns_from_frame(frame: pd.DataFrame) -> list[MindgoFieldSpec]:
+    return [
+        MindgoFieldSpec(
+            name=str(column),
+            label=str(column),
+            value_type=_mindgo_field_type(frame[column]),
+        )
+        for column in frame.columns
+    ]
+
+
+def _mindgo_field_type(series: pd.Series) -> str:
+    if pd.api.types.is_bool_dtype(series):
+        return "boolean"
+    if pd.api.types.is_integer_dtype(series):
+        return "integer"
+    if pd.api.types.is_numeric_dtype(series):
+        return "number"
+    if pd.api.types.is_datetime64_any_dtype(series):
+        return "date"
+    return "string"
 
 
 def _json_value(value: Any) -> Any:

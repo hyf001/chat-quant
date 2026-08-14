@@ -53,6 +53,9 @@ def test_mindgo_dataset_schema_protocol_supports_result_schema() -> None:
     assert schema.name == "股票日行情数据(A股)"
     assert schema.storage.path == "data/mindgo/parquet/stock_a_daily_price"
     assert schema.storage.partitioned_by == ["trade_day"]
+    assert schema.storage.min_partition is None
+    assert schema.storage.max_partition is None
+    assert schema.storage.partition_count == 0
     assert schema.result_schema[0].name == "symbol"
 
 
@@ -97,7 +100,7 @@ def test_mindgo_sync_result_contract() -> None:
     assert result.synced_count == 10
 
 
-async def test_mindgo_dataset_adapter_query_returns_dataframe() -> None:
+async def test_mindgo_dataset_adapter_query_entries_return_dataframes() -> None:
     class FakeMindgoDatasetAdapter:
         dataset_id = "stock_a_daily_price"
 
@@ -115,16 +118,23 @@ async def test_mindgo_dataset_adapter_query_returns_dataframe() -> None:
                 result_schema=[],
             )
 
-        async def query(self, request: MindgoDatasetQueryRequest) -> pd.DataFrame:
+        async def query_from_mindgo(self, request: MindgoDatasetQueryRequest) -> pd.DataFrame:
             return pd.DataFrame(
                 [{"symbol": "000001.SZ", "trade_date": "2023-02-01", "close": 14.7}]
             )
+
+        async def query_from_duckdb(self, sql: str) -> pd.DataFrame:
+            return pd.DataFrame([{"sql": sql}])
 
         async def sync(self, request: MindgoDatasetSyncRequest) -> MindgoDatasetSyncResult:
             return MindgoDatasetSyncResult(status="success", elapsed_ms=12, synced_count=1)
 
     adapter = FakeMindgoDatasetAdapter()
-    frame = await adapter.query(MindgoDatasetQueryRequest(params={"securities": ["000001.SZ"]}))
+    frame = await adapter.query_from_mindgo(
+        MindgoDatasetQueryRequest(params={"securities": ["000001.SZ"]})
+    )
+    sql_frame = await adapter.query_from_duckdb("SELECT 1")
 
     assert isinstance(frame, pd.DataFrame)
     assert frame.iloc[0]["symbol"] == "000001.SZ"
+    assert sql_frame.to_dict(orient="records") == [{"sql": "SELECT 1"}]

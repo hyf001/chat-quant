@@ -115,6 +115,7 @@ class StockADailyPriceAdapter:
         runner: MindgoJupyterRunner | None = None,
         *,
         sync_writer: MindgoSyncWriter | None = None,
+        query_store: DuckDBParquetStore | None = None,
         storage: MindgoDatasetStorage | None = None,
         storage_root: Path | str | None = None,
         parquet_root: Path | str | None = None,
@@ -123,6 +124,7 @@ class StockADailyPriceAdapter:
             raise ValueError("storage cannot be combined with storage_root or parquet_root")
         self._runner = runner
         self._sync_writer = sync_writer or DuckDBParquetMindgoSyncWriter()
+        self._query_store = query_store or DuckDBParquetStore()
         root = storage_root if storage_root is not None else parquet_root
         if storage is not None:
             self._storage = storage
@@ -134,7 +136,7 @@ class StockADailyPriceAdapter:
     async def get_schema(self) -> MindgoDatasetSchema:
         return stock_a_daily_price_schema(self._storage)
 
-    async def query(self, request: MindgoDatasetQueryRequest) -> pd.DataFrame:
+    async def query_from_mindgo(self, request: MindgoDatasetQueryRequest) -> pd.DataFrame:
         if self._runner is None:
             raise RuntimeError("MindGo Jupyter runner is not configured")
 
@@ -149,6 +151,12 @@ class StockADailyPriceAdapter:
             )
         return normalize_stock_a_daily_price(payload.get("data"))
 
+    async def query_from_duckdb(self, sql: str) -> pd.DataFrame:
+        try:
+            return self._query_store.query(sql)
+        except Exception as error:  # noqa: BLE001
+            raise RuntimeError(f"DuckDB query failed: {error}") from error
+
     async def sync(self, request: MindgoDatasetSyncRequest) -> MindgoDatasetSyncResult:
         started_at = time.perf_counter()
         synced_count = 0
@@ -159,7 +167,7 @@ class StockADailyPriceAdapter:
                     "baseDay": sync_day.isoformat(),
                 }
             )
-            frame = await self.query(query_request)
+            frame = await self.query_from_mindgo(query_request)
             for partition_date, partition_frame in _daily_partitions(frame, sync_day):
                 write = MindgoPartitionedParquetWrite(
                     dataset_id=self.dataset_id,
@@ -184,6 +192,11 @@ def stock_a_daily_price_schema(
     storage: MindgoDatasetStorage | None = None,
 ) -> MindgoDatasetSchema:
     storage = storage or MindgoDatasetStorage()
+    partitioned_by = ["trade_day"]
+    partition_summary = storage.partition_summary(
+        STOCK_A_DAILY_PRICE_DATASET_ID,
+        partitioned_by,
+    )
     return MindgoDatasetSchema(
         name="A股历史行情数据(日)",
         category_path=["股票", "A股", "行情数据(A股)"],
@@ -192,7 +205,10 @@ def stock_a_daily_price_schema(
         storage=MindgoDatasetStorageSpec(
             path=storage.dataset_root(STOCK_A_DAILY_PRICE_DATASET_ID).as_posix(),
             format="parquet",
-            partitioned_by=["trade_day"],
+            partitioned_by=partitioned_by,
+            min_partition=partition_summary.min_partition,
+            max_partition=partition_summary.max_partition,
+            partition_count=partition_summary.partition_count,
         ),
         query_params=[
             MindgoParameterSpec(

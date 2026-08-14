@@ -300,6 +300,9 @@ export type MindgoDatasetStorageSpec = {
   path: string;
   format: "parquet";
   partitioned_by: string[];
+  min_partition: string | null;
+  max_partition: string | null;
+  partition_count: number;
 };
 
 export type MindgoDatasetSchema = {
@@ -317,7 +320,7 @@ export type MindgoDatasetSummary = {
   name: string;
   category_path: string[];
   description: string;
-  actions: Array<"get_schema" | "query" | "sync">;
+  storage: MindgoDatasetStorageSpec;
 };
 
 export type MindgoDatasetListResponse = {
@@ -326,6 +329,12 @@ export type MindgoDatasetListResponse = {
 
 export type MindgoDatasetQueryPayload = {
   params: Record<string, MindgoJsonValue>;
+  page: number;
+  page_size: number;
+};
+
+export type MindgoDatasetDuckDBQueryPayload = {
+  sql: string;
   page: number;
   page_size: number;
 };
@@ -471,6 +480,19 @@ export async function queryMindgoDataset(
     method: "POST",
     body: payload,
   });
+}
+
+export async function queryMindgoDatasetFromDuckDB(
+  datasetId: string,
+  payload: MindgoDatasetDuckDBQueryPayload,
+): Promise<MindgoDatasetQueryResponse> {
+  return requestJson<MindgoDatasetQueryResponse>(
+    `/api/mindgo/datasets/${datasetId}/query_from_duckdb`,
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
 }
 
 export async function syncMindgoDataset(

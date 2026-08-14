@@ -30,6 +30,34 @@ class MindgoDatasetStorage:
             path /= f"{_safe_path_segment(key)}={_safe_path_segment(value)}"
         return path / _safe_path_segment(filename)
 
+    def partition_summary(
+        self,
+        dataset_id: str,
+        partition_keys: list[str],
+        *,
+        filename: str = DEFAULT_MINDGO_PARTITION_FILENAME,
+    ) -> MindgoDatasetPartitionSummary:
+        partitions = sorted(
+            _dataset_partitions(
+                self.dataset_root(dataset_id),
+                partition_keys,
+                filename=_safe_path_segment(filename),
+            )
+        )
+        return MindgoDatasetPartitionSummary(
+            min_partition=partitions[0] if partitions else None,
+            max_partition=partitions[-1] if partitions else None,
+            partition_count=len(partitions),
+        )
+
+
+@dataclass(frozen=True)
+class MindgoDatasetPartitionSummary:
+    min_partition: str | None
+    max_partition: str | None
+    partition_count: int
+
+
 def mindgo_dataset_partition_path(
     storage_root: Path | str,
     dataset_id: str,
@@ -43,3 +71,53 @@ def _safe_path_segment(value: str) -> str:
     if not text or "/" in text or "\\" in text or text in {".", ".."}:
         raise ValueError(f"invalid MindGo storage path segment: {text!r}")
     return text
+
+
+def _dataset_partitions(
+    base_path: Path,
+    partition_keys: list[str],
+    *,
+    filename: str,
+) -> list[str]:
+    if not partition_keys:
+        return []
+    partitions: list[str] = []
+    _collect_dataset_partitions(
+        base_path,
+        partition_keys,
+        filename=filename,
+        values=[],
+        partitions=partitions,
+    )
+    return partitions
+
+
+def _collect_dataset_partitions(
+    base_path: Path,
+    partition_keys: list[str],
+    *,
+    filename: str,
+    values: list[str],
+    partitions: list[str],
+) -> None:
+    if len(values) == len(partition_keys):
+        if (base_path / filename).exists():
+            partitions.append("/".join(values))
+        return
+    if not base_path.exists():
+        return
+    partition_key = _safe_path_segment(partition_keys[len(values)])
+    prefix = f"{partition_key}="
+    for child in base_path.iterdir():
+        if not child.is_dir() or not child.name.startswith(prefix):
+            continue
+        partition_value = child.name[len(prefix) :]
+        if partition_value:
+            _safe_path_segment(partition_value)
+            _collect_dataset_partitions(
+                child,
+                partition_keys,
+                filename=filename,
+                values=[*values, partition_value],
+                partitions=partitions,
+            )

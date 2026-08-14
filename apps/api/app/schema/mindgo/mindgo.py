@@ -43,6 +43,9 @@ class MindgoDatasetStorageSpec(BaseModel):
     path: str = Field(min_length=1)
     format: Literal["parquet"]
     partitioned_by: list[str] = Field(default_factory=list)
+    min_partition: str | None = None
+    max_partition: str | None = None
+    partition_count: int = Field(default=0, ge=0)
 
     model_config = ConfigDict(extra="forbid")
 
@@ -79,6 +82,14 @@ class MindgoDatasetQueryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class MindgoDatasetDuckDBQueryRequest(BaseModel):
+    sql: str = Field(min_length=1)
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=50, ge=1, le=500)
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class MindgoDatasetSyncRequest(BaseModel):
     start_date: date
     end_date: date
@@ -107,7 +118,7 @@ class MindgoDatasetSummary(BaseModel):
     name: str = Field(min_length=1)
     category_path: list[str] = Field(min_length=1)
     description: str = ""
-    actions: list[Literal["get_schema", "query", "sync"]]
+    storage: MindgoDatasetStorageSpec
 
     model_config = ConfigDict(extra="forbid")
 

@@ -2,6 +2,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Code2,
+  Database,
   Download,
   FolderOpen,
   Loader2,
@@ -16,12 +18,14 @@ import {
   getMindgoDatasetSchema,
   listMindgoDatasets,
   queryMindgoDataset,
+  queryMindgoDatasetFromDuckDB,
   syncMindgoDataset,
   testMindgoConnection,
   type AppSettings,
   type MindgoDatasetQueryResponse,
   type MindgoDatasetSchema,
   type MindgoDatasetSummary,
+  type MindgoDatasetStorageSpec,
   type MindgoDatasetSyncResult,
   type MindgoJsonValue,
   type MindgoParameterSpec,
@@ -36,6 +40,7 @@ type DataSourceSettingsFormProps = {
 };
 
 type MindgoParamDraft = Record<string, MindgoJsonValue>;
+type MindgoQueryMode = "mindgo" | "duckdb";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -49,6 +54,8 @@ export function DataSourceSettingsForm({
   const [selectedDatasetId, setSelectedDatasetId] = useState("stock_a_daily_price");
   const [schema, setSchema] = useState<MindgoDatasetSchema | null>(null);
   const [params, setParams] = useState<MindgoParamDraft>({});
+  const [queryMode, setQueryMode] = useState<MindgoQueryMode>("mindgo");
+  const [duckdbSql, setDuckdbSql] = useState("");
   const [queryResult, setQueryResult] = useState<MindgoDatasetQueryResponse | null>(null);
   const [syncResult, setSyncResult] = useState<MindgoDatasetSyncResult | null>(null);
   const [page, setPage] = useState(1);
@@ -92,6 +99,7 @@ export function DataSourceSettingsForm({
       const nextSchema = await getMindgoDatasetSchema(datasetId);
       setSchema(nextSchema);
       setParams(defaultParamsFromSchema(nextSchema));
+      setDuckdbSql(defaultDuckDBSql(nextSchema));
       setPage(1);
     } catch (caught) {
       setSchema(null);
@@ -167,6 +175,14 @@ export function DataSourceSettingsForm({
   };
 
   const handleQuery = async (nextPage = page) => {
+    if (queryMode === "duckdb") {
+      await handleDuckDBQuery(nextPage);
+      return;
+    }
+    await handleMindgoQuery(nextPage);
+  };
+
+  const handleMindgoQuery = async (nextPage = page) => {
     if (!schema) {
       return;
     }
@@ -183,6 +199,29 @@ export function DataSourceSettingsForm({
       onToast(`查询完成：${response.total} 行`, "success");
     } catch (caught) {
       onToast(caught instanceof Error ? caught.message : "查询失败", "error");
+    } finally {
+      setIsQuerying(false);
+    }
+  };
+
+  const handleDuckDBQuery = async (nextPage = page) => {
+    if (!schema || !duckdbSql.trim()) {
+      return;
+    }
+    setIsQuerying(true);
+    setQueryResult(null);
+    setSyncResult(null);
+    try {
+      const response = await queryMindgoDatasetFromDuckDB(selectedDatasetId, {
+        sql: duckdbSql,
+        page: nextPage,
+        page_size: pageSize,
+      });
+      setPage(response.page);
+      setQueryResult(response);
+      onToast(`DuckDB 查询完成：${response.total} 行`, "success");
+    } catch (caught) {
+      onToast(caught instanceof Error ? caught.message : "DuckDB 查询失败", "error");
     } finally {
       setIsQuerying(false);
     }
@@ -309,7 +348,7 @@ export function DataSourceSettingsForm({
           <div className="grid gap-2">
             {datasets.map((dataset) => (
               <button
-                className={`grid gap-1 rounded-md border px-3 py-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-signal/20 ${
+                className={`group relative grid gap-1 rounded-md border py-2 pl-3 pr-9 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-signal/20 ${
                   selectedDatasetId === dataset.id
                     ? "border-ink bg-panel text-ink"
                     : "border-line bg-panel/60 text-graphite hover:border-signal"
@@ -322,6 +361,7 @@ export function DataSourceSettingsForm({
                 <span className="text-[11px] leading-4 text-muted">
                   {dataset.category_path.join(" / ")}
                 </span>
+                <StorageSummary storage={dataset.storage} compact />
               </button>
             ))}
           </div>
@@ -341,15 +381,74 @@ export function DataSourceSettingsForm({
             </div>
 
             {schema ? (
-              <div className="grid gap-3 md:grid-cols-2">
-                {schema.query_params.map((param) => (
-                  <ParamField
-                    key={param.name}
-                    param={param}
-                    value={params[param.name]}
-                    onChange={(value) => updateParam(param.name, value)}
-                  />
-                ))}
+              <div className="grid gap-3">
+                <div className="inline-grid w-fit grid-cols-2 rounded-md border border-line bg-soft p-1">
+                  <button
+                    className={`inline-flex h-8 items-center gap-1.5 rounded px-2.5 text-xs font-semibold transition-colors ${
+                      queryMode === "mindgo"
+                        ? "bg-panel text-ink shadow-sm"
+                        : "text-muted hover:text-ink"
+                    }`}
+                    type="button"
+                    onClick={() => {
+                      setQueryMode("mindgo");
+                      setQueryResult(null);
+                      setSyncResult(null);
+                      setPage(1);
+                    }}
+                  >
+                    <Server className="h-3.5 w-3.5" />
+                    MindGo 查询
+                  </button>
+                  <button
+                    className={`inline-flex h-8 items-center gap-1.5 rounded px-2.5 text-xs font-semibold transition-colors ${
+                      queryMode === "duckdb"
+                        ? "bg-panel text-ink shadow-sm"
+                        : "text-muted hover:text-ink"
+                    }`}
+                    type="button"
+                    onClick={() => {
+                      setQueryMode("duckdb");
+                      setQueryResult(null);
+                      setSyncResult(null);
+                      setPage(1);
+                    }}
+                  >
+                    <Database className="h-3.5 w-3.5" />
+                    DuckDB SQL
+                  </button>
+                </div>
+
+                {queryMode === "mindgo" ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {schema.query_params.map((param) => (
+                      <ParamField
+                        key={param.name}
+                        param={param}
+                        value={params[param.name]}
+                        onChange={(value) => updateParam(param.name, value)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-graphite">SQL</span>
+                      <span className="max-w-full truncate font-mono text-[11px] text-muted">
+                        {schema.storage.path}
+                      </span>
+                    </div>
+                    <textarea
+                      className="min-h-40 resize-y rounded-md border border-line bg-soft p-3 font-mono text-[11px] leading-5 text-ink outline-none transition-colors focus:border-signal"
+                      spellCheck={false}
+                      value={duckdbSql}
+                      onChange={(event) => {
+                        setDuckdbSql(event.target.value);
+                        setPage(1);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             ) : null}
 
@@ -358,21 +457,23 @@ export function DataSourceSettingsForm({
                 <button
                   className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-60"
                   type="button"
-                  disabled={!canUseDataset || isBusy}
+                  disabled={!canUseDataset || isBusy || (queryMode === "duckdb" && !duckdbSql.trim())}
                   onClick={() => void handleQuery(1)}
                 >
-                  {isQuerying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                  查询
+                  {isQuerying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : queryMode === "duckdb" ? <Code2 className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                  {queryMode === "duckdb" ? "运行 SQL" : "查询"}
                 </button>
-                <button
-                  className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
-                  type="button"
-                  disabled={!canUseDataset || isBusy}
-                  onClick={() => void handleSync()}
-                >
-                  {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                  导入
-                </button>
+                {queryMode === "mindgo" ? (
+                  <button
+                    className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                    type="button"
+                    disabled={!canUseDataset || isBusy}
+                    onClick={() => void handleSync()}
+                  >
+                    {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                    导入
+                  </button>
+                ) : null}
               </div>
               <label className="flex items-center gap-2 text-xs font-semibold text-graphite">
                 每页
@@ -406,6 +507,80 @@ export function DataSourceSettingsForm({
       </section>
     </div>
   );
+}
+
+function StorageSummary({
+  storage,
+  compact = false,
+}: {
+  storage: MindgoDatasetStorageSpec;
+  compact?: boolean;
+}) {
+  const partitionRange = partitionRangeText(storage);
+
+  if (compact) {
+    return (
+      <span className="absolute right-2 top-2 z-10">
+        <span
+          className="grid h-5 w-5 place-items-center rounded-full border border-line bg-soft font-mono text-[11px] font-bold text-muted transition-colors group-hover:border-signal group-hover:text-ink group-focus-visible:border-signal group-focus-visible:text-ink"
+          aria-hidden="true"
+        >
+          !
+        </span>
+        <span className="pointer-events-none absolute right-0 top-7 z-30 hidden w-72 rounded-md border border-line bg-panel p-3 text-left shadow-lift group-hover:grid group-focus-visible:grid">
+          <span className="text-xs font-semibold text-ink">本地存储</span>
+          <span className="mt-1 break-all font-mono text-[11px] leading-4 text-ink">
+            {storage.path}
+          </span>
+          <span className="mt-2 grid grid-cols-2 gap-1.5">
+            <StorageBadge label="分区数量" value={String(storage.partition_count)} />
+            <StorageBadge label="格式" value={storage.format} />
+            <StorageBadge label="最小分区" value={storage.min_partition ?? "-"} />
+            <StorageBadge label="最大分区" value={storage.max_partition ?? "-"} />
+          </span>
+          <span className="mt-2 font-mono text-[11px] text-muted">
+            {storage.partitioned_by.join(", ") || "-"}
+            {partitionRange ? ` · ${partitionRange}` : ""}
+          </span>
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <div className="grid gap-2 rounded-md border border-line bg-soft px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-xs font-semibold text-graphite">本地存储</span>
+        <span className="font-mono text-[11px] text-muted">{storage.format}</span>
+      </div>
+      <div className="min-w-0 truncate font-mono text-[11px] text-ink">{storage.path}</div>
+      <div className="flex flex-wrap gap-1.5">
+        <StorageBadge label="分区字段" value={storage.partitioned_by.join(", ") || "-"} />
+        <StorageBadge label="分区数量" value={String(storage.partition_count)} />
+        <StorageBadge label="最小分区" value={storage.min_partition ?? "-"} />
+        <StorageBadge label="最大分区" value={storage.max_partition ?? "-"} />
+      </div>
+    </div>
+  );
+}
+
+function StorageBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="inline-flex min-h-6 items-center gap-1 rounded border border-line bg-panel px-2 text-[11px] text-muted">
+      {label}
+      <span className="font-mono font-semibold text-ink">{value}</span>
+    </span>
+  );
+}
+
+function partitionRangeText(storage: MindgoDatasetStorageSpec): string {
+  if (!storage.min_partition || !storage.max_partition) {
+    return "";
+  }
+  if (storage.min_partition === storage.max_partition) {
+    return storage.min_partition;
+  }
+  return `${storage.min_partition}..${storage.max_partition}`;
 }
 
 function TextInput({
@@ -669,6 +844,24 @@ function defaultParamsFromSchema(schema: MindgoDatasetSchema): MindgoParamDraft 
     }
   }
   return draft;
+}
+
+function defaultDuckDBSql(schema: MindgoDatasetSchema): string {
+  const parquetPath =
+    schema.storage.partitioned_by.length > 0
+      ? `${schema.storage.path}/${schema.storage.partitioned_by
+          .map((partition) => `${partition}=*`)
+          .join("/")}/data.parquet`
+      : `${schema.storage.path}/*.parquet`;
+  return [
+    "SELECT *",
+    `FROM read_parquet('${sqlStringLiteral(parquetPath)}')`,
+    "LIMIT 200",
+  ].join("\n");
+}
+
+function sqlStringLiteral(value: string): string {
+  return value.replaceAll("'", "''");
 }
 
 function cleanParams(params: MindgoParamDraft): Record<string, MindgoJsonValue> {

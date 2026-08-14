@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, status
 from app.schema.mindgo import (
     MindgoConnectionTestRequest,
     MindgoConnectionTestResponse,
+    MindgoDatasetDuckDBQueryRequest,
     MindgoDatasetListResponse,
     MindgoDatasetQueryRequest,
     MindgoDatasetQueryResponse,
@@ -57,6 +58,31 @@ async def query_mindgo_dataset(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"MindGo 数据集不存在：{error.dataset_id}",
+        ) from error
+    except RuntimeError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(error),
+        ) from error
+
+
+@router.post("/datasets/{dataset_id}/query_from_duckdb", response_model=MindgoDatasetQueryResponse)
+async def query_mindgo_dataset_from_duckdb(
+    dataset_id: str,
+    payload: MindgoDatasetDuckDBQueryRequest,
+) -> MindgoDatasetQueryResponse:
+    service = _mindgo_service()
+    try:
+        return await service.query_dataset_from_duckdb(dataset_id, payload)
+    except service.MindgoDatasetNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"MindGo 数据集不存在：{error.dataset_id}",
+        ) from error
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
         ) from error
     except RuntimeError as error:
         raise HTTPException(

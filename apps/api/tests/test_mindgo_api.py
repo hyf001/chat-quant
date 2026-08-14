@@ -15,7 +15,14 @@ def test_mindgo_api_lists_first_dataset(client: TestClient) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["datasets"][0]["id"] == "stock_a_daily_price"
-    assert payload["datasets"][0]["actions"] == ["get_schema", "query", "sync"]
+    assert payload["datasets"][0]["storage"] == {
+        "path": "data/mindgo/parquet/stock_a_daily_price",
+        "format": "parquet",
+        "partitioned_by": ["trade_day"],
+        "min_partition": None,
+        "max_partition": None,
+        "partition_count": 0,
+    }
 
 
 def test_mindgo_api_returns_stock_daily_schema(client: TestClient) -> None:
@@ -29,6 +36,9 @@ def test_mindgo_api_returns_stock_daily_schema(client: TestClient) -> None:
     assert payload["storage"]["path"] == "data/mindgo/parquet/stock_a_daily_price"
     assert payload["storage"]["format"] == "parquet"
     assert payload["storage"]["partitioned_by"] == ["trade_day"]
+    assert payload["storage"]["min_partition"] is None
+    assert payload["storage"]["max_partition"] is None
+    assert payload["storage"]["partition_count"] == 0
     assert payload["result_schema"][0]["name"] == "symbol"
 
 
@@ -42,10 +52,13 @@ def test_mindgo_query_uses_default_connection(
         async def get_schema(self):
             return stock_a_daily_price_schema()
 
-        async def query(self, request):
+        async def query_from_mindgo(self, request):
             return pd.DataFrame(
                 [{"symbol": "000001.SZ", "trade_date": "20260813", "close": 10.0}]
             )
+
+        async def query_from_duckdb(self, sql):
+            raise AssertionError("query_from_duckdb should not run")
 
         async def sync(self, request):
             raise AssertionError("sync should not run")
@@ -166,7 +179,7 @@ def test_mindgo_query_paginates_dataframe_rows(
         async def get_schema(self):
             return stock_a_daily_price_schema()
 
-        async def query(self, request):
+        async def query_from_mindgo(self, request):
             return pd.DataFrame(
                 [
                     {"symbol": "000001.SZ", "trade_date": "20260813", "close": 10.0},
@@ -174,6 +187,9 @@ def test_mindgo_query_paginates_dataframe_rows(
                     {"symbol": "000003.SZ", "trade_date": "20260813", "close": 12.0},
                 ]
             )
+
+        async def query_from_duckdb(self, sql):
+            raise AssertionError("query_from_duckdb should not run")
 
         async def sync(self, request):
             raise AssertionError("sync should not run")
@@ -198,6 +214,52 @@ def test_mindgo_query_paginates_dataframe_rows(
     ]
 
 
+def test_mindgo_query_from_duckdb_paginates_sql_rows(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    class FakeAdapter:
+        dataset_id = "stock_a_daily_price"
+
+        async def get_schema(self):
+            raise AssertionError("schema should not run")
+
+        async def query_from_mindgo(self, request):
+            raise AssertionError("query_from_mindgo should not run")
+
+        async def query_from_duckdb(self, sql):
+            assert sql == "SELECT * FROM stock_a_daily_price"
+            return pd.DataFrame(
+                [
+                    {"symbol": "000001.SZ", "close": 10.0},
+                    {"symbol": "000002.SZ", "close": 11.0},
+                    {"symbol": "000003.SZ", "close": 12.0},
+                ]
+            )
+
+        async def sync(self, request):
+            raise AssertionError("sync should not run")
+
+    monkeypatch.setattr(
+        mindgo_service,
+        "_adapter_for_dataset",
+        lambda dataset_id, allow_missing_runner=False: FakeAdapter(),
+    )
+
+    response = client.post(
+        "/api/mindgo/datasets/stock_a_daily_price/query_from_duckdb",
+        json={"sql": " SELECT * FROM stock_a_daily_price ", "page": 2, "page_size": 2},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 3
+    assert payload["total_pages"] == 2
+    assert [column["name"] for column in payload["columns"]] == ["symbol", "close"]
+    assert [column["value_type"] for column in payload["columns"]] == ["string", "number"]
+    assert payload["rows"] == [{"symbol": "000003.SZ", "close": 12.0}]
+
+
 def test_mindgo_sync_runs_immediate_import(
     client: TestClient,
     monkeypatch,
@@ -208,8 +270,11 @@ def test_mindgo_sync_runs_immediate_import(
         async def get_schema(self):
             raise AssertionError("schema should not run")
 
-        async def query(self, request):
-            raise AssertionError("query should not run")
+        async def query_from_mindgo(self, request):
+            raise AssertionError("query_from_mindgo should not run")
+
+        async def query_from_duckdb(self, sql):
+            raise AssertionError("query_from_duckdb should not run")
 
         async def sync(self, request):
             assert request.start_date == date(2026, 8, 13)
