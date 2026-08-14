@@ -5,7 +5,7 @@ from datetime import date
 import pandas as pd
 from app.schema.mindgo import MindgoDatasetSyncResult
 from app.service.mindgo import service as mindgo_service
-from app.service.mindgo.stock_a_daily_price import stock_a_daily_price_schema
+from app.service.mindgo.adaptor.stock_a_daily_price import stock_a_daily_price_schema
 from fastapi.testclient import TestClient
 
 

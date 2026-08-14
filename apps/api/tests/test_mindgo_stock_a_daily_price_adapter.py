@@ -6,7 +6,7 @@ from typing import Any
 
 import pandas as pd
 from app.schema.mindgo import MindgoDatasetQueryRequest, MindgoDatasetSyncRequest
-from app.service.mindgo.stock_a_daily_price import (
+from app.service.mindgo.adaptor.stock_a_daily_price import (
     STOCK_A_DAILY_PRICE_DATASET_ID,
     STOCK_A_DAILY_PRICE_MARKER_END,
     STOCK_A_DAILY_PRICE_MARKER_START,

@@ -24,8 +24,8 @@ from app.service.mindgo.jupyter_runner import (
     MindgoJupyterConfig,
     MindgoJupyterRunner,
 )
-from app.service.mindgo.protocol import MindgoDatasetAdapter
-from app.service.mindgo.stock_a_daily_price import (
+from app.service.mindgo.adaptor.protocol import MindgoDatasetAdapter
+from app.service.mindgo.adaptor.stock_a_daily_price import (
     STOCK_A_DAILY_PRICE_DATASET_ID,
     StockADailyPriceAdapter,
 )
