@@ -358,7 +358,7 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
     config?.fields.find((field) => field.key === "agent_available_tools")?.options ?? [];
 
   return (
-    <section className="mx-auto grid w-full max-w-7xl gap-5">
+    <section className="grid w-full gap-5">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
         <div className="flex min-w-0 items-center gap-3">
           <button
@@ -395,12 +395,6 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
             ))}
           </div>
 
-          {config ? (
-            <div className="grid gap-1 border-t border-line pt-3 font-mono text-[10px] text-muted">
-              <span className="truncate">config: {config.bootstrap.config_file_path}</span>
-              <span className="truncate">sqlite: {config.bootstrap.database_path}</span>
-            </div>
-          ) : null}
         </nav>
 
         <div className="grid min-w-0 gap-4 pb-8">
@@ -466,10 +460,6 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
               ) : null}
             </div>
           ) : null}
-
-          <div className="pb-4 text-xs leading-5 text-muted">
-            配置保存在 SQLite；配置文件只负责定位数据库。
-          </div>
         </div>
       </div>
 

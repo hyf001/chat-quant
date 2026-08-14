@@ -53,6 +53,69 @@ wait_for_url() {
   return 1
 }
 
+url_port() {
+  local url="$1"
+  local without_scheme="${url#*://}"
+  local host_port="${without_scheme%%/*}"
+  local port="${host_port##*:}"
+
+  if [[ "$port" =~ ^[0-9]+$ ]]; then
+    echo "$port"
+  fi
+}
+
+is_port_listening() {
+  local port="$1"
+  [[ -n "$port" ]] && [[ -n "$(lsof -ti "tcp:$port" 2>/dev/null || true)" ]]
+}
+
+is_ready() {
+  local url="$1"
+
+  if [[ -z "$url" ]]; then
+    return 0
+  fi
+
+  if curl -fsS --max-time 1 "$url" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local port
+  port="$(url_port "$url")"
+  is_port_listening "$port"
+}
+
+wait_for_port_clear() {
+  local port="$1"
+
+  for _ in {1..40}; do
+    if [[ -z "$(lsof -ti "tcp:$port" 2>/dev/null || true)" ]]; then
+      return 0
+    fi
+    sleep 0.25
+  done
+
+  return 1
+}
+
+clear_stale_service_port() {
+  local name="$1"
+  local pid_file="$2"
+  local port="$3"
+
+  if [[ ! -f "$pid_file" ]] || is_running "$pid_file"; then
+    return 0
+  fi
+
+  echo "$name has a stale pid file; cleaning port $port..."
+  rm -f "$pid_file"
+  stop_port "$name" "$port"
+  if ! wait_for_port_clear "$port"; then
+    echo "$name port $port is still in use after cleanup"
+    return 1
+  fi
+}
+
 start_service() {
   local name="$1"
   local pid_file="$2"
@@ -61,7 +124,7 @@ start_service() {
   local timeout_seconds="$5"
   shift 5
 
-  if is_running "$pid_file"; then
+  if is_running "$pid_file" && is_ready "$ready_url"; then
     echo "$name already running (pid $(cat "$pid_file"))"
     return 0
   fi
@@ -76,12 +139,12 @@ start_service() {
 
   local attempts=$((timeout_seconds * 4))
   for ((attempt = 1; attempt <= attempts; attempt += 1)); do
-    if [[ -n "$ready_url" ]] && curl -fsS --max-time 1 "$ready_url" >/dev/null 2>&1; then
+    if is_ready "$ready_url"; then
       echo "$name started (pid $(cat "$pid_file"), log $log_file)"
       return 0
     fi
 
-    if ! is_running "$pid_file"; then
+    if ! is_running "$pid_file" && ! is_port_listening "$(url_port "$ready_url")"; then
       rm -f "$pid_file"
       echo "$name failed to start. Recent log output:"
       print_recent_log "$log_file"

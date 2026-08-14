@@ -66,6 +66,19 @@ function registerDesktopIpc() {
     return result.filePaths[0];
   });
 
+  ipcMain.handle("chatq:select-directory", async (_event, options = {}) => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: typeof options.title === "string" ? options.title : undefined,
+      buttonLabel: typeof options.buttonLabel === "string" ? options.buttonLabel : undefined,
+      defaultPath: typeof options.defaultPath === "string" ? options.defaultPath : undefined,
+      properties: ["openDirectory", "createDirectory"],
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+    return result.filePaths[0];
+  });
+
   ipcMain.handle("chatq:create-project-directory", async () => {
     const result = await dialog.showSaveDialog(mainWindow, {
       title: "Create Chat Quant Project",

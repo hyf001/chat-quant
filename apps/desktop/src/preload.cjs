@@ -8,5 +8,6 @@ const apiBaseUrl =
 contextBridge.exposeInMainWorld("chatqDesktop", {
   apiBaseUrl,
   selectProjectDirectory: () => ipcRenderer.invoke("chatq:select-project-directory"),
+  selectDirectory: (options) => ipcRenderer.invoke("chatq:select-directory", options),
   createProjectDirectory: () => ipcRenderer.invoke("chatq:create-project-directory"),
 });

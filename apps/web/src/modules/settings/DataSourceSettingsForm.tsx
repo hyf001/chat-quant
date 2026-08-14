@@ -3,13 +3,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  FolderOpen,
   Loader2,
   Play,
   Save,
   Settings,
   Server,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   getMindgoDatasetSchema,
@@ -141,6 +142,18 @@ export function DataSourceSettingsForm({
     setIsConnectionOpen(false);
   };
 
+  const handleSelectMindgoStorageRoot = async () => {
+    const selected = await selectDirectory({
+      title: "选择 MindGo 数据根目录",
+      buttonLabel: "选择",
+      defaultPath: draft.mindgo.storage_root,
+      prompt: "输入 MindGo 数据根目录",
+    });
+    if (selected) {
+      updateMindgoSettings({ storage_root: selected });
+    }
+  };
+
   const handleTestConnection = async () => {
     setIsTesting(true);
     try {
@@ -176,14 +189,13 @@ export function DataSourceSettingsForm({
   };
 
   const handleSync = async () => {
-    const startDate = stringParam(params.start_date) || today;
-    const endDate = stringParam(params.end_date) || startDate;
+    const baseDay = stringParam(params.baseDay) || today;
     setIsSyncing(true);
     setQueryResult(null);
     try {
       const response = await syncMindgoDataset(selectedDatasetId, {
-        start_date: startDate,
-        end_date: endDate,
+        start_date: baseDay,
+        end_date: baseDay,
         params: cleanParams(params),
       });
       setSyncResult(response);
@@ -240,6 +252,21 @@ export function DataSourceSettingsForm({
                       label="Notebook 路径"
                       value={draft.mindgo.notebook_path}
                       onChange={(notebook_path) => updateMindgoSettings({ notebook_path })}
+                    />
+                    <TextInput
+                      label="数据根目录"
+                      value={draft.mindgo.storage_root}
+                      onChange={(storage_root) => updateMindgoSettings({ storage_root })}
+                      action={
+                        <button
+                          className="inline-flex h-10 items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+                          type="button"
+                          onClick={() => void handleSelectMindgoStorageRoot()}
+                        >
+                          <FolderOpen className="h-3.5 w-3.5" />
+                          浏览
+                        </button>
+                      }
                     />
                     <NumberInput
                       label="超时 秒"
@@ -386,22 +413,27 @@ function TextInput({
   value,
   onChange,
   type = "text",
+  action,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: "text" | "password";
+  action?: ReactNode;
 }) {
   return (
-    <label className="grid gap-1.5">
+    <div className="grid gap-1.5">
       <span className="text-xs font-semibold text-graphite">{label}</span>
-      <input
-        className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </label>
+      <span className="flex gap-2">
+        <input
+          className="h-10 min-w-0 flex-1 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
+          type={type}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        {action}
+      </span>
+    </div>
   );
 }
 
@@ -662,7 +694,25 @@ function normalizeMindgoSettings(settings: MindgoSettings): MindgoSettings {
     notebook_path: settings.notebook_path.trim() || "deepsolo_v3/少标的分时实时.ipynb",
     kernel_id: settings.kernel_id?.trim() || null,
     timeout_seconds: Math.max(1, Number(settings.timeout_seconds) || 120),
+    storage_root: settings.storage_root.trim() || "data/mindgo/parquet",
   };
+}
+
+async function selectDirectory({
+  title,
+  buttonLabel,
+  defaultPath,
+  prompt,
+}: {
+  title: string;
+  buttonLabel: string;
+  defaultPath: string;
+  prompt: string;
+}): Promise<string | null> {
+  if (window.chatqDesktop?.selectDirectory) {
+    return window.chatqDesktop.selectDirectory({ title, buttonLabel, defaultPath });
+  }
+  return window.prompt(prompt, defaultPath)?.trim() || null;
 }
 
 function stringParam(value: MindgoJsonValue): string {

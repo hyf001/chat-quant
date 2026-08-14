@@ -16,6 +16,7 @@ DEFAULT_API_PORT = 12345
 DEFAULT_WEB_HOST = "127.0.0.1"
 DEFAULT_WEB_PORT = 12346
 DEFAULT_MINDGO_NOTEBOOK_PATH = "deepsolo_v3/少标的分时实时.ipynb"
+DEFAULT_MINDGO_STORAGE_ROOT = "data/mindgo/parquet"
 DEFAULT_MODEL_PROVIDER_ID = "provider_anthropic_default"
 DEFAULT_MODEL_PROVIDER_NAME = "Anthropic"
 DEFAULT_AGENT_TOOLS = [
@@ -216,6 +217,14 @@ APP_CONFIG_DEFINITIONS: tuple[ConfigDefinition, ...] = (
         120,
         "MindGo 远端执行超时秒数。",
     ),
+    ConfigDefinition(
+        "mindgo_storage_root",
+        "MindGo 数据根目录",
+        "mindgo",
+        "string",
+        DEFAULT_MINDGO_STORAGE_ROOT,
+        "MindGo 数据集本地存储根目录；数据按 storage_root/dataset_id/partition 管理。",
+    ),
 )
 
 
@@ -251,6 +260,7 @@ class Settings(BaseModel):
     mindgo_notebook_path: str = DEFAULT_MINDGO_NOTEBOOK_PATH
     mindgo_kernel_id: str | None = None
     mindgo_timeout_seconds: int = 120
+    mindgo_storage_root: str = DEFAULT_MINDGO_STORAGE_ROOT
 
     @field_validator("agent_available_tools", mode="before")
     @classmethod

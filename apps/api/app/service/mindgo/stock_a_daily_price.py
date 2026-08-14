@@ -14,6 +14,7 @@ import pandas as pd
 from app.schema.mindgo import (
     MindgoDatasetQueryRequest,
     MindgoDatasetSchema,
+    MindgoDatasetStorageSpec,
     MindgoDatasetSyncRequest,
     MindgoDatasetSyncResult,
     MindgoFieldSpec,
@@ -21,30 +22,26 @@ from app.schema.mindgo import (
     MindgoParameterSpec,
 )
 from app.service.mindgo.jupyter_runner import MindgoJupyterRunner
+from app.service.mindgo.storage import MindgoDatasetStorage, mindgo_dataset_partition_path
 from app.storage import DuckDBParquetStore, ParquetWriteOptions
 
 STOCK_A_DAILY_PRICE_DATASET_ID = "stock_a_daily_price"
-DEFAULT_MINDGO_PARQUET_ROOT = (
-    Path(__file__).resolve().parents[2] / "storage" / "mindgo" / "parquet"
-)
 STOCK_A_DAILY_PRICE_MARKER_START = "MINDGO_STOCK_A_DAILY_PRICE_JSON_START"
 STOCK_A_DAILY_PRICE_MARKER_END = "MINDGO_STOCK_A_DAILY_PRICE_JSON_END"
-STOCK_A_DAILY_PRICE_QUERY_ID = "1014"
-RAW_1014_COLUMNS = [
+STOCK_A_DAILY_PRICE_QUERY_ID = "1015"
+RAW_1015_COLUMNS = [
     "trade_date",
     "query_id",
     "uid",
+    "开盘价:不复权",
     "成交量(日)",
     "成交额(日)",
+    "最高价:不复权",
     "换手(日)",
     "股票代码",
-    "收盘价(日)",
     "股票简称",
-    "最低价(日)",
-    "振幅(日)",
-    "涨跌(日)",
-    "最高价(日)",
-    "开盘价(日)",
+    "最低价:不复权",
+    "收盘价:不复权",
 ]
 STOCK_A_DAILY_PRICE_FIELDS = [
     ("symbol", "股票代码", "string"),
@@ -57,14 +54,16 @@ STOCK_A_DAILY_PRICE_FIELDS = [
     ("volume", "成交量", "number"),
     ("turnover", "成交额", "number"),
     ("turnover_rate", "换手", "number"),
-    ("amplitude", "振幅", "number"),
-    ("change", "涨跌", "number"),
 ]
 DEFAULT_QUERY_FIELDS = [name for name, _, _ in STOCK_A_DAILY_PRICE_FIELDS]
 RAW_TO_STANDARD_FIELD = {
     "股票代码": "symbol",
     "trade_date": "trade_date",
     "股票简称": "name",
+    "开盘价:不复权": "open",
+    "最高价:不复权": "high",
+    "最低价:不复权": "low",
+    "收盘价:不复权": "close",
     "开盘价(日)": "open",
     "最高价(日)": "high",
     "最低价(日)": "low",
@@ -72,8 +71,6 @@ RAW_TO_STANDARD_FIELD = {
     "成交量(日)": "volume",
     "成交额(日)": "turnover",
     "换手(日)": "turnover_rate",
-    "振幅(日)": "amplitude",
-    "涨跌(日)": "change",
     "uid": "uid",
     "query_id": "query_id",
 }
@@ -118,14 +115,24 @@ class StockADailyPriceAdapter:
         runner: MindgoJupyterRunner | None = None,
         *,
         sync_writer: MindgoSyncWriter | None = None,
+        storage: MindgoDatasetStorage | None = None,
+        storage_root: Path | str | None = None,
         parquet_root: Path | str | None = None,
     ) -> None:
+        if storage is not None and (storage_root is not None or parquet_root is not None):
+            raise ValueError("storage cannot be combined with storage_root or parquet_root")
         self._runner = runner
         self._sync_writer = sync_writer or DuckDBParquetMindgoSyncWriter()
-        self._parquet_root = Path(parquet_root) if parquet_root else DEFAULT_MINDGO_PARQUET_ROOT
+        root = storage_root if storage_root is not None else parquet_root
+        if storage is not None:
+            self._storage = storage
+        elif root is not None:
+            self._storage = MindgoDatasetStorage(root)
+        else:
+            self._storage = MindgoDatasetStorage()
 
     async def get_schema(self) -> MindgoDatasetSchema:
-        return stock_a_daily_price_schema()
+        return stock_a_daily_price_schema(self._storage)
 
     async def query(self, request: MindgoDatasetQueryRequest) -> pd.DataFrame:
         if self._runner is None:
@@ -149,8 +156,7 @@ class StockADailyPriceAdapter:
             query_request = MindgoDatasetQueryRequest(
                 params={
                     **request.params,
-                    "start_date": sync_day.isoformat(),
-                    "end_date": sync_day.isoformat(),
+                    "baseDay": sync_day.isoformat(),
                 }
             )
             frame = await self.query(query_request)
@@ -158,8 +164,7 @@ class StockADailyPriceAdapter:
                 write = MindgoPartitionedParquetWrite(
                     dataset_id=self.dataset_id,
                     partition_values={"trade_day": partition_date},
-                    path=mindgo_parquet_partition_path(
-                        self._parquet_root,
+                    path=self._storage.partition_path(
                         self.dataset_id,
                         {"trade_day": partition_date},
                     ),
@@ -175,26 +180,27 @@ class StockADailyPriceAdapter:
         )
 
 
-def stock_a_daily_price_schema() -> MindgoDatasetSchema:
+def stock_a_daily_price_schema(
+    storage: MindgoDatasetStorage | None = None,
+) -> MindgoDatasetSchema:
+    storage = storage or MindgoDatasetStorage()
     return MindgoDatasetSchema(
         name="A股历史行情数据(日)",
         category_path=["股票", "A股", "行情数据(A股)"],
-        description="A股股票日频历史行情数据",
+        description="A股股票日频历史行情数据，不复权",
         mindgo_function="query_index",
-        sync_table_name="",
+        storage=MindgoDatasetStorageSpec(
+            path=storage.dataset_root(STOCK_A_DAILY_PRICE_DATASET_ID).as_posix(),
+            format="parquet",
+            partitioned_by=["trade_day"],
+        ),
         query_params=[
             MindgoParameterSpec(
-                name="start_date",
-                label="起始日期",
+                name="baseDay",
+                label="baseDay",
                 value_type="date",
                 required=True,
-                description="query_index 1014 按单个交易日返回；query 会使用 end_date/base_day。",
-            ),
-            MindgoParameterSpec(
-                name="end_date",
-                label="结束日期",
-                value_type="date",
-                required=True,
+                description="query_index 1015 的单日查询日期。",
             ),
             MindgoParameterSpec(
                 name="fields",
@@ -377,7 +383,12 @@ def normalize_query_index(raw, base_day):
 payload = {{"data": None}}
 try:
     call_params = dict(PARAMS)
-    base_day = str(call_params.get("end_date") or call_params.get("base_day") or "")
+    base_day = str(
+        call_params.get("baseDay")
+        or call_params.get("base_day")
+        or call_params.get("end_date")
+        or ""
+    )
     pod = call_params.get("pod") or "cbas-babel-frondend-pod"
 
     def query_index():
@@ -416,6 +427,7 @@ def normalize_stock_a_daily_price(value: Any) -> pd.DataFrame:
 
 def _query_params(request: MindgoDatasetQueryRequest) -> dict[str, Any]:
     params = dict(request.params)
+    params.setdefault("baseDay", params.get("end_date") or params.get("start_date"))
     params.setdefault("fields", DEFAULT_QUERY_FIELDS)
     return params
 
@@ -440,14 +452,11 @@ def _daily_partitions(frame: pd.DataFrame, fallback_date: date) -> list[tuple[st
 
 
 def mindgo_parquet_partition_path(
-    root: Path | str,
+    storage_root: Path | str,
     dataset_id: str,
     partition_values: Mapping[str, str],
 ) -> Path:
-    path = Path(root) / _safe_partition_segment(dataset_id)
-    for key, value in partition_values.items():
-        path /= f"{_safe_partition_segment(key)}={_safe_partition_segment(value)}"
-    return path / "data.parquet"
+    return mindgo_dataset_partition_path(storage_root, dataset_id, partition_values)
 
 
 def _normalize_dict(value: dict[str, Any]) -> pd.DataFrame:
@@ -539,10 +548,3 @@ def _date_text(value: Any) -> str | None:
     if pd.isna(timestamp):
         return None
     return timestamp.strftime("%Y%m%d")
-
-
-def _safe_partition_segment(value: str) -> str:
-    text = str(value)
-    if not text or "/" in text or "\\" in text or text in {".", ".."}:
-        raise ValueError(f"invalid parquet partition path segment: {text!r}")
-    return text

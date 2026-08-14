@@ -2,16 +2,16 @@ from datetime import date
 
 import pandas as pd
 import pytest
-from pydantic import ValidationError
-
 from app.schema.mindgo import (
     MindgoDatasetQueryRequest,
     MindgoDatasetSchema,
+    MindgoDatasetStorageSpec,
     MindgoDatasetSyncRequest,
     MindgoDatasetSyncResult,
     MindgoFieldSpec,
     MindgoParameterSpec,
 )
+from pydantic import ValidationError
 
 
 def test_mindgo_dataset_schema_protocol_supports_result_schema() -> None:
@@ -20,6 +20,11 @@ def test_mindgo_dataset_schema_protocol_supports_result_schema() -> None:
         category_path=["股票", "A股", "行情数据(A股)"],
         description="A股股票日频行情数据",
         mindgo_function="get_price",
+        storage=MindgoDatasetStorageSpec(
+            path="data/mindgo/parquet/stock_a_daily_price",
+            format="parquet",
+            partitioned_by=["trade_day"],
+        ),
         query_params=[
             MindgoParameterSpec(
                 name="securities",
@@ -46,7 +51,8 @@ def test_mindgo_dataset_schema_protocol_supports_result_schema() -> None:
     )
 
     assert schema.name == "股票日行情数据(A股)"
-    assert schema.sync_table_name == ""
+    assert schema.storage.path == "data/mindgo/parquet/stock_a_daily_price"
+    assert schema.storage.partitioned_by == ["trade_day"]
     assert schema.result_schema[0].name == "symbol"
 
 
@@ -100,6 +106,11 @@ async def test_mindgo_dataset_adapter_query_returns_dataframe() -> None:
                 name="股票日行情数据(A股)",
                 category_path=["股票", "A股", "行情数据(A股)"],
                 mindgo_function="get_price",
+                storage=MindgoDatasetStorageSpec(
+                    path="data/mindgo/parquet/stock_a_daily_price",
+                    format="parquet",
+                    partitioned_by=["trade_day"],
+                ),
                 query_params=[],
                 result_schema=[],
             )

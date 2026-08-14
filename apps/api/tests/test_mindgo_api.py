@@ -25,6 +25,10 @@ def test_mindgo_api_returns_stock_daily_schema(client: TestClient) -> None:
     payload = response.json()
     assert payload["name"] == "A股历史行情数据(日)"
     assert payload["category_path"] == ["股票", "A股", "行情数据(A股)"]
+    assert "sync_table_name" not in payload
+    assert payload["storage"]["path"] == "data/mindgo/parquet/stock_a_daily_price"
+    assert payload["storage"]["format"] == "parquet"
+    assert payload["storage"]["partitioned_by"] == ["trade_day"]
     assert payload["result_schema"][0]["name"] == "symbol"
 
 
@@ -56,8 +60,7 @@ def test_mindgo_query_uses_default_connection(
         "/api/mindgo/datasets/stock_a_daily_price/query",
         json={
             "params": {
-                "start_date": "2026-08-13",
-                "end_date": "2026-08-13",
+                "baseDay": "2026-08-13",
             }
         },
     )

@@ -5,7 +5,7 @@ from typing import Any
 
 import pandas as pd
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.schema.mindgo import (
     MindgoConnectionConfig,
     MindgoConnectionTestRequest,
@@ -29,6 +29,7 @@ from app.service.mindgo.stock_a_daily_price import (
     STOCK_A_DAILY_PRICE_DATASET_ID,
     StockADailyPriceAdapter,
 )
+from app.service.mindgo.storage import MindgoDatasetStorage
 
 MINDGO_CONNECTION_TEST_MARKER_START = "MINDGO_CONNECTION_TEST_JSON_START"
 MINDGO_CONNECTION_TEST_MARKER_END = "MINDGO_CONNECTION_TEST_JSON_END"
@@ -62,7 +63,8 @@ async def get_schema(dataset_id: str) -> MindgoDatasetSchema:
 
 async def test_connection(request: MindgoConnectionTestRequest) -> MindgoConnectionTestResponse:
     _ = request
-    connection = _connection_from_settings()
+    settings = _fresh_settings()
+    connection = _connection_from_settings(settings)
     if not connection.url.strip():
         return MindgoConnectionTestResponse(ok=False, message="请填写 Notebook 地址")
     if not (connection.token or "").strip():
@@ -133,14 +135,19 @@ def _adapter_for_dataset(
 ) -> MindgoDatasetAdapter:
     if dataset_id != STOCK_A_DAILY_PRICE_DATASET_ID:
         raise MindgoDatasetNotFoundError(dataset_id)
-    connection = _connection_from_settings()
+    settings = _fresh_settings()
+    connection = _connection_from_settings(settings)
     runner = None if allow_missing_runner else _runner_from_connection(connection)
-    return StockADailyPriceAdapter(runner)
+    return StockADailyPriceAdapter(runner, storage=_storage_from_settings(settings))
 
 
-def _connection_from_settings() -> MindgoConnectionConfig:
+def _fresh_settings() -> Settings:
     get_settings.cache_clear()
-    settings = get_settings()
+    return get_settings()
+
+
+def _connection_from_settings(settings: Settings | None = None) -> MindgoConnectionConfig:
+    settings = settings or _fresh_settings()
     return MindgoConnectionConfig(
         execution_mode="jupyter",
         url=settings.mindgo_jupyter_url or "",
@@ -150,6 +157,10 @@ def _connection_from_settings() -> MindgoConnectionConfig:
         kernel_id=settings.mindgo_kernel_id,
         timeout_seconds=settings.mindgo_timeout_seconds,
     )
+
+
+def _storage_from_settings(settings: Settings) -> MindgoDatasetStorage:
+    return MindgoDatasetStorage(settings.mindgo_storage_root)
 
 
 def _runner_from_connection(connection: MindgoConnectionConfig | None):

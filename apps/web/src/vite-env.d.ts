@@ -6,6 +6,11 @@ interface Window {
   chatqDesktop?: {
     apiBaseUrl: string;
     selectProjectDirectory?: () => Promise<string | null>;
+    selectDirectory?: (options?: {
+      title?: string;
+      buttonLabel?: string;
+      defaultPath?: string;
+    }) => Promise<string | null>;
     createProjectDirectory?: () => Promise<string | null>;
   };
 }

@@ -165,6 +165,7 @@ export type MindgoSettings = {
   notebook_path: string;
   kernel_id: string | null;
   timeout_seconds: number;
+  storage_root: string;
 };
 
 export type AppSettings = {
@@ -295,12 +296,18 @@ export type MindgoFieldSpec = {
   description: string;
 };
 
+export type MindgoDatasetStorageSpec = {
+  path: string;
+  format: "parquet";
+  partitioned_by: string[];
+};
+
 export type MindgoDatasetSchema = {
   name: string;
   category_path: string[];
   description: string;
   mindgo_function: string;
-  sync_table_name: string;
+  storage: MindgoDatasetStorageSpec;
   query_params: MindgoParameterSpec[];
   result_schema: MindgoFieldSpec[];
 };

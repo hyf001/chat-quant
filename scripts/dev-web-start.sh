@@ -6,6 +6,9 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/dev-common.sh"
 API_PID_FILE="$PID_DIR/web-api.pid"
 WEB_PID_FILE="$PID_DIR/web.pid"
 
+clear_stale_service_port "web api" "$API_PID_FILE" "$API_PORT"
+clear_stale_service_port "web" "$WEB_PID_FILE" "$WEB_PORT"
+
 start_service \
   "web api" \
   "$API_PID_FILE" \

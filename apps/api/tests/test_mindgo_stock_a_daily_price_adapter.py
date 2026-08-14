@@ -17,6 +17,7 @@ from app.service.mindgo.stock_a_daily_price import (
     normalize_stock_a_daily_price,
     stock_a_daily_price_remote_code,
 )
+from app.service.mindgo.storage import MindgoDatasetStorage
 from app.storage import DuckDBParquetStore
 
 
@@ -75,10 +76,11 @@ async def test_stock_a_daily_price_schema_contract() -> None:
     assert adapter.dataset_id == STOCK_A_DAILY_PRICE_DATASET_ID
     assert schema.name == "A股历史行情数据(日)"
     assert schema.mindgo_function == "query_index"
-    assert schema.sync_table_name == ""
-    assert [param.name for param in schema.query_params][:3] == [
-        "start_date",
-        "end_date",
+    assert schema.storage.path.endswith("/stock_a_daily_price")
+    assert schema.storage.format == "parquet"
+    assert schema.storage.partitioned_by == ["trade_day"]
+    assert [param.name for param in schema.query_params][:2] == [
+        "baseDay",
         "fields",
     ]
     assert [field.name for field in schema.result_schema[:4]] == [
@@ -102,35 +104,31 @@ async def test_stock_a_daily_price_query_uses_remote_runner_and_returns_datafram
             "data": [
                 {
                     "trade_date": 20260813,
-                    "query_id": 1014,
+                    "query_id": 1015,
                     "uid": "601827.SH",
+                    "开盘价:不复权": 8.78,
                     "成交量(日)": 13275200.0,
                     "成交额(日)": 112309808.0,
+                    "最高价:不复权": 8.78,
                     "换手(日)": 0.794,
                     "股票代码": "601827.SH",
-                    "收盘价(日)": 8.38,
                     "股票简称": "三峰环境",
-                    "最低价(日)": 8.36,
-                    "振幅(日)": 4.8387,
-                    "涨跌(日)": -0.3,
-                    "最高价(日)": 8.78,
-                    "开盘价(日)": 8.78,
+                    "最低价:不复权": 8.36,
+                    "收盘价:不复权": 8.38,
                 },
                 {
                     "trade_date": 20260813,
-                    "query_id": 1014,
+                    "query_id": 1015,
                     "uid": "600117.SH",
+                    "开盘价:不复权": 2.26,
                     "成交量(日)": 14055710.0,
                     "成交额(日)": 31957520.0,
+                    "最高价:不复权": 2.3,
                     "换手(日)": 0.4318,
                     "股票代码": "600117.SH",
-                    "收盘价(日)": 2.3,
                     "股票简称": "西宁特钢",
-                    "最低价(日)": 2.24,
-                    "振幅(日)": 2.6549,
-                    "涨跌(日)": 0.04,
-                    "最高价(日)": 2.3,
-                    "开盘价(日)": 2.26,
+                    "最低价:不复权": 2.24,
+                    "收盘价:不复权": 2.3,
                 },
             ]
         }
@@ -140,8 +138,7 @@ async def test_stock_a_daily_price_query_uses_remote_runner_and_returns_datafram
     frame = await adapter.query(
         MindgoDatasetQueryRequest(
             params={
-                "start_date": "2026-08-13",
-                "end_date": "2026-08-13",
+                "baseDay": "2026-08-13",
                 "fields": ["open", "close"],
             }
         )
@@ -155,15 +152,14 @@ async def test_stock_a_daily_price_query_uses_remote_runner_and_returns_datafram
     assert frame.iloc[1]["close"] == 2.3
     assert runner.calls[0]["marker_start"] == STOCK_A_DAILY_PRICE_MARKER_START
     assert runner.calls[0]["marker_end"] == STOCK_A_DAILY_PRICE_MARKER_END
-    assert '"end_date": "2026-08-13"' in runner.calls[0]["code"]
-    assert '"1014"' in runner.calls[0]["code"]
+    assert '"baseDay": "2026-08-13"' in runner.calls[0]["code"]
+    assert '"1015"' in runner.calls[0]["code"]
 
 
 def test_stock_a_daily_price_remote_code_embeds_query_index_contract() -> None:
     code = stock_a_daily_price_remote_code(
         {
-            "start_date": "2026-08-13",
-            "end_date": "2026-08-13",
+            "baseDay": "2026-08-13",
         }
     )
 
@@ -177,23 +173,21 @@ def test_stock_a_daily_price_remote_code_embeds_query_index_contract() -> None:
     assert "MINDGO_STOCK_A_DAILY_PRICE_JSON_START" in code
 
 
-def test_normalize_stock_a_daily_price_maps_query_1014_columns_to_standard_columns() -> None:
+def test_normalize_stock_a_daily_price_maps_query_1015_columns_to_standard_columns() -> None:
     raw = [
         {
             "trade_date": 20260813,
-            "query_id": 1014,
+            "query_id": 1015,
             "uid": "601827.SH",
+            "开盘价:不复权": 8.78,
             "成交量(日)": 13275200.0,
             "成交额(日)": 112309808.0,
+            "最高价:不复权": 8.78,
             "换手(日)": 0.794,
             "股票代码": "601827.SH",
-            "收盘价(日)": 8.38,
             "股票简称": "三峰环境",
-            "最低价(日)": 8.36,
-            "振幅(日)": 4.8387,
-            "涨跌(日)": -0.3,
-            "最高价(日)": 8.78,
-            "开盘价(日)": 8.78,
+            "最低价:不复权": 8.36,
+            "收盘价:不复权": 8.38,
         }
     ]
 
@@ -211,8 +205,6 @@ def test_normalize_stock_a_daily_price_maps_query_1014_columns_to_standard_colum
             "volume",
             "turnover",
             "turnover_rate",
-            "amplitude",
-            "change",
         ]
     ].to_dict(orient="records") == [
         {
@@ -226,10 +218,10 @@ def test_normalize_stock_a_daily_price_maps_query_1014_columns_to_standard_colum
             "volume": 13275200.0,
             "turnover": 112309808.0,
             "turnover_rate": 0.794,
-            "amplitude": 4.8387,
-            "change": -0.3,
         },
     ]
+    assert "amplitude" not in frame.columns
+    assert "change" not in frame.columns
     assert "uid" not in frame.columns
     assert "query_id" not in frame.columns
 
@@ -238,8 +230,8 @@ async def test_stock_a_daily_price_sync_writes_daily_partitions_with_storage_pro
     runner = FakeMindgoRunner(
         {
             "data": [
-                {"股票代码": "601827.SH", "trade_date": 20260813, "收盘价(日)": 8.38},
-                {"股票代码": "600117.SH", "trade_date": 20260813, "收盘价(日)": 2.3},
+                {"股票代码": "601827.SH", "trade_date": 20260813, "收盘价:不复权": 8.38},
+                {"股票代码": "600117.SH", "trade_date": 20260813, "收盘价:不复权": 2.3},
             ]
         }
     )
@@ -247,7 +239,7 @@ async def test_stock_a_daily_price_sync_writes_daily_partitions_with_storage_pro
     adapter = StockADailyPriceAdapter(  # type: ignore[arg-type]
         runner,
         sync_writer=writer,
-        parquet_root="/tmp/mindgo-test/parquet",
+        storage_root="/tmp/mindgo-test/parquet",
     )
 
     result = await adapter.sync(
@@ -269,8 +261,7 @@ async def test_stock_a_daily_price_sync_writes_daily_partitions_with_storage_pro
     assert writer.calls[0]["start_date"] == date(2026, 8, 13)
     assert writer.calls[0]["end_date"] == date(2026, 8, 13)
     assert writer.calls[0]["order_by"] == ["trade_date", "symbol"]
-    assert '"start_date": "2026-08-13"' in runner.calls[0]["code"]
-    assert '"end_date": "2026-08-13"' in runner.calls[0]["code"]
+    assert '"baseDay": "2026-08-13"' in runner.calls[0]["code"]
 
 
 async def test_stock_a_daily_price_sync_imports_multiple_days_to_duckdb_parquet(
@@ -289,15 +280,15 @@ async def test_stock_a_daily_price_sync_imports_multiple_days_to_duckdb_parquet(
             timeout_seconds: float | None = None,
         ) -> dict[str, Any]:
             self.calls.append(code)
-            if '"end_date": "2026-08-13"' in code:
+            if '"baseDay": "2026-08-13"' in code:
                 return {
                     "data": [
-                        {"股票代码": "601827.SH", "trade_date": 20260813, "收盘价(日)": 8.38},
+                        {"股票代码": "601827.SH", "trade_date": 20260813, "收盘价:不复权": 8.38},
                     ]
                 }
             return {
                 "data": [
-                    {"股票代码": "600117.SH", "trade_date": 20260814, "收盘价(日)": 2.3},
+                    {"股票代码": "600117.SH", "trade_date": 20260814, "收盘价:不复权": 2.3},
                 ]
             }
 
@@ -306,7 +297,7 @@ async def test_stock_a_daily_price_sync_imports_multiple_days_to_duckdb_parquet(
     adapter = StockADailyPriceAdapter(  # type: ignore[arg-type]
         DailyMindgoRunner(),
         sync_writer=DuckDBParquetMindgoSyncWriter(store),
-        parquet_root=parquet_root,
+        storage=MindgoDatasetStorage(parquet_root),
     )
 
     result = await adapter.sync(

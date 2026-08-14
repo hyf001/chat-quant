@@ -161,6 +161,7 @@ def _payload_from_settings(settings: Settings) -> AppSettingsPayload:
             notebook_path=settings.mindgo_notebook_path,
             kernel_id=settings.mindgo_kernel_id,
             timeout_seconds=settings.mindgo_timeout_seconds,
+            storage_root=settings.mindgo_storage_root,
         ),
     )
 
@@ -210,4 +211,6 @@ def _flatten_payload(payload: AppSettingsUpdatePayload) -> dict[str, ConfigValue
             values["mindgo_kernel_id"] = payload.mindgo.kernel_id
         if payload.mindgo.timeout_seconds is not None:
             values["mindgo_timeout_seconds"] = payload.mindgo.timeout_seconds
+        if payload.mindgo.storage_root is not None:
+            values["mindgo_storage_root"] = payload.mindgo.storage_root
     return values

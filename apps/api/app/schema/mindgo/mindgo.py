@@ -39,12 +39,20 @@ class MindgoFieldSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class MindgoDatasetStorageSpec(BaseModel):
+    path: str = Field(min_length=1)
+    format: Literal["parquet"]
+    partitioned_by: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class MindgoDatasetSchema(BaseModel):
     name: str = Field(min_length=1)
     category_path: list[str] = Field(min_length=1)
     description: str = ""
     mindgo_function: str = Field(min_length=1)
-    sync_table_name: str = ""
+    storage: MindgoDatasetStorageSpec
     query_params: list[MindgoParameterSpec]
     result_schema: list[MindgoFieldSpec]
 

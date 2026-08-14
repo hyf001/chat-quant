@@ -73,6 +73,7 @@ class MindgoSettingsPayload(BaseModel):
     notebook_path: str
     kernel_id: str | None = None
     timeout_seconds: int = Field(ge=0)
+    storage_root: str = Field(min_length=1)
 
 
 class MindgoSettingsUpdatePayload(BaseModel):
@@ -82,6 +83,7 @@ class MindgoSettingsUpdatePayload(BaseModel):
     notebook_path: str | None = None
     kernel_id: str | None = None
     timeout_seconds: int | None = Field(default=None, ge=0)
+    storage_root: str | None = Field(default=None, min_length=1)
 
 
 class AppSettingsPayload(BaseModel):
