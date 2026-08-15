@@ -18,12 +18,20 @@ class SystemSettingsPayload(BaseModel):
     environment: Literal["development", "desktop", "production"]
     access_log_enabled: bool
     access_log_slow_threshold_ms: int = Field(ge=0)
+    job_runtime_creation_tick_minutes: int = Field(ge=1)
+    job_runtime_dispatch_interval_seconds: int = Field(ge=1)
+    job_runtime_dispatch_limit: int = Field(ge=1)
+    job_runtime_max_concurrent_instances: int = Field(ge=1)
 
 
 class SystemSettingsUpdatePayload(BaseModel):
     environment: Literal["development", "desktop", "production"] | None = None
     access_log_enabled: bool | None = None
     access_log_slow_threshold_ms: int | None = Field(default=None, ge=0)
+    job_runtime_creation_tick_minutes: int | None = Field(default=None, ge=1)
+    job_runtime_dispatch_interval_seconds: int | None = Field(default=None, ge=1)
+    job_runtime_dispatch_limit: int | None = Field(default=None, ge=1)
+    job_runtime_max_concurrent_instances: int | None = Field(default=None, ge=1)
 
 
 class LoggingSettingsPayload(BaseModel):

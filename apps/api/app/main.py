@@ -14,7 +14,13 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     register_default_job_runtime_events()
-    worker = JobRuntimeWorker()
+    settings = get_settings()
+    worker = JobRuntimeWorker(
+        creation_tick_minutes=settings.job_runtime_creation_tick_minutes,
+        dispatch_interval_seconds=settings.job_runtime_dispatch_interval_seconds,
+        dispatch_limit=settings.job_runtime_dispatch_limit,
+        max_concurrent_instances=settings.job_runtime_max_concurrent_instances,
+    )
     worker.start()
     app.state.job_runtime_worker = worker
     try:

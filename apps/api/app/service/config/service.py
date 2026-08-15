@@ -137,6 +137,10 @@ def _payload_from_settings(settings: Settings) -> AppSettingsPayload:
             environment=settings.environment,  # type: ignore[arg-type]
             access_log_enabled=settings.access_log_enabled,
             access_log_slow_threshold_ms=settings.access_log_slow_threshold_ms,
+            job_runtime_creation_tick_minutes=settings.job_runtime_creation_tick_minutes,
+            job_runtime_dispatch_interval_seconds=settings.job_runtime_dispatch_interval_seconds,
+            job_runtime_dispatch_limit=settings.job_runtime_dispatch_limit,
+            job_runtime_max_concurrent_instances=settings.job_runtime_max_concurrent_instances,
         ),
         logging=LoggingSettingsPayload(
             level=settings.log_level,  # type: ignore[arg-type]
@@ -175,6 +179,20 @@ def _flatten_payload(payload: AppSettingsUpdatePayload) -> dict[str, ConfigValue
             values["access_log_enabled"] = payload.system.access_log_enabled
         if payload.system.access_log_slow_threshold_ms is not None:
             values["access_log_slow_threshold_ms"] = payload.system.access_log_slow_threshold_ms
+        if payload.system.job_runtime_creation_tick_minutes is not None:
+            values["job_runtime_creation_tick_minutes"] = (
+                payload.system.job_runtime_creation_tick_minutes
+            )
+        if payload.system.job_runtime_dispatch_interval_seconds is not None:
+            values["job_runtime_dispatch_interval_seconds"] = (
+                payload.system.job_runtime_dispatch_interval_seconds
+            )
+        if payload.system.job_runtime_dispatch_limit is not None:
+            values["job_runtime_dispatch_limit"] = payload.system.job_runtime_dispatch_limit
+        if payload.system.job_runtime_max_concurrent_instances is not None:
+            values["job_runtime_max_concurrent_instances"] = (
+                payload.system.job_runtime_max_concurrent_instances
+            )
     if payload.logging is not None:
         if payload.logging.level is not None:
             values["log_level"] = payload.logging.level

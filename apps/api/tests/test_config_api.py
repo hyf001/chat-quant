@@ -39,6 +39,10 @@ def test_config_api_returns_structured_settings(client: TestClient) -> None:
     assert payload["settings"]["mindgo"]["notebook_path"] == "deepsolo_v3/少标的分时实时.ipynb"
     assert payload["settings"]["mindgo"]["timeout_seconds"] == 120
     assert payload["settings"]["mindgo"]["storage_root"] == "data/mindgo/parquet"
+    assert payload["settings"]["system"]["job_runtime_creation_tick_minutes"] == 1
+    assert payload["settings"]["system"]["job_runtime_dispatch_interval_seconds"] == 30
+    assert payload["settings"]["system"]["job_runtime_dispatch_limit"] == 20
+    assert payload["settings"]["system"]["job_runtime_max_concurrent_instances"] == 20
     assert "available_tools" in payload["settings"]["agent"]
     assert "allowed_tools_default" not in payload["settings"]["agent"]
     assert any(field["key"] == "agent_provider_id" for field in payload["fields"])
@@ -98,6 +102,59 @@ def test_config_api_updates_sqlite_backed_settings(client: TestClient) -> None:
     assert updated["agent"]["available_tools"] == ["Bash", "Read"]
     assert get_settings().agent_model == "claude-test-model"
     assert get_settings().agent_available_tools == ["Bash", "Read"]
+
+
+def test_config_api_updates_job_runtime_settings(client: TestClient) -> None:
+    response = client.put(
+        "/api/config",
+        json={
+            "settings": {
+                "system": {
+                    "job_runtime_creation_tick_minutes": 5,
+                    "job_runtime_dispatch_interval_seconds": 10,
+                    "job_runtime_dispatch_limit": 7,
+                    "job_runtime_max_concurrent_instances": 3,
+                }
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    updated = response.json()["settings"]["system"]
+    assert updated["job_runtime_creation_tick_minutes"] == 5
+    assert updated["job_runtime_dispatch_interval_seconds"] == 10
+    assert updated["job_runtime_dispatch_limit"] == 7
+    assert updated["job_runtime_max_concurrent_instances"] == 3
+    settings = get_settings()
+    assert settings.job_runtime_creation_tick_minutes == 5
+    assert settings.job_runtime_dispatch_interval_seconds == 10
+    assert settings.job_runtime_dispatch_limit == 7
+    assert settings.job_runtime_max_concurrent_instances == 3
+
+
+def test_app_restart_applies_job_runtime_settings(client: TestClient) -> None:
+    response = client.put(
+        "/api/config",
+        json={
+            "settings": {
+                "system": {
+                    "job_runtime_creation_tick_minutes": 6,
+                    "job_runtime_dispatch_interval_seconds": 11,
+                    "job_runtime_dispatch_limit": 8,
+                    "job_runtime_max_concurrent_instances": 4,
+                }
+            }
+        },
+    )
+    assert response.status_code == 200
+
+    with TestClient(create_app()) as fresh_client:
+        worker = fresh_client.app.state.job_runtime_worker
+
+        assert worker._creation_tick_minutes == 6
+        assert worker._dispatch_interval_seconds == 11
+        assert worker._dispatch_limit == 8
+        assert worker._max_concurrent_instances == 4
 
 
 def test_config_api_updates_single_setting_without_touching_other_groups(

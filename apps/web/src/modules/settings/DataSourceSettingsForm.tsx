@@ -57,6 +57,15 @@ type DataSourceSettingsFormProps = {
 type MindgoParamDraft = Record<string, MindgoJsonValue>;
 type MindgoQueryMode = "mindgo" | "duckdb" | "sync";
 type SyncInstanceStatusFilter = JobInstanceStatus | "all";
+type SchedulerFrequency = "daily" | "workdays" | "weekly" | "monthly" | "custom";
+
+type SchedulerScheduleDraft = {
+  frequency: SchedulerFrequency;
+  time: string;
+  weekday: string;
+  monthDay: string;
+  customCron: string;
+};
 
 const today = formatLocalDate(new Date());
 const defaultSyncTime = formatLocalTime(new Date());
@@ -72,6 +81,29 @@ const syncInstanceStatusOptions: Array<{ value: SyncInstanceStatusFilter; label:
   { value: "failed", label: "失败" },
   { value: "cancelled", label: "取消" },
 ];
+const defaultSchedulerSchedule: SchedulerScheduleDraft = {
+  frequency: "workdays",
+  time: "18:00",
+  weekday: "1",
+  monthDay: "1",
+  customCron: defaultSyncCron,
+};
+const schedulerFrequencyOptions: Array<{ value: SchedulerFrequency; label: string }> = [
+  { value: "daily", label: "每天" },
+  { value: "workdays", label: "工作日" },
+  { value: "weekly", label: "每周" },
+  { value: "monthly", label: "每月" },
+];
+const schedulerWeekdayOptions = [
+  { value: "1", label: "周一" },
+  { value: "2", label: "周二" },
+  { value: "3", label: "周三" },
+  { value: "4", label: "周四" },
+  { value: "5", label: "周五" },
+  { value: "6", label: "周六" },
+  { value: "0", label: "周日" },
+];
+const schedulerMonthDayOptions = Array.from({ length: 31 }, (_, index) => String(index + 1));
 
 export function DataSourceSettingsForm({
   draft,
@@ -100,6 +132,7 @@ export function DataSourceSettingsForm({
   const [isLoadingDatasets, setIsLoadingDatasets] = useState(false);
   const [isLoadingSchema, setIsLoadingSchema] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isDatasetSidebarCollapsed, setIsDatasetSidebarCollapsed] = useState(false);
   const [isQuerying, setIsQuerying] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoadingSyncStatus, setIsLoadingSyncStatus] = useState(false);
@@ -585,32 +618,69 @@ export function DataSourceSettingsForm({
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
-        <div className="grid gap-3 rounded-md border border-line bg-soft p-3 xl:self-start">
+      <section
+        className={`grid gap-4 transition-[grid-template-columns] duration-200 ${
+          isDatasetSidebarCollapsed
+            ? "xl:grid-cols-[56px_minmax(0,1fr)]"
+            : "xl:grid-cols-[280px_minmax(0,1fr)]"
+        }`}
+      >
+        <div
+          className={`rounded-md border border-line bg-soft xl:self-start ${
+            isDatasetSidebarCollapsed ? "grid place-items-center gap-2 p-2" : "grid gap-3 p-3"
+          }`}
+        >
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-ink">已接入数据集</h2>
-            {isLoadingDatasets ? <Loader2 className="h-4 w-4 animate-spin text-muted" /> : null}
-          </div>
-          <div className="grid gap-2">
-            {datasets.map((dataset) => (
+            {isDatasetSidebarCollapsed ? null : (
+              <h2 className="text-sm font-semibold text-ink">已接入数据集</h2>
+            )}
+            <div className="flex items-center gap-1.5">
+              {isLoadingDatasets ? <Loader2 className="h-4 w-4 animate-spin text-muted" /> : null}
               <button
-                className={`group relative grid gap-1 rounded-md border py-2 pl-3 pr-9 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-signal/20 ${
-                  selectedDatasetId === dataset.id
-                    ? "border-ink bg-panel text-ink"
-                    : "border-line bg-panel/60 text-graphite hover:border-signal"
-                }`}
-                key={dataset.id}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
                 type="button"
-                onClick={() => setSelectedDatasetId(dataset.id)}
+                title={isDatasetSidebarCollapsed ? "展开数据集" : "收起数据集"}
+                aria-label={isDatasetSidebarCollapsed ? "展开数据集" : "收起数据集"}
+                onClick={() => setIsDatasetSidebarCollapsed((current) => !current)}
               >
-                <span className="text-xs font-semibold">{dataset.name}</span>
-                <span className="text-[11px] leading-4 text-muted">
-                  {dataset.category_path.join(" / ")}
-                </span>
-                <StorageSummary storage={dataset.storage} compact />
+                {isDatasetSidebarCollapsed ? (
+                  <ChevronRight className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                )}
               </button>
-            ))}
+            </div>
           </div>
+          {isDatasetSidebarCollapsed ? (
+            <div
+              className="grid h-10 w-10 place-items-center rounded-md border border-line bg-panel text-graphite"
+              title={`已接入 ${datasets.length} 个数据集`}
+              aria-label={`已接入 ${datasets.length} 个数据集`}
+            >
+              <Database className="h-4 w-4" />
+            </div>
+          ) : (
+            <div className="grid gap-2">
+              {datasets.map((dataset) => (
+                <button
+                  className={`group relative grid gap-1 rounded-md border py-2 pl-3 pr-9 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-signal/20 ${
+                    selectedDatasetId === dataset.id
+                      ? "border-ink bg-panel text-ink"
+                      : "border-line bg-panel/60 text-graphite hover:border-signal"
+                  }`}
+                  key={dataset.id}
+                  type="button"
+                  onClick={() => setSelectedDatasetId(dataset.id)}
+                >
+                  <span className="text-xs font-semibold">{dataset.name}</span>
+                  <span className="text-[11px] leading-4 text-muted">
+                    {dataset.category_path.join(" / ")}
+                  </span>
+                  <StorageSummary storage={dataset.storage} compact />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="grid min-w-0 gap-4">
@@ -1223,6 +1293,126 @@ function ManualSyncDialog({
   );
 }
 
+function parseSchedulerCron(cron: string): SchedulerScheduleDraft {
+  const trimmedCron = cron.trim();
+  const parts = trimmedCron.split(/\s+/);
+  if (parts.length !== 5) {
+    return {
+      ...defaultSchedulerSchedule,
+      frequency: "custom",
+      customCron: trimmedCron,
+    };
+  }
+
+  const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+  const hourNumber = Number(hour);
+  const minuteNumber = Number(minute);
+  const hasSingleTime =
+    /^\d+$/.test(hour) &&
+    /^\d+$/.test(minute) &&
+    hourNumber >= 0 &&
+    hourNumber <= 23 &&
+    minuteNumber >= 0 &&
+    minuteNumber <= 59;
+
+  if (!hasSingleTime || month !== "*") {
+    return {
+      ...defaultSchedulerSchedule,
+      frequency: "custom",
+      customCron: trimmedCron,
+    };
+  }
+
+  const time = `${String(hourNumber).padStart(2, "0")}:${String(minuteNumber).padStart(2, "0")}`;
+  if (dayOfMonth === "*" && dayOfWeek === "*") {
+    return {
+      ...defaultSchedulerSchedule,
+      frequency: "daily",
+      time,
+      customCron: trimmedCron,
+    };
+  }
+  if (dayOfMonth === "*" && (dayOfWeek === "1-5" || dayOfWeek === "1,2,3,4,5")) {
+    return {
+      ...defaultSchedulerSchedule,
+      frequency: "workdays",
+      time,
+      customCron: trimmedCron,
+    };
+  }
+  if (
+    dayOfMonth === "*" &&
+    schedulerWeekdayOptions.some((option) => option.value === dayOfWeek)
+  ) {
+    return {
+      ...defaultSchedulerSchedule,
+      frequency: "weekly",
+      time,
+      weekday: dayOfWeek,
+      customCron: trimmedCron,
+    };
+  }
+  if (dayOfWeek === "*" && schedulerMonthDayOptions.includes(dayOfMonth)) {
+    return {
+      ...defaultSchedulerSchedule,
+      frequency: "monthly",
+      time,
+      monthDay: dayOfMonth,
+      customCron: trimmedCron,
+    };
+  }
+  return {
+    ...defaultSchedulerSchedule,
+    frequency: "custom",
+    time,
+    customCron: trimmedCron,
+  };
+}
+
+function buildSchedulerCron(schedule: SchedulerScheduleDraft): string {
+  if (schedule.frequency === "custom") {
+    return schedule.customCron.trim();
+  }
+
+  const [hour = "18", minute = "00"] = schedule.time.split(":");
+  const normalizedHour = String(Math.min(23, Math.max(0, Number(hour) || 0)));
+  const normalizedMinute = String(Math.min(59, Math.max(0, Number(minute) || 0)));
+
+  switch (schedule.frequency) {
+    case "daily":
+      return `${normalizedMinute} ${normalizedHour} * * *`;
+    case "workdays":
+      return `${normalizedMinute} ${normalizedHour} * * 1-5`;
+    case "weekly":
+      return `${normalizedMinute} ${normalizedHour} * * ${schedule.weekday}`;
+    case "monthly":
+      return `${normalizedMinute} ${normalizedHour} ${schedule.monthDay} * *`;
+    default:
+      return schedule.customCron.trim();
+  }
+}
+
+function schedulerDescription(schedule: SchedulerScheduleDraft): string {
+  const time = schedule.time || defaultSchedulerSchedule.time;
+  switch (schedule.frequency) {
+    case "daily":
+      return `每天 ${time} 执行`;
+    case "workdays":
+      return `每个工作日 ${time} 执行`;
+    case "weekly": {
+      const weekdayLabel =
+        schedulerWeekdayOptions.find((option) => option.value === schedule.weekday)?.label ?? "周一";
+      return `每${weekdayLabel} ${time} 执行`;
+    }
+    case "monthly":
+      return `每月 ${schedule.monthDay} 日 ${time} 执行`;
+    case "custom":
+      return "使用自定义 Cron";
+    default:
+      return "使用周期设置";
+  }
+}
+
 function SchedulerSyncDialog({
   cron,
   disabled,
@@ -1250,9 +1440,20 @@ function SchedulerSyncDialog({
   onEnableScheduler: () => void;
   onWriteModeChange: (value: MindgoDatasetSyncWriteMode) => void;
 }) {
+  const schedule = parseSchedulerCron(cron);
+  const generatedCron = buildSchedulerCron(schedule);
+  const updateSchedule = (patch: Partial<SchedulerScheduleDraft>) => {
+    const nextSchedule = {
+      ...schedule,
+      ...patch,
+      customCron: patch.customCron ?? schedule.customCron ?? cron,
+    };
+    onCronChange(buildSchedulerCron(nextSchedule));
+  };
+
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-ink/20 p-4">
-      <div className="grid w-full max-w-lg gap-4 rounded-md border border-line bg-panel p-4 shadow-lift">
+      <div className="grid w-full max-w-xl gap-4 rounded-md border border-line bg-panel p-4 shadow-lift">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold text-ink">周期同步设置</h2>
@@ -1271,15 +1472,98 @@ function SchedulerSyncDialog({
               onChange={onWriteModeChange}
             />
           </div>
-          <div className="grid gap-3">
-            <label className="grid gap-1.5">
-              <span className="text-xs font-semibold text-graphite">Cron</span>
-              <input
-                className="h-10 rounded-md border border-line bg-panel px-2.5 font-mono text-xs text-ink outline-none focus:border-signal"
-                value={cron}
-                onChange={(event) => onCronChange(event.target.value)}
-              />
-            </label>
+          <div className="grid gap-3 border-t border-line pt-3">
+            <div className="grid gap-1.5">
+              <span className="text-xs font-semibold text-graphite">执行周期</span>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {schedulerFrequencyOptions.map((option) => {
+                  const isActive = schedule.frequency === option.value;
+                  return (
+                    <button
+                      className={`inline-flex h-9 items-center justify-center rounded-md border px-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                        isActive
+                          ? "border-ink bg-ink text-panel"
+                          : "border-line bg-panel text-graphite hover:border-signal hover:text-ink"
+                      }`}
+                      key={option.value}
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => updateSchedule({ frequency: option.value })}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {schedule.frequency === "custom" ? (
+              <label className="grid gap-1.5">
+                <span className="text-xs font-semibold text-graphite">自定义 Cron</span>
+                <input
+                  className="h-10 rounded-md border border-line bg-panel px-2.5 font-mono text-xs text-ink outline-none focus:border-signal"
+                  value={schedule.customCron}
+                  disabled={disabled}
+                  onChange={(event) => updateSchedule({ customCron: event.target.value })}
+                />
+              </label>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-semibold text-graphite">触发时间</span>
+                  <input
+                    className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-ink outline-none focus:border-signal"
+                    type="time"
+                    step={60}
+                    value={schedule.time}
+                    disabled={disabled}
+                    onChange={(event) => updateSchedule({ time: event.target.value })}
+                  />
+                </label>
+                {schedule.frequency === "weekly" ? (
+                  <label className="grid gap-1.5">
+                    <span className="text-xs font-semibold text-graphite">执行日</span>
+                    <select
+                      className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-ink outline-none focus:border-signal"
+                      value={schedule.weekday}
+                      disabled={disabled}
+                      onChange={(event) => updateSchedule({ weekday: event.target.value })}
+                    >
+                      {schedulerWeekdayOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                {schedule.frequency === "monthly" ? (
+                  <label className="grid gap-1.5">
+                    <span className="text-xs font-semibold text-graphite">执行日</span>
+                    <select
+                      className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-ink outline-none focus:border-signal"
+                      value={schedule.monthDay}
+                      disabled={disabled}
+                      onChange={(event) => updateSchedule({ monthDay: event.target.value })}
+                    >
+                      {schedulerMonthDayOptions.map((day) => (
+                        <option key={day} value={day}>
+                          {day} 日
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+              </div>
+            )}
+
+            <div className="grid gap-1 rounded-md border border-line bg-panel px-3 py-2 text-[11px] text-muted">
+              <span className="font-semibold text-graphite">{schedulerDescription(schedule)}</span>
+              <span>
+                生成 Cron：
+                <code className="ml-1 rounded bg-soft px-1.5 py-0.5 font-mono text-ink">{generatedCron || "-"}</code>
+              </span>
+            </div>
           </div>
           <div className="grid gap-1 rounded-md border border-line bg-panel px-3 py-2 text-[11px] text-muted">
             <span>最近调度：{formatDateTime(lastRunAt)}</span>
@@ -1298,7 +1582,7 @@ function SchedulerSyncDialog({
             <button
               className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
-              disabled={disabled || !cron.trim() || isSavingScheduler}
+              disabled={disabled || !generatedCron.trim() || isSavingScheduler}
               onClick={onEnableScheduler}
             >
               {isSavingScheduler ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : schedulerConfigured ? <CalendarClock className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}

@@ -1,6 +1,12 @@
 import {
   ArrowLeft,
+  Bot,
+  Database,
   Loader2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ScrollText,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -41,15 +47,16 @@ type ToastState = {
   tone: "success" | "error" | "info";
 };
 
-const tabs: Array<{ id: SettingsTab; label: string }> = [
-  { id: "agent", label: "Agent" },
-  { id: "system", label: "系统" },
-  { id: "logging", label: "日志" },
-  { id: "data", label: "数据源" },
+const tabs: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
+  { id: "agent", label: "Agent", icon: Bot },
+  { id: "system", label: "系统", icon: SlidersHorizontal },
+  { id: "logging", label: "日志", icon: ScrollText },
+  { id: "data", label: "数据源", icon: Database },
 ];
 
 export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("agent");
+  const [isSettingsNavCollapsed, setIsSettingsNavCollapsed] = useState(false);
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [draft, setDraft] = useState<AppSettings | null>(null);
   const [providers, setProviders] = useState<ModelProvider[]>([]);
@@ -378,21 +385,51 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
         </div>
       </header>
 
-      <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
-        <nav className="grid gap-3 rounded-lg border border-line bg-soft p-3 xl:sticky xl:top-0 xl:self-start">
+      <div
+        className={`grid gap-4 transition-[grid-template-columns] duration-200 ${
+          isSettingsNavCollapsed
+            ? "xl:grid-cols-[56px_minmax(0,1fr)]"
+            : "xl:grid-cols-[220px_minmax(0,1fr)]"
+        }`}
+      >
+        <nav className="grid gap-3 rounded-lg border border-line bg-soft p-2 xl:sticky xl:top-0 xl:self-start">
+          <div className="hidden items-center justify-between gap-2 xl:flex">
+            {isSettingsNavCollapsed ? null : (
+              <span className="px-1 text-[11px] font-semibold text-muted">设置导航</span>
+            )}
+            <button
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+              type="button"
+              title={isSettingsNavCollapsed ? "展开导航" : "收起导航"}
+              aria-label={isSettingsNavCollapsed ? "展开导航" : "收起导航"}
+              onClick={() => setIsSettingsNavCollapsed((current) => !current)}
+            >
+              {isSettingsNavCollapsed ? (
+                <PanelLeftOpen className="h-3.5 w-3.5" />
+              ) : (
+                <PanelLeftClose className="h-3.5 w-3.5" />
+              )}
+            </button>
+          </div>
           <div className="grid grid-cols-2 gap-1 sm:grid-cols-4 xl:grid-cols-1">
-            {tabs.map((tab) => (
-              <button
-                className={`rounded-md px-2.5 py-2 text-center text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-signal/20 xl:text-left ${
-                  activeTab === tab.id ? "bg-ink text-panel" : "text-muted hover:bg-panel hover:text-ink"
-                }`}
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-              >
-                {tab.label}
-              </button>
-            ))}
+            {tabs.map((tab) => {
+              const TabIcon = tab.icon;
+              return (
+                <button
+                  className={`inline-flex h-10 items-center justify-center gap-2 rounded-md px-2.5 text-center text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-signal/20 xl:justify-start ${
+                    activeTab === tab.id ? "bg-ink text-panel" : "text-muted hover:bg-panel hover:text-ink"
+                  } ${isSettingsNavCollapsed ? "xl:px-0" : ""}`}
+                  key={tab.id}
+                  type="button"
+                  title={tab.label}
+                  aria-label={tab.label}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  <TabIcon className="h-3.5 w-3.5 shrink-0" />
+                  <span className={isSettingsNavCollapsed ? "xl:hidden" : ""}>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
 
         </nav>

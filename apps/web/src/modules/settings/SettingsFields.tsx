@@ -100,12 +100,14 @@ export function NumberField({
   onChange,
   onCommit,
   disabled = false,
+  min = 0,
 }: {
   label: string;
   value: number;
   onChange: (value: number) => void;
   onCommit?: () => void;
   disabled?: boolean;
+  min?: number;
 }) {
   return (
     <label className="grid gap-1.5">
@@ -113,7 +115,7 @@ export function NumberField({
       <span className="flex h-10 items-center rounded-md border border-line bg-panel focus-within:border-signal">
         <input
           className="min-h-0 min-w-0 flex-1 bg-transparent px-2.5 text-xs text-ink outline-none disabled:cursor-not-allowed disabled:text-muted"
-          min={0}
+          min={min}
           type="number"
           value={value}
           disabled={disabled}

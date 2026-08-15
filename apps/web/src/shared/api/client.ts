@@ -138,6 +138,10 @@ export type SystemSettings = {
   environment: "development" | "desktop" | "production";
   access_log_enabled: boolean;
   access_log_slow_threshold_ms: number;
+  job_runtime_creation_tick_minutes: number;
+  job_runtime_dispatch_interval_seconds: number;
+  job_runtime_dispatch_limit: number;
+  job_runtime_max_concurrent_instances: number;
 };
 
 export type LoggingSettings = {

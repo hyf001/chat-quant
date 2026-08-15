@@ -5,7 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 JsonPrimitive = str | int | bool | None
 ConfigValue = JsonPrimitive | list[str]
@@ -91,6 +91,38 @@ APP_CONFIG_DEFINITIONS: tuple[ConfigDefinition, ...] = (
         "integer",
         1000,
         "超过该毫秒数的请求会被标记为慢请求。",
+    ),
+    ConfigDefinition(
+        "job_runtime_creation_tick_minutes",
+        "Worker 创建扫描粒度",
+        "system",
+        "integer",
+        1,
+        "后台 Worker 创建定时任务实例的分钟扫描粒度，重启 API 后生效。",
+    ),
+    ConfigDefinition(
+        "job_runtime_dispatch_interval_seconds",
+        "Worker 派发扫描间隔",
+        "system",
+        "integer",
+        30,
+        "后台 Worker 扫描并派发等待实例的秒级间隔，重启 API 后生效。",
+    ),
+    ConfigDefinition(
+        "job_runtime_dispatch_limit",
+        "Worker 每轮派发上限",
+        "system",
+        "integer",
+        20,
+        "后台 Worker 每轮最多派发的等待实例数量，重启 API 后生效。",
+    ),
+    ConfigDefinition(
+        "job_runtime_max_concurrent_instances",
+        "Worker 最大并发实例数",
+        "system",
+        "integer",
+        20,
+        "后台 Worker 允许同时运行或派发中的实例数量，重启 API 后生效。",
     ),
     ConfigDefinition(
         "agent_provider_id",
@@ -243,6 +275,10 @@ class Settings(BaseModel):
     log_level: str = "INFO"
     access_log_enabled: bool = True
     access_log_slow_threshold_ms: int = 1000
+    job_runtime_creation_tick_minutes: int = Field(default=1, ge=1)
+    job_runtime_dispatch_interval_seconds: int = Field(default=30, ge=1)
+    job_runtime_dispatch_limit: int = Field(default=20, ge=1)
+    job_runtime_max_concurrent_instances: int = Field(default=20, ge=1)
     agent_provider_id: str = DEFAULT_MODEL_PROVIDER_ID
     agent_model: str = "claude-sonnet-4"
     agent_base_url: str | None = None
