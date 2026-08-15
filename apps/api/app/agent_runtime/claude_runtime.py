@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator, Callable
-from datetime import UTC, datetime
+from datetime import datetime
 
 from claude_agent_sdk import ClaudeAgentOptions, query
 
@@ -315,7 +315,7 @@ def _make_envelope(
         chat_session_id=chat_session_id,
         sdk_session_id=sdk_session_id,
         turn_id=turn_id,
-        received_at=datetime.now(UTC),
+        received_at=datetime.now(),
         sdk_event=sdk_event,
     )
 

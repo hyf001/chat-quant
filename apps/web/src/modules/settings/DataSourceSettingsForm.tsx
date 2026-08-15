@@ -1,32 +1,47 @@
 import {
+  CalendarClock,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Code2,
   Database,
-  Download,
   FolderOpen,
   Loader2,
   Play,
+  Power,
+  PowerOff,
+  RefreshCw,
+  RotateCcw,
   Save,
   Settings,
   Server,
+  Trash2,
 } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  deleteJobRuntimeInstance,
+  deleteMindgoDatasetSyncScheduler,
+  getMindgoDatasetSyncStatus,
   getMindgoDatasetSchema,
+  listJobRuntimeInstances,
   listMindgoDatasets,
   queryMindgoDataset,
   queryMindgoDatasetFromDuckDB,
+  rerunJobRuntimeInstance,
   syncMindgoDataset,
   testMindgoConnection,
+  upsertMindgoDatasetSyncScheduler,
   type AppSettings,
+  type JobInstanceStatus,
+  type JobRuntimeInstance,
+  type JobRuntimeInstanceListResponse,
   type MindgoDatasetQueryResponse,
   type MindgoDatasetSchema,
   type MindgoDatasetSummary,
   type MindgoDatasetStorageSpec,
-  type MindgoDatasetSyncResult,
+  type MindgoDatasetSyncStatusResponse,
+  type MindgoDatasetSyncWriteMode,
   type MindgoJsonValue,
   type MindgoParameterSpec,
   type MindgoSettings,
@@ -40,9 +55,22 @@ type DataSourceSettingsFormProps = {
 };
 
 type MindgoParamDraft = Record<string, MindgoJsonValue>;
-type MindgoQueryMode = "mindgo" | "duckdb";
+type MindgoQueryMode = "mindgo" | "duckdb" | "sync";
+type SyncInstanceStatusFilter = JobInstanceStatus | "all";
 
-const today = new Date().toISOString().slice(0, 10);
+const today = formatLocalDate(new Date());
+const defaultSyncCron = "0 18 * * 1-5";
+const defaultSyncWriteMode: MindgoDatasetSyncWriteMode = "overwrite";
+const defaultSyncInstancePageSize = 8;
+const syncInstanceStatusOptions: Array<{ value: SyncInstanceStatusFilter; label: string }> = [
+  { value: "all", label: "全部" },
+  { value: "waiting", label: "等待" },
+  { value: "dispatching", label: "分发" },
+  { value: "running", label: "运行" },
+  { value: "completed", label: "完成" },
+  { value: "failed", label: "失败" },
+  { value: "cancelled", label: "取消" },
+];
 
 export function DataSourceSettingsForm({
   draft,
@@ -57,7 +85,14 @@ export function DataSourceSettingsForm({
   const [queryMode, setQueryMode] = useState<MindgoQueryMode>("mindgo");
   const [duckdbSql, setDuckdbSql] = useState("");
   const [queryResult, setQueryResult] = useState<MindgoDatasetQueryResponse | null>(null);
-  const [syncResult, setSyncResult] = useState<MindgoDatasetSyncResult | null>(null);
+  const [syncStatus, setSyncStatus] = useState<MindgoDatasetSyncStatusResponse | null>(null);
+  const [syncInstances, setSyncInstances] = useState<JobRuntimeInstanceListResponse | null>(null);
+  const [syncInstancePage, setSyncInstancePage] = useState(1);
+  const [syncInstancePageSize, setSyncInstancePageSize] = useState(defaultSyncInstancePageSize);
+  const [syncInstanceStatusFilter, setSyncInstanceStatusFilter] = useState<SyncInstanceStatusFilter>("all");
+  const [cronDraft, setCronDraft] = useState(defaultSyncCron);
+  const [manualWriteModeDraft, setManualWriteModeDraft] = useState<MindgoDatasetSyncWriteMode>(defaultSyncWriteMode);
+  const [schedulerWriteModeDraft, setSchedulerWriteModeDraft] = useState<MindgoDatasetSyncWriteMode>(defaultSyncWriteMode);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [isConnectionOpen, setIsConnectionOpen] = useState(false);
@@ -66,6 +101,14 @@ export function DataSourceSettingsForm({
   const [isTesting, setIsTesting] = useState(false);
   const [isQuerying, setIsQuerying] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isLoadingSyncStatus, setIsLoadingSyncStatus] = useState(false);
+  const [isLoadingSyncInstances, setIsLoadingSyncInstances] = useState(false);
+  const [mutatingInstanceId, setMutatingInstanceId] = useState<string | null>(null);
+  const [isSavingScheduler, setIsSavingScheduler] = useState(false);
+  const [isManualSyncOpen, setIsManualSyncOpen] = useState(false);
+  const [isSchedulerSettingsOpen, setIsSchedulerSettingsOpen] = useState(false);
+  const [syncStartDateDraft, setSyncStartDateDraft] = useState(today);
+  const [syncEndDateDraft, setSyncEndDateDraft] = useState(today);
 
   const selectedDataset = useMemo(
     () => datasets.find((dataset) => dataset.id === selectedDatasetId) ?? datasets[0] ?? null,
@@ -94,7 +137,6 @@ export function DataSourceSettingsForm({
   const loadSchema = useCallback(async (datasetId: string) => {
     setIsLoadingSchema(true);
     setQueryResult(null);
-    setSyncResult(null);
     try {
       const nextSchema = await getMindgoDatasetSchema(datasetId);
       setSchema(nextSchema);
@@ -109,20 +151,81 @@ export function DataSourceSettingsForm({
     }
   }, [onToast]);
 
+  const loadSyncInstances = useCallback(async ({
+    jobType,
+    jobId,
+    page: nextPage = 1,
+    pageSize: nextPageSize = defaultSyncInstancePageSize,
+    statusFilter = "all",
+  }: {
+    jobType: string;
+    jobId: string;
+    page?: number;
+    pageSize?: number;
+    statusFilter?: SyncInstanceStatusFilter;
+  }) => {
+    setIsLoadingSyncInstances(true);
+    try {
+      const response = await listJobRuntimeInstances({
+        job_type: jobType,
+        job_id: jobId,
+        status: statusFilter === "all" ? undefined : statusFilter,
+        page: nextPage,
+        page_size: nextPageSize,
+      });
+      setSyncInstances(response);
+      setSyncInstancePage(response.page);
+      setSyncInstancePageSize(response.page_size);
+    } catch (caught) {
+      setSyncInstances(null);
+      onToast(caught instanceof Error ? caught.message : "实例列表加载失败", "error");
+    } finally {
+      setIsLoadingSyncInstances(false);
+    }
+  }, [onToast]);
+
+  const loadSyncStatus = useCallback(async (
+    datasetId: string,
+    statusFilter: SyncInstanceStatusFilter = "all",
+  ) => {
+    setIsLoadingSyncStatus(true);
+    try {
+      const response = await getMindgoDatasetSyncStatus(datasetId);
+      setSyncStatus(response);
+      setCronDraft(response.scheduler.cron ?? defaultSyncCron);
+      setSchedulerWriteModeDraft(response.scheduler.write_mode ?? defaultSyncWriteMode);
+      await loadSyncInstances({
+        jobType: response.job_type,
+        jobId: response.job_id,
+        page: 1,
+        statusFilter,
+      });
+    } catch (caught) {
+      setSyncStatus(null);
+      setSyncInstances(null);
+      if (selectedDatasetId === datasetId) {
+        onToast(caught instanceof Error ? caught.message : "同步状态加载失败", "error");
+      }
+    } finally {
+      setIsLoadingSyncStatus(false);
+    }
+  }, [loadSyncInstances, onToast, selectedDatasetId]);
+
   useEffect(() => {
     void loadDatasets();
   }, [loadDatasets]);
 
   useEffect(() => {
     if (selectedDatasetId) {
+      setSyncInstanceStatusFilter("all");
       void loadSchema(selectedDatasetId);
+      void loadSyncStatus(selectedDatasetId, "all");
     }
-  }, [loadSchema, selectedDatasetId]);
+  }, [loadSchema, loadSyncStatus, selectedDatasetId]);
 
   const updateParam = (name: string, value: MindgoJsonValue) => {
     setParams((current) => ({ ...current, [name]: value }));
     setQueryResult(null);
-    setSyncResult(null);
     setPage(1);
   };
 
@@ -187,7 +290,6 @@ export function DataSourceSettingsForm({
       return;
     }
     setIsQuerying(true);
-    setSyncResult(null);
     try {
       const response = await queryMindgoDataset(selectedDatasetId, {
         params: cleanParams(params),
@@ -210,7 +312,6 @@ export function DataSourceSettingsForm({
     }
     setIsQuerying(true);
     setQueryResult(null);
-    setSyncResult(null);
     try {
       const response = await queryMindgoDatasetFromDuckDB(selectedDatasetId, {
         sql: duckdbSql,
@@ -228,26 +329,167 @@ export function DataSourceSettingsForm({
   };
 
   const handleSync = async () => {
-    const baseDay = stringParam(params.baseDay) || today;
     setIsSyncing(true);
     setQueryResult(null);
     try {
       const response = await syncMindgoDataset(selectedDatasetId, {
-        start_date: baseDay,
-        end_date: baseDay,
-        params: cleanParams(params),
+        start_date: syncStartDateDraft,
+        end_date: syncEndDateDraft,
+        write_mode: manualWriteModeDraft,
+        params: {},
       });
-      setSyncResult(response);
-      onToast(`导入完成：${response.synced_count} 行`, "success");
+      const instances = response.instances.length > 0 ? response.instances : [response.instance];
+      await loadSyncStatus(selectedDatasetId, syncInstanceStatusFilter);
+      setIsManualSyncOpen(false);
+      onToast(syncInstancesToast(instances), instances.some((instance) => instance.status === "failed") ? "error" : "success");
     } catch (caught) {
-      onToast(caught instanceof Error ? caught.message : "导入失败", "error");
+      onToast(caught instanceof Error ? caught.message : "同步失败", "error");
     } finally {
       setIsSyncing(false);
     }
   };
 
+  const handleRefreshSyncRuntime = async () => {
+    if (!selectedDatasetId) {
+      return;
+    }
+    await loadSyncStatus(selectedDatasetId, syncInstanceStatusFilter);
+  };
+
+  const handleSyncInstancePageChange = async (nextPage: number) => {
+    if (!syncStatus) {
+      return;
+    }
+    await loadSyncInstances({
+      jobType: syncStatus.job_type,
+      jobId: syncStatus.job_id,
+      page: nextPage,
+      pageSize: syncInstancePageSize,
+      statusFilter: syncInstanceStatusFilter,
+    });
+  };
+
+  const handleSyncInstancePageSizeChange = async (nextPageSize: number) => {
+    setSyncInstancePageSize(nextPageSize);
+    if (!syncStatus) {
+      return;
+    }
+    await loadSyncInstances({
+      jobType: syncStatus.job_type,
+      jobId: syncStatus.job_id,
+      page: 1,
+      pageSize: nextPageSize,
+      statusFilter: syncInstanceStatusFilter,
+    });
+  };
+
+  const handleSyncInstanceStatusFilterChange = async (nextStatus: SyncInstanceStatusFilter) => {
+    setSyncInstanceStatusFilter(nextStatus);
+    if (!syncStatus) {
+      return;
+    }
+    await loadSyncInstances({
+      jobType: syncStatus.job_type,
+      jobId: syncStatus.job_id,
+      page: 1,
+      pageSize: syncInstancePageSize,
+      statusFilter: nextStatus,
+    });
+  };
+
+  const handleRerunInstance = async (instance: JobRuntimeInstance) => {
+    setMutatingInstanceId(instance.id);
+    try {
+      await rerunJobRuntimeInstance(instance.id);
+      if (syncStatus) {
+        await loadSyncInstances({
+          jobType: syncStatus.job_type,
+          jobId: syncStatus.job_id,
+          page: syncInstancePage,
+          pageSize: syncInstancePageSize,
+          statusFilter: syncInstanceStatusFilter,
+        });
+      }
+      onToast("实例已重新加入等待队列", "success");
+    } catch (caught) {
+      onToast(caught instanceof Error ? caught.message : "重新执行失败", "error");
+    } finally {
+      setMutatingInstanceId(null);
+    }
+  };
+
+  const handleDeleteInstance = async (instance: JobRuntimeInstance) => {
+    if (!window.confirm(`删除实例 ${instance.id}？`)) {
+      return;
+    }
+    setMutatingInstanceId(instance.id);
+    try {
+      await deleteJobRuntimeInstance(instance.id);
+      if (syncStatus) {
+        const nextPage =
+          syncInstances?.items.length === 1
+            ? Math.max(1, syncInstancePage - 1)
+            : syncInstancePage;
+        await loadSyncInstances({
+          jobType: syncStatus.job_type,
+          jobId: syncStatus.job_id,
+          page: nextPage,
+          pageSize: syncInstancePageSize,
+          statusFilter: syncInstanceStatusFilter,
+        });
+      }
+      onToast("实例已删除", "success");
+    } catch (caught) {
+      onToast(caught instanceof Error ? caught.message : "删除实例失败", "error");
+    } finally {
+      setMutatingInstanceId(null);
+    }
+  };
+
+  const handleSaveScheduler = async () => {
+    setIsSavingScheduler(true);
+    try {
+      const response = await upsertMindgoDatasetSyncScheduler(selectedDatasetId, {
+        cron: cronDraft,
+        write_mode: schedulerWriteModeDraft,
+        params: {},
+      });
+      setSyncStatus(response);
+      setCronDraft(response.scheduler.cron ?? defaultSyncCron);
+      setSchedulerWriteModeDraft(response.scheduler.write_mode ?? defaultSyncWriteMode);
+      onToast("周期同步已上线", "success");
+    } catch (caught) {
+      onToast(caught instanceof Error ? caught.message : "周期同步保存失败", "error");
+    } finally {
+      setIsSavingScheduler(false);
+    }
+  };
+
+  const handleDeleteScheduler = async () => {
+    setIsSavingScheduler(true);
+    try {
+      const response = await deleteMindgoDatasetSyncScheduler(selectedDatasetId);
+      setSyncStatus(response);
+      onToast("周期同步已下线", "success");
+    } catch (caught) {
+      onToast(caught instanceof Error ? caught.message : "周期同步下线失败", "error");
+    } finally {
+      setIsSavingScheduler(false);
+    }
+  };
+
+  const handleOpenManualSyncDialog = () => {
+    setSyncStartDateDraft(today);
+    setSyncEndDateDraft(today);
+    setIsManualSyncOpen(true);
+  };
+
+  const handleOpenSchedulerSettingsDialog = () => {
+    setIsSchedulerSettingsOpen(true);
+  };
+
   const canUseDataset = Boolean(schema && selectedDataset);
-  const isBusy = isLoadingSchema || isQuerying || isSyncing || isTesting;
+  const isBusy = isLoadingSchema || isQuerying || isSyncing || isTesting || isSavingScheduler;
 
   return (
     <div className="grid gap-5">
@@ -382,7 +624,7 @@ export function DataSourceSettingsForm({
 
             {schema ? (
               <div className="grid gap-3">
-                <div className="inline-grid w-fit grid-cols-2 rounded-md border border-line bg-soft p-1">
+                <div className="inline-grid w-fit grid-cols-3 rounded-md border border-line bg-soft p-1">
                   <button
                     className={`inline-flex h-8 items-center gap-1.5 rounded px-2.5 text-xs font-semibold transition-colors ${
                       queryMode === "mindgo"
@@ -393,7 +635,6 @@ export function DataSourceSettingsForm({
                     onClick={() => {
                       setQueryMode("mindgo");
                       setQueryResult(null);
-                      setSyncResult(null);
                       setPage(1);
                     }}
                   >
@@ -410,12 +651,26 @@ export function DataSourceSettingsForm({
                     onClick={() => {
                       setQueryMode("duckdb");
                       setQueryResult(null);
-                      setSyncResult(null);
                       setPage(1);
                     }}
                   >
                     <Database className="h-3.5 w-3.5" />
                     DuckDB SQL
+                  </button>
+                  <button
+                    className={`inline-flex h-8 items-center gap-1.5 rounded px-2.5 text-xs font-semibold transition-colors ${
+                      queryMode === "sync"
+                        ? "bg-panel text-ink shadow-sm"
+                        : "text-muted hover:text-ink"
+                    }`}
+                    type="button"
+                    onClick={() => {
+                      setQueryMode("sync");
+                      setQueryResult(null);
+                    }}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    数据同步
                   </button>
                 </div>
 
@@ -430,7 +685,7 @@ export function DataSourceSettingsForm({
                       />
                     ))}
                   </div>
-                ) : (
+                ) : queryMode === "duckdb" ? (
                   <div className="grid gap-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-xs font-semibold text-graphite">SQL</span>
@@ -448,10 +703,31 @@ export function DataSourceSettingsForm({
                       }}
                     />
                   </div>
+                ) : (
+                  <SyncRuntimePanel
+                    disabled={!canUseDataset || isBusy || isLoadingSyncStatus || isLoadingSyncInstances}
+                    instancePage={syncInstancePage}
+                    instancePageSize={syncInstancePageSize}
+                    instances={syncInstances}
+                    isLoading={isLoadingSyncStatus || isLoadingSyncInstances}
+                    isSyncing={isSyncing}
+                    mutatingInstanceId={mutatingInstanceId}
+                    statusFilter={syncInstanceStatusFilter}
+                    status={syncStatus}
+                    onDeleteInstance={handleDeleteInstance}
+                    onInstancePageChange={(nextPage) => void handleSyncInstancePageChange(nextPage)}
+                    onInstancePageSizeChange={(nextPageSize) => void handleSyncInstancePageSizeChange(nextPageSize)}
+                    onInstanceStatusFilterChange={(nextStatus) => void handleSyncInstanceStatusFilterChange(nextStatus)}
+                    onOpenManualSync={handleOpenManualSyncDialog}
+                    onOpenSchedulerSettings={handleOpenSchedulerSettingsDialog}
+                    onRefresh={() => void handleRefreshSyncRuntime()}
+                    onRerunInstance={handleRerunInstance}
+                  />
                 )}
               </div>
             ) : null}
 
+            {queryMode !== "sync" ? (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -463,17 +739,6 @@ export function DataSourceSettingsForm({
                   {isQuerying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : queryMode === "duckdb" ? <Code2 className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
                   {queryMode === "duckdb" ? "运行 SQL" : "查询"}
                 </button>
-                {queryMode === "mindgo" ? (
-                  <button
-                    className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
-                    type="button"
-                    disabled={!canUseDataset || isBusy}
-                    onClick={() => void handleSync()}
-                  >
-                    {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                    导入
-                  </button>
-                ) : null}
               </div>
               <label className="flex items-center gap-2 text-xs font-semibold text-graphite">
                 每页
@@ -493,6 +758,7 @@ export function DataSourceSettingsForm({
                 </select>
               </label>
             </div>
+            ) : null}
           </section>
 
           {queryResult ? (
@@ -502,9 +768,41 @@ export function DataSourceSettingsForm({
               disabled={isBusy}
             />
           ) : null}
-          {syncResult ? <SyncResultPanel result={syncResult} /> : null}
         </div>
       </section>
+      {isManualSyncOpen ? (
+        <ManualSyncDialog
+          disabled={isSyncing || isSavingScheduler}
+          endDate={syncEndDateDraft}
+          isSyncing={isSyncing}
+          startDate={syncStartDateDraft}
+          writeMode={manualWriteModeDraft}
+          onCancel={() => setIsManualSyncOpen(false)}
+          onEndDateChange={setSyncEndDateDraft}
+          onStartDateChange={(value) => {
+            setSyncStartDateDraft(value);
+            setSyncEndDateDraft((current) => (current < value ? value : current));
+          }}
+          onSync={() => void handleSync()}
+          onWriteModeChange={setManualWriteModeDraft}
+        />
+      ) : null}
+      {isSchedulerSettingsOpen ? (
+        <SchedulerSyncDialog
+          cron={cronDraft}
+          disabled={isSyncing || isSavingScheduler}
+          isSavingScheduler={isSavingScheduler}
+          lastRunAt={syncStatus?.scheduler.last_run_at ?? null}
+          nextRunAt={syncStatus?.scheduler.next_run_at ?? null}
+          schedulerConfigured={Boolean(syncStatus?.scheduler.configured)}
+          writeMode={schedulerWriteModeDraft}
+          onCancel={() => setIsSchedulerSettingsOpen(false)}
+          onCronChange={setCronDraft}
+          onDisableScheduler={() => void handleDeleteScheduler()}
+          onEnableScheduler={() => void handleSaveScheduler()}
+          onWriteModeChange={setSchedulerWriteModeDraft}
+        />
+      ) : null}
     </div>
   );
 }
@@ -817,15 +1115,543 @@ function QueryResultTable({
   );
 }
 
-function SyncResultPanel({ result }: { result: MindgoDatasetSyncResult }) {
+function ManualSyncDialog({
+  disabled,
+  endDate,
+  isSyncing,
+  startDate,
+  writeMode,
+  onCancel,
+  onEndDateChange,
+  onStartDateChange,
+  onSync,
+  onWriteModeChange,
+}: {
+  disabled: boolean;
+  endDate: string;
+  isSyncing: boolean;
+  startDate: string;
+  writeMode: MindgoDatasetSyncWriteMode;
+  onCancel: () => void;
+  onEndDateChange: (value: string) => void;
+  onStartDateChange: (value: string) => void;
+  onSync: () => void;
+  onWriteModeChange: (value: MindgoDatasetSyncWriteMode) => void;
+}) {
+  const invalidRange = !startDate || !endDate || startDate > endDate;
   return (
-    <section className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-brand/25 bg-gainSoft px-3 py-2 text-xs text-brand">
-      <span className="font-semibold">导入完成</span>
-      <span className="font-mono">
-        rows={result.synced_count} · elapsed={result.elapsed_ms}ms
-      </span>
-    </section>
+    <div className="fixed inset-0 z-40 grid place-items-center bg-ink/20 p-4">
+      <div className="grid w-full max-w-md gap-4 rounded-md border border-line bg-panel p-4 shadow-lift">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-ink">手动同步</h2>
+          <Play className="h-4 w-4 text-muted" />
+        </div>
+        <div className="grid gap-3 rounded-md border border-line bg-soft p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-graphite">写入方式</span>
+            <WriteModeSwitch
+              disabled={disabled}
+              value={writeMode}
+              onChange={onWriteModeChange}
+            />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1.5">
+              <span className="text-xs font-semibold text-graphite">开始日期</span>
+              <input
+                className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
+                type="date"
+                value={startDate}
+                onChange={(event) => onStartDateChange(event.target.value)}
+              />
+            </label>
+            <label className="grid gap-1.5">
+              <span className="text-xs font-semibold text-graphite">结束日期</span>
+              <input
+                className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
+                min={startDate}
+                type="date"
+                value={endDate}
+                onChange={(event) => onEndDateChange(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-60"
+              type="button"
+              disabled={disabled || invalidRange || isSyncing}
+              onClick={onSync}
+            >
+              {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              创建实例
+            </button>
+          </div>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-3">
+          <button
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            disabled={disabled}
+            onClick={onCancel}
+          >
+            关闭
+          </button>
+        </div>
+      </div>
+    </div>
   );
+}
+
+function SchedulerSyncDialog({
+  cron,
+  disabled,
+  isSavingScheduler,
+  lastRunAt,
+  nextRunAt,
+  schedulerConfigured,
+  writeMode,
+  onCancel,
+  onCronChange,
+  onDisableScheduler,
+  onEnableScheduler,
+  onWriteModeChange,
+}: {
+  cron: string;
+  disabled: boolean;
+  isSavingScheduler: boolean;
+  lastRunAt: string | null;
+  nextRunAt: string | null;
+  schedulerConfigured: boolean;
+  writeMode: MindgoDatasetSyncWriteMode;
+  onCancel: () => void;
+  onCronChange: (value: string) => void;
+  onDisableScheduler: () => void;
+  onEnableScheduler: () => void;
+  onWriteModeChange: (value: MindgoDatasetSyncWriteMode) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-40 grid place-items-center bg-ink/20 p-4">
+      <div className="grid w-full max-w-lg gap-4 rounded-md border border-line bg-panel p-4 shadow-lift">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-ink">周期同步设置</h2>
+            <StatusBadge tone={schedulerConfigured ? "success" : "muted"}>
+              {schedulerConfigured ? "已开启同步" : "未开启同步"}
+            </StatusBadge>
+          </div>
+          <CalendarClock className="h-4 w-4 text-muted" />
+        </div>
+        <div className="grid gap-3 rounded-md border border-line bg-soft p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-graphite">写入方式</span>
+            <WriteModeSwitch
+              disabled={disabled}
+              value={writeMode}
+              onChange={onWriteModeChange}
+            />
+          </div>
+          <div className="grid gap-3">
+            <label className="grid gap-1.5">
+              <span className="text-xs font-semibold text-graphite">Cron</span>
+              <input
+                className="h-10 rounded-md border border-line bg-panel px-2.5 font-mono text-xs text-ink outline-none focus:border-signal"
+                value={cron}
+                onChange={(event) => onCronChange(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="grid gap-1 rounded-md border border-line bg-panel px-3 py-2 text-[11px] text-muted">
+            <span>最近调度：{formatDateTime(lastRunAt)}</span>
+            <span>下次调度：{formatDateTime(nextRunAt)}</span>
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+              type="button"
+              disabled={disabled || !schedulerConfigured || isSavingScheduler}
+              onClick={onDisableScheduler}
+            >
+              {isSavingScheduler ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PowerOff className="h-3.5 w-3.5" />}
+              下线
+            </button>
+            <button
+              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-60"
+              type="button"
+              disabled={disabled || !cron.trim() || isSavingScheduler}
+              onClick={onEnableScheduler}
+            >
+              {isSavingScheduler ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : schedulerConfigured ? <CalendarClock className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
+              {schedulerConfigured ? "更新周期" : "上线"}
+            </button>
+          </div>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-3">
+          <button
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            disabled={disabled}
+            onClick={onCancel}
+          >
+            关闭
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WriteModeSwitch({
+  disabled,
+  value,
+  onChange,
+}: {
+  disabled: boolean;
+  value: MindgoDatasetSyncWriteMode;
+  onChange: (value: MindgoDatasetSyncWriteMode) => void;
+}) {
+  return (
+    <div className="inline-grid w-fit grid-cols-2 rounded-md border border-line bg-panel p-1">
+      {[
+        ["overwrite", "覆盖"],
+        ["skip", "跳过"],
+      ].map(([optionValue, label]) => (
+        <button
+          className={`inline-flex h-8 items-center justify-center rounded px-3 text-xs font-semibold transition-colors ${
+            value === optionValue ? "bg-ink text-panel shadow-sm" : "text-muted hover:text-ink"
+          }`}
+          key={optionValue}
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(optionValue as MindgoDatasetSyncWriteMode)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SyncRuntimePanel({
+  disabled,
+  instancePage,
+  instancePageSize,
+  instances,
+  isLoading,
+  isSyncing,
+  mutatingInstanceId,
+  statusFilter,
+  status,
+  onDeleteInstance,
+  onInstancePageChange,
+  onInstancePageSizeChange,
+  onInstanceStatusFilterChange,
+  onOpenManualSync,
+  onOpenSchedulerSettings,
+  onRefresh,
+  onRerunInstance,
+}: {
+  disabled: boolean;
+  instancePage: number;
+  instancePageSize: number;
+  instances: JobRuntimeInstanceListResponse | null;
+  isLoading: boolean;
+  isSyncing: boolean;
+  mutatingInstanceId: string | null;
+  statusFilter: SyncInstanceStatusFilter;
+  status: MindgoDatasetSyncStatusResponse | null;
+  onDeleteInstance: (instance: JobRuntimeInstance) => void;
+  onInstancePageChange: (page: number) => void;
+  onInstancePageSizeChange: (pageSize: number) => void;
+  onInstanceStatusFilterChange: (status: SyncInstanceStatusFilter) => void;
+  onOpenManualSync: () => void;
+  onOpenSchedulerSettings: () => void;
+  onRefresh: () => void;
+  onRerunInstance: (instance: JobRuntimeInstance) => void;
+}) {
+  const schedulerConfigured = Boolean(status?.scheduler.configured);
+  const instanceRows = instances?.items ?? [];
+  const totalPages = instances?.total_pages ?? 0;
+  const canGoPrev = instancePage > 1;
+  const canGoNext = totalPages > 0 && instancePage < totalPages;
+  const statusCountMap = new Map(
+    (instances?.status_counts ?? []).map((item) => [item.status, item.count]),
+  );
+  const allInstanceCount = Array.from(statusCountMap.values()).reduce(
+    (total, count) => total + count,
+    0,
+  );
+
+  return (
+    <div className="grid gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-60"
+          type="button"
+          disabled={disabled || isSyncing}
+          onClick={onOpenManualSync}
+        >
+          {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+          手动同步
+        </button>
+        <button
+          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+          type="button"
+          disabled={disabled}
+          onClick={onOpenSchedulerSettings}
+        >
+          <CalendarClock className="h-3.5 w-3.5" />
+          周期同步设置
+        </button>
+        <span
+          className={`px-2 text-xs font-semibold ${
+            schedulerConfigured ? "text-brand" : "text-muted"
+          }`}
+        >
+          {schedulerConfigured ? "已开启同步" : "未开启同步"}
+        </span>
+        {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted" /> : null}
+      </div>
+
+      <div className="grid gap-2 border-t border-line pt-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs font-semibold text-graphite">实例记录</span>
+          <div className="flex min-w-[220px] flex-1 flex-wrap items-center gap-1.5">
+            {syncInstanceStatusOptions.map((option) => {
+              const isActive = statusFilter === option.value;
+              const count =
+                option.value === "all"
+                  ? allInstanceCount
+                  : statusCountMap.get(option.value) ?? 0;
+              return (
+                <button
+                  className={`inline-flex h-8 items-center gap-1 rounded-md border px-2 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                    isActive
+                      ? "border-ink bg-ink text-panel"
+                      : "border-line bg-panel text-graphite hover:border-signal hover:text-ink"
+                  }`}
+                  key={option.value}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onInstanceStatusFilterChange(option.value)}
+                >
+                  <span>{option.label}</span>
+                  <span className={isActive ? "text-panel/75" : "text-muted"}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-muted">{instances?.total ?? 0} 条</span>
+            <label className="flex items-center gap-1 text-[11px] font-semibold text-muted">
+              每页
+              <select
+                className="h-8 rounded-md border border-line bg-panel px-2 text-[11px] outline-none focus:border-signal"
+                value={instancePageSize}
+                disabled={disabled}
+                onChange={(event) => onInstancePageSizeChange(Number(event.target.value))}
+              >
+                {[8, 20, 50, 100].map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="grid h-8 w-8 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              title="刷新同步状态"
+              aria-label="刷新同步状态"
+              disabled={disabled}
+              onClick={onRefresh}
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[980px] border-separate border-spacing-y-1.5 text-left text-xs">
+            <thead className="text-[11px] font-semibold text-muted">
+              <tr>
+                <th className="px-2 py-1">id</th>
+                <th className="px-2 py-1">触发方式</th>
+                <th className="px-2 py-1">触发时间</th>
+                <th className="px-2 py-1">开始时间</th>
+                <th className="px-2 py-1">结束时间</th>
+                <th className="px-2 py-1">状态</th>
+                <th className="px-2 py-1">结果</th>
+                <th className="px-2 py-1">summary</th>
+                <th className="px-2 py-1 text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {instanceRows.map((instance) => {
+                const isMutating = mutatingInstanceId === instance.id;
+                return (
+                  <tr className="bg-soft text-graphite" key={instance.id}>
+                    <td className="rounded-l-md px-2 py-2 font-mono text-[11px] text-ink">{instance.id}</td>
+                    <td className="px-2 py-2">{triggerTypeLabel(instance.trigger_type)}</td>
+                    <td className="px-2 py-2 font-mono text-[11px] text-muted">{formatDateTime(instance.scheduled_for)}</td>
+                    <td className="px-2 py-2 font-mono text-[11px] text-muted">{formatDateTime(instance.started_at)}</td>
+                    <td className="px-2 py-2 font-mono text-[11px] text-muted">{formatDateTime(instance.completed_at)}</td>
+                    <td className="px-2 py-2">
+                      <StatusBadge tone={instance.status === "completed" ? "success" : instance.status === "failed" ? "danger" : "muted"}>
+                        {instanceStatusLabel(instance.status)}
+                      </StatusBadge>
+                    </td>
+                    <td className="px-2 py-2">{instance.result_status || "-"}</td>
+                    <td className="max-w-[260px] truncate px-2 py-2 text-ink" title={instance.summary || instance.error_message || ""}>
+                      {instance.summary || instance.error_message || "-"}
+                    </td>
+                    <td className="rounded-r-md px-2 py-2">
+                      <div className="flex justify-end gap-1">
+                        <button
+                          className="grid h-7 w-7 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                          type="button"
+                          title="重新执行"
+                          aria-label={`重新执行实例 ${instance.id}`}
+                          disabled={disabled || Boolean(mutatingInstanceId)}
+                          onClick={() => onRerunInstance(instance)}
+                        >
+                          {isMutating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                        </button>
+                        <button
+                          className="grid h-7 w-7 place-items-center rounded-md border border-line bg-panel text-muted transition-colors hover:border-risk hover:text-risk disabled:cursor-not-allowed disabled:opacity-50"
+                          type="button"
+                          title="删除"
+                          aria-label={`删除实例 ${instance.id}`}
+                          disabled={disabled || Boolean(mutatingInstanceId)}
+                          onClick={() => onDeleteInstance(instance)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {instanceRows.length === 0 ? (
+            <div className="rounded-md bg-soft px-3 py-6 text-center text-xs text-muted">暂无实例</div>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <span className="font-mono text-[11px] text-muted">
+            {totalPages > 0 ? `${instancePage} / ${totalPages}` : "0 / 0"}
+          </span>
+          <button
+            className="grid h-8 w-8 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            title="上一页"
+            aria-label="上一页"
+            disabled={disabled || !canGoPrev}
+            onClick={() => onInstancePageChange(instancePage - 1)}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <button
+            className="grid h-8 w-8 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            title="下一页"
+            aria-label="下一页"
+            disabled={disabled || !canGoNext}
+            onClick={() => onInstancePageChange(instancePage + 1)}
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({
+  children,
+  tone,
+}: {
+  children: ReactNode;
+  tone: "success" | "danger" | "muted";
+}) {
+  const className =
+    tone === "success"
+      ? "border-brand/25 bg-gainSoft text-brand"
+      : tone === "danger"
+        ? "border-risk/25 bg-riskSoft text-risk"
+        : "border-line bg-panel text-muted";
+  return (
+    <span className={`inline-flex h-6 items-center rounded border px-2 text-[11px] font-semibold ${className}`}>
+      {children}
+    </span>
+  );
+}
+
+function syncInstancesToast(instances: JobRuntimeInstance[]): string {
+  const failed = instances.find((instance) => instance.status === "failed");
+  if (failed) {
+    return failed.error_message || "同步任务失败";
+  }
+  if (instances.length > 1) {
+    return `已创建 ${instances.length} 个同步实例`;
+  }
+  return instances[0]?.summary || "同步任务已创建";
+}
+
+function instanceStatusLabel(status: JobRuntimeInstance["status"]): string {
+  switch (status) {
+    case "waiting":
+      return "等待";
+    case "dispatching":
+      return "分发";
+    case "running":
+      return "运行";
+    case "completed":
+      return "完成";
+    case "failed":
+      return "失败";
+    case "cancelled":
+      return "取消";
+    default:
+      return status;
+  }
+}
+
+function triggerTypeLabel(triggerType: JobRuntimeInstance["trigger_type"]): string {
+  switch (triggerType) {
+    case "schedule":
+      return "周期";
+    case "manual":
+      return "手动";
+    case "system":
+      return "系统";
+    default:
+      return triggerType;
+  }
+}
+
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) {
+    return "-";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString("zh-CN", {
+    hour12: false,
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatLocalDate(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function defaultParamsFromSchema(schema: MindgoDatasetSchema): MindgoParamDraft {

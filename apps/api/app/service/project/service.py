@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.model.project import ProjectRow
-from app.service.project.types import Project, utc_now
+from app.service.project.types import Project, local_now
 
 
 class ProjectNotFoundError(LookupError):
@@ -137,7 +137,7 @@ class ProjectService:
         name: str | None,
         description: str | None,
     ) -> Project:
-        now = utc_now()
+        now = local_now()
         project = Project(
             id=project_id_from_local_path(local_path),
             local_path=local_path,
@@ -164,7 +164,7 @@ class ProjectService:
             name=_clean_name(name, project.local_path) if name is not None else project.name,
             description=description if description is not None else project.description,
             deleted_at=None if restore else project.deleted_at,
-            updated_at=utc_now(),
+            updated_at=local_now(),
         )
         row = await self._db.get(ProjectRow, updated.id)
         if row is None:
@@ -206,7 +206,7 @@ class ProjectService:
 
     async def soft_delete_project(self, project_id: str) -> None:
         project = await self.require_project(project_id)
-        now = utc_now()
+        now = local_now()
         deleted = replace(project, deleted_at=now, updated_at=now)
         row = await self._db.get(ProjectRow, deleted.id)
         if row is None:

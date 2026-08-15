@@ -261,7 +261,7 @@ export function ConversationShell({
     () =>
       formatElapsed(
         getRunStartedAt(textMessages, envelopes),
-        isStreaming ? new Date(now).toISOString() : getRunEndedAt(envelopes),
+        isStreaming ? formatLocalDateTime(new Date(now)) : getRunEndedAt(envelopes),
       ),
     [envelopes, isStreaming, textMessages, now],
   );
@@ -1385,6 +1385,17 @@ function getRunEndedAt(envelopes: SDKStreamEnvelope[]): string | null {
 function timestampMs(value: string): number {
   const parsed = new Date(value).getTime();
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatLocalDateTime(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  const hour = String(value.getHours()).padStart(2, "0");
+  const minute = String(value.getMinutes()).padStart(2, "0");
+  const second = String(value.getSeconds()).padStart(2, "0");
+  const millisecond = String(value.getMilliseconds()).padStart(3, "0");
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}.${millisecond}`;
 }
 
 function formatElapsed(startAt: string | null, endAt: string | null): string | null {

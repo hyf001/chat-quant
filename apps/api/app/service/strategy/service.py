@@ -18,7 +18,7 @@ from app.schema.strategy import (
     StrategySummary,
     StrategyVersionCreate,
     StrategyVersionRecord,
-    utc_now,
+    local_now,
 )
 from app.service import project as project_service
 from app.service.project import ProjectNotFoundError
@@ -121,7 +121,7 @@ class StrategyService:
         updated_strategy = strategy.model_copy(
             update={
                 "current_version_id": version.id,
-                "updated_at": utc_now(),
+                "updated_at": local_now(),
             }
         )
 
@@ -161,7 +161,7 @@ class StrategyService:
         updated_strategy = strategy.model_copy(
             update={
                 "current_version_id": version.id,
-                "updated_at": utc_now(),
+                "updated_at": local_now(),
             }
         )
         await self._save_strategy(updated_strategy)
@@ -180,7 +180,7 @@ class StrategyService:
         if strategy.status == StrategyStatus.DELETED:
             raise StrategyError("STRATEGY_DELETED", "Strategy is deleted", 409)
 
-        update_data: dict[str, object] = {"updated_at": utc_now()}
+        update_data: dict[str, object] = {"updated_at": local_now()}
         if name is not None:
             update_data["name"] = name
         if description is not None:

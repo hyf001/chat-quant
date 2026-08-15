@@ -15,9 +15,9 @@ class ProjectRow(Base):
     local_path: Mapped[str] = mapped_column(Text, nullable=False)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime)
 
     __table_args__ = (
         UniqueConstraint("local_path", name="uq_projects_local_path"),

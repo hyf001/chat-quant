@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 
 
-def utc_now() -> datetime:
-    return datetime.now(UTC)
+def local_now() -> datetime:
+    return datetime.now()
 
 
 @dataclass(slots=True)
@@ -14,6 +14,6 @@ class Project:
     local_path: str
     name: str
     description: str | None = None
-    created_at: datetime = field(default_factory=utc_now)
-    updated_at: datetime = field(default_factory=utc_now)
+    created_at: datetime = field(default_factory=local_now)
+    updated_at: datetime = field(default_factory=local_now)
     deleted_at: datetime | None = None

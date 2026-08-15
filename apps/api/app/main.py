@@ -1,17 +1,32 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import RequestLoggingMiddleware, configure_logging, get_logger
+from app.service.job_runtime import JobRuntimeWorker, register_default_job_runtime_events
 
 logger = get_logger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    register_default_job_runtime_events()
+    worker = JobRuntimeWorker()
+    worker.start()
+    app.state.job_runtime_worker = worker
+    try:
+        yield
+    finally:
+        await worker.stop()
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings)
-    app = FastAPI(title=settings.app_name)
+    app = FastAPI(title=settings.app_name, lifespan=lifespan)
     logger.info(
         "creating FastAPI app",
         extra={"app_name": settings.app_name, "environment": settings.environment},

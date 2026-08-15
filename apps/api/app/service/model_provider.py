@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
@@ -45,7 +45,7 @@ class ModelProviderService:
 
     async def create_provider(self, payload: ModelProviderPayload) -> ModelProviderResponse:
         await _require_models_from_payload(payload)
-        now = datetime.now(UTC)
+        now = datetime.now()
         row = ModelProviderRow(
             id=f"provider_{uuid4().hex[:16]}",
             name=payload.name.strip(),
@@ -77,7 +77,7 @@ class ModelProviderService:
         if next_api_key is not None:
             row.api_key = next_api_key
         row.enabled = payload.enabled
-        row.updated_at = datetime.now(UTC)
+        row.updated_at = datetime.now()
         await self._db.commit()
         await self._db.refresh(row)
         get_settings.cache_clear()

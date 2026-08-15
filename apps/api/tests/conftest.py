@@ -1,6 +1,6 @@
 import json
 from collections.abc import Iterator
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -43,7 +43,7 @@ def project_test() -> None:
     settings = get_settings()
     ensure_database_schema(settings)
     engine = create_engine(f"sqlite:///{settings.database_path}")
-    now = datetime.now(UTC)
+    now = datetime.now()
     try:
         with engine.begin() as connection:
             connection.execute(

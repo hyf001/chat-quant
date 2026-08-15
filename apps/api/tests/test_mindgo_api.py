@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from datetime import date
-
 import pandas as pd
-from app.schema.mindgo import MindgoDatasetSyncResult
 from app.service.mindgo import service as mindgo_service
-from app.service.mindgo.adaptor.stock_a_daily_price import stock_a_daily_price_schema
+from app.service.mindgo.stock_a_daily_price.adaptor import stock_a_daily_price_schema
 from fastapi.testclient import TestClient
 
 
@@ -264,37 +261,42 @@ def test_mindgo_sync_runs_immediate_import(
     client: TestClient,
     monkeypatch,
 ) -> None:
-    class FakeAdapter:
-        dataset_id = "stock_a_daily_price"
-
-        async def get_schema(self):
-            raise AssertionError("schema should not run")
-
-        async def query_from_mindgo(self, request):
-            raise AssertionError("query_from_mindgo should not run")
-
-        async def query_from_duckdb(self, sql):
-            raise AssertionError("query_from_duckdb should not run")
-
-        async def sync(self, request):
-            assert request.start_date == date(2026, 8, 13)
-            assert request.end_date == date(2026, 8, 13)
-            return MindgoDatasetSyncResult(status="success", elapsed_ms=21, synced_count=2)
-
     monkeypatch.setattr(
         mindgo_service,
         "_adapter_for_dataset",
-        lambda dataset_id, allow_missing_runner=False: FakeAdapter(),
+        lambda dataset_id, allow_missing_runner=False: (_ for _ in ()).throw(
+            AssertionError("sync endpoint should only create job instances")
+        ),
     )
 
     response = client.post(
         "/api/mindgo/datasets/stock_a_daily_price/sync",
         json={
             "start_date": "2026-08-13",
-            "end_date": "2026-08-13",
+            "end_date": "2026-08-15",
+            "write_mode": "skip",
             "params": {"fields": ["close"]},
         },
     )
 
     assert response.status_code == 200
-    assert response.json() == {"status": "success", "elapsed_ms": 21, "synced_count": 2}
+    payload = response.json()
+    assert len(payload["instances"]) == 3
+    assert payload["instance"] == payload["instances"][0]
+    assert [instance["payload"]["start_date"] for instance in payload["instances"]] == [
+        "2026-08-13",
+        "2026-08-14",
+        "2026-08-15",
+    ]
+    assert [instance["payload"]["end_date"] for instance in payload["instances"]] == [
+        "2026-08-13",
+        "2026-08-14",
+        "2026-08-15",
+    ]
+    assert [instance["scheduled_for"][:10] for instance in payload["instances"]] == [
+        "2026-08-13",
+        "2026-08-14",
+        "2026-08-15",
+    ]
+    assert {instance["payload"]["write_mode"] for instance in payload["instances"]} == {"skip"}
+    assert {instance["trigger_type"] for instance in payload["instances"]} == {"manual"}

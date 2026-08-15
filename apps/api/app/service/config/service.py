@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -43,7 +43,7 @@ class AppConfigService:
     async def update_config(self, request: UpdateAppConfigRequest) -> AppConfigResponse:
         values = _flatten_payload(request.settings)
         definitions = {definition.key: definition for definition in APP_CONFIG_DEFINITIONS}
-        now = datetime.now(UTC)
+        now = datetime.now()
 
         for key, raw_value in values.items():
             definition = definitions[key]

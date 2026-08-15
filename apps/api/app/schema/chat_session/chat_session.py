@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import uuid4
 
 from claude_agent_sdk.types import (
@@ -400,4 +400,4 @@ def _new_message_id() -> str:
 
 
 def _now() -> datetime:
-    return datetime.now(UTC)
+    return datetime.now()

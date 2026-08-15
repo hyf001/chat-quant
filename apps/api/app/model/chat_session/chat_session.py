@@ -26,11 +26,11 @@ class ChatSessionRow(Base):
     current_strategy_version_id: Mapped[str | None] = mapped_column(String(40))
     current_backtest_run_id: Mapped[str | None] = mapped_column(String(40))
     data_scope_label: Mapped[str | None] = mapped_column(String(120))
-    last_saved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_saved_at: Mapped[datetime | None] = mapped_column(DateTime)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
     __table_args__ = (
         Index("idx_chat_sessions_project_updated", "project_id", "updated_at"),
@@ -51,8 +51,8 @@ class ChatSessionAssetLinkRow(Base):
     sdk_message_uuid: Mapped[str | None] = mapped_column(String(128))
     sdk_tool_use_id: Mapped[str | None] = mapped_column(String(128))
     display_snapshot: Mapped[object | None] = mapped_column(JSON)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
     __table_args__ = (
         UniqueConstraint(

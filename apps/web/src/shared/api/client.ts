@@ -352,13 +352,97 @@ export type MindgoDatasetQueryResponse = {
 export type MindgoDatasetSyncPayload = {
   start_date: string;
   end_date: string;
+  write_mode: MindgoDatasetSyncWriteMode;
   params: Record<string, MindgoJsonValue>;
 };
+
+export type MindgoDatasetSyncWriteMode = "overwrite" | "skip";
 
 export type MindgoDatasetSyncResult = {
   status: "success" | "failed";
   elapsed_ms: number;
   synced_count: number;
+};
+
+export type JobTriggerType = "schedule" | "manual" | "system";
+
+export type JobInstanceStatus =
+  | "waiting"
+  | "dispatching"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type JobRuntimeInstance = {
+  id: string;
+  job_type: string;
+  job_id: string;
+  trigger_type: JobTriggerType;
+  trigger_key: string;
+  payload: Record<string, MindgoJsonValue>;
+  priority: number;
+  scheduled_for: string;
+  started_at: string | null;
+  completed_at: string | null;
+  status: JobInstanceStatus;
+  result_status: string | null;
+  summary: string;
+  error_message: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type JobRuntimeInstanceListResponse = {
+  items: JobRuntimeInstance[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  status_counts: JobRuntimeInstanceStatusCount[];
+};
+
+export type JobRuntimeInstanceStatusCount = {
+  status: JobInstanceStatus;
+  count: number;
+};
+
+export type JobRuntimeInstanceListParams = {
+  job_type?: string;
+  job_id?: string;
+  status?: JobInstanceStatus;
+  page?: number;
+  page_size?: number;
+};
+
+export type MindgoDatasetSyncTriggerResponse = {
+  instance: JobRuntimeInstance;
+  instances: JobRuntimeInstance[];
+};
+
+export type MindgoDatasetSyncSchedulerPayload = {
+  cron: string;
+  write_mode: MindgoDatasetSyncWriteMode;
+  params: Record<string, MindgoJsonValue>;
+};
+
+export type MindgoDatasetSyncSchedulerState = {
+  configured: boolean;
+  scheduler_id: string | null;
+  cron: string | null;
+  write_mode: MindgoDatasetSyncWriteMode;
+  params: Record<string, MindgoJsonValue>;
+  last_run_at: string | null;
+  next_run_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type MindgoDatasetSyncStatusResponse = {
+  dataset_id: string;
+  job_type: string;
+  job_id: string;
+  scheduler: MindgoDatasetSyncSchedulerState;
 };
 
 export type MindgoConnectionTestResponse = {
@@ -498,10 +582,75 @@ export async function queryMindgoDatasetFromDuckDB(
 export async function syncMindgoDataset(
   datasetId: string,
   payload: MindgoDatasetSyncPayload,
-): Promise<MindgoDatasetSyncResult> {
-  return requestJson<MindgoDatasetSyncResult>(`/api/mindgo/datasets/${datasetId}/sync`, {
+): Promise<MindgoDatasetSyncTriggerResponse> {
+  return requestJson<MindgoDatasetSyncTriggerResponse>(`/api/mindgo/datasets/${datasetId}/sync`, {
     method: "POST",
     body: payload,
+  });
+}
+
+export async function getMindgoDatasetSyncStatus(
+  datasetId: string,
+): Promise<MindgoDatasetSyncStatusResponse> {
+  return requestJson<MindgoDatasetSyncStatusResponse>(`/api/mindgo/datasets/${datasetId}/sync`);
+}
+
+export async function upsertMindgoDatasetSyncScheduler(
+  datasetId: string,
+  payload: MindgoDatasetSyncSchedulerPayload,
+): Promise<MindgoDatasetSyncStatusResponse> {
+  return requestJson<MindgoDatasetSyncStatusResponse>(
+    `/api/mindgo/datasets/${datasetId}/sync/scheduler`,
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
+}
+
+export async function deleteMindgoDatasetSyncScheduler(
+  datasetId: string,
+): Promise<MindgoDatasetSyncStatusResponse> {
+  return requestJson<MindgoDatasetSyncStatusResponse>(
+    `/api/mindgo/datasets/${datasetId}/sync/scheduler`,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
+export async function listJobRuntimeInstances(
+  params: JobRuntimeInstanceListParams = {},
+): Promise<JobRuntimeInstanceListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params.job_type) {
+    searchParams.set("job_type", params.job_type);
+  }
+  if (params.job_id) {
+    searchParams.set("job_id", params.job_id);
+  }
+  if (params.status) {
+    searchParams.set("status", params.status);
+  }
+  if (params.page) {
+    searchParams.set("page", String(params.page));
+  }
+  if (params.page_size) {
+    searchParams.set("page_size", String(params.page_size));
+  }
+  const suffix = searchParams.toString() ? `?${searchParams.toString()}` : "";
+  return requestJson<JobRuntimeInstanceListResponse>(`/api/job-runtime/instances${suffix}`);
+}
+
+export async function rerunJobRuntimeInstance(instanceId: string): Promise<JobRuntimeInstance> {
+  return requestJson<JobRuntimeInstance>(`/api/job-runtime/instances/${instanceId}/rerun`, {
+    method: "POST",
+  });
+}
+
+export async function deleteJobRuntimeInstance(instanceId: string): Promise<void> {
+  return requestJson<void>(`/api/job-runtime/instances/${instanceId}`, {
+    method: "DELETE",
   });
 }
 

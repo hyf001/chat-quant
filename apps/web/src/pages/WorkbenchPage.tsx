@@ -876,7 +876,7 @@ function appendOptimisticUserMessage({
       chat_session_id: chatSessionId,
       sdk_session_id: sdkSessionId,
       turn_id: null,
-      received_at: new Date().toISOString(),
+      received_at: formatLocalDateTime(new Date()),
       sdk_event: {
         type: "user_message",
         id: userMessageId,
@@ -889,6 +889,17 @@ function appendOptimisticUserMessage({
 function userEventId(event: Record<string, unknown>): string | null {
   const message = asRecord(event.message);
   return asString(event.id) ?? asString(event.uuid) ?? asString(message?.id) ?? asString(message?.uuid);
+}
+
+function formatLocalDateTime(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  const hour = String(value.getHours()).padStart(2, "0");
+  const minute = String(value.getMinutes()).padStart(2, "0");
+  const second = String(value.getSeconds()).padStart(2, "0");
+  const millisecond = String(value.getMilliseconds()).padStart(3, "0");
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}.${millisecond}`;
 }
 
 function unwrapEvent(event: Record<string, unknown>): Record<string, unknown> {

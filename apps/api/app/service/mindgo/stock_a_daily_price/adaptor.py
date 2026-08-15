@@ -17,15 +17,16 @@ from app.schema.mindgo import (
     MindgoDatasetStorageSpec,
     MindgoDatasetSyncRequest,
     MindgoDatasetSyncResult,
+    MindgoDatasetSyncWriteMode,
     MindgoFieldSpec,
     MindgoParameterOption,
     MindgoParameterSpec,
 )
 from app.service.mindgo.jupyter_runner import MindgoJupyterRunner
+from app.service.mindgo.stock_a_daily_price.constants import STOCK_A_DAILY_PRICE_DATASET_ID
 from app.service.mindgo.storage import MindgoDatasetStorage, mindgo_dataset_partition_path
 from app.storage import DuckDBParquetStore, ParquetWriteOptions
 
-STOCK_A_DAILY_PRICE_DATASET_ID = "stock_a_daily_price"
 STOCK_A_DAILY_PRICE_MARKER_START = "MINDGO_STOCK_A_DAILY_PRICE_JSON_START"
 STOCK_A_DAILY_PRICE_MARKER_END = "MINDGO_STOCK_A_DAILY_PRICE_JSON_END"
 STOCK_A_DAILY_PRICE_QUERY_ID = "1015"
@@ -104,6 +105,8 @@ class DuckDBParquetMindgoSyncWriter:
         write: MindgoPartitionedParquetWrite,
         frame: pd.DataFrame,
     ) -> int:
+        if write.request.write_mode == MindgoDatasetSyncWriteMode.SKIP and write.path.exists():
+            return 0
         return self._store.write(frame, write.path, options=write.options)
 
 
@@ -377,6 +380,30 @@ def rename_row(row, label_by_key):
     return renamed
 
 
+def title_date_text(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if len(digits) < 8:
+        return None
+    return digits[:8]
+
+
+def title_trade_date(titles):
+    dates = []
+    for item in titles:
+        if not isinstance(item, dict):
+            continue
+        text = title_date_text(item.get("from"))
+        if text and text != "00000000":
+            dates.append(text)
+    unique_dates = sorted({{trade_date for trade_date in dates}})
+    if len(unique_dates) > 1:
+        raise ValueError("query_index returned multiple trade dates: " + ",".join(unique_dates))
+    return unique_dates[0] if unique_dates else None
+
+
 def normalize_query_index(raw, base_day):
     titles = title_items(raw)
     title_keys = [str(item["key"]) for item in titles if isinstance(item, dict) and item.get("key")]
@@ -385,12 +412,13 @@ def normalize_query_index(raw, base_day):
         for item in titles
         if isinstance(item, dict) and item.get("key")
     }}
+    trade_date = title_trade_date(titles) or base_day
     rows = []
     for row in first_row_list(raw, title_keys):
         normalized = normalize_row(row, title_keys)
         if normalized:
             renamed = rename_row(normalized, label_by_key)
-            renamed["trade_date"] = base_day
+            renamed["trade_date"] = trade_date
             renamed["query_id"] = QUERY_ID
             rows.append(renamed)
     return rows

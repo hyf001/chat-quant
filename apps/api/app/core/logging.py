@@ -6,7 +6,7 @@ import sys
 import time
 import traceback
 from contextvars import ContextVar
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
@@ -91,7 +91,7 @@ class JsonLogFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         extra = _record_extra(record)
         payload: dict[str, Any] = {
-            "timestamp": datetime.now(UTC).isoformat(),
+            "timestamp": datetime.now().isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),

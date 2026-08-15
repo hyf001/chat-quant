@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 from datetime import date
 from typing import Any
 
 import pandas as pd
 from app.schema.mindgo import MindgoDatasetQueryRequest, MindgoDatasetSyncRequest
-from app.service.mindgo.adaptor.stock_a_daily_price import (
+from app.service.mindgo.stock_a_daily_price.adaptor import (
     STOCK_A_DAILY_PRICE_DATASET_ID,
     STOCK_A_DAILY_PRICE_MARKER_END,
     STOCK_A_DAILY_PRICE_MARKER_START,
@@ -178,7 +180,55 @@ def test_stock_a_daily_price_remote_code_embeds_query_index_contract() -> None:
     assert 'get_open_api("public")' not in code
     assert "open_api.get_llminfo()" not in code
     assert "retried_after_token_refresh" not in code
+    assert "title_trade_date(titles) or base_day" in code
     assert "MINDGO_STOCK_A_DAILY_PRICE_JSON_START" in code
+
+
+def test_stock_a_daily_price_remote_code_uses_query_index_title_from_date() -> None:
+    code = stock_a_daily_price_remote_code({"baseDay": "2026-08-14"})
+    raw = {
+        "total": 1,
+        "titles": [
+            {"key": "40000000", "label": "股票代码", "from": "0"},
+            {"key": "40000006", "label": "股票简称", "from": "0"},
+            {"key": "40000014_b94e8445", "label": "开盘价:不复权", "from": "20260813"},
+            {"key": "40000009_b94e8445", "label": "收盘价:不复权", "from": "20260813"},
+        ],
+        "data": [
+            {
+                "40000000": "601827.SH",
+                "40000006": "三峰环境",
+                "40000014_b94e8445": 8.37,
+                "40000009_b94e8445": 8.6,
+            }
+        ],
+    }
+
+    class FakeResponse:
+        def json(self) -> dict[str, Any]:
+            return raw
+
+    class FakeArsenalAPI:
+        def post(self, path: str, *, files: dict[str, tuple[None, str]]) -> FakeResponse:
+            assert path == "/babel/api/query_index"
+            assert files["queryId"] == (None, "1015")
+            assert files["baseDay"] == (None, "20260814")
+            return FakeResponse()
+
+    stdout = io.StringIO()
+    with contextlib.redirect_stdout(stdout):
+        exec(code, {"get_arsenal_api": lambda pod: FakeArsenalAPI()})  # noqa: S102
+
+    text = stdout.getvalue()
+    start = text.index(STOCK_A_DAILY_PRICE_MARKER_START) + len(
+        STOCK_A_DAILY_PRICE_MARKER_START
+    )
+    end = text.index(STOCK_A_DAILY_PRICE_MARKER_END, start)
+    payload = json.loads(text[start:end].strip())
+
+    assert payload["data"][0]["trade_date"] == "20260813"
+    assert payload["data"][0]["股票代码"] == "601827.SH"
+    assert payload["data"][0]["收盘价:不复权"] == 8.6
 
 
 def test_normalize_stock_a_daily_price_maps_query_1015_columns_to_standard_columns() -> None:
@@ -252,8 +302,8 @@ async def test_stock_a_daily_price_sync_writes_daily_partitions_with_storage_pro
 
     result = await adapter.sync(
         MindgoDatasetSyncRequest(
-            start_date=date(2026, 8, 13),
-            end_date=date(2026, 8, 13),
+            start_date=date(2026, 8, 14),
+            end_date=date(2026, 8, 14),
             params={"fields": ["close"]},
         )
     )
@@ -266,10 +316,10 @@ async def test_stock_a_daily_price_sync_writes_daily_partitions_with_storage_pro
     assert writer.calls[0]["path"].as_posix().endswith(
         "/stock_a_daily_price/trade_day=20260813/data.parquet"
     )
-    assert writer.calls[0]["start_date"] == date(2026, 8, 13)
-    assert writer.calls[0]["end_date"] == date(2026, 8, 13)
+    assert writer.calls[0]["start_date"] == date(2026, 8, 14)
+    assert writer.calls[0]["end_date"] == date(2026, 8, 14)
     assert writer.calls[0]["order_by"] == ["trade_date", "symbol"]
-    assert '"baseDay": "2026-08-13"' in runner.calls[0]["code"]
+    assert '"baseDay": "2026-08-14"' in runner.calls[0]["code"]
 
 
 async def test_stock_a_daily_price_sync_imports_multiple_days_to_duckdb_parquet(

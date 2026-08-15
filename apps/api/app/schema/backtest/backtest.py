@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 from typing import Literal
@@ -13,8 +13,8 @@ type JsonScalar = str | int | float | bool | None
 type JsonValue = JsonScalar | list[JsonValue] | dict[str, JsonValue]
 
 
-def utc_now() -> datetime:
-    return datetime.now(UTC)
+def local_now() -> datetime:
+    return datetime.now()
 
 
 def default_backtest_end_date() -> date:
@@ -122,8 +122,8 @@ class StrategyBacktestRecord(BaseModel):
     failure_detail: dict[str, JsonValue] | None = None
     started_at: datetime | None = None
     completed_at: datetime | None = None
-    created_at: datetime = Field(default_factory=utc_now)
-    updated_at: datetime = Field(default_factory=utc_now)
+    created_at: datetime = Field(default_factory=local_now)
+    updated_at: datetime = Field(default_factory=local_now)
 
 
 class StrategyBacktestMetrics(BaseModel):
@@ -172,7 +172,7 @@ class StrategyCurve(BaseModel):
     start_date: date
     end_date: date
     points: list[StrategyCurvePoint] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=utc_now)
+    created_at: datetime = Field(default_factory=local_now)
 
 
 class StrategyMarketCandle(BaseModel):
@@ -232,7 +232,7 @@ class StrategyBacktestResultRecord(BaseModel):
     engine: str
     protocol: str
     data_source: dict[str, JsonValue] = Field(default_factory=dict)
-    created_at: datetime = Field(default_factory=utc_now)
+    created_at: datetime = Field(default_factory=local_now)
 
 
 class StrategyBacktestDetail(BaseModel):

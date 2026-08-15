@@ -20,7 +20,7 @@ from app.schema.strategy import (
     StrategyCustomParameter,
     StrategyStatus,
     StrategyVersionRecord,
-    utc_now,
+    local_now,
     validate_param_value,
 )
 from app.service.backtest.backtrader import BacktraderStrategyBacktestEngine
@@ -169,7 +169,7 @@ class BacktestService:
             return await self.get_detail(backtest_id)
 
         version = await self._require_strategy_version(backtest.strategy_version_id)
-        started_at = utc_now()
+        started_at = local_now()
         running = backtest.model_copy(
             update={
                 "status": StrategyBacktestStatus.RUNNING,
@@ -193,7 +193,7 @@ class BacktestService:
         try:
             result = engine.execute(backtest=running, version=version)
         except StrategyBacktestError as exc:
-            failed_at = utc_now()
+            failed_at = local_now()
             failed = running.model_copy(
                 update={
                     "status": StrategyBacktestStatus.FAILED,
@@ -220,7 +220,7 @@ class BacktestService:
             )
             return StrategyBacktestDetail(backtest=failed)
 
-        completed_at = utc_now()
+        completed_at = local_now()
         succeeded = running.model_copy(
             update={
                 "status": StrategyBacktestStatus.SUCCEEDED,

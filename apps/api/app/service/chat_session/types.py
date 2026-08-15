@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import StrEnum
 
 from pydantic import JsonValue
@@ -42,8 +42,8 @@ class SDKContentBlockType(StrEnum):
     TOOL_RESULT = "tool_result"
 
 
-def utc_now() -> datetime:
-    return datetime.now(UTC)
+def local_now() -> datetime:
+    return datetime.now()
 
 
 @dataclass(slots=True)
@@ -57,8 +57,8 @@ class AssetLink:
     sdk_message_uuid: str | None = None
     sdk_tool_use_id: str | None = None
     display_snapshot: JSONValue | None = None
-    created_at: datetime = field(default_factory=utc_now)
-    updated_at: datetime = field(default_factory=utc_now)
+    created_at: datetime = field(default_factory=local_now)
+    updated_at: datetime = field(default_factory=local_now)
 
 
 @dataclass(slots=True)
@@ -81,5 +81,5 @@ class ChatSession:
     last_saved_at: datetime | None = None
     archived_at: datetime | None = None
     deleted_at: datetime | None = None
-    created_at: datetime = field(default_factory=utc_now)
-    updated_at: datetime = field(default_factory=utc_now)
+    created_at: datetime = field(default_factory=local_now)
+    updated_at: datetime = field(default_factory=local_now)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import StrEnum
 from typing import Literal
 
@@ -11,8 +11,8 @@ type JsonScalar = str | int | float | bool | None
 type JsonValue = JsonScalar | list[JsonValue] | dict[str, JsonValue]
 
 
-def utc_now() -> datetime:
-    return datetime.now(UTC)
+def local_now() -> datetime:
+    return datetime.now()
 
 
 class StrategyStatus(StrEnum):
@@ -66,8 +66,8 @@ class StrategyRecord(BaseModel):
     tags: list[str] = Field(default_factory=list)
     current_version_id: str | None = None
     status: StrategyStatus = StrategyStatus.ACTIVE
-    created_at: datetime = Field(default_factory=utc_now)
-    updated_at: datetime = Field(default_factory=utc_now)
+    created_at: datetime = Field(default_factory=local_now)
+    updated_at: datetime = Field(default_factory=local_now)
 
 
 class StrategyVersionRecord(BaseModel):
@@ -77,7 +77,7 @@ class StrategyVersionRecord(BaseModel):
     source_code: str
     strategy_mode: StrategyMode = StrategyMode.SINGLE_SYMBOL
     custom_params: list[StrategyCustomParameter] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=utc_now)
+    created_at: datetime = Field(default_factory=local_now)
 
 
 class StrategySummary(BaseModel):

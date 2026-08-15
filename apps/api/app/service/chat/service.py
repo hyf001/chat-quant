@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import uuid4
 
 from claude_agent_sdk import get_session_messages as sdk_get_session_messages
@@ -355,7 +355,7 @@ def _asset_reference_from_link(link: AssetLink) -> AssetReference:
 
 
 def _now() -> datetime:
-    return datetime.now(UTC)
+    return datetime.now()
 
 
 runtime = ClaudeAgentRuntime(

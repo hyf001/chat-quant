@@ -12,7 +12,7 @@ from app.schema.strategy.strategy import (
     StrategyValidationIssue,
     StrategyVersionCreate,
     StrategyVersionRecord,
-    utc_now,
+    local_now,
     validate_param_value,
 )
 
@@ -30,6 +30,6 @@ __all__ = [
     "StrategyValidationIssue",
     "StrategyVersionCreate",
     "StrategyVersionRecord",
-    "utc_now",
+    "local_now",
     "validate_param_value",
 ]

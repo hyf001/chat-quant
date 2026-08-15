@@ -1,12 +1,20 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.schema.job_runtime import JobRuntimeInstanceResponse
+
 type MindgoJsonScalar = str | int | float | bool | None
 type MindgoJsonValue = MindgoJsonScalar | list[MindgoJsonValue] | dict[str, MindgoJsonValue]
+
+
+class MindgoDatasetSyncWriteMode(StrEnum):
+    OVERWRITE = "overwrite"
+    SKIP = "skip"
 
 
 class MindgoParameterOption(BaseModel):
@@ -93,6 +101,7 @@ class MindgoDatasetDuckDBQueryRequest(BaseModel):
 class MindgoDatasetSyncRequest(BaseModel):
     start_date: date
     end_date: date
+    write_mode: MindgoDatasetSyncWriteMode = MindgoDatasetSyncWriteMode.OVERWRITE
     params: dict[str, MindgoJsonValue] = Field(default_factory=dict)
 
     model_config = ConfigDict(extra="forbid")
@@ -109,6 +118,44 @@ class MindgoDatasetSyncResult(BaseModel):
     status: Literal["success", "failed"]
     elapsed_ms: int = Field(ge=0)
     synced_count: int = Field(ge=0)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class MindgoDatasetSyncTriggerResponse(BaseModel):
+    instance: JobRuntimeInstanceResponse
+    instances: list[JobRuntimeInstanceResponse] = Field(default_factory=list)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class MindgoDatasetSyncSchedulerRequest(BaseModel):
+    cron: str = Field(min_length=1, max_length=120)
+    write_mode: MindgoDatasetSyncWriteMode = MindgoDatasetSyncWriteMode.OVERWRITE
+    params: dict[str, MindgoJsonValue] = Field(default_factory=dict)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class MindgoDatasetSyncSchedulerState(BaseModel):
+    configured: bool
+    scheduler_id: str | None = None
+    cron: str | None = None
+    write_mode: MindgoDatasetSyncWriteMode = MindgoDatasetSyncWriteMode.OVERWRITE
+    params: dict[str, MindgoJsonValue] = Field(default_factory=dict)
+    last_run_at: datetime | None = None
+    next_run_at: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class MindgoDatasetSyncStatusResponse(BaseModel):
+    dataset_id: str = Field(min_length=1)
+    job_type: str = Field(min_length=1)
+    job_id: str = Field(min_length=1)
+    scheduler: MindgoDatasetSyncSchedulerState
 
     model_config = ConfigDict(extra="forbid")
 

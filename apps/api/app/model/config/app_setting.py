@@ -19,6 +19,6 @@ class AppSettingRow(Base):
     is_secret: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
     __table_args__ = (Index("idx_app_settings_namespace", "scope", "namespace"),)

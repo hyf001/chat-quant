@@ -18,6 +18,7 @@ from app.model.chat_session import chat_session as chat_session_model  # noqa: F
 from app.model.config import app_setting as app_setting_model  # noqa: F401
 from app.model.config import model_provider as model_provider_model  # noqa: F401
 from app.model.project import project as project_model  # noqa: F401
+from app.model.job_runtime import job_runtime as job_runtime_model  # noqa: F401
 from app.model.strategy import strategy as strategy_model  # noqa: F401
 
 _SCHEMA_LOCK = Lock()
@@ -33,6 +34,7 @@ def ensure_database_schema(settings: Settings) -> None:
         engine = create_engine(database_url)
         try:
             Base.metadata.create_all(engine)
+            _migrate_job_runtime_scheduler_schema(engine)
             _migrate_local_project_schema(engine, settings)
             _migrate_strategy_source_code(engine)
             _migrate_strategy_version_contract(engine)
@@ -105,6 +107,19 @@ def _drop_column_if_exists(
         for index_name in index_names:
             connection.execute(text(f"DROP INDEX IF EXISTS {index_name}"))
         connection.execute(text(f"ALTER TABLE {table_name} DROP COLUMN {column_name}"))
+
+
+def _migrate_job_runtime_scheduler_schema(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if "job_schedulers" not in inspector.get_table_names():
+        return
+    with engine.begin() as connection:
+        connection.execute(text("DROP INDEX IF EXISTS idx_job_schedulers_enabled"))
+        connection.execute(
+            text("CREATE INDEX IF NOT EXISTS idx_job_schedulers_job_type ON job_schedulers(job_type)")
+        )
+    for column_name in ("enabled", "run_mode", "run_at", "timezone"):
+        _drop_column_if_exists(engine, inspect(engine), "job_schedulers", column_name, ())
 
 
 def _seed_model_providers(engine: Engine) -> None:

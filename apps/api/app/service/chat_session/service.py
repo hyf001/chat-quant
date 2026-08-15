@@ -17,7 +17,7 @@ from app.service.chat_session.types import (
     ChatSession,
     ChatSessionKind,
     JSONValue,
-    utc_now,
+    local_now,
 )
 
 
@@ -81,7 +81,7 @@ class ChatSessionService:
         sdk_project_key: str | None = None,
         data_scope_label: str | None = None,
     ) -> ChatSession:
-        now = utc_now()
+        now = local_now()
         await project_service.require_project(self._db, project_id)
         session = ChatSession(
             id=chat_session_id or _new_id("chat"),
@@ -123,7 +123,7 @@ class ChatSessionService:
         archived: bool | None = None,
     ) -> ChatSession:
         session = await self._require_session(chat_session_id)
-        now = utc_now()
+        now = local_now()
         archived_at = session.archived_at
         if archived is True and archived_at is None:
             archived_at = now
@@ -267,7 +267,7 @@ class ChatSessionService:
 
     async def soft_delete_chat_session(self, chat_session_id: str) -> None:
         session = await self._require_session(chat_session_id)
-        now = utc_now()
+        now = local_now()
         deleted = replace(session, deleted_at=now, updated_at=now)
         row = await self._db.get(ChatSessionRow, deleted.id)
         if row is None:
@@ -382,7 +382,7 @@ class AssetLinkService:
         if session is None or session.deleted_at is not None:
             raise ChatSessionNotFoundError(chat_session_id)
 
-        now = utc_now()
+        now = local_now()
         link = AssetLink(
             id=_new_id("alink"),
             chat_session_id=chat_session_id,
