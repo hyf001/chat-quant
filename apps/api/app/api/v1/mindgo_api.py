@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from importlib import import_module
 from typing import Any
-from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, status
 
@@ -22,9 +21,11 @@ from app.schema.mindgo import (
     MindgoDatasetSyncSchedulerRequest,
     MindgoDatasetSyncSchedulerState,
     MindgoDatasetSyncStatusResponse,
+    MindgoDatasetSyncTriggerRequest,
     MindgoDatasetSyncTriggerResponse,
 )
 from app.service.job_runtime import (
+    DuplicateJobInstanceError,
     JobRef,
     JobRuntimeInstanceService,
     JobRuntimeScheduleService,
@@ -128,26 +129,32 @@ async def get_mindgo_dataset_sync_status(
 @router.post("/datasets/{dataset_id}/sync", response_model=MindgoDatasetSyncTriggerResponse)
 async def sync_mindgo_dataset(
     dataset_id: str,
-    payload: MindgoDatasetSyncRequest,
+    payload: MindgoDatasetSyncTriggerRequest,
     db: DatabaseSession,
 ) -> MindgoDatasetSyncTriggerResponse:
     job_ref = _sync_job_ref_for_dataset(dataset_id)
     register_default_job_runtime_events(job_runtime_registry)
     instance_service = JobRuntimeInstanceService(registry=job_runtime_registry)
     instances = []
-    submitted_at = datetime.now()
-    for sync_day in _date_range(payload.start_date, payload.end_date):
-        daily_payload = payload.model_copy(update={"start_date": sync_day, "end_date": sync_day})
-        instances.append(
-            await instance_service.create_job_instance(
-                db,
-                job_ref=job_ref,
-                trigger_type=TriggerType.MANUAL,
-                trigger_key=f"manual:{dataset_id}:{sync_day.isoformat()}:{uuid4().hex}",
-                scheduled_for=_manual_scheduled_for(sync_day, submitted_at),
-                payload=daily_payload.model_dump(mode="json"),
+    for sync_day in _date_range(payload.trigger_start_date, payload.trigger_end_date):
+        scheduled_for = _manual_scheduled_for(sync_day, payload.trigger_time)
+        daily_payload = _sync_payload_for_scheduled_for(payload, scheduled_for)
+        try:
+            instances.append(
+                await instance_service.create_job_instance(
+                    db,
+                    job_ref=job_ref,
+                    trigger_type=TriggerType.MANUAL,
+                    trigger_key=f"manual:{dataset_id}:{scheduled_for.isoformat()}",
+                    scheduled_for=scheduled_for,
+                    payload=daily_payload.model_dump(mode="json"),
+                )
             )
-        )
+        except DuplicateJobInstanceError as error:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Job instance already exists for the same manual trigger time",
+            ) from error
     instance_responses = [_instance_response(instance) for instance in instances]
     return MindgoDatasetSyncTriggerResponse(
         instance=instance_responses[0],
@@ -256,8 +263,21 @@ def _date_range(start_date, end_date):
     return [start_date + timedelta(days=offset) for offset in range(day_count)]
 
 
-def _manual_scheduled_for(sync_day: date, submitted_at: datetime) -> datetime:
+def _manual_scheduled_for(sync_day: date, trigger_time: time) -> datetime:
     return datetime.combine(
         sync_day,
-        submitted_at.time(),
+        trigger_time.replace(microsecond=0),
+    )
+
+
+def _sync_payload_for_scheduled_for(
+    payload: MindgoDatasetSyncTriggerRequest,
+    scheduled_for: datetime,
+) -> MindgoDatasetSyncRequest:
+    sync_date = scheduled_for.date()
+    return MindgoDatasetSyncRequest(
+        start_date=sync_date,
+        end_date=sync_date,
+        write_mode=payload.write_mode,
+        params=dict(payload.params),
     )

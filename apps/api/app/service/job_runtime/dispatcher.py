@@ -36,7 +36,7 @@ class JobRuntimeDispatcher:
         self,
         db: AsyncSession,
         *,
-        limit: int = 20,
+        limit: int = 200,
         now: datetime | None = None,
     ) -> int:
         instances = await self._instance_service.list_due_waiting_instances(

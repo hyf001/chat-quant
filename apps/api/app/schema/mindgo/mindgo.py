@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, time
 from enum import StrEnum
 from typing import Literal
 
@@ -110,6 +110,23 @@ class MindgoDatasetSyncRequest(BaseModel):
     def validate_date_range(self) -> MindgoDatasetSyncRequest:
         if self.start_date > self.end_date:
             msg = "start_date must be less than or equal to end_date"
+            raise ValueError(msg)
+        return self
+
+
+class MindgoDatasetSyncTriggerRequest(BaseModel):
+    trigger_start_date: date
+    trigger_end_date: date
+    trigger_time: time
+    write_mode: MindgoDatasetSyncWriteMode = MindgoDatasetSyncWriteMode.OVERWRITE
+    params: dict[str, MindgoJsonValue] = Field(default_factory=dict)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> MindgoDatasetSyncTriggerRequest:
+        if self.trigger_start_date > self.trigger_end_date:
+            msg = "trigger_start_date must be less than or equal to trigger_end_date"
             raise ValueError(msg)
         return self
 

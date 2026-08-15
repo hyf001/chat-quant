@@ -272,8 +272,9 @@ def test_mindgo_sync_runs_immediate_import(
     response = client.post(
         "/api/mindgo/datasets/stock_a_daily_price/sync",
         json={
-            "start_date": "2026-08-13",
-            "end_date": "2026-08-15",
+            "trigger_start_date": "2026-08-13",
+            "trigger_end_date": "2026-08-15",
+            "trigger_time": "10:30:15",
             "write_mode": "skip",
             "params": {"fields": ["close"]},
         },
@@ -298,5 +299,8 @@ def test_mindgo_sync_runs_immediate_import(
         "2026-08-14",
         "2026-08-15",
     ]
+    assert {instance["scheduled_for"][11:19] for instance in payload["instances"]} == {
+        "10:30:15"
+    }
     assert {instance["payload"]["write_mode"] for instance in payload["instances"]} == {"skip"}
     assert {instance["trigger_type"] for instance in payload["instances"]} == {"manual"}

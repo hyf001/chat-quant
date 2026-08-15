@@ -59,6 +59,7 @@ type MindgoQueryMode = "mindgo" | "duckdb" | "sync";
 type SyncInstanceStatusFilter = JobInstanceStatus | "all";
 
 const today = formatLocalDate(new Date());
+const defaultSyncTime = formatLocalTime(new Date());
 const defaultSyncCron = "0 18 * * 1-5";
 const defaultSyncWriteMode: MindgoDatasetSyncWriteMode = "overwrite";
 const defaultSyncInstancePageSize = 8;
@@ -109,6 +110,7 @@ export function DataSourceSettingsForm({
   const [isSchedulerSettingsOpen, setIsSchedulerSettingsOpen] = useState(false);
   const [syncStartDateDraft, setSyncStartDateDraft] = useState(today);
   const [syncEndDateDraft, setSyncEndDateDraft] = useState(today);
+  const [syncTimeDraft, setSyncTimeDraft] = useState(defaultSyncTime);
 
   const selectedDataset = useMemo(
     () => datasets.find((dataset) => dataset.id === selectedDatasetId) ?? datasets[0] ?? null,
@@ -333,8 +335,9 @@ export function DataSourceSettingsForm({
     setQueryResult(null);
     try {
       const response = await syncMindgoDataset(selectedDatasetId, {
-        start_date: syncStartDateDraft,
-        end_date: syncEndDateDraft,
+        trigger_start_date: syncStartDateDraft,
+        trigger_end_date: syncEndDateDraft,
+        trigger_time: syncTimeDraft,
         write_mode: manualWriteModeDraft,
         params: {},
       });
@@ -481,6 +484,7 @@ export function DataSourceSettingsForm({
   const handleOpenManualSyncDialog = () => {
     setSyncStartDateDraft(today);
     setSyncEndDateDraft(today);
+    setSyncTimeDraft(formatLocalTime(new Date()));
     setIsManualSyncOpen(true);
   };
 
@@ -776,6 +780,7 @@ export function DataSourceSettingsForm({
           endDate={syncEndDateDraft}
           isSyncing={isSyncing}
           startDate={syncStartDateDraft}
+          triggerTime={syncTimeDraft}
           writeMode={manualWriteModeDraft}
           onCancel={() => setIsManualSyncOpen(false)}
           onEndDateChange={setSyncEndDateDraft}
@@ -784,6 +789,7 @@ export function DataSourceSettingsForm({
             setSyncEndDateDraft((current) => (current < value ? value : current));
           }}
           onSync={() => void handleSync()}
+          onTriggerTimeChange={setSyncTimeDraft}
           onWriteModeChange={setManualWriteModeDraft}
         />
       ) : null}
@@ -1120,25 +1126,29 @@ function ManualSyncDialog({
   endDate,
   isSyncing,
   startDate,
+  triggerTime,
   writeMode,
   onCancel,
   onEndDateChange,
   onStartDateChange,
   onSync,
+  onTriggerTimeChange,
   onWriteModeChange,
 }: {
   disabled: boolean;
   endDate: string;
   isSyncing: boolean;
   startDate: string;
+  triggerTime: string;
   writeMode: MindgoDatasetSyncWriteMode;
   onCancel: () => void;
   onEndDateChange: (value: string) => void;
   onStartDateChange: (value: string) => void;
   onSync: () => void;
+  onTriggerTimeChange: (value: string) => void;
   onWriteModeChange: (value: MindgoDatasetSyncWriteMode) => void;
 }) {
-  const invalidRange = !startDate || !endDate || startDate > endDate;
+  const invalidRange = !startDate || !endDate || startDate > endDate || !triggerTime;
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-ink/20 p-4">
       <div className="grid w-full max-w-md gap-4 rounded-md border border-line bg-panel p-4 shadow-lift">
@@ -1155,7 +1165,7 @@ function ManualSyncDialog({
               onChange={onWriteModeChange}
             />
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <label className="grid gap-1.5">
               <span className="text-xs font-semibold text-graphite">开始日期</span>
               <input
@@ -1173,6 +1183,16 @@ function ManualSyncDialog({
                 type="date"
                 value={endDate}
                 onChange={(event) => onEndDateChange(event.target.value)}
+              />
+            </label>
+            <label className="grid gap-1.5">
+              <span className="text-xs font-semibold text-graphite">触发时间</span>
+              <input
+                className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
+                step={1}
+                type="time"
+                value={triggerTime}
+                onChange={(event) => onTriggerTimeChange(event.target.value)}
               />
             </label>
           </div>
@@ -1471,7 +1491,7 @@ function SyncRuntimePanel({
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] border-separate border-spacing-y-1.5 text-left text-xs">
+          <table className="w-full min-w-[1180px] border-separate border-spacing-y-1.5 text-left text-xs">
             <thead className="text-[11px] font-semibold text-muted">
               <tr>
                 <th className="px-2 py-1">id</th>
@@ -1479,6 +1499,8 @@ function SyncRuntimePanel({
                 <th className="px-2 py-1">触发时间</th>
                 <th className="px-2 py-1">开始时间</th>
                 <th className="px-2 py-1">结束时间</th>
+                <th className="px-2 py-1">创建时间</th>
+                <th className="px-2 py-1">更新时间</th>
                 <th className="px-2 py-1">状态</th>
                 <th className="px-2 py-1">结果</th>
                 <th className="px-2 py-1">summary</th>
@@ -1495,6 +1517,8 @@ function SyncRuntimePanel({
                     <td className="px-2 py-2 font-mono text-[11px] text-muted">{formatDateTime(instance.scheduled_for)}</td>
                     <td className="px-2 py-2 font-mono text-[11px] text-muted">{formatDateTime(instance.started_at)}</td>
                     <td className="px-2 py-2 font-mono text-[11px] text-muted">{formatDateTime(instance.completed_at)}</td>
+                    <td className="px-2 py-2 font-mono text-[11px] text-muted">{formatDateTime(instance.created_at)}</td>
+                    <td className="px-2 py-2 font-mono text-[11px] text-muted">{formatDateTime(instance.updated_at)}</td>
                     <td className="px-2 py-2">
                       <StatusBadge tone={instance.status === "completed" ? "success" : instance.status === "failed" ? "danger" : "muted"}>
                         {instanceStatusLabel(instance.status)}
@@ -1623,6 +1647,8 @@ function triggerTypeLabel(triggerType: JobRuntimeInstance["trigger_type"]): stri
       return "周期";
     case "manual":
       return "手动";
+    case "rerun":
+      return "重新执行";
     case "system":
       return "系统";
     default:
@@ -1638,13 +1664,13 @@ function formatDateTime(value: string | null | undefined): string {
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return date.toLocaleString("zh-CN", {
-    hour12: false,
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  const second = String(date.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 }
 
 function formatLocalDate(value: Date): string {
@@ -1652,6 +1678,13 @@ function formatLocalDate(value: Date): string {
   const month = String(value.getMonth() + 1).padStart(2, "0");
   const day = String(value.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function formatLocalTime(value: Date): string {
+  const hour = String(value.getHours()).padStart(2, "0");
+  const minute = String(value.getMinutes()).padStart(2, "0");
+  const second = String(value.getSeconds()).padStart(2, "0");
+  return `${hour}:${minute}:${second}`;
 }
 
 function defaultParamsFromSchema(schema: MindgoDatasetSchema): MindgoParamDraft {

@@ -59,7 +59,7 @@ class JobRuntimeInstanceService:
         priority: PrioritySpec | None = None,
         payload: dict | None = None,
     ) -> JobInstanceRow:
-        scheduled_for = scheduled_for or _now()
+        scheduled_for = _to_second(scheduled_for or _now())
         payload = payload or {}
         if await self._job_instance_exists(
             db,
@@ -323,7 +323,7 @@ class JobRuntimeInstanceService:
         source_instance: JobInstanceRow,
     ) -> JobInstanceRow:
         source_instance.status = InstanceStatus.WAITING
-        source_instance.trigger_type = TriggerType.MANUAL
+        source_instance.trigger_type = TriggerType.RERUN
         source_instance.scheduled_for = _now()
         source_instance.started_at = None
         source_instance.completed_at = None
@@ -440,7 +440,11 @@ def _new_id(prefix: str) -> str:
 
 
 def _now() -> datetime:
-    return datetime.now()
+    return _to_second(datetime.now())
+
+
+def _to_second(value: datetime) -> datetime:
+    return value.replace(microsecond=0)
 
 
 def _log_job_instance_event(

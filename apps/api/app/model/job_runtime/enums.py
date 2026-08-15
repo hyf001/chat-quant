@@ -6,6 +6,7 @@ from enum import StrEnum
 class TriggerType(StrEnum):
     SCHEDULE = "schedule"
     MANUAL = "manual"
+    RERUN = "rerun"
     SYSTEM = "system"
 
 

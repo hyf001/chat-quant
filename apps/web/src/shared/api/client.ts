@@ -350,8 +350,9 @@ export type MindgoDatasetQueryResponse = {
 };
 
 export type MindgoDatasetSyncPayload = {
-  start_date: string;
-  end_date: string;
+  trigger_start_date: string;
+  trigger_end_date: string;
+  trigger_time: string;
   write_mode: MindgoDatasetSyncWriteMode;
   params: Record<string, MindgoJsonValue>;
 };
@@ -364,7 +365,7 @@ export type MindgoDatasetSyncResult = {
   synced_count: number;
 };
 
-export type JobTriggerType = "schedule" | "manual" | "system";
+export type JobTriggerType = "schedule" | "manual" | "rerun" | "system";
 
 export type JobInstanceStatus =
   | "waiting"

@@ -251,4 +251,4 @@ def _new_id(prefix: str) -> str:
 
 
 def _now() -> datetime:
-    return datetime.now()
+    return datetime.now().replace(microsecond=0)
