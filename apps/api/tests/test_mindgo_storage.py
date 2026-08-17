@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import pytest
-from app.service.mindgo.storage import MindgoDatasetStorage, mindgo_dataset_partition_path
+from app.service.datasource.mindgo.storage import MindgoSourceStorage, mindgo_source_partition_path
 
 
-def test_mindgo_dataset_storage_builds_dataset_partition_path() -> None:
-    storage = MindgoDatasetStorage("/tmp/mindgo-root")
+def test_mindgo_source_storage_builds_source_partition_path() -> None:
+    storage = MindgoSourceStorage("/tmp/mindgo-root")
 
     path = storage.partition_path(
         "stock_a_daily_price",
@@ -18,17 +18,17 @@ def test_mindgo_dataset_storage_builds_dataset_partition_path() -> None:
     )
 
 
-def test_mindgo_dataset_partition_path_rejects_unsafe_segments() -> None:
+def test_mindgo_source_partition_path_rejects_unsafe_segments() -> None:
     with pytest.raises(ValueError):
-        mindgo_dataset_partition_path(
+        mindgo_source_partition_path(
             "/tmp/mindgo-root",
             "../stock_a_daily_price",
             {"trade_day": "20260813"},
         )
 
 
-def test_mindgo_dataset_storage_summarizes_partitions(tmp_path) -> None:
-    storage = MindgoDatasetStorage(tmp_path)
+def test_mindgo_source_storage_summarizes_partitions(tmp_path) -> None:
+    storage = MindgoSourceStorage(tmp_path)
     storage.partition_path(
         "stock_a_daily_price",
         {"trade_day": "20260814"},
@@ -53,8 +53,8 @@ def test_mindgo_dataset_storage_summarizes_partitions(tmp_path) -> None:
     assert summary.partition_count == 2
 
 
-def test_mindgo_dataset_storage_returns_empty_partition_summary(tmp_path) -> None:
-    storage = MindgoDatasetStorage(tmp_path)
+def test_mindgo_source_storage_returns_empty_partition_summary(tmp_path) -> None:
+    storage = MindgoSourceStorage(tmp_path)
 
     summary = storage.partition_summary("stock_a_daily_price", ["trade_day"])
 

@@ -300,7 +300,7 @@ export type MindgoFieldSpec = {
   description: string;
 };
 
-export type MindgoDatasetStorageSpec = {
+export type MindgoSourceStorageSpec = {
   path: string;
   format: "parquet";
   partitioned_by: string[];
@@ -309,42 +309,36 @@ export type MindgoDatasetStorageSpec = {
   partition_count: number;
 };
 
-export type MindgoDatasetSchema = {
+export type MindgoSourceSchema = {
   name: string;
   category_path: string[];
   description: string;
   mindgo_function: string;
-  storage: MindgoDatasetStorageSpec;
+  storage: MindgoSourceStorageSpec;
   query_params: MindgoParameterSpec[];
   result_schema: MindgoFieldSpec[];
 };
 
-export type MindgoDatasetSummary = {
+export type MindgoSourceSummary = {
   id: string;
   name: string;
   category_path: string[];
   description: string;
-  storage: MindgoDatasetStorageSpec;
+  storage: MindgoSourceStorageSpec;
 };
 
-export type MindgoDatasetListResponse = {
-  datasets: MindgoDatasetSummary[];
+export type MindgoSourceListResponse = {
+  sources: MindgoSourceSummary[];
 };
 
-export type MindgoDatasetQueryPayload = {
+export type MindgoSourceQueryPayload = {
   params: Record<string, MindgoJsonValue>;
   page: number;
   page_size: number;
 };
 
-export type MindgoDatasetDuckDBQueryPayload = {
-  sql: string;
-  page: number;
-  page_size: number;
-};
-
-export type MindgoDatasetQueryResponse = {
-  dataset_id: string;
+export type MindgoSourceQueryResponse = {
+  source_id: string;
   page: number;
   page_size: number;
   total: number;
@@ -353,17 +347,17 @@ export type MindgoDatasetQueryResponse = {
   rows: Array<Record<string, MindgoJsonValue>>;
 };
 
-export type MindgoDatasetSyncPayload = {
+export type MindgoSourceSyncPayload = {
   trigger_start_date: string;
   trigger_end_date: string;
   trigger_time: string;
-  write_mode: MindgoDatasetSyncWriteMode;
+  write_mode: MindgoSourceSyncWriteMode;
   params: Record<string, MindgoJsonValue>;
 };
 
-export type MindgoDatasetSyncWriteMode = "overwrite" | "skip";
+export type MindgoSourceSyncWriteMode = "overwrite" | "skip";
 
-export type MindgoDatasetSyncResult = {
+export type MindgoSourceSyncResult = {
   status: "success" | "failed";
   elapsed_ms: number;
   synced_count: number;
@@ -420,22 +414,22 @@ export type JobRuntimeInstanceListParams = {
   page_size?: number;
 };
 
-export type MindgoDatasetSyncTriggerResponse = {
+export type MindgoSourceSyncTriggerResponse = {
   instance: JobRuntimeInstance;
   instances: JobRuntimeInstance[];
 };
 
-export type MindgoDatasetSyncSchedulerPayload = {
+export type MindgoSourceSyncSchedulerPayload = {
   cron: string;
-  write_mode: MindgoDatasetSyncWriteMode;
+  write_mode: MindgoSourceSyncWriteMode;
   params: Record<string, MindgoJsonValue>;
 };
 
-export type MindgoDatasetSyncSchedulerState = {
+export type MindgoSourceSyncSchedulerState = {
   configured: boolean;
   scheduler_id: string | null;
   cron: string | null;
-  write_mode: MindgoDatasetSyncWriteMode;
+  write_mode: MindgoSourceSyncWriteMode;
   params: Record<string, MindgoJsonValue>;
   last_run_at: string | null;
   next_run_at: string | null;
@@ -443,16 +437,67 @@ export type MindgoDatasetSyncSchedulerState = {
   updated_at: string | null;
 };
 
-export type MindgoDatasetSyncStatusResponse = {
-  dataset_id: string;
+export type MindgoSourceSyncStatusResponse = {
+  source_id: string;
   job_type: string;
   job_id: string;
-  scheduler: MindgoDatasetSyncSchedulerState;
+  scheduler: MindgoSourceSyncSchedulerState;
 };
 
 export type MindgoConnectionTestResponse = {
   ok: boolean;
   message: string;
+};
+
+export type Dataset = {
+  id: string;
+  name: string;
+  description: string;
+  category_path: string[];
+  exposed_to_agent: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DatasetDetail = Dataset & {
+  create_sql: string;
+};
+
+export type DatasetPayload = {
+  id?: string | null;
+  name: string;
+  description: string;
+  category_path: string[];
+  exposed_to_agent: boolean;
+  create_sql: string;
+};
+
+export type DatasetUpdatePayload = Partial<
+  Pick<Dataset, "description" | "category_path" | "exposed_to_agent">
+>;
+
+export type DatasetListResponse = {
+  datasets: Dataset[];
+};
+
+export type DatasetQueryColumn = {
+  name: string;
+  value_type: string;
+};
+
+export type DatasetQueryPayload = {
+  sql: string;
+  page: number;
+  page_size: number;
+};
+
+export type DatasetQueryResponse = {
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+  columns: DatasetQueryColumn[];
+  rows: Array<Record<string, MindgoJsonValue>>;
 };
 
 export async function getHealth(): Promise<{ status: string; service?: string }> {
@@ -544,8 +589,8 @@ export async function testModelProviderPayload(
   });
 }
 
-export async function listMindgoDatasets(): Promise<MindgoDatasetListResponse> {
-  return requestJson<MindgoDatasetListResponse>("/api/mindgo/datasets");
+export async function listMindgoSources(): Promise<MindgoSourceListResponse> {
+  return requestJson<MindgoSourceListResponse>("/api/mindgo/sources");
 }
 
 export async function testMindgoConnection(): Promise<MindgoConnectionTestResponse> {
@@ -555,28 +600,44 @@ export async function testMindgoConnection(): Promise<MindgoConnectionTestRespon
   });
 }
 
-export async function getMindgoDatasetSchema(
-  datasetId: string,
-): Promise<MindgoDatasetSchema> {
-  return requestJson<MindgoDatasetSchema>(`/api/mindgo/datasets/${datasetId}/schema`);
+export async function getMindgoSourceSchema(
+  sourceId: string,
+): Promise<MindgoSourceSchema> {
+  return requestJson<MindgoSourceSchema>(`/api/mindgo/sources/${sourceId}/schema`);
 }
 
-export async function queryMindgoDataset(
-  datasetId: string,
-  payload: MindgoDatasetQueryPayload,
-): Promise<MindgoDatasetQueryResponse> {
-  return requestJson<MindgoDatasetQueryResponse>(`/api/mindgo/datasets/${datasetId}/query`, {
+export async function queryMindgoSource(
+  sourceId: string,
+  payload: MindgoSourceQueryPayload,
+): Promise<MindgoSourceQueryResponse> {
+  return requestJson<MindgoSourceQueryResponse>(`/api/mindgo/sources/${sourceId}/query`, {
     method: "POST",
     body: payload,
   });
 }
 
-export async function queryMindgoDatasetFromDuckDB(
-  datasetId: string,
-  payload: MindgoDatasetDuckDBQueryPayload,
-): Promise<MindgoDatasetQueryResponse> {
-  return requestJson<MindgoDatasetQueryResponse>(
-    `/api/mindgo/datasets/${datasetId}/query_from_duckdb`,
+export async function syncMindgoSource(
+  sourceId: string,
+  payload: MindgoSourceSyncPayload,
+): Promise<MindgoSourceSyncTriggerResponse> {
+  return requestJson<MindgoSourceSyncTriggerResponse>(`/api/mindgo/sources/${sourceId}/sync`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function getMindgoSourceSyncStatus(
+  sourceId: string,
+): Promise<MindgoSourceSyncStatusResponse> {
+  return requestJson<MindgoSourceSyncStatusResponse>(`/api/mindgo/sources/${sourceId}/sync`);
+}
+
+export async function upsertMindgoSourceSyncScheduler(
+  sourceId: string,
+  payload: MindgoSourceSyncSchedulerPayload,
+): Promise<MindgoSourceSyncStatusResponse> {
+  return requestJson<MindgoSourceSyncStatusResponse>(
+    `/api/mindgo/sources/${sourceId}/sync/scheduler`,
     {
       method: "POST",
       body: payload,
@@ -584,44 +645,64 @@ export async function queryMindgoDatasetFromDuckDB(
   );
 }
 
-export async function syncMindgoDataset(
-  datasetId: string,
-  payload: MindgoDatasetSyncPayload,
-): Promise<MindgoDatasetSyncTriggerResponse> {
-  return requestJson<MindgoDatasetSyncTriggerResponse>(`/api/mindgo/datasets/${datasetId}/sync`, {
-    method: "POST",
-    body: payload,
-  });
-}
-
-export async function getMindgoDatasetSyncStatus(
-  datasetId: string,
-): Promise<MindgoDatasetSyncStatusResponse> {
-  return requestJson<MindgoDatasetSyncStatusResponse>(`/api/mindgo/datasets/${datasetId}/sync`);
-}
-
-export async function upsertMindgoDatasetSyncScheduler(
-  datasetId: string,
-  payload: MindgoDatasetSyncSchedulerPayload,
-): Promise<MindgoDatasetSyncStatusResponse> {
-  return requestJson<MindgoDatasetSyncStatusResponse>(
-    `/api/mindgo/datasets/${datasetId}/sync/scheduler`,
-    {
-      method: "POST",
-      body: payload,
-    },
-  );
-}
-
-export async function deleteMindgoDatasetSyncScheduler(
-  datasetId: string,
-): Promise<MindgoDatasetSyncStatusResponse> {
-  return requestJson<MindgoDatasetSyncStatusResponse>(
-    `/api/mindgo/datasets/${datasetId}/sync/scheduler`,
+export async function deleteMindgoSourceSyncScheduler(
+  sourceId: string,
+): Promise<MindgoSourceSyncStatusResponse> {
+  return requestJson<MindgoSourceSyncStatusResponse>(
+    `/api/mindgo/sources/${sourceId}/sync/scheduler`,
     {
       method: "DELETE",
     },
   );
+}
+
+export async function listDatasets(
+  exposedToAgent?: boolean,
+): Promise<DatasetListResponse> {
+  const searchParams = new URLSearchParams();
+  if (exposedToAgent !== undefined) {
+    searchParams.set("exposed_to_agent", String(exposedToAgent));
+  }
+  const query = searchParams.toString();
+  return requestJson<DatasetListResponse>(`/api/datasets${query ? `?${query}` : ""}`);
+}
+
+export async function createDataset(
+  payload: DatasetPayload,
+): Promise<DatasetDetail> {
+  return requestJson<DatasetDetail>("/api/datasets", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function getDataset(datasetId: string): Promise<DatasetDetail> {
+  return requestJson<DatasetDetail>(`/api/datasets/${datasetId}`);
+}
+
+export async function updateDataset(
+  datasetId: string,
+  payload: DatasetUpdatePayload,
+): Promise<Dataset> {
+  return requestJson<Dataset>(`/api/datasets/${datasetId}`, {
+    method: "PUT",
+    body: payload,
+  });
+}
+
+export async function deleteDataset(datasetId: string): Promise<void> {
+  return requestJson<void>(`/api/datasets/${datasetId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function queryDatasets(
+  payload: DatasetQueryPayload,
+): Promise<DatasetQueryResponse> {
+  return requestJson<DatasetQueryResponse>("/api/datasets/query", {
+    method: "POST",
+    body: payload,
+  });
 }
 
 export async function listJobRuntimeInstances(

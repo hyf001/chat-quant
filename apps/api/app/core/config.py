@@ -255,7 +255,7 @@ APP_CONFIG_DEFINITIONS: tuple[ConfigDefinition, ...] = (
         "mindgo",
         "string",
         DEFAULT_MINDGO_STORAGE_ROOT,
-        "MindGo 数据集本地存储根目录；数据按 storage_root/dataset_id/partition 管理。",
+        "MindGo 数据源本地存储根目录；数据按 storage_root/source_id/partition 管理。",
     ),
 )
 

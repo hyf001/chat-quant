@@ -7,9 +7,11 @@ import {
   PanelLeftOpen,
   ScrollText,
   SlidersHorizontal,
+  TableProperties,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { DatasetPage } from "../modules/dataset";
 import { AgentSettingsForm } from "../modules/settings/AgentSettingsForm";
 import { DataSourceSettingsForm } from "../modules/settings/DataSourceSettingsForm";
 import { LoggingSettingsForm } from "../modules/settings/LoggingSettingsForm";
@@ -52,6 +54,7 @@ const tabs: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
   { id: "system", label: "系统", icon: SlidersHorizontal },
   { id: "logging", label: "日志", icon: ScrollText },
   { id: "data", label: "数据源", icon: Database },
+  { id: "datasets", label: "数据集", icon: TableProperties },
 ];
 
 export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
@@ -495,6 +498,7 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
                   onToast={showToast}
                 />
               ) : null}
+              {activeTab === "datasets" ? <DatasetPage embedded /> : null}
             </div>
           ) : null}
         </div>

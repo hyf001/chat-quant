@@ -12,7 +12,7 @@ type MindgoJsonScalar = str | int | float | bool | None
 type MindgoJsonValue = MindgoJsonScalar | list[MindgoJsonValue] | dict[str, MindgoJsonValue]
 
 
-class MindgoDatasetSyncWriteMode(StrEnum):
+class MindgoSourceSyncWriteMode(StrEnum):
     OVERWRITE = "overwrite"
     SKIP = "skip"
 
@@ -47,7 +47,7 @@ class MindgoFieldSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class MindgoDatasetStorageSpec(BaseModel):
+class MindgoSourceStorageSpec(BaseModel):
     path: str = Field(min_length=1)
     format: Literal["parquet"]
     partitioned_by: list[str] = Field(default_factory=list)
@@ -58,12 +58,12 @@ class MindgoDatasetStorageSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class MindgoDatasetSchema(BaseModel):
+class MindgoSourceSchema(BaseModel):
     name: str = Field(min_length=1)
     category_path: list[str] = Field(min_length=1)
     description: str = ""
     mindgo_function: str = Field(min_length=1)
-    storage: MindgoDatasetStorageSpec
+    storage: MindgoSourceStorageSpec
     query_params: list[MindgoParameterSpec]
     result_schema: list[MindgoFieldSpec]
 
@@ -82,7 +82,7 @@ class MindgoConnectionConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class MindgoDatasetQueryRequest(BaseModel):
+class MindgoSourceQueryRequest(BaseModel):
     params: dict[str, MindgoJsonValue] = Field(default_factory=dict)
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=50, ge=1, le=500)
@@ -90,48 +90,40 @@ class MindgoDatasetQueryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class MindgoDatasetDuckDBQueryRequest(BaseModel):
-    sql: str = Field(min_length=1)
-    page: int = Field(default=1, ge=1)
-    page_size: int = Field(default=50, ge=1, le=500)
-
-    model_config = ConfigDict(extra="forbid")
-
-
-class MindgoDatasetSyncRequest(BaseModel):
+class MindgoSourceSyncRequest(BaseModel):
     start_date: date
     end_date: date
-    write_mode: MindgoDatasetSyncWriteMode = MindgoDatasetSyncWriteMode.OVERWRITE
+    write_mode: MindgoSourceSyncWriteMode = MindgoSourceSyncWriteMode.OVERWRITE
     params: dict[str, MindgoJsonValue] = Field(default_factory=dict)
 
     model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
-    def validate_date_range(self) -> MindgoDatasetSyncRequest:
+    def validate_date_range(self) -> MindgoSourceSyncRequest:
         if self.start_date > self.end_date:
             msg = "start_date must be less than or equal to end_date"
             raise ValueError(msg)
         return self
 
 
-class MindgoDatasetSyncTriggerRequest(BaseModel):
+class MindgoSourceSyncTriggerRequest(BaseModel):
     trigger_start_date: date
     trigger_end_date: date
     trigger_time: time
-    write_mode: MindgoDatasetSyncWriteMode = MindgoDatasetSyncWriteMode.OVERWRITE
+    write_mode: MindgoSourceSyncWriteMode = MindgoSourceSyncWriteMode.OVERWRITE
     params: dict[str, MindgoJsonValue] = Field(default_factory=dict)
 
     model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
-    def validate_date_range(self) -> MindgoDatasetSyncTriggerRequest:
+    def validate_date_range(self) -> MindgoSourceSyncTriggerRequest:
         if self.trigger_start_date > self.trigger_end_date:
             msg = "trigger_start_date must be less than or equal to trigger_end_date"
             raise ValueError(msg)
         return self
 
 
-class MindgoDatasetSyncResult(BaseModel):
+class MindgoSourceSyncResult(BaseModel):
     status: Literal["success", "failed"]
     elapsed_ms: int = Field(ge=0)
     synced_count: int = Field(ge=0)
@@ -139,26 +131,26 @@ class MindgoDatasetSyncResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class MindgoDatasetSyncTriggerResponse(BaseModel):
+class MindgoSourceSyncTriggerResponse(BaseModel):
     instance: JobRuntimeInstanceResponse
     instances: list[JobRuntimeInstanceResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(extra="forbid")
 
 
-class MindgoDatasetSyncSchedulerRequest(BaseModel):
+class MindgoSourceSyncSchedulerRequest(BaseModel):
     cron: str = Field(min_length=1, max_length=120)
-    write_mode: MindgoDatasetSyncWriteMode = MindgoDatasetSyncWriteMode.OVERWRITE
+    write_mode: MindgoSourceSyncWriteMode = MindgoSourceSyncWriteMode.OVERWRITE
     params: dict[str, MindgoJsonValue] = Field(default_factory=dict)
 
     model_config = ConfigDict(extra="forbid")
 
 
-class MindgoDatasetSyncSchedulerState(BaseModel):
+class MindgoSourceSyncSchedulerState(BaseModel):
     configured: bool
     scheduler_id: str | None = None
     cron: str | None = None
-    write_mode: MindgoDatasetSyncWriteMode = MindgoDatasetSyncWriteMode.OVERWRITE
+    write_mode: MindgoSourceSyncWriteMode = MindgoSourceSyncWriteMode.OVERWRITE
     params: dict[str, MindgoJsonValue] = Field(default_factory=dict)
     last_run_at: datetime | None = None
     next_run_at: datetime | None = None
@@ -168,33 +160,33 @@ class MindgoDatasetSyncSchedulerState(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class MindgoDatasetSyncStatusResponse(BaseModel):
-    dataset_id: str = Field(min_length=1)
+class MindgoSourceSyncStatusResponse(BaseModel):
+    source_id: str = Field(min_length=1)
     job_type: str = Field(min_length=1)
     job_id: str = Field(min_length=1)
-    scheduler: MindgoDatasetSyncSchedulerState
+    scheduler: MindgoSourceSyncSchedulerState
 
     model_config = ConfigDict(extra="forbid")
 
 
-class MindgoDatasetSummary(BaseModel):
+class MindgoSourceSummary(BaseModel):
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
     category_path: list[str] = Field(min_length=1)
     description: str = ""
-    storage: MindgoDatasetStorageSpec
+    storage: MindgoSourceStorageSpec
 
     model_config = ConfigDict(extra="forbid")
 
 
-class MindgoDatasetListResponse(BaseModel):
-    datasets: list[MindgoDatasetSummary]
+class MindgoSourceListResponse(BaseModel):
+    sources: list[MindgoSourceSummary]
 
     model_config = ConfigDict(extra="forbid")
 
 
-class MindgoDatasetQueryResponse(BaseModel):
-    dataset_id: str = Field(min_length=1)
+class MindgoSourceQueryResponse(BaseModel):
+    source_id: str = Field(min_length=1)
     page: int = Field(ge=1)
     page_size: int = Field(ge=1)
     total: int = Field(ge=0)

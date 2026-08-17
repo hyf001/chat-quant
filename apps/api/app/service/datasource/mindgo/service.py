@@ -10,61 +10,64 @@ from app.schema.mindgo import (
     MindgoConnectionConfig,
     MindgoConnectionTestRequest,
     MindgoConnectionTestResponse,
-    MindgoDatasetDuckDBQueryRequest,
-    MindgoDatasetListResponse,
-    MindgoDatasetQueryRequest,
-    MindgoDatasetQueryResponse,
-    MindgoDatasetSchema,
-    MindgoDatasetSummary,
-    MindgoDatasetSyncRequest,
-    MindgoDatasetSyncResult,
     MindgoFieldSpec,
+    MindgoSourceListResponse,
+    MindgoSourceQueryRequest,
+    MindgoSourceQueryResponse,
+    MindgoSourceSchema,
+    MindgoSourceSummary,
+    MindgoSourceSyncRequest,
+    MindgoSourceSyncResult,
 )
-from app.service.mindgo.jupyter_runner import (
+from app.service.datasource.mindgo.jupyter_runner import (
     DEFAULT_MINDGO_AUTH_SCHEME,
     DEFAULT_MINDGO_NOTEBOOK_PATH,
     MindgoJupyterConfig,
     MindgoJupyterRunner,
 )
-from app.service.mindgo.protocol import MindgoDatasetAdapter
-from app.service.mindgo.stock_a_adjust_factor.adaptor import (
+from app.service.datasource.mindgo.protocol import MindgoSourceAdapter
+from app.service.datasource.mindgo.stock_a_adjust_factor.adaptor import (
     StockAAdjustFactorAdapter,
 )
-from app.service.mindgo.stock_a_adjust_factor.constants import STOCK_A_ADJUST_FACTOR_DATASET_ID
-from app.service.mindgo.stock_a_daily_price.adaptor import (
+from app.service.datasource.mindgo.stock_a_adjust_factor.constants import (
+    STOCK_A_ADJUST_FACTOR_SOURCE_ID,
+)
+from app.service.datasource.mindgo.stock_a_daily_price.adaptor import (
     StockADailyPriceAdapter,
 )
-from app.service.mindgo.stock_a_daily_price.constants import STOCK_A_DAILY_PRICE_DATASET_ID
-from app.service.mindgo.storage import MindgoDatasetStorage
+from app.service.datasource.mindgo.stock_a_daily_price.constants import (
+    STOCK_A_DAILY_PRICE_SOURCE_ID,
+)
+from app.service.datasource.mindgo.storage import MindgoSourceStorage
 
 MINDGO_CONNECTION_TEST_MARKER_START = "MINDGO_CONNECTION_TEST_JSON_START"
 MINDGO_CONNECTION_TEST_MARKER_END = "MINDGO_CONNECTION_TEST_JSON_END"
 
 
-class MindgoDatasetNotFoundError(ValueError):
-    def __init__(self, dataset_id: str) -> None:
-        super().__init__(f"MindGo dataset not found: {dataset_id}")
-        self.dataset_id = dataset_id
+class MindgoSourceNotFoundError(ValueError):
+    def __init__(self, source_id: str) -> None:
+        super().__init__(f"MindGo source not found: {source_id}")
+        self.source_id = source_id
 
 
-async def list_datasets() -> MindgoDatasetListResponse:
+async def list_sources() -> MindgoSourceListResponse:
     summaries = []
-    for dataset_id in _dataset_ids():
-        schema = await _schema_for_dataset(dataset_id)
+    for source_id in _source_ids():
+        schema = await _schema_for_source(source_id)
         summaries.append(
-            MindgoDatasetSummary(
-                id=dataset_id,
+            MindgoSourceSummary(
+                id=source_id,
                 name=schema.name,
                 category_path=schema.category_path,
                 description=schema.description,
                 storage=schema.storage,
             )
         )
-    return MindgoDatasetListResponse(datasets=summaries)
+    return MindgoSourceListResponse(sources=summaries)
 
 
-async def get_schema(dataset_id: str) -> MindgoDatasetSchema:
-    return await _schema_for_dataset(dataset_id)
+async def get_source_schema(source_id: str) -> MindgoSourceSchema:
+    return await _schema_for_source(source_id)
 
 
 async def test_connection(request: MindgoConnectionTestRequest) -> MindgoConnectionTestResponse:
@@ -93,15 +96,15 @@ async def test_connection(request: MindgoConnectionTestRequest) -> MindgoConnect
     return MindgoConnectionTestResponse(ok=False, message="连接失败：远端返回异常")
 
 
-async def query_dataset(
-    dataset_id: str,
-    request: MindgoDatasetQueryRequest,
-) -> MindgoDatasetQueryResponse:
-    adapter = _adapter_for_dataset(dataset_id)
-    schema = await adapter.get_schema()
+async def query_source(
+    source_id: str,
+    request: MindgoSourceQueryRequest,
+) -> MindgoSourceQueryResponse:
+    adapter = _adapter_for_source(source_id)
+    schema = await adapter.get_source_schema()
     frame = await adapter.query_from_mindgo(request)
     return _frame_query_response(
-        dataset_id,
+        source_id,
         frame,
         columns=schema.result_schema,
         page=request.page,
@@ -109,55 +112,37 @@ async def query_dataset(
     )
 
 
-async def query_dataset_from_duckdb(
-    dataset_id: str,
-    request: MindgoDatasetDuckDBQueryRequest,
-) -> MindgoDatasetQueryResponse:
-    sql = request.sql.strip()
-    if not sql:
-        raise ValueError("SQL 不能为空")
-    adapter = _adapter_for_dataset(dataset_id, allow_missing_runner=True)
-    frame = await adapter.query_from_duckdb(sql)
-    return _frame_query_response(
-        dataset_id,
-        frame,
-        columns=_columns_from_frame(frame),
-        page=request.page,
-        page_size=request.page_size,
-    )
-
-
-async def sync_dataset(
-    dataset_id: str,
-    request: MindgoDatasetSyncRequest,
-) -> MindgoDatasetSyncResult:
-    adapter = _adapter_for_dataset(dataset_id)
+async def sync_source(
+    source_id: str,
+    request: MindgoSourceSyncRequest,
+) -> MindgoSourceSyncResult:
+    adapter = _adapter_for_source(source_id)
     return await adapter.sync(request)
 
 
-def _dataset_ids() -> tuple[str, ...]:
-    return (STOCK_A_DAILY_PRICE_DATASET_ID, STOCK_A_ADJUST_FACTOR_DATASET_ID)
+def _source_ids() -> tuple[str, ...]:
+    return (STOCK_A_DAILY_PRICE_SOURCE_ID, STOCK_A_ADJUST_FACTOR_SOURCE_ID)
 
 
-async def _schema_for_dataset(dataset_id: str) -> MindgoDatasetSchema:
-    adapter = _adapter_for_dataset(dataset_id, allow_missing_runner=True)
-    return await adapter.get_schema()
+async def _schema_for_source(source_id: str) -> MindgoSourceSchema:
+    adapter = _adapter_for_source(source_id, allow_missing_runner=True)
+    return await adapter.get_source_schema()
 
 
-def _adapter_for_dataset(
-    dataset_id: str,
+def _adapter_for_source(
+    source_id: str,
     *,
     allow_missing_runner: bool = False,
-) -> MindgoDatasetAdapter:
+) -> MindgoSourceAdapter:
     settings = _fresh_settings()
     connection = _connection_from_settings(settings)
     runner = None if allow_missing_runner else _runner_from_connection(connection)
     storage = _storage_from_settings(settings)
-    if dataset_id == STOCK_A_DAILY_PRICE_DATASET_ID:
+    if source_id == STOCK_A_DAILY_PRICE_SOURCE_ID:
         return StockADailyPriceAdapter(runner, storage=storage)
-    if dataset_id == STOCK_A_ADJUST_FACTOR_DATASET_ID:
+    if source_id == STOCK_A_ADJUST_FACTOR_SOURCE_ID:
         return StockAAdjustFactorAdapter(runner, storage=storage)
-    raise MindgoDatasetNotFoundError(dataset_id)
+    raise MindgoSourceNotFoundError(source_id)
 
 
 def _fresh_settings() -> Settings:
@@ -178,8 +163,8 @@ def _connection_from_settings(settings: Settings | None = None) -> MindgoConnect
     )
 
 
-def _storage_from_settings(settings: Settings) -> MindgoDatasetStorage:
-    return MindgoDatasetStorage(settings.mindgo_storage_root)
+def _storage_from_settings(settings: Settings) -> MindgoSourceStorage:
+    return MindgoSourceStorage(settings.mindgo_storage_root)
 
 
 def _runner_from_connection(connection: MindgoConnectionConfig | None):
@@ -215,19 +200,19 @@ def _frame_to_json_rows(frame: pd.DataFrame) -> list[dict[str, Any]]:
 
 
 def _frame_query_response(
-    dataset_id: str,
+    source_id: str,
     frame: pd.DataFrame,
     *,
     columns: list[MindgoFieldSpec],
     page: int,
     page_size: int,
-) -> MindgoDatasetQueryResponse:
+) -> MindgoSourceQueryResponse:
     rows = _frame_to_json_rows(frame)
     total = len(rows)
     start = (page - 1) * page_size
     end = start + page_size
-    return MindgoDatasetQueryResponse(
-        dataset_id=dataset_id,
+    return MindgoSourceQueryResponse(
+        source_id=source_id,
         page=page,
         page_size=page_size,
         total=total,
@@ -235,29 +220,6 @@ def _frame_query_response(
         columns=columns,
         rows=rows[start:end],
     )
-
-
-def _columns_from_frame(frame: pd.DataFrame) -> list[MindgoFieldSpec]:
-    return [
-        MindgoFieldSpec(
-            name=str(column),
-            label=str(column),
-            value_type=_mindgo_field_type(frame[column]),
-        )
-        for column in frame.columns
-    ]
-
-
-def _mindgo_field_type(series: pd.Series) -> str:
-    if pd.api.types.is_bool_dtype(series):
-        return "boolean"
-    if pd.api.types.is_integer_dtype(series):
-        return "integer"
-    if pd.api.types.is_numeric_dtype(series):
-        return "number"
-    if pd.api.types.is_datetime64_any_dtype(series):
-        return "date"
-    return "string"
 
 
 def _json_value(value: Any) -> Any:

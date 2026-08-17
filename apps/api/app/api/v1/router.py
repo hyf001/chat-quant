@@ -5,6 +5,7 @@ from app.api.v1 import (
     chat_api,
     chat_session_api,
     config_api,
+    dataset_api,
     health_api,
     job_runtime_api,
     log_api,
@@ -20,6 +21,7 @@ api_router.include_router(backtest_api.router, prefix="/backtests", tags=["backt
 api_router.include_router(chat_api.router, prefix="/chat", tags=["chat"])
 api_router.include_router(chat_session_api.router, prefix="/chat-sessions", tags=["chat-sessions"])
 api_router.include_router(config_api.router, prefix="/config", tags=["config"])
+api_router.include_router(dataset_api.router, prefix="/datasets", tags=["datasets"])
 api_router.include_router(health_api.router, tags=["health"])
 api_router.include_router(job_runtime_api.router, prefix="/job-runtime", tags=["job-runtime"])
 api_router.include_router(log_api.router, prefix="/logs", tags=["logs"])

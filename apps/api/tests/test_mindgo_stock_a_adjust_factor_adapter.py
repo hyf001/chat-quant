@@ -7,11 +7,11 @@ from datetime import date
 from typing import Any
 
 import pandas as pd
-from app.schema.mindgo import MindgoDatasetQueryRequest, MindgoDatasetSyncRequest
-from app.service.mindgo.stock_a_adjust_factor.adaptor import (
-    STOCK_A_ADJUST_FACTOR_DATASET_ID,
+from app.schema.mindgo import MindgoSourceQueryRequest, MindgoSourceSyncRequest
+from app.service.datasource.mindgo.stock_a_adjust_factor.adaptor import (
     STOCK_A_ADJUST_FACTOR_MARKER_END,
     STOCK_A_ADJUST_FACTOR_MARKER_START,
+    STOCK_A_ADJUST_FACTOR_SOURCE_ID,
     MindgoPartitionedParquetWrite,
     StockAAdjustFactorAdapter,
     normalize_stock_a_adjust_factor,
@@ -54,7 +54,7 @@ class FakeMindgoSyncWriter:
     ) -> int:
         self.calls.append(
             {
-                "dataset_id": write.dataset_id,
+                "source_id": write.source_id,
                 "partition_values": dict(write.partition_values),
                 "path": write.path,
                 "rows": json.loads(frame.to_json(orient="records")),
@@ -69,9 +69,9 @@ class FakeMindgoSyncWriter:
 async def test_stock_a_adjust_factor_schema_contract() -> None:
     adapter = StockAAdjustFactorAdapter()
 
-    schema = await adapter.get_schema()
+    schema = await adapter.get_source_schema()
 
-    assert adapter.dataset_id == STOCK_A_ADJUST_FACTOR_DATASET_ID
+    assert adapter.source_id == STOCK_A_ADJUST_FACTOR_SOURCE_ID
     assert schema.name == "A股复权因子(日)"
     assert schema.mindgo_function == "query_index"
     assert schema.storage.path.endswith("/stock_a_adjust_factor")
@@ -114,7 +114,7 @@ async def test_stock_a_adjust_factor_query_from_mindgo_returns_dataframe() -> No
     adapter = StockAAdjustFactorAdapter(runner)  # type: ignore[arg-type]
 
     frame = await adapter.query_from_mindgo(
-        MindgoDatasetQueryRequest(params={"baseDay": "2026-08-13"})
+        MindgoSourceQueryRequest(params={"baseDay": "2026-08-13"})
     )
 
     assert isinstance(frame, pd.DataFrame)
@@ -234,7 +234,7 @@ async def test_stock_a_adjust_factor_sync_writes_daily_partitions(tmp_path) -> N
     )
 
     result = await adapter.sync(
-        MindgoDatasetSyncRequest(
+        MindgoSourceSyncRequest(
             start_date=date(2026, 8, 13),
             end_date=date(2026, 8, 13),
         )
@@ -246,5 +246,5 @@ async def test_stock_a_adjust_factor_sync_writes_daily_partitions(tmp_path) -> N
         {"trade_day": "20260813"},
         {"trade_day": "20260814"},
     ]
-    assert {call["dataset_id"] for call in writer.calls} == {STOCK_A_ADJUST_FACTOR_DATASET_ID}
+    assert {call["source_id"] for call in writer.calls} == {STOCK_A_ADJUST_FACTOR_SOURCE_ID}
     assert {tuple(call["order_by"]) for call in writer.calls} == {("trade_date", "symbol")}

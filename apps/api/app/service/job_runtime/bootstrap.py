@@ -9,10 +9,10 @@ def register_default_job_runtime_events(
 ) -> JobRuntimeRegistry:
     """Return the registry after job runtime defaults are available."""
     registry = registry or job_runtime_registry
-    from app.service.mindgo.stock_a_adjust_factor.job import (
+    from app.service.datasource.mindgo.stock_a_adjust_factor.job import (
         register_stock_a_adjust_factor_job_runtime_handlers,
     )
-    from app.service.mindgo.stock_a_daily_price.job import (
+    from app.service.datasource.mindgo.stock_a_daily_price.job import (
         register_stock_a_daily_price_job_runtime_handlers,
     )
 

@@ -3,24 +3,24 @@ from datetime import date
 import pandas as pd
 import pytest
 from app.schema.mindgo import (
-    MindgoDatasetQueryRequest,
-    MindgoDatasetSchema,
-    MindgoDatasetStorageSpec,
-    MindgoDatasetSyncRequest,
-    MindgoDatasetSyncResult,
+    MindgoSourceQueryRequest,
+    MindgoSourceSchema,
+    MindgoSourceStorageSpec,
+    MindgoSourceSyncRequest,
+    MindgoSourceSyncResult,
     MindgoFieldSpec,
     MindgoParameterSpec,
 )
 from pydantic import ValidationError
 
 
-def test_mindgo_dataset_schema_protocol_supports_result_schema() -> None:
-    schema = MindgoDatasetSchema(
+def test_mindgo_source_schema_protocol_supports_result_schema() -> None:
+    schema = MindgoSourceSchema(
         name="股票日行情数据(A股)",
         category_path=["股票", "A股", "行情数据(A股)"],
         description="A股股票日频行情数据",
         mindgo_function="get_price",
-        storage=MindgoDatasetStorageSpec(
+        storage=MindgoSourceStorageSpec(
             path="data/mindgo/parquet/stock_a_daily_price",
             format="parquet",
             partitioned_by=["trade_day"],
@@ -60,12 +60,12 @@ def test_mindgo_dataset_schema_protocol_supports_result_schema() -> None:
 
 
 def test_mindgo_query_and_sync_payload_contracts() -> None:
-    query_request = MindgoDatasetQueryRequest(
+    query_request = MindgoSourceQueryRequest(
         params={"securities": ["000001.SZ"], "fq": "pre"},
         page=2,
         page_size=20,
     )
-    sync_request = MindgoDatasetSyncRequest(
+    sync_request = MindgoSourceSyncRequest(
         start_date="2023-02-01",
         end_date="2023-02-03",
         params={"securities": ["000001.SZ"]},
@@ -80,12 +80,12 @@ def test_mindgo_query_and_sync_payload_contracts() -> None:
 
 def test_mindgo_sync_request_requires_date_range() -> None:
     with pytest.raises(ValidationError):
-        MindgoDatasetSyncRequest(params={"securities": ["000001.SZ"]})
+        MindgoSourceSyncRequest(params={"securities": ["000001.SZ"]})
 
 
 def test_mindgo_sync_request_requires_ordered_date_range() -> None:
     with pytest.raises(ValidationError):
-        MindgoDatasetSyncRequest(
+        MindgoSourceSyncRequest(
             start_date=date(2023, 2, 3),
             end_date=date(2023, 2, 1),
             params={"securities": ["000001.SZ"]},
@@ -93,23 +93,23 @@ def test_mindgo_sync_request_requires_ordered_date_range() -> None:
 
 
 def test_mindgo_sync_result_contract() -> None:
-    result = MindgoDatasetSyncResult(status="success", elapsed_ms=123, synced_count=10)
+    result = MindgoSourceSyncResult(status="success", elapsed_ms=123, synced_count=10)
 
     assert result.status == "success"
     assert result.elapsed_ms == 123
     assert result.synced_count == 10
 
 
-async def test_mindgo_dataset_adapter_query_entries_return_dataframes() -> None:
-    class FakeMindgoDatasetAdapter:
-        dataset_id = "stock_a_daily_price"
+async def test_mindgo_source_adapter_query_entries_return_dataframes() -> None:
+    class FakeMindgoSourceAdapter:
+        source_id = "stock_a_daily_price"
 
-        async def get_schema(self) -> MindgoDatasetSchema:
-            return MindgoDatasetSchema(
+        async def get_source_schema(self) -> MindgoSourceSchema:
+            return MindgoSourceSchema(
                 name="股票日行情数据(A股)",
                 category_path=["股票", "A股", "行情数据(A股)"],
                 mindgo_function="get_price",
-                storage=MindgoDatasetStorageSpec(
+                storage=MindgoSourceStorageSpec(
                     path="data/mindgo/parquet/stock_a_daily_price",
                     format="parquet",
                     partitioned_by=["trade_day"],
@@ -118,23 +118,18 @@ async def test_mindgo_dataset_adapter_query_entries_return_dataframes() -> None:
                 result_schema=[],
             )
 
-        async def query_from_mindgo(self, request: MindgoDatasetQueryRequest) -> pd.DataFrame:
+        async def query_from_mindgo(self, request: MindgoSourceQueryRequest) -> pd.DataFrame:
             return pd.DataFrame(
                 [{"symbol": "000001.SZ", "trade_date": "2023-02-01", "close": 14.7}]
             )
 
-        async def query_from_duckdb(self, sql: str) -> pd.DataFrame:
-            return pd.DataFrame([{"sql": sql}])
+        async def sync(self, request: MindgoSourceSyncRequest) -> MindgoSourceSyncResult:
+            return MindgoSourceSyncResult(status="success", elapsed_ms=12, synced_count=1)
 
-        async def sync(self, request: MindgoDatasetSyncRequest) -> MindgoDatasetSyncResult:
-            return MindgoDatasetSyncResult(status="success", elapsed_ms=12, synced_count=1)
-
-    adapter = FakeMindgoDatasetAdapter()
+    adapter = FakeMindgoSourceAdapter()
     frame = await adapter.query_from_mindgo(
-        MindgoDatasetQueryRequest(params={"securities": ["000001.SZ"]})
+        MindgoSourceQueryRequest(params={"securities": ["000001.SZ"]})
     )
-    sql_frame = await adapter.query_from_duckdb("SELECT 1")
 
     assert isinstance(frame, pd.DataFrame)
     assert frame.iloc[0]["symbol"] == "000001.SZ"
-    assert sql_frame.to_dict(orient="records") == [{"sql": "SELECT 1"}]

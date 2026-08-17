@@ -1,8 +1,8 @@
-from app.service.mindgo.stock_a_adjust_factor.constants import (
-    STOCK_A_ADJUST_FACTOR_DATASET_ID,
+from app.service.datasource.mindgo.stock_a_adjust_factor.constants import (
+    STOCK_A_ADJUST_FACTOR_SOURCE_ID,
     STOCK_A_ADJUST_FACTOR_SYNC_JOB_TYPE,
 )
-from app.service.mindgo.stock_a_adjust_factor.job import (
+from app.service.datasource.mindgo.stock_a_adjust_factor.job import (
     StockAAdjustFactorSyncExecutor,
     StockAAdjustFactorSyncInstanceFactory,
     register_stock_a_adjust_factor_job_runtime_handlers,
@@ -10,7 +10,7 @@ from app.service.mindgo.stock_a_adjust_factor.job import (
 )
 
 __all__ = [
-    "STOCK_A_ADJUST_FACTOR_DATASET_ID",
+    "STOCK_A_ADJUST_FACTOR_SOURCE_ID",
     "STOCK_A_ADJUST_FACTOR_SYNC_JOB_TYPE",
     "StockAAdjustFactorSyncExecutor",
     "StockAAdjustFactorSyncInstanceFactory",

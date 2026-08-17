@@ -1,20 +1,21 @@
 from __future__ import annotations
 
 import pandas as pd
-from app.service.mindgo import service as mindgo_service
-from app.service.mindgo.stock_a_adjust_factor.adaptor import stock_a_adjust_factor_schema
-from app.service.mindgo.stock_a_daily_price.adaptor import stock_a_daily_price_schema
+from app.service.datasource.mindgo import service as mindgo_service
+from app.service.datasource.mindgo.jupyter_runner import _portable_mcp_root
+from app.service.datasource.mindgo.stock_a_adjust_factor.adaptor import stock_a_adjust_factor_schema
+from app.service.datasource.mindgo.stock_a_daily_price.adaptor import stock_a_daily_price_schema
 from fastapi.testclient import TestClient
 
 
-def test_mindgo_api_lists_first_dataset(client: TestClient) -> None:
-    response = client.get("/api/mindgo/datasets")
+def test_mindgo_api_lists_first_source(client: TestClient) -> None:
+    response = client.get("/api/mindgo/sources")
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["datasets"][0]["id"] == "stock_a_daily_price"
-    assert payload["datasets"][1]["id"] == "stock_a_adjust_factor"
-    assert payload["datasets"][0]["storage"] == {
+    assert payload["sources"][0]["id"] == "stock_a_daily_price"
+    assert payload["sources"][1]["id"] == "stock_a_adjust_factor"
+    assert payload["sources"][0]["storage"] == {
         "path": "data/mindgo/parquet/stock_a_daily_price",
         "format": "parquet",
         "partitioned_by": ["trade_day"],
@@ -25,7 +26,7 @@ def test_mindgo_api_lists_first_dataset(client: TestClient) -> None:
 
 
 def test_mindgo_api_returns_stock_daily_schema(client: TestClient) -> None:
-    response = client.get("/api/mindgo/datasets/stock_a_daily_price/schema")
+    response = client.get("/api/mindgo/sources/stock_a_daily_price/schema")
 
     assert response.status_code == 200
     payload = response.json()
@@ -42,7 +43,7 @@ def test_mindgo_api_returns_stock_daily_schema(client: TestClient) -> None:
 
 
 def test_mindgo_api_returns_stock_adjust_factor_schema(client: TestClient) -> None:
-    response = client.get("/api/mindgo/datasets/stock_a_adjust_factor/schema")
+    response = client.get("/api/mindgo/sources/stock_a_adjust_factor/schema")
 
     assert response.status_code == 200
     payload = response.json()
@@ -59,14 +60,18 @@ def test_mindgo_api_returns_stock_adjust_factor_schema(client: TestClient) -> No
     ]
 
 
+def test_mindgo_jupyter_runner_finds_bundled_supermind_mcp() -> None:
+    assert (_portable_mcp_root() / "supermind_mcp" / "__init__.py").exists()
+
+
 def test_mindgo_query_uses_default_connection(
     client: TestClient,
     monkeypatch,
 ) -> None:
     class FakeAdapter:
-        dataset_id = "stock_a_daily_price"
+        source_id = "stock_a_daily_price"
 
-        async def get_schema(self):
+        async def get_source_schema(self):
             return stock_a_daily_price_schema()
 
         async def query_from_mindgo(self, request):
@@ -74,20 +79,17 @@ def test_mindgo_query_uses_default_connection(
                 [{"symbol": "000001.SZ", "trade_date": "20260813", "close": 10.0}]
             )
 
-        async def query_from_duckdb(self, sql):
-            raise AssertionError("query_from_duckdb should not run")
-
         async def sync(self, request):
             raise AssertionError("sync should not run")
 
     monkeypatch.setattr(
         mindgo_service,
-        "_adapter_for_dataset",
-        lambda dataset_id, allow_missing_runner=False: FakeAdapter(),
+        "_adapter_for_source",
+        lambda source_id, allow_missing_runner=False: FakeAdapter(),
     )
 
     response = client.post(
-        "/api/mindgo/datasets/stock_a_daily_price/query",
+        "/api/mindgo/sources/stock_a_daily_price/query",
         json={
             "params": {
                 "baseDay": "2026-08-13",
@@ -191,9 +193,9 @@ def test_mindgo_query_paginates_dataframe_rows(
     monkeypatch,
 ) -> None:
     class FakeAdapter:
-        dataset_id = "stock_a_daily_price"
+        source_id = "stock_a_daily_price"
 
-        async def get_schema(self):
+        async def get_source_schema(self):
             return stock_a_daily_price_schema()
 
         async def query_from_mindgo(self, request):
@@ -205,20 +207,17 @@ def test_mindgo_query_paginates_dataframe_rows(
                 ]
             )
 
-        async def query_from_duckdb(self, sql):
-            raise AssertionError("query_from_duckdb should not run")
-
         async def sync(self, request):
             raise AssertionError("sync should not run")
 
     monkeypatch.setattr(
         mindgo_service,
-        "_adapter_for_dataset",
-        lambda dataset_id, allow_missing_runner=False: FakeAdapter(),
+        "_adapter_for_source",
+        lambda source_id, allow_missing_runner=False: FakeAdapter(),
     )
 
     response = client.post(
-        "/api/mindgo/datasets/stock_a_daily_price/query",
+        "/api/mindgo/sources/stock_a_daily_price/query",
         json={"params": {}, "page": 2, "page_size": 2},
     )
 
@@ -231,66 +230,20 @@ def test_mindgo_query_paginates_dataframe_rows(
     ]
 
 
-def test_mindgo_query_from_duckdb_paginates_sql_rows(
-    client: TestClient,
-    monkeypatch,
-) -> None:
-    class FakeAdapter:
-        dataset_id = "stock_a_daily_price"
-
-        async def get_schema(self):
-            raise AssertionError("schema should not run")
-
-        async def query_from_mindgo(self, request):
-            raise AssertionError("query_from_mindgo should not run")
-
-        async def query_from_duckdb(self, sql):
-            assert sql == "SELECT * FROM stock_a_daily_price"
-            return pd.DataFrame(
-                [
-                    {"symbol": "000001.SZ", "close": 10.0},
-                    {"symbol": "000002.SZ", "close": 11.0},
-                    {"symbol": "000003.SZ", "close": 12.0},
-                ]
-            )
-
-        async def sync(self, request):
-            raise AssertionError("sync should not run")
-
-    monkeypatch.setattr(
-        mindgo_service,
-        "_adapter_for_dataset",
-        lambda dataset_id, allow_missing_runner=False: FakeAdapter(),
-    )
-
-    response = client.post(
-        "/api/mindgo/datasets/stock_a_daily_price/query_from_duckdb",
-        json={"sql": " SELECT * FROM stock_a_daily_price ", "page": 2, "page_size": 2},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["total"] == 3
-    assert payload["total_pages"] == 2
-    assert [column["name"] for column in payload["columns"]] == ["symbol", "close"]
-    assert [column["value_type"] for column in payload["columns"]] == ["string", "number"]
-    assert payload["rows"] == [{"symbol": "000003.SZ", "close": 12.0}]
-
-
 def test_mindgo_sync_runs_immediate_import(
     client: TestClient,
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
         mindgo_service,
-        "_adapter_for_dataset",
-        lambda dataset_id, allow_missing_runner=False: (_ for _ in ()).throw(
+        "_adapter_for_source",
+        lambda source_id, allow_missing_runner=False: (_ for _ in ()).throw(
             AssertionError("sync endpoint should only create job instances")
         ),
     )
 
     response = client.post(
-        "/api/mindgo/datasets/stock_a_daily_price/sync",
+        "/api/mindgo/sources/stock_a_daily_price/sync",
         json={
             "trigger_start_date": "2026-08-13",
             "trigger_end_date": "2026-08-15",
@@ -331,28 +284,25 @@ def test_mindgo_sync_supports_stock_adjust_factor(
     monkeypatch,
 ) -> None:
     class FakeAdapter:
-        dataset_id = "stock_a_adjust_factor"
+        source_id = "stock_a_adjust_factor"
 
-        async def get_schema(self):
+        async def get_source_schema(self):
             return stock_a_adjust_factor_schema()
 
         async def query_from_mindgo(self, request):
             raise AssertionError("query_from_mindgo should not run")
-
-        async def query_from_duckdb(self, sql):
-            raise AssertionError("query_from_duckdb should not run")
 
         async def sync(self, request):
             raise AssertionError("sync should not run")
 
     monkeypatch.setattr(
         mindgo_service,
-        "_adapter_for_dataset",
-        lambda dataset_id, allow_missing_runner=False: FakeAdapter(),
+        "_adapter_for_source",
+        lambda source_id, allow_missing_runner=False: FakeAdapter(),
     )
 
     response = client.post(
-        "/api/mindgo/datasets/stock_a_adjust_factor/sync",
+        "/api/mindgo/sources/stock_a_adjust_factor/sync",
         json={
             "trigger_start_date": "2026-08-13",
             "trigger_end_date": "2026-08-13",

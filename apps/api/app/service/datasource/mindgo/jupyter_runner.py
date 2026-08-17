@@ -143,8 +143,14 @@ def _extract_marked_json(
 
 
 def _ensure_portable_mcp_importable() -> None:
-    root = Path(__file__).resolve().parents[5]
-    portable_mcp_root = root / "docs" / "mindgo" / "mindgo-mcp-portable"
+    portable_mcp_root = _portable_mcp_root()
     if str(portable_mcp_root) not in sys.path:
         sys.path.insert(0, str(portable_mcp_root))
 
+
+def _portable_mcp_root() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "docs" / "mindgo" / "mindgo-mcp-portable"
+        if (candidate / "supermind_mcp" / "__init__.py").exists():
+            return candidate
+    raise MindgoRemoteExecutionError("Could not locate bundled supermind_mcp package")

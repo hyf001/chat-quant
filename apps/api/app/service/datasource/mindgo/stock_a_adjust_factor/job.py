@@ -4,7 +4,11 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schema.mindgo import MindgoDatasetSyncRequest
+from app.schema.mindgo import MindgoSourceSyncRequest
+from app.service.datasource.mindgo.stock_a_adjust_factor.constants import (
+    STOCK_A_ADJUST_FACTOR_SOURCE_ID,
+    STOCK_A_ADJUST_FACTOR_SYNC_JOB_TYPE,
+)
 from app.service.job_runtime import (
     ExecutionResult,
     JobRef,
@@ -14,23 +18,19 @@ from app.service.job_runtime import (
     TriggerType,
     job_runtime_registry,
 )
-from app.service.mindgo.stock_a_daily_price.constants import (
-    STOCK_A_DAILY_PRICE_DATASET_ID,
-    STOCK_A_DAILY_PRICE_SYNC_JOB_TYPE,
-)
 
 if TYPE_CHECKING:
     from app.model.job_runtime import JobInstanceRow
 
 
-def stock_a_daily_price_sync_job_ref() -> JobRef:
+def stock_a_adjust_factor_sync_job_ref() -> JobRef:
     return JobRef(
-        job_type=STOCK_A_DAILY_PRICE_SYNC_JOB_TYPE,
-        job_id=STOCK_A_DAILY_PRICE_SYNC_JOB_TYPE,
+        job_type=STOCK_A_ADJUST_FACTOR_SYNC_JOB_TYPE,
+        job_id=STOCK_A_ADJUST_FACTOR_SYNC_JOB_TYPE,
     )
 
 
-class StockADailyPriceSyncInstanceFactory:
+class StockAAdjustFactorSyncInstanceFactory:
     async def create_job_instances(
         self,
         db: AsyncSession,
@@ -52,7 +52,7 @@ class StockADailyPriceSyncInstanceFactory:
         ]
 
 
-class StockADailyPriceSyncExecutor:
+class StockAAdjustFactorSyncExecutor:
     async def execute_job_instance(
         self,
         db: AsyncSession,
@@ -61,32 +61,32 @@ class StockADailyPriceSyncExecutor:
         instance_service: JobRuntimeInstanceService,
     ) -> ExecutionResult:
         _ = db, instance_service
-        from app.service.mindgo import service as mindgo_service
+        from app.service.datasource.mindgo import service as mindgo_service
 
-        request = MindgoDatasetSyncRequest.model_validate(instance.trigger_payload_json or {})
-        result = await mindgo_service.sync_dataset(STOCK_A_DAILY_PRICE_DATASET_ID, request)
+        request = MindgoSourceSyncRequest.model_validate(instance.trigger_payload_json or {})
+        result = await mindgo_service.sync_source(STOCK_A_ADJUST_FACTOR_SOURCE_ID, request)
         return ExecutionResult(
             result_status=result.status,
             summary=f"synced {result.synced_count} rows",
             payload={
-                "dataset_id": STOCK_A_DAILY_PRICE_DATASET_ID,
+                "source_id": STOCK_A_ADJUST_FACTOR_SOURCE_ID,
                 "elapsed_ms": result.elapsed_ms,
                 "synced_count": result.synced_count,
             },
         )
 
 
-def register_stock_a_daily_price_job_runtime_handlers(
+def register_stock_a_adjust_factor_job_runtime_handlers(
     registry: JobRuntimeRegistry | None = None,
 ) -> JobRuntimeRegistry:
     registry = registry or job_runtime_registry
     registry.register_instance_factory(
-        job_type=STOCK_A_DAILY_PRICE_SYNC_JOB_TYPE,
-        factory=StockADailyPriceSyncInstanceFactory(),
+        job_type=STOCK_A_ADJUST_FACTOR_SYNC_JOB_TYPE,
+        factory=StockAAdjustFactorSyncInstanceFactory(),
     )
     registry.register_job_executor(
-        job_type=STOCK_A_DAILY_PRICE_SYNC_JOB_TYPE,
-        executor=StockADailyPriceSyncExecutor(),
+        job_type=STOCK_A_ADJUST_FACTOR_SYNC_JOB_TYPE,
+        executor=StockAAdjustFactorSyncExecutor(),
     )
     return registry
 

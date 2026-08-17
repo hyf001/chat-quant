@@ -466,9 +466,9 @@ export function WorkbenchPage() {
             onOpenInspectorObject={setActiveInspectorObject}
             onPromptSelect={handleSendMessage}
           />
-        ) : (
+        ) : activeRoute === "strategies" ? (
           <StrategyList project={activeProject} />
-        )
+        ) : null
       }
       composer={
         activeRoute === "new-task" && !hasNoProjects ? (

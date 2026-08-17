@@ -3,7 +3,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Code2,
   Database,
   FolderOpen,
   Loader2,
@@ -16,32 +15,32 @@ import {
   Settings,
   Server,
   Trash2,
+  X,
 } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   deleteJobRuntimeInstance,
-  deleteMindgoDatasetSyncScheduler,
-  getMindgoDatasetSyncStatus,
-  getMindgoDatasetSchema,
+  deleteMindgoSourceSyncScheduler,
+  getMindgoSourceSyncStatus,
+  getMindgoSourceSchema,
   listJobRuntimeInstances,
-  listMindgoDatasets,
-  queryMindgoDataset,
-  queryMindgoDatasetFromDuckDB,
+  listMindgoSources,
+  queryMindgoSource,
   rerunJobRuntimeInstance,
-  syncMindgoDataset,
+  syncMindgoSource,
   testMindgoConnection,
-  upsertMindgoDatasetSyncScheduler,
+  upsertMindgoSourceSyncScheduler,
   type AppSettings,
   type JobInstanceStatus,
   type JobRuntimeInstance,
   type JobRuntimeInstanceListResponse,
-  type MindgoDatasetQueryResponse,
-  type MindgoDatasetSchema,
-  type MindgoDatasetSummary,
-  type MindgoDatasetStorageSpec,
-  type MindgoDatasetSyncStatusResponse,
-  type MindgoDatasetSyncWriteMode,
+  type MindgoSourceQueryResponse,
+  type MindgoSourceSchema,
+  type MindgoSourceSummary,
+  type MindgoSourceStorageSpec,
+  type MindgoSourceSyncStatusResponse,
+  type MindgoSourceSyncWriteMode,
   type MindgoJsonValue,
   type MindgoParameterSpec,
   type MindgoSettings,
@@ -55,7 +54,7 @@ type DataSourceSettingsFormProps = {
 };
 
 type MindgoParamDraft = Record<string, MindgoJsonValue>;
-type MindgoQueryMode = "mindgo" | "duckdb" | "sync";
+type MindgoSourceMode = "mindgo" | "sync";
 type SyncInstanceStatusFilter = JobInstanceStatus | "all";
 type SchedulerFrequency = "daily" | "workdays" | "weekly" | "monthly" | "custom";
 
@@ -67,24 +66,21 @@ type SchedulerScheduleDraft = {
   customCron: string;
 };
 
-type MindgoDatasetUiMeta = {
+type MindgoSourceUiMeta = {
   badge: string;
-  duckdbColumns: string[];
 };
 
 const today = formatLocalDate(new Date());
 const defaultSyncTime = formatLocalTime(new Date());
 const defaultSyncCron = "0 18 * * 1-5";
-const defaultSyncWriteMode: MindgoDatasetSyncWriteMode = "overwrite";
+const defaultSyncWriteMode: MindgoSourceSyncWriteMode = "overwrite";
 const defaultSyncInstancePageSize = 8;
-const mindgoDatasetUiMeta: Record<string, MindgoDatasetUiMeta> = {
+const mindgoSourceUiMeta: Record<string, MindgoSourceUiMeta> = {
   stock_a_daily_price: {
     badge: "1015 日行情",
-    duckdbColumns: ["symbol", "trade_date", "name", "open", "high", "low", "close"],
   },
   stock_a_adjust_factor: {
     badge: "1016 复权因子",
-    duckdbColumns: ["symbol", "trade_date", "name", "factor"],
   },
 };
 const syncInstanceStatusOptions: Array<{ value: SyncInstanceStatusFilter; label: string }> = [
@@ -126,28 +122,27 @@ export function DataSourceSettingsForm({
   onSaveMindgoSettings,
   onToast,
 }: DataSourceSettingsFormProps) {
-  const [datasets, setDatasets] = useState<MindgoDatasetSummary[]>([]);
-  const [selectedDatasetId, setSelectedDatasetId] = useState("stock_a_daily_price");
-  const [schema, setSchema] = useState<MindgoDatasetSchema | null>(null);
+  const [sources, setSources] = useState<MindgoSourceSummary[]>([]);
+  const [selectedSourceId, setSelectedSourceId] = useState("stock_a_daily_price");
+  const [schema, setSchema] = useState<MindgoSourceSchema | null>(null);
   const [params, setParams] = useState<MindgoParamDraft>({});
-  const [queryMode, setQueryMode] = useState<MindgoQueryMode>("mindgo");
-  const [duckdbSql, setDuckdbSql] = useState("");
-  const [queryResult, setQueryResult] = useState<MindgoDatasetQueryResponse | null>(null);
-  const [syncStatus, setSyncStatus] = useState<MindgoDatasetSyncStatusResponse | null>(null);
+  const [queryMode, setQueryMode] = useState<MindgoSourceMode>("mindgo");
+  const [queryResult, setQueryResult] = useState<MindgoSourceQueryResponse | null>(null);
+  const [syncStatus, setSyncStatus] = useState<MindgoSourceSyncStatusResponse | null>(null);
   const [syncInstances, setSyncInstances] = useState<JobRuntimeInstanceListResponse | null>(null);
   const [syncInstancePage, setSyncInstancePage] = useState(1);
   const [syncInstancePageSize, setSyncInstancePageSize] = useState(defaultSyncInstancePageSize);
   const [syncInstanceStatusFilter, setSyncInstanceStatusFilter] = useState<SyncInstanceStatusFilter>("all");
   const [cronDraft, setCronDraft] = useState(defaultSyncCron);
-  const [manualWriteModeDraft, setManualWriteModeDraft] = useState<MindgoDatasetSyncWriteMode>(defaultSyncWriteMode);
-  const [schedulerWriteModeDraft, setSchedulerWriteModeDraft] = useState<MindgoDatasetSyncWriteMode>(defaultSyncWriteMode);
+  const [manualWriteModeDraft, setManualWriteModeDraft] = useState<MindgoSourceSyncWriteMode>(defaultSyncWriteMode);
+  const [schedulerWriteModeDraft, setSchedulerWriteModeDraft] = useState<MindgoSourceSyncWriteMode>(defaultSyncWriteMode);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [isConnectionOpen, setIsConnectionOpen] = useState(false);
-  const [isLoadingDatasets, setIsLoadingDatasets] = useState(false);
+  const [isLoadingSources, setIsLoadingSources] = useState(false);
   const [isLoadingSchema, setIsLoadingSchema] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
-  const [isDatasetSidebarCollapsed, setIsDatasetSidebarCollapsed] = useState(false);
+  const [isSourceSidebarCollapsed, setIsSourceSidebarCollapsed] = useState(false);
   const [isQuerying, setIsQuerying] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoadingSyncStatus, setIsLoadingSyncStatus] = useState(false);
@@ -156,42 +151,45 @@ export function DataSourceSettingsForm({
   const [isSavingScheduler, setIsSavingScheduler] = useState(false);
   const [isManualSyncOpen, setIsManualSyncOpen] = useState(false);
   const [isSchedulerSettingsOpen, setIsSchedulerSettingsOpen] = useState(false);
+  const [storageDialog, setStorageDialog] = useState<{
+    sourceName: string;
+    storage: MindgoSourceStorageSpec;
+  } | null>(null);
   const [syncStartDateDraft, setSyncStartDateDraft] = useState(today);
   const [syncEndDateDraft, setSyncEndDateDraft] = useState(today);
   const [syncTimeDraft, setSyncTimeDraft] = useState(defaultSyncTime);
 
-  const selectedDataset = useMemo(
-    () => datasets.find((dataset) => dataset.id === selectedDatasetId) ?? datasets[0] ?? null,
-    [datasets, selectedDatasetId],
+  const selectedSource = useMemo(
+    () => sources.find((source) => source.id === selectedSourceId) ?? sources[0] ?? null,
+    [sources, selectedSourceId],
   );
 
-  const loadDatasets = useCallback(async () => {
-    setIsLoadingDatasets(true);
+  const loadSources = useCallback(async () => {
+    setIsLoadingSources(true);
     try {
-      const response = await listMindgoDatasets();
-      setDatasets(response.datasets);
-      if (response.datasets.length > 0) {
-        setSelectedDatasetId((current) =>
-          response.datasets.some((dataset) => dataset.id === current)
+      const response = await listMindgoSources();
+      setSources(response.sources);
+      if (response.sources.length > 0) {
+        setSelectedSourceId((current) =>
+          response.sources.some((source) => source.id === current)
             ? current
-            : response.datasets[0].id,
+            : response.sources[0].id,
         );
       }
     } catch (caught) {
-      onToast(caught instanceof Error ? caught.message : "数据集加载失败", "error");
+      onToast(caught instanceof Error ? caught.message : "数据源加载失败", "error");
     } finally {
-      setIsLoadingDatasets(false);
+      setIsLoadingSources(false);
     }
   }, [onToast]);
 
-  const loadSchema = useCallback(async (datasetId: string) => {
+  const loadSchema = useCallback(async (sourceId: string) => {
     setIsLoadingSchema(true);
     setQueryResult(null);
     try {
-      const nextSchema = await getMindgoDatasetSchema(datasetId);
+      const nextSchema = await getMindgoSourceSchema(sourceId);
       setSchema(nextSchema);
       setParams(defaultParamsFromSchema(nextSchema));
-      setDuckdbSql(defaultDuckDBSql(datasetId, nextSchema));
       setPage(1);
     } catch (caught) {
       setSchema(null);
@@ -235,12 +233,12 @@ export function DataSourceSettingsForm({
   }, [onToast]);
 
   const loadSyncStatus = useCallback(async (
-    datasetId: string,
+    sourceId: string,
     statusFilter: SyncInstanceStatusFilter = "all",
   ) => {
     setIsLoadingSyncStatus(true);
     try {
-      const response = await getMindgoDatasetSyncStatus(datasetId);
+      const response = await getMindgoSourceSyncStatus(sourceId);
       setSyncStatus(response);
       setCronDraft(response.scheduler.cron ?? defaultSyncCron);
       setSchedulerWriteModeDraft(response.scheduler.write_mode ?? defaultSyncWriteMode);
@@ -253,25 +251,25 @@ export function DataSourceSettingsForm({
     } catch (caught) {
       setSyncStatus(null);
       setSyncInstances(null);
-      if (selectedDatasetId === datasetId) {
+      if (selectedSourceId === sourceId) {
         onToast(caught instanceof Error ? caught.message : "同步状态加载失败", "error");
       }
     } finally {
       setIsLoadingSyncStatus(false);
     }
-  }, [loadSyncInstances, onToast, selectedDatasetId]);
+  }, [loadSyncInstances, onToast, selectedSourceId]);
 
   useEffect(() => {
-    void loadDatasets();
-  }, [loadDatasets]);
+    void loadSources();
+  }, [loadSources]);
 
   useEffect(() => {
-    if (selectedDatasetId) {
+    if (selectedSourceId) {
       setSyncInstanceStatusFilter("all");
-      void loadSchema(selectedDatasetId);
-      void loadSyncStatus(selectedDatasetId, "all");
+      void loadSchema(selectedSourceId);
+      void loadSyncStatus(selectedSourceId, "all");
     }
-  }, [loadSchema, loadSyncStatus, selectedDatasetId]);
+  }, [loadSchema, loadSyncStatus, selectedSourceId]);
 
   const updateParam = (name: string, value: MindgoJsonValue) => {
     setParams((current) => ({ ...current, [name]: value }));
@@ -328,10 +326,6 @@ export function DataSourceSettingsForm({
   };
 
   const handleQuery = async (nextPage = page) => {
-    if (queryMode === "duckdb") {
-      await handleDuckDBQuery(nextPage);
-      return;
-    }
     await handleMindgoQuery(nextPage);
   };
 
@@ -341,7 +335,7 @@ export function DataSourceSettingsForm({
     }
     setIsQuerying(true);
     try {
-      const response = await queryMindgoDataset(selectedDatasetId, {
+      const response = await queryMindgoSource(selectedSourceId, {
         params: cleanParams(params),
         page: nextPage,
         page_size: pageSize,
@@ -356,33 +350,11 @@ export function DataSourceSettingsForm({
     }
   };
 
-  const handleDuckDBQuery = async (nextPage = page) => {
-    if (!schema || !duckdbSql.trim()) {
-      return;
-    }
-    setIsQuerying(true);
-    setQueryResult(null);
-    try {
-      const response = await queryMindgoDatasetFromDuckDB(selectedDatasetId, {
-        sql: duckdbSql,
-        page: nextPage,
-        page_size: pageSize,
-      });
-      setPage(response.page);
-      setQueryResult(response);
-      onToast(`DuckDB 查询完成：${response.total} 行`, "success");
-    } catch (caught) {
-      onToast(caught instanceof Error ? caught.message : "DuckDB 查询失败", "error");
-    } finally {
-      setIsQuerying(false);
-    }
-  };
-
   const handleSync = async () => {
     setIsSyncing(true);
     setQueryResult(null);
     try {
-      const response = await syncMindgoDataset(selectedDatasetId, {
+      const response = await syncMindgoSource(selectedSourceId, {
         trigger_start_date: syncStartDateDraft,
         trigger_end_date: syncEndDateDraft,
         trigger_time: syncTimeDraft,
@@ -390,7 +362,7 @@ export function DataSourceSettingsForm({
         params: {},
       });
       const instances = response.instances.length > 0 ? response.instances : [response.instance];
-      await loadSyncStatus(selectedDatasetId, syncInstanceStatusFilter);
+      await loadSyncStatus(selectedSourceId, syncInstanceStatusFilter);
       setIsManualSyncOpen(false);
       onToast(syncInstancesToast(instances), instances.some((instance) => instance.status === "failed") ? "error" : "success");
     } catch (caught) {
@@ -401,10 +373,10 @@ export function DataSourceSettingsForm({
   };
 
   const handleRefreshSyncRuntime = async () => {
-    if (!selectedDatasetId) {
+    if (!selectedSourceId) {
       return;
     }
-    await loadSyncStatus(selectedDatasetId, syncInstanceStatusFilter);
+    await loadSyncStatus(selectedSourceId, syncInstanceStatusFilter);
   };
 
   const handleSyncInstancePageChange = async (nextPage: number) => {
@@ -500,7 +472,7 @@ export function DataSourceSettingsForm({
   const handleSaveScheduler = async () => {
     setIsSavingScheduler(true);
     try {
-      const response = await upsertMindgoDatasetSyncScheduler(selectedDatasetId, {
+      const response = await upsertMindgoSourceSyncScheduler(selectedSourceId, {
         cron: cronDraft,
         write_mode: schedulerWriteModeDraft,
         params: {},
@@ -519,7 +491,7 @@ export function DataSourceSettingsForm({
   const handleDeleteScheduler = async () => {
     setIsSavingScheduler(true);
     try {
-      const response = await deleteMindgoDatasetSyncScheduler(selectedDatasetId);
+      const response = await deleteMindgoSourceSyncScheduler(selectedSourceId);
       setSyncStatus(response);
       onToast("周期同步已下线", "success");
     } catch (caught) {
@@ -540,7 +512,7 @@ export function DataSourceSettingsForm({
     setIsSchedulerSettingsOpen(true);
   };
 
-  const canUseDataset = Boolean(schema && selectedDataset);
+  const canUseSource = Boolean(schema && selectedSource);
   const isBusy = isLoadingSchema || isQuerying || isSyncing || isTesting || isSavingScheduler;
 
   return (
@@ -635,30 +607,30 @@ export function DataSourceSettingsForm({
 
       <section
         className={`grid gap-4 transition-[grid-template-columns] duration-200 ${
-          isDatasetSidebarCollapsed
+          isSourceSidebarCollapsed
             ? "xl:grid-cols-[56px_minmax(0,1fr)]"
             : "xl:grid-cols-[280px_minmax(0,1fr)]"
         }`}
       >
         <div
           className={`rounded-md border border-line bg-soft xl:self-start ${
-            isDatasetSidebarCollapsed ? "grid place-items-center gap-2 p-2" : "grid gap-3 p-3"
+            isSourceSidebarCollapsed ? "grid place-items-center gap-2 p-2" : "grid gap-3 p-3"
           }`}
         >
           <div className="flex items-center justify-between gap-2">
-            {isDatasetSidebarCollapsed ? null : (
-              <h2 className="text-sm font-semibold text-ink">已接入数据集</h2>
+            {isSourceSidebarCollapsed ? null : (
+              <h2 className="text-sm font-semibold text-ink">已接入数据源</h2>
             )}
             <div className="flex items-center gap-1.5">
-              {isLoadingDatasets ? <Loader2 className="h-4 w-4 animate-spin text-muted" /> : null}
+              {isLoadingSources ? <Loader2 className="h-4 w-4 animate-spin text-muted" /> : null}
               <button
                 className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
                 type="button"
-                title={isDatasetSidebarCollapsed ? "展开数据集" : "收起数据集"}
-                aria-label={isDatasetSidebarCollapsed ? "展开数据集" : "收起数据集"}
-                onClick={() => setIsDatasetSidebarCollapsed((current) => !current)}
+                title={isSourceSidebarCollapsed ? "展开数据源" : "收起数据源"}
+                aria-label={isSourceSidebarCollapsed ? "展开数据源" : "收起数据源"}
+                onClick={() => setIsSourceSidebarCollapsed((current) => !current)}
               >
-                {isDatasetSidebarCollapsed ? (
+                {isSourceSidebarCollapsed ? (
                   <ChevronRight className="h-3.5 w-3.5" />
                 ) : (
                   <ChevronLeft className="h-3.5 w-3.5" />
@@ -666,35 +638,44 @@ export function DataSourceSettingsForm({
               </button>
             </div>
           </div>
-          {isDatasetSidebarCollapsed ? (
+          {isSourceSidebarCollapsed ? (
             <div
               className="grid h-10 w-10 place-items-center rounded-md border border-line bg-panel text-graphite"
-              title={`已接入 ${datasets.length} 个数据集`}
-              aria-label={`已接入 ${datasets.length} 个数据集`}
+              title={`已接入 ${sources.length} 个数据源`}
+              aria-label={`已接入 ${sources.length} 个数据源`}
             >
               <Database className="h-4 w-4" />
             </div>
           ) : (
             <div className="grid gap-2">
-              {datasets.map((dataset) => (
+              {sources.map((source) => (
                 <button
-                  className={`group relative grid gap-1 rounded-md border py-2 pl-3 pr-9 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-signal/20 ${
-                    selectedDatasetId === dataset.id
+                  className={`group relative grid gap-1 rounded-md border py-2 pl-3 pr-14 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-signal/20 ${
+                    selectedSourceId === source.id
                       ? "border-ink bg-panel text-ink"
                       : "border-line bg-panel/60 text-graphite hover:border-signal"
                   }`}
-                  key={dataset.id}
+                  key={source.id}
                   type="button"
-                  onClick={() => setSelectedDatasetId(dataset.id)}
+                  onClick={() => setSelectedSourceId(source.id)}
                 >
                   <span className="flex min-w-0 items-center gap-1.5">
-                    <span className="truncate text-xs font-semibold">{dataset.name}</span>
-                    <DatasetBadge datasetId={dataset.id} />
+                    <span className="truncate text-xs font-semibold">{source.name}</span>
+                    <SourceBadge sourceId={source.id} />
                   </span>
                   <span className="text-[11px] leading-4 text-muted">
-                    {dataset.category_path.join(" / ")}
+                    {source.category_path.join(" / ")}
                   </span>
-                  <StorageSummary storage={dataset.storage} compact />
+                  <StorageSummary
+                    storage={source.storage}
+                    compact
+                    onOpen={() =>
+                      setStorageDialog({
+                        sourceName: source.name,
+                        storage: source.storage,
+                      })
+                    }
+                  />
                 </button>
               ))}
             </div>
@@ -707,19 +688,19 @@ export function DataSourceSettingsForm({
               <div className="min-w-0">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <h2 className="truncate text-sm font-semibold text-ink">
-                    {selectedDataset?.name ?? "数据集"}
+                    {selectedSource?.name ?? "数据源"}
                   </h2>
-                  {selectedDataset ? <DatasetBadge datasetId={selectedDataset.id} /> : null}
+                  {selectedSource ? <SourceBadge sourceId={selectedSource.id} /> : null}
                 </div>
                 <p className="mt-1 text-xs leading-5 text-muted">
-                  {selectedDataset?.description ?? "选择一个数据集后开始查询。"}
+                  {selectedSource?.description ?? "选择一个数据源后开始查询。"}
                 </p>
               </div>
             </div>
 
             {schema ? (
               <div className="grid gap-3">
-                <div className="inline-grid w-fit grid-cols-3 rounded-md border border-line bg-soft p-1">
+                <div className="inline-grid w-fit grid-cols-2 rounded-md border border-line bg-soft p-1">
                   <button
                     className={`inline-flex h-8 items-center gap-1.5 rounded px-2.5 text-xs font-semibold transition-colors ${
                       queryMode === "mindgo"
@@ -735,22 +716,6 @@ export function DataSourceSettingsForm({
                   >
                     <Server className="h-3.5 w-3.5" />
                     MindGo 查询
-                  </button>
-                  <button
-                    className={`inline-flex h-8 items-center gap-1.5 rounded px-2.5 text-xs font-semibold transition-colors ${
-                      queryMode === "duckdb"
-                        ? "bg-panel text-ink shadow-sm"
-                        : "text-muted hover:text-ink"
-                    }`}
-                    type="button"
-                    onClick={() => {
-                      setQueryMode("duckdb");
-                      setQueryResult(null);
-                      setPage(1);
-                    }}
-                  >
-                    <Database className="h-3.5 w-3.5" />
-                    DuckDB SQL
                   </button>
                   <button
                     className={`inline-flex h-8 items-center gap-1.5 rounded px-2.5 text-xs font-semibold transition-colors ${
@@ -780,27 +745,9 @@ export function DataSourceSettingsForm({
                       />
                     ))}
                   </div>
-                ) : queryMode === "duckdb" ? (
-                  <div className="grid gap-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-graphite">SQL</span>
-                      <span className="max-w-full truncate font-mono text-[11px] text-muted">
-                        {schema.storage.path}
-                      </span>
-                    </div>
-                    <textarea
-                      className="min-h-40 resize-y rounded-md border border-line bg-soft p-3 font-mono text-[11px] leading-5 text-ink outline-none transition-colors focus:border-signal"
-                      spellCheck={false}
-                      value={duckdbSql}
-                      onChange={(event) => {
-                        setDuckdbSql(event.target.value);
-                        setPage(1);
-                      }}
-                    />
-                  </div>
                 ) : (
                   <SyncRuntimePanel
-                    disabled={!canUseDataset || isBusy || isLoadingSyncStatus || isLoadingSyncInstances}
+                    disabled={!canUseSource || isBusy || isLoadingSyncStatus || isLoadingSyncInstances}
                     instancePage={syncInstancePage}
                     instancePageSize={syncInstancePageSize}
                     instances={syncInstances}
@@ -828,11 +775,11 @@ export function DataSourceSettingsForm({
                 <button
                   className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-60"
                   type="button"
-                  disabled={!canUseDataset || isBusy || (queryMode === "duckdb" && !duckdbSql.trim())}
+                  disabled={!canUseSource || isBusy}
                   onClick={() => void handleQuery(1)}
                 >
-                  {isQuerying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : queryMode === "duckdb" ? <Code2 className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                  {queryMode === "duckdb" ? "运行 SQL" : "查询"}
+                  {isQuerying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                  查询
                 </button>
               </div>
               <label className="flex items-center gap-2 text-xs font-semibold text-graphite">
@@ -900,15 +847,22 @@ export function DataSourceSettingsForm({
           onWriteModeChange={setSchedulerWriteModeDraft}
         />
       ) : null}
+      {storageDialog ? (
+        <SourceStorageDialog
+          sourceName={storageDialog.sourceName}
+          storage={storageDialog.storage}
+          onClose={() => setStorageDialog(null)}
+        />
+      ) : null}
     </div>
   );
 }
 
-function DatasetBadge({ datasetId }: { datasetId: string }) {
-  const meta = mindgoDatasetUiMeta[datasetId];
+function SourceBadge({ sourceId }: { sourceId: string }) {
+  const meta = mindgoSourceUiMeta[sourceId];
   return (
     <span className="inline-flex h-5 shrink-0 items-center rounded border border-line bg-soft px-1.5 font-mono text-[10px] font-semibold text-muted">
-      {meta?.badge ?? datasetId}
+      {meta?.badge ?? sourceId}
     </span>
   );
 }
@@ -916,36 +870,32 @@ function DatasetBadge({ datasetId }: { datasetId: string }) {
 function StorageSummary({
   storage,
   compact = false,
+  onOpen,
 }: {
-  storage: MindgoDatasetStorageSpec;
+  storage: MindgoSourceStorageSpec;
   compact?: boolean;
+  onOpen?: () => void;
 }) {
-  const partitionRange = partitionRangeText(storage);
-
   if (compact) {
     return (
       <span className="absolute right-2 top-2 z-10">
         <span
-          className="grid h-5 w-5 place-items-center rounded-full border border-line bg-soft font-mono text-[11px] font-bold text-muted transition-colors group-hover:border-signal group-hover:text-ink group-focus-visible:border-signal group-focus-visible:text-ink"
-          aria-hidden="true"
+          className="inline-flex h-6 items-center rounded-md border border-line bg-soft px-1.5 text-[10px] font-semibold text-muted transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+          role="button"
+          tabIndex={0}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen?.();
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              event.stopPropagation();
+              onOpen?.();
+            }
+          }}
         >
-          !
-        </span>
-        <span className="pointer-events-none absolute right-0 top-7 z-30 hidden w-72 rounded-md border border-line bg-panel p-3 text-left shadow-lift group-hover:grid group-focus-visible:grid">
-          <span className="text-xs font-semibold text-ink">本地存储</span>
-          <span className="mt-1 break-all font-mono text-[11px] leading-4 text-ink">
-            {storage.path}
-          </span>
-          <span className="mt-2 grid grid-cols-2 gap-1.5">
-            <StorageBadge label="分区数量" value={String(storage.partition_count)} />
-            <StorageBadge label="格式" value={storage.format} />
-            <StorageBadge label="最小分区" value={storage.min_partition ?? "-"} />
-            <StorageBadge label="最大分区" value={storage.max_partition ?? "-"} />
-          </span>
-          <span className="mt-2 font-mono text-[11px] text-muted">
-            {storage.partitioned_by.join(", ") || "-"}
-            {partitionRange ? ` · ${partitionRange}` : ""}
-          </span>
+          存储
         </span>
       </span>
     );
@@ -968,6 +918,69 @@ function StorageSummary({
   );
 }
 
+function SourceStorageDialog({
+  sourceName,
+  storage,
+  onClose,
+}: {
+  sourceName: string;
+  storage: MindgoSourceStorageSpec;
+  onClose: () => void;
+}) {
+  const partitionRange = partitionRangeText(storage);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/45 px-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="数据源本地存储"
+    >
+      <div className="w-full max-w-xl overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
+        <div className="flex items-center justify-between gap-3 border-b border-line p-4">
+          <div className="min-w-0">
+            <div className="font-mono text-[10px] font-bold uppercase text-muted">Storage</div>
+            <h2 className="mt-1 truncate text-base font-semibold text-ink">{sourceName}</h2>
+          </div>
+          <button
+            className="grid h-8 w-8 place-items-center rounded-md text-muted transition-colors hover:bg-soft hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+            type="button"
+            aria-label="关闭"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="grid gap-3 p-4">
+          <div className="rounded-md border border-line bg-soft p-3">
+            <div className="text-xs font-semibold text-graphite">本地存储</div>
+            <div className="mt-2 break-all font-mono text-[11px] leading-5 text-ink">
+              {storage.path}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <StorageBadge label="格式" value={storage.format} />
+            <StorageBadge label="分区数量" value={String(storage.partition_count)} />
+            <StorageBadge label="最小分区" value={storage.min_partition ?? "-"} />
+            <StorageBadge label="最大分区" value={storage.max_partition ?? "-"} />
+            <StorageBadge label="分区字段" value={storage.partitioned_by.join(", ") || "-"} />
+            <StorageBadge label="分区范围" value={partitionRange || "-"} />
+          </div>
+        </div>
+        <div className="flex justify-end border-t border-line p-4">
+          <button
+            className="inline-flex h-9 items-center rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+            type="button"
+            onClick={onClose}
+          >
+            关闭
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StorageBadge({ label, value }: { label: string; value: string }) {
   return (
     <span className="inline-flex min-h-6 items-center gap-1 rounded border border-line bg-panel px-2 text-[11px] text-muted">
@@ -977,7 +990,7 @@ function StorageBadge({ label, value }: { label: string; value: string }) {
   );
 }
 
-function partitionRangeText(storage: MindgoDatasetStorageSpec): string {
+function partitionRangeText(storage: MindgoSourceStorageSpec): string {
   if (!storage.min_partition || !storage.max_partition) {
     return "";
   }
@@ -1147,7 +1160,7 @@ function QueryResultTable({
   disabled,
   onPageChange,
 }: {
-  result: MindgoDatasetQueryResponse;
+  result: MindgoSourceQueryResponse;
   disabled: boolean;
   onPageChange: (page: number) => void;
 }) {
@@ -1240,13 +1253,13 @@ function ManualSyncDialog({
   isSyncing: boolean;
   startDate: string;
   triggerTime: string;
-  writeMode: MindgoDatasetSyncWriteMode;
+  writeMode: MindgoSourceSyncWriteMode;
   onCancel: () => void;
   onEndDateChange: (value: string) => void;
   onStartDateChange: (value: string) => void;
   onSync: () => void;
   onTriggerTimeChange: (value: string) => void;
-  onWriteModeChange: (value: MindgoDatasetSyncWriteMode) => void;
+  onWriteModeChange: (value: MindgoSourceSyncWriteMode) => void;
 }) {
   const invalidRange = !startDate || !endDate || startDate > endDate || !triggerTime;
   return (
@@ -1463,12 +1476,12 @@ function SchedulerSyncDialog({
   lastRunAt: string | null;
   nextRunAt: string | null;
   schedulerConfigured: boolean;
-  writeMode: MindgoDatasetSyncWriteMode;
+  writeMode: MindgoSourceSyncWriteMode;
   onCancel: () => void;
   onCronChange: (value: string) => void;
   onDisableScheduler: () => void;
   onEnableScheduler: () => void;
-  onWriteModeChange: (value: MindgoDatasetSyncWriteMode) => void;
+  onWriteModeChange: (value: MindgoSourceSyncWriteMode) => void;
 }) {
   const schedule = parseSchedulerCron(cron);
   const generatedCron = buildSchedulerCron(schedule);
@@ -1641,8 +1654,8 @@ function WriteModeSwitch({
   onChange,
 }: {
   disabled: boolean;
-  value: MindgoDatasetSyncWriteMode;
-  onChange: (value: MindgoDatasetSyncWriteMode) => void;
+  value: MindgoSourceSyncWriteMode;
+  onChange: (value: MindgoSourceSyncWriteMode) => void;
 }) {
   return (
     <div className="inline-grid w-fit grid-cols-2 rounded-md border border-line bg-panel p-1">
@@ -1657,7 +1670,7 @@ function WriteModeSwitch({
           key={optionValue}
           type="button"
           disabled={disabled}
-          onClick={() => onChange(optionValue as MindgoDatasetSyncWriteMode)}
+          onClick={() => onChange(optionValue as MindgoSourceSyncWriteMode)}
         >
           {label}
         </button>
@@ -1693,7 +1706,7 @@ function SyncRuntimePanel({
   isSyncing: boolean;
   mutatingInstanceId: string | null;
   statusFilter: SyncInstanceStatusFilter;
-  status: MindgoDatasetSyncStatusResponse | null;
+  status: MindgoSourceSyncStatusResponse | null;
   onDeleteInstance: (instance: JobRuntimeInstance) => void;
   onInstancePageChange: (page: number) => void;
   onInstancePageSizeChange: (pageSize: number) => void;
@@ -2001,7 +2014,7 @@ function formatLocalTime(value: Date): string {
   return `${hour}:${minute}:${second}`;
 }
 
-function defaultParamsFromSchema(schema: MindgoDatasetSchema): MindgoParamDraft {
+function defaultParamsFromSchema(schema: MindgoSourceSchema): MindgoParamDraft {
   const draft: MindgoParamDraft = {};
   for (const param of schema.query_params) {
     if (param.default !== null && param.default !== undefined) {
@@ -2017,31 +2030,6 @@ function defaultParamsFromSchema(schema: MindgoDatasetSchema): MindgoParamDraft 
     }
   }
   return draft;
-}
-
-function defaultDuckDBSql(datasetId: string, schema: MindgoDatasetSchema): string {
-  const parquetPath =
-    schema.storage.partitioned_by.length > 0
-      ? `${schema.storage.path}/${schema.storage.partitioned_by
-          .map((partition) => `${partition}=*`)
-          .join("/")}/data.parquet`
-      : `${schema.storage.path}/*.parquet`;
-  const columns =
-    mindgoDatasetUiMeta[datasetId]?.duckdbColumns.filter((column) =>
-      schema.result_schema.some((field) => field.name === column),
-    ) ?? [];
-  return [
-    columns.length > 0 ? `SELECT ${columns.join(", ")}` : "SELECT *",
-    `FROM read_parquet('${sqlStringLiteral(parquetPath)}')`,
-    schema.storage.partitioned_by.includes("trade_day")
-      ? "ORDER BY trade_date DESC, symbol"
-      : "",
-    "LIMIT 200",
-  ].filter(Boolean).join("\n");
-}
-
-function sqlStringLiteral(value: string): string {
-  return value.replaceAll("'", "''");
 }
 
 function cleanParams(params: MindgoParamDraft): Record<string, MindgoJsonValue> {

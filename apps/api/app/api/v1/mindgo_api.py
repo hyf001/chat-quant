@@ -12,18 +12,27 @@ from app.schema.job_runtime import JobRuntimeInstanceResponse
 from app.schema.mindgo import (
     MindgoConnectionTestRequest,
     MindgoConnectionTestResponse,
-    MindgoDatasetDuckDBQueryRequest,
-    MindgoDatasetListResponse,
-    MindgoDatasetQueryRequest,
-    MindgoDatasetQueryResponse,
-    MindgoDatasetSchema,
-    MindgoDatasetSyncRequest,
-    MindgoDatasetSyncSchedulerRequest,
-    MindgoDatasetSyncSchedulerState,
-    MindgoDatasetSyncStatusResponse,
-    MindgoDatasetSyncTriggerRequest,
-    MindgoDatasetSyncTriggerResponse,
+    MindgoSourceListResponse,
+    MindgoSourceQueryRequest,
+    MindgoSourceQueryResponse,
+    MindgoSourceSchema,
+    MindgoSourceSyncRequest,
+    MindgoSourceSyncSchedulerRequest,
+    MindgoSourceSyncSchedulerState,
+    MindgoSourceSyncStatusResponse,
+    MindgoSourceSyncTriggerRequest,
+    MindgoSourceSyncTriggerResponse,
 )
+from app.service.datasource.mindgo.stock_a_adjust_factor.constants import (
+    STOCK_A_ADJUST_FACTOR_SOURCE_ID,
+)
+from app.service.datasource.mindgo.stock_a_adjust_factor.job import (
+    stock_a_adjust_factor_sync_job_ref,
+)
+from app.service.datasource.mindgo.stock_a_daily_price.constants import (
+    STOCK_A_DAILY_PRICE_SOURCE_ID,
+)
+from app.service.datasource.mindgo.stock_a_daily_price.job import stock_a_daily_price_sync_job_ref
 from app.service.job_runtime import (
     DuplicateJobInstanceError,
     JobRef,
@@ -33,18 +42,14 @@ from app.service.job_runtime import (
     job_runtime_registry,
     register_default_job_runtime_events,
 )
-from app.service.mindgo.stock_a_adjust_factor.constants import STOCK_A_ADJUST_FACTOR_DATASET_ID
-from app.service.mindgo.stock_a_adjust_factor.job import stock_a_adjust_factor_sync_job_ref
-from app.service.mindgo.stock_a_daily_price.constants import STOCK_A_DAILY_PRICE_DATASET_ID
-from app.service.mindgo.stock_a_daily_price.job import stock_a_daily_price_sync_job_ref
 
 router = APIRouter()
 
 
-@router.get("/datasets", response_model=MindgoDatasetListResponse)
-async def list_mindgo_datasets() -> MindgoDatasetListResponse:
+@router.get("/sources", response_model=MindgoSourceListResponse)
+async def list_mindgo_sources() -> MindgoSourceListResponse:
     service = _mindgo_service()
-    return await service.list_datasets()
+    return await service.list_sources()
 
 
 @router.post("/test", response_model=MindgoConnectionTestResponse)
@@ -55,30 +60,30 @@ async def test_mindgo_connection(
     return await service.test_connection(payload)
 
 
-@router.get("/datasets/{dataset_id}/schema", response_model=MindgoDatasetSchema)
-async def get_mindgo_dataset_schema(dataset_id: str) -> MindgoDatasetSchema:
+@router.get("/sources/{source_id}/schema", response_model=MindgoSourceSchema)
+async def get_mindgo_source_schema(source_id: str) -> MindgoSourceSchema:
     service = _mindgo_service()
     try:
-        return await service.get_schema(dataset_id)
-    except service.MindgoDatasetNotFoundError as error:
+        return await service.get_source_schema(source_id)
+    except service.MindgoSourceNotFoundError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"MindGo 数据集不存在：{error.dataset_id}",
+            detail=f"MindGo 数据源不存在：{error.source_id}",
         ) from error
 
 
-@router.post("/datasets/{dataset_id}/query", response_model=MindgoDatasetQueryResponse)
-async def query_mindgo_dataset(
-    dataset_id: str,
-    payload: MindgoDatasetQueryRequest,
-) -> MindgoDatasetQueryResponse:
+@router.post("/sources/{source_id}/query", response_model=MindgoSourceQueryResponse)
+async def query_mindgo_source(
+    source_id: str,
+    payload: MindgoSourceQueryRequest,
+) -> MindgoSourceQueryResponse:
     service = _mindgo_service()
     try:
-        return await service.query_dataset(dataset_id, payload)
-    except service.MindgoDatasetNotFoundError as error:
+        return await service.query_source(source_id, payload)
+    except service.MindgoSourceNotFoundError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"MindGo 数据集不存在：{error.dataset_id}",
+            detail=f"MindGo 数据源不存在：{error.source_id}",
         ) from error
     except RuntimeError as error:
         raise HTTPException(
@@ -87,54 +92,29 @@ async def query_mindgo_dataset(
         ) from error
 
 
-@router.post("/datasets/{dataset_id}/query_from_duckdb", response_model=MindgoDatasetQueryResponse)
-async def query_mindgo_dataset_from_duckdb(
-    dataset_id: str,
-    payload: MindgoDatasetDuckDBQueryRequest,
-) -> MindgoDatasetQueryResponse:
-    service = _mindgo_service()
-    try:
-        return await service.query_dataset_from_duckdb(dataset_id, payload)
-    except service.MindgoDatasetNotFoundError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"MindGo 数据集不存在：{error.dataset_id}",
-        ) from error
-    except ValueError as error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(error),
-        ) from error
-    except RuntimeError as error:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(error),
-        ) from error
-
-
-@router.get("/datasets/{dataset_id}/sync", response_model=MindgoDatasetSyncStatusResponse)
-async def get_mindgo_dataset_sync_status(
-    dataset_id: str,
+@router.get("/sources/{source_id}/sync", response_model=MindgoSourceSyncStatusResponse)
+async def get_mindgo_source_sync_status(
+    source_id: str,
     db: DatabaseSession,
-) -> MindgoDatasetSyncStatusResponse:
-    job_ref = _sync_job_ref_for_dataset(dataset_id)
+) -> MindgoSourceSyncStatusResponse:
+    job_ref = _sync_job_ref_for_source(source_id)
     schedule_service = JobRuntimeScheduleService(registry=job_runtime_registry)
     scheduler = await schedule_service.get_scheduler(db, job_ref=job_ref)
-    return MindgoDatasetSyncStatusResponse(
-        dataset_id=dataset_id,
+    return MindgoSourceSyncStatusResponse(
+        source_id=source_id,
         job_type=job_ref.job_type,
         job_id=job_ref.job_id,
         scheduler=_scheduler_state(scheduler),
     )
 
 
-@router.post("/datasets/{dataset_id}/sync", response_model=MindgoDatasetSyncTriggerResponse)
-async def sync_mindgo_dataset(
-    dataset_id: str,
-    payload: MindgoDatasetSyncTriggerRequest,
+@router.post("/sources/{source_id}/sync", response_model=MindgoSourceSyncTriggerResponse)
+async def sync_mindgo_source(
+    source_id: str,
+    payload: MindgoSourceSyncTriggerRequest,
     db: DatabaseSession,
-) -> MindgoDatasetSyncTriggerResponse:
-    job_ref = _sync_job_ref_for_dataset(dataset_id)
+) -> MindgoSourceSyncTriggerResponse:
+    job_ref = _sync_job_ref_for_source(source_id)
     register_default_job_runtime_events(job_runtime_registry)
     instance_service = JobRuntimeInstanceService(registry=job_runtime_registry)
     instances = []
@@ -147,7 +127,7 @@ async def sync_mindgo_dataset(
                     db,
                     job_ref=job_ref,
                     trigger_type=TriggerType.MANUAL,
-                    trigger_key=f"manual:{dataset_id}:{scheduled_for.isoformat()}",
+                    trigger_key=f"manual:{source_id}:{scheduled_for.isoformat()}",
                     scheduled_for=scheduled_for,
                     payload=daily_payload.model_dump(mode="json"),
                 )
@@ -158,22 +138,22 @@ async def sync_mindgo_dataset(
                 detail="Job instance already exists for the same manual trigger time",
             ) from error
     instance_responses = [_instance_response(instance) for instance in instances]
-    return MindgoDatasetSyncTriggerResponse(
+    return MindgoSourceSyncTriggerResponse(
         instance=instance_responses[0],
         instances=instance_responses,
     )
 
 
 @router.post(
-    "/datasets/{dataset_id}/sync/scheduler",
-    response_model=MindgoDatasetSyncStatusResponse,
+    "/sources/{source_id}/sync/scheduler",
+    response_model=MindgoSourceSyncStatusResponse,
 )
-async def upsert_mindgo_dataset_sync_scheduler(
-    dataset_id: str,
-    payload: MindgoDatasetSyncSchedulerRequest,
+async def upsert_mindgo_source_sync_scheduler(
+    source_id: str,
+    payload: MindgoSourceSyncSchedulerRequest,
     db: DatabaseSession,
-) -> MindgoDatasetSyncStatusResponse:
-    job_ref = _sync_job_ref_for_dataset(dataset_id)
+) -> MindgoSourceSyncStatusResponse:
+    job_ref = _sync_job_ref_for_source(source_id)
     register_default_job_runtime_events(job_runtime_registry)
     schedule_service = JobRuntimeScheduleService(registry=job_runtime_registry)
     try:
@@ -191,35 +171,35 @@ async def upsert_mindgo_dataset_sync_scheduler(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(error),
         ) from error
-    return await get_mindgo_dataset_sync_status(dataset_id, db)
+    return await get_mindgo_source_sync_status(source_id, db)
 
 
 @router.delete(
-    "/datasets/{dataset_id}/sync/scheduler",
-    response_model=MindgoDatasetSyncStatusResponse,
+    "/sources/{source_id}/sync/scheduler",
+    response_model=MindgoSourceSyncStatusResponse,
 )
-async def delete_mindgo_dataset_sync_scheduler(
-    dataset_id: str,
+async def delete_mindgo_source_sync_scheduler(
+    source_id: str,
     db: DatabaseSession,
-) -> MindgoDatasetSyncStatusResponse:
-    job_ref = _sync_job_ref_for_dataset(dataset_id)
+) -> MindgoSourceSyncStatusResponse:
+    job_ref = _sync_job_ref_for_source(source_id)
     schedule_service = JobRuntimeScheduleService(registry=job_runtime_registry)
     await schedule_service.delete_scheduler(db, job_ref=job_ref)
-    return await get_mindgo_dataset_sync_status(dataset_id, db)
+    return await get_mindgo_source_sync_status(source_id, db)
 
 
 def _mindgo_service() -> Any:
-    return import_module("app.service.mindgo.service")
+    return import_module("app.service.datasource.mindgo.service")
 
 
-def _sync_job_ref_for_dataset(dataset_id: str) -> JobRef:
-    if dataset_id == STOCK_A_DAILY_PRICE_DATASET_ID:
+def _sync_job_ref_for_source(source_id: str) -> JobRef:
+    if source_id == STOCK_A_DAILY_PRICE_SOURCE_ID:
         return stock_a_daily_price_sync_job_ref()
-    if dataset_id == STOCK_A_ADJUST_FACTOR_DATASET_ID:
+    if source_id == STOCK_A_ADJUST_FACTOR_SOURCE_ID:
         return stock_a_adjust_factor_sync_job_ref()
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"MindGo 数据集暂未配置同步任务：{dataset_id}",
+        detail=f"MindGo 数据源暂未配置同步任务：{source_id}",
     )
 
 
@@ -244,12 +224,12 @@ def _instance_response(instance: JobInstanceRow) -> JobRuntimeInstanceResponse:
     )
 
 
-def _scheduler_state(scheduler: JobSchedulerRow | None) -> MindgoDatasetSyncSchedulerState:
+def _scheduler_state(scheduler: JobSchedulerRow | None) -> MindgoSourceSyncSchedulerState:
     if scheduler is None:
-        return MindgoDatasetSyncSchedulerState(configured=False)
+        return MindgoSourceSyncSchedulerState(configured=False)
     payload = dict(scheduler.payload_json or {})
     params = payload.get("params")
-    return MindgoDatasetSyncSchedulerState(
+    return MindgoSourceSyncSchedulerState(
         configured=True,
         scheduler_id=scheduler.id,
         cron=scheduler.cron,
@@ -275,11 +255,11 @@ def _manual_scheduled_for(sync_day: date, trigger_time: time) -> datetime:
 
 
 def _sync_payload_for_scheduled_for(
-    payload: MindgoDatasetSyncTriggerRequest,
+    payload: MindgoSourceSyncTriggerRequest,
     scheduled_for: datetime,
-) -> MindgoDatasetSyncRequest:
+) -> MindgoSourceSyncRequest:
     sync_date = scheduled_for.date()
-    return MindgoDatasetSyncRequest(
+    return MindgoSourceSyncRequest(
         start_date=sync_date,
         end_date=sync_date,
         write_mode=payload.write_mode,

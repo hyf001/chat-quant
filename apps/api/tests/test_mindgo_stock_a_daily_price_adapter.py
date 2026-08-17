@@ -7,11 +7,11 @@ from datetime import date
 from typing import Any
 
 import pandas as pd
-from app.schema.mindgo import MindgoDatasetQueryRequest, MindgoDatasetSyncRequest
-from app.service.mindgo.stock_a_daily_price.adaptor import (
-    STOCK_A_DAILY_PRICE_DATASET_ID,
+from app.schema.mindgo import MindgoSourceQueryRequest, MindgoSourceSyncRequest
+from app.service.datasource.mindgo.stock_a_daily_price.adaptor import (
     STOCK_A_DAILY_PRICE_MARKER_END,
     STOCK_A_DAILY_PRICE_MARKER_START,
+    STOCK_A_DAILY_PRICE_SOURCE_ID,
     DuckDBParquetMindgoSyncWriter,
     MindgoPartitionedParquetWrite,
     StockADailyPriceAdapter,
@@ -19,7 +19,7 @@ from app.service.mindgo.stock_a_daily_price.adaptor import (
     normalize_stock_a_daily_price,
     stock_a_daily_price_remote_code,
 )
-from app.service.mindgo.storage import MindgoDatasetStorage
+from app.service.datasource.mindgo.storage import MindgoSourceStorage
 from app.storage import DuckDBParquetStore
 
 
@@ -58,7 +58,7 @@ class FakeMindgoSyncWriter:
     ) -> int:
         self.calls.append(
             {
-                "dataset_id": write.dataset_id,
+                "source_id": write.source_id,
                 "partition_values": dict(write.partition_values),
                 "path": write.path,
                 "rows": json.loads(frame.to_json(orient="records")),
@@ -73,9 +73,9 @@ class FakeMindgoSyncWriter:
 async def test_stock_a_daily_price_schema_contract() -> None:
     adapter = StockADailyPriceAdapter()
 
-    schema = await adapter.get_schema()
+    schema = await adapter.get_source_schema()
 
-    assert adapter.dataset_id == STOCK_A_DAILY_PRICE_DATASET_ID
+    assert adapter.source_id == STOCK_A_DAILY_PRICE_SOURCE_ID
     assert schema.name == "A股历史行情数据(日)"
     assert schema.mindgo_function == "query_index"
     assert schema.storage.path.endswith("/stock_a_daily_price")
@@ -100,7 +100,7 @@ async def test_stock_a_daily_price_schema_contract() -> None:
     assert "query_id" not in field_options
 
 
-async def test_stock_a_daily_price_query_from_mindgo_uses_remote_runner_and_returns_dataframe() -> None:
+async def test_stock_a_daily_price_query_from_mindgo_returns_dataframe() -> None:
     runner = FakeMindgoRunner(
         {
             "data": [
@@ -138,7 +138,7 @@ async def test_stock_a_daily_price_query_from_mindgo_uses_remote_runner_and_retu
     adapter = StockADailyPriceAdapter(runner)  # type: ignore[arg-type]
 
     frame = await adapter.query_from_mindgo(
-        MindgoDatasetQueryRequest(
+        MindgoSourceQueryRequest(
             params={
                 "baseDay": "2026-08-13",
                 "fields": ["open", "close"],
@@ -156,14 +156,6 @@ async def test_stock_a_daily_price_query_from_mindgo_uses_remote_runner_and_retu
     assert runner.calls[0]["marker_end"] == STOCK_A_DAILY_PRICE_MARKER_END
     assert '"baseDay": "2026-08-13"' in runner.calls[0]["code"]
     assert '"1015"' in runner.calls[0]["code"]
-
-
-async def test_stock_a_daily_price_query_from_duckdb_executes_sql() -> None:
-    adapter = StockADailyPriceAdapter()
-
-    frame = await adapter.query_from_duckdb("SELECT '000001.SZ' AS symbol, 14.7 AS close")
-
-    assert frame.to_dict(orient="records") == [{"symbol": "000001.SZ", "close": 14.7}]
 
 
 def test_stock_a_daily_price_remote_code_embeds_query_index_contract() -> None:
@@ -301,7 +293,7 @@ async def test_stock_a_daily_price_sync_writes_daily_partitions_with_storage_pro
     )
 
     result = await adapter.sync(
-        MindgoDatasetSyncRequest(
+        MindgoSourceSyncRequest(
             start_date=date(2026, 8, 14),
             end_date=date(2026, 8, 14),
             params={"fields": ["close"]},
@@ -311,7 +303,7 @@ async def test_stock_a_daily_price_sync_writes_daily_partitions_with_storage_pro
     assert result.status == "success"
     assert result.elapsed_ms >= 0
     assert result.synced_count == 2
-    assert writer.calls[0]["dataset_id"] == STOCK_A_DAILY_PRICE_DATASET_ID
+    assert writer.calls[0]["source_id"] == STOCK_A_DAILY_PRICE_SOURCE_ID
     assert writer.calls[0]["partition_values"] == {"trade_day": "20260813"}
     assert writer.calls[0]["path"].as_posix().endswith(
         "/stock_a_daily_price/trade_day=20260813/data.parquet"
@@ -355,11 +347,11 @@ async def test_stock_a_daily_price_sync_imports_multiple_days_to_duckdb_parquet(
     adapter = StockADailyPriceAdapter(  # type: ignore[arg-type]
         DailyMindgoRunner(),
         sync_writer=DuckDBParquetMindgoSyncWriter(store),
-        storage=MindgoDatasetStorage(parquet_root),
+        storage=MindgoSourceStorage(parquet_root),
     )
 
     result = await adapter.sync(
-        MindgoDatasetSyncRequest(
+        MindgoSourceSyncRequest(
             start_date=date(2026, 8, 13),
             end_date=date(2026, 8, 14),
             params={"fields": ["close"]},
@@ -369,12 +361,12 @@ async def test_stock_a_daily_price_sync_imports_multiple_days_to_duckdb_parquet(
     assert result.synced_count == 2
     first_path = mindgo_parquet_partition_path(
         parquet_root,
-        STOCK_A_DAILY_PRICE_DATASET_ID,
+        STOCK_A_DAILY_PRICE_SOURCE_ID,
         {"trade_day": "20260813"},
     )
     second_path = mindgo_parquet_partition_path(
         parquet_root,
-        STOCK_A_DAILY_PRICE_DATASET_ID,
+        STOCK_A_DAILY_PRICE_SOURCE_ID,
         {"trade_day": "20260814"},
     )
     assert first_path.exists()
@@ -388,7 +380,7 @@ async def test_stock_a_daily_price_sync_imports_multiple_days_to_duckdb_parquet(
         """,
         params={
             "path": str(
-                parquet_root / STOCK_A_DAILY_PRICE_DATASET_ID / "trade_day=*" / "data.parquet"
+                parquet_root / STOCK_A_DAILY_PRICE_SOURCE_ID / "trade_day=*" / "data.parquet"
             )
         },
     )

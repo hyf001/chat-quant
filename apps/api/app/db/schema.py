@@ -17,8 +17,9 @@ from app.db.session import Base, sync_database_url
 from app.model.chat_session import chat_session as chat_session_model  # noqa: F401
 from app.model.config import app_setting as app_setting_model  # noqa: F401
 from app.model.config import model_provider as model_provider_model  # noqa: F401
-from app.model.project import project as project_model  # noqa: F401
+from app.model.dataset import dataset as dataset_model  # noqa: F401
 from app.model.job_runtime import job_runtime as job_runtime_model  # noqa: F401
+from app.model.project import project as project_model  # noqa: F401
 from app.model.strategy import strategy as strategy_model  # noqa: F401
 
 _SCHEMA_LOCK = Lock()
@@ -116,7 +117,10 @@ def _migrate_job_runtime_scheduler_schema(engine: Engine) -> None:
     with engine.begin() as connection:
         connection.execute(text("DROP INDEX IF EXISTS idx_job_schedulers_enabled"))
         connection.execute(
-            text("CREATE INDEX IF NOT EXISTS idx_job_schedulers_job_type ON job_schedulers(job_type)")
+            text(
+                "CREATE INDEX IF NOT EXISTS "
+                "idx_job_schedulers_job_type ON job_schedulers(job_type)"
+            )
         )
     for column_name in ("enabled", "run_mode", "run_at", "timezone"):
         _drop_column_if_exists(engine, inspect(engine), "job_schedulers", column_name, ())

@@ -9,42 +9,42 @@ DEFAULT_MINDGO_PARTITION_FILENAME = "data.parquet"
 
 
 @dataclass(frozen=True)
-class MindgoDatasetStorage:
+class MindgoSourceStorage:
     storage_root: Path
 
     def __init__(self, storage_root: Path | str = DEFAULT_MINDGO_STORAGE_ROOT) -> None:
         object.__setattr__(self, "storage_root", Path(storage_root).expanduser())
 
-    def dataset_root(self, dataset_id: str) -> Path:
-        return self.storage_root / _safe_path_segment(dataset_id)
+    def source_root(self, source_id: str) -> Path:
+        return self.storage_root / _safe_path_segment(source_id)
 
     def partition_path(
         self,
-        dataset_id: str,
+        source_id: str,
         partition_values: Mapping[str, str],
         *,
         filename: str = DEFAULT_MINDGO_PARTITION_FILENAME,
     ) -> Path:
-        path = self.dataset_root(dataset_id)
+        path = self.source_root(source_id)
         for key, value in partition_values.items():
             path /= f"{_safe_path_segment(key)}={_safe_path_segment(value)}"
         return path / _safe_path_segment(filename)
 
     def partition_summary(
         self,
-        dataset_id: str,
+        source_id: str,
         partition_keys: list[str],
         *,
         filename: str = DEFAULT_MINDGO_PARTITION_FILENAME,
-    ) -> MindgoDatasetPartitionSummary:
+    ) -> MindgoSourcePartitionSummary:
         partitions = sorted(
-            _dataset_partitions(
-                self.dataset_root(dataset_id),
+            _source_partitions(
+                self.source_root(source_id),
                 partition_keys,
                 filename=_safe_path_segment(filename),
             )
         )
-        return MindgoDatasetPartitionSummary(
+        return MindgoSourcePartitionSummary(
             min_partition=partitions[0] if partitions else None,
             max_partition=partitions[-1] if partitions else None,
             partition_count=len(partitions),
@@ -52,18 +52,18 @@ class MindgoDatasetStorage:
 
 
 @dataclass(frozen=True)
-class MindgoDatasetPartitionSummary:
+class MindgoSourcePartitionSummary:
     min_partition: str | None
     max_partition: str | None
     partition_count: int
 
 
-def mindgo_dataset_partition_path(
+def mindgo_source_partition_path(
     storage_root: Path | str,
-    dataset_id: str,
+    source_id: str,
     partition_values: Mapping[str, str],
 ) -> Path:
-    return MindgoDatasetStorage(storage_root).partition_path(dataset_id, partition_values)
+    return MindgoSourceStorage(storage_root).partition_path(source_id, partition_values)
 
 
 def _safe_path_segment(value: str) -> str:
@@ -73,7 +73,7 @@ def _safe_path_segment(value: str) -> str:
     return text
 
 
-def _dataset_partitions(
+def _source_partitions(
     base_path: Path,
     partition_keys: list[str],
     *,
@@ -82,7 +82,7 @@ def _dataset_partitions(
     if not partition_keys:
         return []
     partitions: list[str] = []
-    _collect_dataset_partitions(
+    _collect_source_partitions(
         base_path,
         partition_keys,
         filename=filename,
@@ -92,7 +92,7 @@ def _dataset_partitions(
     return partitions
 
 
-def _collect_dataset_partitions(
+def _collect_source_partitions(
     base_path: Path,
     partition_keys: list[str],
     *,
@@ -114,7 +114,7 @@ def _collect_dataset_partitions(
         partition_value = child.name[len(prefix) :]
         if partition_value:
             _safe_path_segment(partition_value)
-            _collect_dataset_partitions(
+            _collect_source_partitions(
                 child,
                 partition_keys,
                 filename=filename,
