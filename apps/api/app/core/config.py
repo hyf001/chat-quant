@@ -1,5 +1,6 @@
 import json
 import sqlite3
+import sys
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -312,7 +313,12 @@ class Settings(BaseModel):
 
 
 def config_file_path() -> Path:
-    return DEFAULT_CONFIG_FILE_PATH
+    if DEFAULT_CONFIG_FILE_PATH.is_absolute():
+        return DEFAULT_CONFIG_FILE_PATH.resolve(strict=False)
+    discovered = _discover_config_file_path()
+    if discovered is not None:
+        return discovered
+    return _default_config_file_path()
 
 
 def default_app_config_values() -> dict[str, ConfigValue]:
@@ -364,7 +370,11 @@ def config_definition_by_key() -> dict[str, ConfigDefinition]:
 def get_settings() -> Settings:
     file_path = config_file_path()
     file_config = _load_file_config_values(file_path)
-    database_path = _coerce_path(file_config.get("database_path"), DEFAULT_DATABASE_PATH)
+    database_path = _coerce_path(
+        file_config.get("database_path"),
+        DEFAULT_DATABASE_PATH,
+        base_dir=file_path.parent,
+    )
     api_host = _coerce_string(file_config.get("api_host"), DEFAULT_API_HOST)
     api_port = _coerce_port(file_config.get("api_port"), DEFAULT_API_PORT)
     web_host = _coerce_string(file_config.get("web_host"), DEFAULT_WEB_HOST)
@@ -393,10 +403,44 @@ def _load_file_config_values(file_path: Path) -> dict[str, object]:
     return payload if isinstance(payload, dict) else {}
 
 
-def _coerce_path(value: object, default: Path) -> Path:
-    if isinstance(value, str) and value.strip():
-        return Path(value).expanduser()
-    return default
+def _coerce_path(value: object, default: Path, *, base_dir: Path) -> Path:
+    path = Path(value).expanduser() if isinstance(value, str) and value.strip() else default
+    if path.is_absolute():
+        return path
+    return (base_dir / path).resolve(strict=False)
+
+
+def _discover_config_file_path() -> Path | None:
+    for root in _config_search_roots():
+        for parent in (root, *root.parents):
+            candidate = parent / DEFAULT_CONFIG_FILE_PATH
+            if candidate.exists():
+                return candidate.resolve(strict=False)
+    return None
+
+
+def _config_search_roots() -> tuple[Path, ...]:
+    roots = [Path(__file__).resolve().parent]
+    if getattr(sys, "frozen", False):
+        roots.append(Path(sys.executable).resolve().parent)
+    return tuple(_dedupe_paths(roots))
+
+
+def _default_config_file_path() -> Path:
+    parents = Path(__file__).resolve().parents
+    repo_root = parents[4] if len(parents) > 4 else parents[-1]
+    return (repo_root / DEFAULT_CONFIG_FILE_PATH).resolve(strict=False)
+
+
+def _dedupe_paths(paths: list[Path]) -> list[Path]:
+    deduped: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        if path in seen:
+            continue
+        seen.add(path)
+        deduped.append(path)
+    return deduped
 
 
 def _coerce_string(value: object, default: str) -> str:

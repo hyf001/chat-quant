@@ -4,6 +4,48 @@
 
 访问域名：`https://chatq.nanbende.com`
 
+## 两种部署模式
+
+### 模式 A：完整部署到阿里云
+
+项目代码、后端服务、前端静态资源都部署在阿里云服务器上。使用：
+
+```bash
+bash deploy/0_remote_deploy.sh
+```
+
+### 模式 B：本机运行，阿里云通过 SSH 隧道中转
+
+项目继续运行在你的本机，阿里云服务器只负责公网 Nginx 入口。适合把本地开发中的 Web 临时给好友试用。
+
+先配置阿里云 Nginx 为隧道代理模式：
+
+```bash
+bash deploy/3_setup_local_tunnel_server.sh
+```
+
+再在本机启动 Chat-Quant、Caddy 统一入口和 SSH 反向隧道：
+
+```bash
+bash deploy/4_start_local_tunnel.sh
+```
+
+请使用 `bash` 执行脚本，不要用 `sh`。启动脚本会逐项检查本地 dev 服务、Caddy 和 SSH 隧道；已经启动且健康的服务会跳过。启动完成后好友可以访问 `deploy/server.config` 中 `DOMAIN` 对应的域名，例如 `https://chatq.nanbende.com`。
+
+停止本机公开访问栈：
+
+```bash
+bash deploy/5_stop_local_tunnel.sh
+```
+
+脚本复用 `deploy/server.config` 中的服务器、域名和 SSH key 配置。可用环境变量覆盖隧道端口：
+
+```bash
+TUNNEL_REMOTE_PORT=18081 LOCAL_PROXY_PORT=18081 bash deploy/4_start_local_tunnel.sh
+```
+
+完整说明见：`docs/local-public-access-via-aliyun.md`。
+
 ## 使用
 
 1. 确认域名 `chatq.nanbende.com` 的 A 记录已解析到 `47.95.205.124`。

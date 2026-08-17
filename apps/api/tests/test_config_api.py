@@ -1,5 +1,8 @@
+import json
 import logging
+from pathlib import Path
 
+import app.core.config as config_module
 from app.core.config import get_settings
 from app.main import create_app
 from fastapi.testclient import TestClient
@@ -17,6 +20,50 @@ def test_cross_origin_requests_are_allowed() -> None:
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://example.test"
+
+
+def test_config_file_path_ignores_current_working_directory(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    project_config = tmp_path / "config.json"
+    project_config.write_text('{"api_port": 19999}\n', encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(config_module, "DEFAULT_CONFIG_FILE_PATH", Path("config.json"))
+
+    assert config_module.config_file_path() != project_config.resolve(strict=False)
+
+
+def test_relative_database_path_resolves_from_config_file_directory(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_dir = tmp_path / "runtime"
+    project_dir = tmp_path / "project"
+    config_dir.mkdir()
+    project_dir.mkdir()
+    config_file = config_dir / "config.json"
+    config_file.write_text(
+        json.dumps(
+            {
+                "database_path": "data/custom-chat-quant.db",
+                "api_port": 18001,
+                "web_port": 15174,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(config_module, "DEFAULT_CONFIG_FILE_PATH", config_file)
+    monkeypatch.chdir(project_dir)
+    get_settings.cache_clear()
+
+    settings = get_settings()
+
+    assert settings.config_file_path == config_file.resolve(strict=False)
+    assert settings.database_path == (config_dir / "data/custom-chat-quant.db").resolve(
+        strict=False
+    )
 
 
 def test_config_api_returns_structured_settings(client: TestClient) -> None:

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import duckdb
+import pandas as pd
 
 _RELATION_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
@@ -97,6 +98,16 @@ class DuckDBViewStore:
         finally:
             connection.close()
         return columns, rows, total
+
+    def query_frame(self, sql: str) -> pd.DataFrame:
+        query_sql = _normalize_select_sql(sql)
+        connection = self._connect()
+        try:
+            return connection.execute(query_sql).df()
+        except duckdb.Error as error:
+            raise DuckDBViewStoreError(str(error)) from error
+        finally:
+            connection.close()
 
     def drop_view(self, name: str) -> None:
         _validate_relation_name(name)

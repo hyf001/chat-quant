@@ -3,6 +3,7 @@ from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
 
+import app.core.config as config_module
 import pytest
 from app.core.config import get_settings
 from app.db.schema import ensure_database_schema
@@ -27,6 +28,7 @@ def isolated_database(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterat
         + "\n",
         encoding="utf-8",
     )
+    monkeypatch.setattr(config_module, "DEFAULT_CONFIG_FILE_PATH", config_file)
     monkeypatch.chdir(tmp_path)
     _clear_dependency_caches()
     yield
