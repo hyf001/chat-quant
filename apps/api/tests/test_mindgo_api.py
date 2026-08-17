@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 from app.service.mindgo import service as mindgo_service
+from app.service.mindgo.stock_a_adjust_factor.adaptor import stock_a_adjust_factor_schema
 from app.service.mindgo.stock_a_daily_price.adaptor import stock_a_daily_price_schema
 from fastapi.testclient import TestClient
 
@@ -12,6 +13,7 @@ def test_mindgo_api_lists_first_dataset(client: TestClient) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["datasets"][0]["id"] == "stock_a_daily_price"
+    assert payload["datasets"][1]["id"] == "stock_a_adjust_factor"
     assert payload["datasets"][0]["storage"] == {
         "path": "data/mindgo/parquet/stock_a_daily_price",
         "format": "parquet",
@@ -37,6 +39,24 @@ def test_mindgo_api_returns_stock_daily_schema(client: TestClient) -> None:
     assert payload["storage"]["max_partition"] is None
     assert payload["storage"]["partition_count"] == 0
     assert payload["result_schema"][0]["name"] == "symbol"
+
+
+def test_mindgo_api_returns_stock_adjust_factor_schema(client: TestClient) -> None:
+    response = client.get("/api/mindgo/datasets/stock_a_adjust_factor/schema")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["name"] == "A股复权因子(日)"
+    assert payload["category_path"] == ["股票", "A股", "行情数据(A股)"]
+    assert payload["storage"]["path"] == "data/mindgo/parquet/stock_a_adjust_factor"
+    assert payload["storage"]["format"] == "parquet"
+    assert payload["storage"]["partitioned_by"] == ["trade_day"]
+    assert [field["name"] for field in payload["result_schema"]] == [
+        "symbol",
+        "trade_date",
+        "name",
+        "factor",
+    ]
 
 
 def test_mindgo_query_uses_default_connection(
@@ -304,3 +324,45 @@ def test_mindgo_sync_runs_immediate_import(
     }
     assert {instance["payload"]["write_mode"] for instance in payload["instances"]} == {"skip"}
     assert {instance["trigger_type"] for instance in payload["instances"]} == {"manual"}
+
+
+def test_mindgo_sync_supports_stock_adjust_factor(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    class FakeAdapter:
+        dataset_id = "stock_a_adjust_factor"
+
+        async def get_schema(self):
+            return stock_a_adjust_factor_schema()
+
+        async def query_from_mindgo(self, request):
+            raise AssertionError("query_from_mindgo should not run")
+
+        async def query_from_duckdb(self, sql):
+            raise AssertionError("query_from_duckdb should not run")
+
+        async def sync(self, request):
+            raise AssertionError("sync should not run")
+
+    monkeypatch.setattr(
+        mindgo_service,
+        "_adapter_for_dataset",
+        lambda dataset_id, allow_missing_runner=False: FakeAdapter(),
+    )
+
+    response = client.post(
+        "/api/mindgo/datasets/stock_a_adjust_factor/sync",
+        json={
+            "trigger_start_date": "2026-08-13",
+            "trigger_end_date": "2026-08-13",
+            "trigger_time": "10:30:15",
+            "write_mode": "overwrite",
+            "params": {"fields": ["factor"]},
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["instance"]["job_type"] == "mindgo.stock_a_adjust_factor.sync"
+    assert payload["instance"]["payload"]["params"] == {"fields": ["factor"]}

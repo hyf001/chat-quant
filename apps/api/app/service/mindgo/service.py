@@ -27,10 +27,14 @@ from app.service.mindgo.jupyter_runner import (
     MindgoJupyterRunner,
 )
 from app.service.mindgo.protocol import MindgoDatasetAdapter
-from app.service.mindgo.stock_a_daily_price.constants import STOCK_A_DAILY_PRICE_DATASET_ID
+from app.service.mindgo.stock_a_adjust_factor.adaptor import (
+    StockAAdjustFactorAdapter,
+)
+from app.service.mindgo.stock_a_adjust_factor.constants import STOCK_A_ADJUST_FACTOR_DATASET_ID
 from app.service.mindgo.stock_a_daily_price.adaptor import (
     StockADailyPriceAdapter,
 )
+from app.service.mindgo.stock_a_daily_price.constants import STOCK_A_DAILY_PRICE_DATASET_ID
 from app.service.mindgo.storage import MindgoDatasetStorage
 
 MINDGO_CONNECTION_TEST_MARKER_START = "MINDGO_CONNECTION_TEST_JSON_START"
@@ -132,7 +136,7 @@ async def sync_dataset(
 
 
 def _dataset_ids() -> tuple[str, ...]:
-    return (STOCK_A_DAILY_PRICE_DATASET_ID,)
+    return (STOCK_A_DAILY_PRICE_DATASET_ID, STOCK_A_ADJUST_FACTOR_DATASET_ID)
 
 
 async def _schema_for_dataset(dataset_id: str) -> MindgoDatasetSchema:
@@ -145,12 +149,15 @@ def _adapter_for_dataset(
     *,
     allow_missing_runner: bool = False,
 ) -> MindgoDatasetAdapter:
-    if dataset_id != STOCK_A_DAILY_PRICE_DATASET_ID:
-        raise MindgoDatasetNotFoundError(dataset_id)
     settings = _fresh_settings()
     connection = _connection_from_settings(settings)
     runner = None if allow_missing_runner else _runner_from_connection(connection)
-    return StockADailyPriceAdapter(runner, storage=_storage_from_settings(settings))
+    storage = _storage_from_settings(settings)
+    if dataset_id == STOCK_A_DAILY_PRICE_DATASET_ID:
+        return StockADailyPriceAdapter(runner, storage=storage)
+    if dataset_id == STOCK_A_ADJUST_FACTOR_DATASET_ID:
+        return StockAAdjustFactorAdapter(runner, storage=storage)
+    raise MindgoDatasetNotFoundError(dataset_id)
 
 
 def _fresh_settings() -> Settings:

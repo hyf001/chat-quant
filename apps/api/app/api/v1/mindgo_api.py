@@ -33,6 +33,8 @@ from app.service.job_runtime import (
     job_runtime_registry,
     register_default_job_runtime_events,
 )
+from app.service.mindgo.stock_a_adjust_factor.constants import STOCK_A_ADJUST_FACTOR_DATASET_ID
+from app.service.mindgo.stock_a_adjust_factor.job import stock_a_adjust_factor_sync_job_ref
 from app.service.mindgo.stock_a_daily_price.constants import STOCK_A_DAILY_PRICE_DATASET_ID
 from app.service.mindgo.stock_a_daily_price.job import stock_a_daily_price_sync_job_ref
 
@@ -211,12 +213,14 @@ def _mindgo_service() -> Any:
 
 
 def _sync_job_ref_for_dataset(dataset_id: str) -> JobRef:
-    if dataset_id != STOCK_A_DAILY_PRICE_DATASET_ID:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"MindGo 数据集暂未配置同步任务：{dataset_id}",
-        )
-    return stock_a_daily_price_sync_job_ref()
+    if dataset_id == STOCK_A_DAILY_PRICE_DATASET_ID:
+        return stock_a_daily_price_sync_job_ref()
+    if dataset_id == STOCK_A_ADJUST_FACTOR_DATASET_ID:
+        return stock_a_adjust_factor_sync_job_ref()
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"MindGo 数据集暂未配置同步任务：{dataset_id}",
+    )
 
 
 def _instance_response(instance: JobInstanceRow) -> JobRuntimeInstanceResponse:

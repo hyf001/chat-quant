@@ -67,11 +67,26 @@ type SchedulerScheduleDraft = {
   customCron: string;
 };
 
+type MindgoDatasetUiMeta = {
+  badge: string;
+  duckdbColumns: string[];
+};
+
 const today = formatLocalDate(new Date());
 const defaultSyncTime = formatLocalTime(new Date());
 const defaultSyncCron = "0 18 * * 1-5";
 const defaultSyncWriteMode: MindgoDatasetSyncWriteMode = "overwrite";
 const defaultSyncInstancePageSize = 8;
+const mindgoDatasetUiMeta: Record<string, MindgoDatasetUiMeta> = {
+  stock_a_daily_price: {
+    badge: "1015 日行情",
+    duckdbColumns: ["symbol", "trade_date", "name", "open", "high", "low", "close"],
+  },
+  stock_a_adjust_factor: {
+    badge: "1016 复权因子",
+    duckdbColumns: ["symbol", "trade_date", "name", "factor"],
+  },
+};
 const syncInstanceStatusOptions: Array<{ value: SyncInstanceStatusFilter; label: string }> = [
   { value: "all", label: "全部" },
   { value: "waiting", label: "等待" },
@@ -176,7 +191,7 @@ export function DataSourceSettingsForm({
       const nextSchema = await getMindgoDatasetSchema(datasetId);
       setSchema(nextSchema);
       setParams(defaultParamsFromSchema(nextSchema));
-      setDuckdbSql(defaultDuckDBSql(nextSchema));
+      setDuckdbSql(defaultDuckDBSql(datasetId, nextSchema));
       setPage(1);
     } catch (caught) {
       setSchema(null);
@@ -672,7 +687,10 @@ export function DataSourceSettingsForm({
                   type="button"
                   onClick={() => setSelectedDatasetId(dataset.id)}
                 >
-                  <span className="text-xs font-semibold">{dataset.name}</span>
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate text-xs font-semibold">{dataset.name}</span>
+                    <DatasetBadge datasetId={dataset.id} />
+                  </span>
                   <span className="text-[11px] leading-4 text-muted">
                     {dataset.category_path.join(" / ")}
                   </span>
@@ -687,9 +705,12 @@ export function DataSourceSettingsForm({
           <section className="grid gap-3 rounded-md border border-line bg-panel p-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="truncate text-sm font-semibold text-ink">
-                  {selectedDataset?.name ?? "数据集"}
-                </h2>
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <h2 className="truncate text-sm font-semibold text-ink">
+                    {selectedDataset?.name ?? "数据集"}
+                  </h2>
+                  {selectedDataset ? <DatasetBadge datasetId={selectedDataset.id} /> : null}
+                </div>
                 <p className="mt-1 text-xs leading-5 text-muted">
                   {selectedDataset?.description ?? "选择一个数据集后开始查询。"}
                 </p>
@@ -880,6 +901,15 @@ export function DataSourceSettingsForm({
         />
       ) : null}
     </div>
+  );
+}
+
+function DatasetBadge({ datasetId }: { datasetId: string }) {
+  const meta = mindgoDatasetUiMeta[datasetId];
+  return (
+    <span className="inline-flex h-5 shrink-0 items-center rounded border border-line bg-soft px-1.5 font-mono text-[10px] font-semibold text-muted">
+      {meta?.badge ?? datasetId}
+    </span>
   );
 }
 
@@ -1989,18 +2019,25 @@ function defaultParamsFromSchema(schema: MindgoDatasetSchema): MindgoParamDraft 
   return draft;
 }
 
-function defaultDuckDBSql(schema: MindgoDatasetSchema): string {
+function defaultDuckDBSql(datasetId: string, schema: MindgoDatasetSchema): string {
   const parquetPath =
     schema.storage.partitioned_by.length > 0
       ? `${schema.storage.path}/${schema.storage.partitioned_by
           .map((partition) => `${partition}=*`)
           .join("/")}/data.parquet`
       : `${schema.storage.path}/*.parquet`;
+  const columns =
+    mindgoDatasetUiMeta[datasetId]?.duckdbColumns.filter((column) =>
+      schema.result_schema.some((field) => field.name === column),
+    ) ?? [];
   return [
-    "SELECT *",
+    columns.length > 0 ? `SELECT ${columns.join(", ")}` : "SELECT *",
     `FROM read_parquet('${sqlStringLiteral(parquetPath)}')`,
+    schema.storage.partitioned_by.includes("trade_day")
+      ? "ORDER BY trade_date DESC, symbol"
+      : "",
     "LIMIT 200",
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 function sqlStringLiteral(value: string): string {
