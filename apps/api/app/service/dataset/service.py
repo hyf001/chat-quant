@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from datetime import date, datetime
 from decimal import Decimal
+from uuid import uuid4
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -210,7 +211,11 @@ def _dataset_response(row: DatasetRow) -> DatasetResponse:
 
 
 def _dataset_id_from_payload(payload: DatasetPayload) -> str:
-    return (payload.id or payload.name).strip()
+    return payload.id.strip() if payload.id else _new_id("ds")
+
+
+def _new_id(prefix: str) -> str:
+    return f"{prefix}_{uuid4().hex[:16]}"
 
 
 def _dataset_detail_response(row: DatasetRow, create_sql: str) -> DatasetDetailResponse:

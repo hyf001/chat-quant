@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 _DUCKDB_VIEW_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 type DatasetJsonScalar = str | int | float | bool | None
@@ -54,6 +54,13 @@ class DatasetPayload(BaseModel):
             msg = "create_sql must contain non-whitespace characters"
             raise ValueError(msg)
         return stripped
+
+    @model_validator(mode="after")
+    def validate_stable_id(self) -> DatasetPayload:
+        if self.id is not None and self.id == self.name:
+            msg = "id must be stable and different from name"
+            raise ValueError(msg)
+        return self
 
 
 class DatasetUpdatePayload(BaseModel):

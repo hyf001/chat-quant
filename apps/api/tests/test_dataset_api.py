@@ -18,7 +18,8 @@ def test_dataset_api_creates_and_lists_dataset_metadata(client: TestClient) -> N
 
     assert response.status_code == 201
     dataset = response.json()
-    assert dataset["id"] == "a_stock_daily_price_pre_adjusted"
+    assert dataset["id"].startswith("ds_")
+    assert dataset["id"] != dataset["name"]
     assert dataset["name"] == "a_stock_daily_price_pre_adjusted"
     assert dataset["name_zh"] == "A股前复权日行情"
     assert dataset["name_en"] == "a_stock_daily_price_pre_adjusted"
@@ -40,9 +41,7 @@ def test_dataset_api_creates_and_lists_dataset_metadata(client: TestClient) -> N
     list_response = client.get("/api/datasets?exposed_to_agent=true")
 
     assert list_response.status_code == 200
-    assert [item["id"] for item in list_response.json()["datasets"]] == [
-        "a_stock_daily_price_pre_adjusted"
-    ]
+    assert [item["id"] for item in list_response.json()["datasets"]] == [dataset["id"]]
 
 
 def test_dataset_api_returns_naming_options(client: TestClient) -> None:
@@ -57,8 +56,28 @@ def test_dataset_api_returns_naming_options(client: TestClient) -> None:
     assert {"value": "日", "label": "日", "name_en": "daily"} in payload["frequencies"]
 
 
+def test_dataset_api_rejects_id_equal_to_view_name(client: TestClient) -> None:
+    response = client.post(
+        "/api/datasets",
+        json={
+            "id": "a_stock_daily_price",
+            "name": "a_stock_daily_price",
+            "description": "A股股票日行情数据",
+            "category_path": ["A股", "股票", "日", "行情数据"],
+            "exposed_to_agent": True,
+            "create_sql": (
+                "CREATE VIEW a_stock_daily_price AS "
+                "SELECT '000001.SZ' AS symbol, 10.0 AS close"
+            ),
+        },
+    )
+
+    assert response.status_code == 422
+    assert "id must be stable and different from name" in response.text
+
+
 def test_dataset_api_updates_and_deletes_dataset_metadata(client: TestClient) -> None:
-    client.post(
+    create_response = client.post(
         "/api/datasets",
         json={
             "name": "a_stock_daily_adjust_factor",
@@ -71,9 +90,10 @@ def test_dataset_api_updates_and_deletes_dataset_metadata(client: TestClient) ->
             ),
         },
     )
+    dataset_id = create_response.json()["id"]
 
     update_response = client.put(
-        "/api/datasets/a_stock_daily_adjust_factor",
+        f"/api/datasets/{dataset_id}",
         json={
             "description": "A股日频复权因子",
             "category_path": ["A股", "股票", "日", "行情数据"],
@@ -91,10 +111,10 @@ def test_dataset_api_updates_and_deletes_dataset_metadata(client: TestClient) ->
     assert updated["category_path_en"] == ["a", "stock", "daily", "adjust_factor"]
     assert updated["exposed_to_agent"] is True
 
-    delete_response = client.delete("/api/datasets/a_stock_daily_adjust_factor")
+    delete_response = client.delete(f"/api/datasets/{dataset_id}")
 
     assert delete_response.status_code == 204
-    assert client.get("/api/datasets/a_stock_daily_adjust_factor").status_code == 404
+    assert client.get(f"/api/datasets/{dataset_id}").status_code == 404
 
 
 def test_dataset_api_rejects_duplicate_duckdb_view_name(client: TestClient) -> None:
@@ -204,7 +224,8 @@ def test_dataset_api_gets_duckdb_create_view_sql(client: TestClient) -> None:
 
     assert response.status_code == 201
 
-    detail_response = client.get("/api/datasets/a_stock_daily_price_forward_adjusted")
+    dataset_id = response.json()["id"]
+    detail_response = client.get(f"/api/datasets/{dataset_id}")
 
     assert detail_response.status_code == 200
     detail = detail_response.json()

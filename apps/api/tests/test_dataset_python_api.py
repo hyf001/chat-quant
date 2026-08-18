@@ -30,10 +30,12 @@ def test_dataset_python_api_lists_describes_and_queries_exposed_dataset(
     )
 
     datasets = list_datasets()
-    assert datasets["id"].tolist() == ["a_stock_daily_price"]
+    assert datasets["id"].iloc[0].startswith("ds_")
+    assert datasets["name"].tolist() == ["a_stock_daily_price"]
 
     detail = describe_dataset("a_stock_daily_price")
-    assert detail["id"] == "a_stock_daily_price"
+    assert detail["id"].startswith("ds_")
+    assert detail["name"] == "a_stock_daily_price"
     assert [column["name"] for column in detail["columns"]] == [
         "symbol",
         "trade_date",
