@@ -49,6 +49,7 @@ class ChatApplicationService:
         self.auto_refresh_settings = auto_refresh_settings
         self._pending_executions: dict[str, AgentExecutionCommand] = {}
         self._session_state: dict[str, ChatExecutionState] = {}
+        self._stopped_sessions: set[str] = set()
 
     async def handle_user_message(
         self,
@@ -107,6 +108,7 @@ class ChatApplicationService:
                 "user_message_id": user_message_id,
             },
         )
+        self._stopped_sessions.discard(chat_session_id)
         self._pending_executions[chat_session_id] = command
         self._session_state[chat_session_id] = ChatExecutionState(
             title=title,
@@ -183,6 +185,23 @@ class ChatApplicationService:
         chat_sessions: ChatSessionService | None = None,
     ) -> AsyncIterator[SDKStreamEnvelope]:
         command = self._pending_executions.pop(chat_session_id, None)
+        if chat_session_id in self._stopped_sessions:
+            self._stopped_sessions.discard(chat_session_id)
+            yield SDKStreamEnvelope(
+                sequence=1,
+                chat_session_id=chat_session_id,
+                sdk_session_id=command.sdk_session_id if command is not None else None,
+                turn_id=None,
+                received_at=_now(),
+                sdk_event={
+                    "type": "result_message",
+                    "subtype": "error_during_execution",
+                    "is_error": True,
+                    "result": None,
+                    "message": "用户已停止本轮执行。",
+                },
+            )
+            return
         if command is None:
             state = self._session_state.get(chat_session_id)
             sdk_session_id = state.sdk_session_id if state is not None else None
@@ -250,12 +269,20 @@ class ChatApplicationService:
             },
         )
 
-    async def cancel_session(self, chat_session_id: str, reason: str) -> bool:
+    async def stop_session(self, chat_session_id: str, reason: str) -> bool:
         removed = self._pending_executions.pop(chat_session_id, None)
-        exists = removed is not None or chat_session_id in self._session_state
+        interrupted = await self.runtime.interrupt_session(chat_session_id)
+        exists = removed is not None or interrupted or chat_session_id in self._session_state
+        if removed is not None:
+            self._stopped_sessions.add(chat_session_id)
         logger.info(
-            "chat session cancellation requested",
-            extra={"chat_session_id": chat_session_id, "reason": reason, "found": exists},
+            "chat session stop requested",
+            extra={
+                "chat_session_id": chat_session_id,
+                "reason": reason,
+                "found": exists,
+                "interrupted": interrupted,
+            },
         )
         return exists
 

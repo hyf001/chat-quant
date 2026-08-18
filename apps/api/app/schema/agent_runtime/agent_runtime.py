@@ -88,10 +88,10 @@ class ChatSessionDetail(BaseModel):
     assets: list[AssetReference] = Field(default_factory=list)
 
 
-class CancelSessionRequest(BaseModel):
-    reason: str = Field(default="user_requested", max_length=256)
+class StopSessionRequest(BaseModel):
+    reason: str = Field(default="user_requested_stop", max_length=256)
 
 
-class CancelSessionResponse(BaseModel):
+class StopSessionResponse(BaseModel):
     chat_session_id: str
-    cancelled: bool
+    stopped: bool

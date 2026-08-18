@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator, Callable
 from datetime import datetime
+from typing import Protocol
 
-from claude_agent_sdk import ClaudeAgentOptions, query
+from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 
 from app.agent_runtime.custom_tools import (
     CHATQ_PYTHON_TOOL_NAME,
@@ -30,6 +31,28 @@ from app.schema.agent_runtime import (
 )
 
 SDKQuery = Callable[..., AsyncIterator[object]]
+
+
+class SDKStreamingClient(Protocol):
+    async def connect(
+        self,
+        prompt: str | AsyncIterator[dict[str, object]] | None = None,
+    ) -> None: ...
+
+    async def query(
+        self,
+        prompt: str | AsyncIterator[dict[str, object]],
+        session_id: str = "default",
+    ) -> None: ...
+
+    def receive_response(self) -> AsyncIterator[object]: ...
+
+    async def interrupt(self) -> None: ...
+
+    async def disconnect(self) -> None: ...
+
+
+SDKClientFactory = Callable[[ClaudeAgentOptions], SDKStreamingClient]
 logger = get_logger(__name__)
 serialize_sdk_message = parse_sdk_message
 DEFAULT_SKILL_PLUGIN_DIR = "plugin"
@@ -41,10 +64,13 @@ class ClaudeAgentRuntime:
         self,
         *,
         settings: Settings,
-        sdk_query: SDKQuery = query,
+        sdk_query: SDKQuery | None = None,
+        sdk_client_factory: SDKClientFactory = ClaudeSDKClient,
     ) -> None:
         self.settings = settings
         self.sdk_query = sdk_query
+        self.sdk_client_factory = sdk_client_factory
+        self._active_clients: dict[str, SDKStreamingClient] = {}
         self.hooks = AgentRuntimeHooks()
         self.skill_plugin = SDKSkillPlugin(
             DEFAULT_SKILL_PLUGIN_DIR,
@@ -107,9 +133,13 @@ class ClaudeAgentRuntime:
                 if command.deadline_seconds
                 else None
             )
-            sdk_messages = self.sdk_query(
-                prompt=_streaming_user_prompt(command),
-                options=sdk_options,
+            sdk_messages = (
+                self.sdk_query(
+                    prompt=_streaming_user_prompt(command),
+                    options=sdk_options,
+                )
+                if self.sdk_query is not None
+                else self._stream_sdk_client_messages(command, sdk_options)
             )
 
             initial_deadline = _min_deadline(first_effective_deadline, execution_deadline)
@@ -254,6 +284,29 @@ class ClaudeAgentRuntime:
                         "event_count": sequence,
                     },
                 )
+
+    async def interrupt_session(self, chat_session_id: str) -> bool:
+        client = self._active_clients.get(chat_session_id)
+        if client is None:
+            return False
+        await client.interrupt()
+        return True
+
+    async def _stream_sdk_client_messages(
+        self,
+        command: AgentExecutionCommand,
+        sdk_options: ClaudeAgentOptions,
+    ) -> AsyncIterator[object]:
+        client = self.sdk_client_factory(sdk_options)
+        self._active_clients[command.chat_session_id] = client
+        try:
+            await client.connect()
+            await client.query(_streaming_user_prompt(command))
+            async for message in client.receive_response():
+                yield message
+        finally:
+            self._active_clients.pop(command.chat_session_id, None)
+            await client.disconnect()
 
     def build_sdk_options(
         self,

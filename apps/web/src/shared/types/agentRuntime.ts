@@ -23,6 +23,11 @@ export type ChatMessageAccepted = {
   stream_url: string;
 };
 
+export type StopChatSessionResponse = {
+  chat_session_id: string;
+  stopped: boolean;
+};
+
 export type ChatMessageRole = "user" | "assistant";
 
 export type ChatMessageView = {

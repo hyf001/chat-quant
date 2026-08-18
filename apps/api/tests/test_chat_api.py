@@ -91,6 +91,27 @@ def test_chat_message_returns_stream_url_and_sse_events() -> None:
     assert "result_message" in stream_response.text
 
 
+def test_chat_message_can_be_stopped_before_stream_starts() -> None:
+    project = _create_api_project()
+    response = client.post(
+        "/api/chat/messages",
+        json={"message": "执行一个较长任务", "project_id": project["id"]},
+    )
+    data = response.json()
+
+    stop_response = client.post(f"/api/chat/sessions/{data['chat_session_id']}/stop", json={})
+    stream_response = client.get(data["stream_url"])
+
+    assert stop_response.status_code == 200
+    assert stop_response.json() == {
+        "chat_session_id": data["chat_session_id"],
+        "stopped": True,
+    }
+    assert stream_response.status_code == 200
+    assert "result_message" in stream_response.text
+    assert "error_during_execution" in stream_response.text
+
+
 def test_chat_session_detail_does_not_use_live_envelope_cache() -> None:
     project = _create_api_project()
     response = client.post(

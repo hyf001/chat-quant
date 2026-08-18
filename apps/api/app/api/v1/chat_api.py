@@ -10,11 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.schema.agent_runtime import (
-    CancelSessionRequest,
-    CancelSessionResponse,
     ChatMessageAccepted,
     ChatMessageRequest,
     ChatSessionDetail,
+    StopSessionRequest,
+    StopSessionResponse,
 )
 from app.service import chat_session as chat_session_service
 from app.service.chat import ChatApplicationService, chat_application_service
@@ -53,15 +53,15 @@ async def stream_chat_session(
     )
 
 
-@router.post("/sessions/{chat_session_id}/cancel", response_model=CancelSessionResponse)
-async def cancel_chat_session(
+@router.post("/sessions/{chat_session_id}/stop", response_model=StopSessionResponse)
+async def stop_chat_session(
     chat_session_id: str,
-    request: CancelSessionRequest,
-) -> CancelSessionResponse:
-    cancelled = await chat_application_service.cancel_session(chat_session_id, request.reason)
-    if not cancelled:
+    request: StopSessionRequest,
+) -> StopSessionResponse:
+    stopped = await chat_application_service.stop_session(chat_session_id, request.reason)
+    if not stopped:
         raise HTTPException(status_code=404, detail="chat session not found")
-    return CancelSessionResponse(chat_session_id=chat_session_id, cancelled=True)
+    return StopSessionResponse(chat_session_id=chat_session_id, stopped=True)
 
 
 @router.get("/sessions/{chat_session_id}", response_model=ChatSessionDetail)

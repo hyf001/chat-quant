@@ -9,9 +9,12 @@ type ComposerProps = {
   models: ProviderModel[];
   isModelLoading?: boolean;
   isModelSaving?: boolean;
+  isStreaming?: boolean;
+  isStopping?: boolean;
   onModelChange: (model: string) => void;
   onModelRefresh?: () => void;
   onSendMessage: (content: string) => Promise<void>;
+  onStopStreaming?: () => Promise<void> | void;
 };
 
 export function Composer({
@@ -21,23 +24,38 @@ export function Composer({
   models,
   isModelLoading = false,
   isModelSaving = false,
+  isStreaming = false,
+  isStopping = false,
   onModelChange,
   onModelRefresh,
   onSendMessage,
+  onStopStreaming,
 }: ComposerProps) {
   const [content, setContent] = useState("");
   const hasModels = models.length > 0;
-  const canSelectModel = hasModels && !disabled && !isModelSaving;
+  const canEdit = !disabled && !isStreaming;
+  const canSelectModel = hasModels && canEdit && !isModelSaving;
+  const isSubmitDisabled = isStreaming
+    ? isStopping || !onStopStreaming
+    : disabled || content.trim().length === 0;
   const selectedModel = currentModel ?? models[0]?.id ?? "";
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isStreaming) {
+      await onStopStreaming?.();
+      return;
+    }
     const trimmed = content.trim();
-    if (!trimmed || disabled) {
+    if (!trimmed || !canEdit) {
       return;
     }
     setContent("");
     await onSendMessage(trimmed);
+  };
+
+  const handleStopClick = () => {
+    void onStopStreaming?.();
   };
 
   return (
@@ -50,7 +68,7 @@ export function Composer({
         <span className="select-none font-mono text-lg font-black text-signal">&gt;</span>
         <input
           className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted/70"
-          disabled={disabled}
+          disabled={!canEdit}
           id="agent-message-input"
           name="message"
           onChange={(event) => setContent(event.target.value)}
@@ -80,11 +98,16 @@ export function Composer({
           ))}
         </select>
         <button
-          className="h-9 shrink-0 rounded-md bg-ink px-4 text-xs font-bold text-panel transition-colors hover:bg-graphite focus:outline-none focus:ring-2 focus:ring-signal/25 disabled:cursor-not-allowed disabled:bg-strong disabled:text-muted"
-          disabled={disabled || content.trim().length === 0}
-          type="submit"
+          className={
+            isStreaming
+              ? "h-9 shrink-0 rounded-md bg-rose-600 px-4 text-xs font-bold text-white transition-colors hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500/25 disabled:cursor-not-allowed disabled:bg-strong disabled:text-muted"
+              : "h-9 shrink-0 rounded-md bg-ink px-4 text-xs font-bold text-panel transition-colors hover:bg-graphite focus:outline-none focus:ring-2 focus:ring-signal/25 disabled:cursor-not-allowed disabled:bg-strong disabled:text-muted"
+          }
+          disabled={isSubmitDisabled}
+          onClick={isStreaming ? handleStopClick : undefined}
+          type={isStreaming ? "button" : "submit"}
         >
-          发送
+          {isStreaming ? "停止" : "发送"}
         </button>
       </form>
     </footer>

@@ -20,6 +20,7 @@ import {
   openProject,
   readChatStream,
   sendAgentChatMessage,
+  stopAgentChatSession,
   updateAppConfig,
   updateProject,
   type AgentChatSessionDetail,
@@ -61,6 +62,7 @@ export function WorkbenchPage() {
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [composerModelState, setComposerModelState] = useState<ComposerModelState>({
     currentModel: null,
@@ -335,6 +337,9 @@ export function WorkbenchPage() {
   };
 
   const handleSendMessage = async (content: string) => {
+    if (isSending) {
+      return;
+    }
     if (!activeProjectId) {
       setError("请先创建或选择项目");
       return;
@@ -378,7 +383,23 @@ export function WorkbenchPage() {
     } finally {
       streamingSessionIdRef.current = null;
       setIsSending(false);
+      setIsStopping(false);
       void refreshSessions(historyQuery, activeProjectId);
+    }
+  };
+
+  const handleStopStreaming = async () => {
+    const chatSessionId = streamingSessionIdRef.current;
+    if (!chatSessionId || isStopping) {
+      return;
+    }
+    setIsStopping(true);
+    setError(null);
+    try {
+      await stopAgentChatSession(chatSessionId);
+    } catch (caught) {
+      setIsStopping(false);
+      setError(caught instanceof Error ? caught.message : "停止会话失败");
     }
   };
 
@@ -473,15 +494,18 @@ export function WorkbenchPage() {
       composer={
         activeRoute === "new-task" && !hasNoProjects ? (
           <Composer
-            disabled={isSending || !activeProjectId}
+            disabled={!activeProjectId}
             currentModel={composerModelState.currentModel}
             models={composerModelState.models}
             isModelLoading={isModelLoading}
             isModelSaving={isModelSaving}
+            isStreaming={isSending}
+            isStopping={isStopping}
             placeholder={activeProjectId ? "随心输入" : "先创建或选择项目"}
             onModelChange={(model) => void handleModelChange(model)}
             onModelRefresh={handleModelRefresh}
             onSendMessage={handleSendMessage}
+            onStopStreaming={handleStopStreaming}
           />
         ) : null
       }

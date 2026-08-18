@@ -2,6 +2,7 @@ import type {
   AgentChatSessionDetail,
   ChatMessageAccepted,
   SDKStreamEnvelope,
+  StopChatSessionResponse,
 } from "../types/agentRuntime";
 import type { BacktestDetail, BacktestRun, CreateBacktestRunPayload } from "../types/backtests";
 import type {
@@ -858,6 +859,15 @@ export async function getAgentChatSessionDetail(
   chatSessionId: string,
 ): Promise<AgentChatSessionDetail> {
   return requestJson<AgentChatSessionDetail>(`/api/chat/sessions/${chatSessionId}`);
+}
+
+export async function stopAgentChatSession(
+  chatSessionId: string,
+): Promise<StopChatSessionResponse> {
+  return requestJson<StopChatSessionResponse>(`/api/chat/sessions/${chatSessionId}/stop`, {
+    method: "POST",
+    body: { reason: "user_requested_stop" },
+  });
 }
 
 export async function readChatStream(

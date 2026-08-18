@@ -37,7 +37,12 @@ def test_runtime_extracts_session_id_from_system_event_data() -> None:
     asyncio.run(_run_system_event_session_id_assertions())
 
 
+def test_runtime_interrupts_active_sdk_client() -> None:
+    asyncio.run(_run_runtime_interrupt_assertions())
+
+
 def test_sdk_options_omit_thinking_by_default_for_compatible_agent_api() -> None:
+    (Path.cwd() / "plugin").mkdir()
     runtime = ClaudeAgentRuntime(
         settings=Settings(),
         sdk_query=fake_sdk_query,
@@ -177,6 +182,84 @@ def test_sdk_options_delegate_permissions_to_sdk_rules_without_hooks() -> None:
     assert sdk_options.permission_mode == "bypassPermissions"
     assert sdk_options.skills == ["chat-quant:financial_data_query"]
     assert not hasattr(sdk_options, "hooks") or sdk_options.hooks is None
+
+
+async def _run_runtime_interrupt_assertions() -> None:
+    clients: list[InterruptibleFakeClient] = []
+
+    def fake_client_factory(options: object) -> "InterruptibleFakeClient":
+        client = InterruptibleFakeClient(options)
+        clients.append(client)
+        return client
+
+    runtime = ClaudeAgentRuntime(
+        settings=Settings(),
+        sdk_client_factory=fake_client_factory,
+    )
+    command = AgentExecutionCommand(
+        project_id="project_1",
+        chat_session_id="chat_interrupt",
+        user_message_id="msg_1",
+        project_dir=str(Path.cwd()),
+        sdk_session_id=None,
+        request_id="req_1",
+        user_prompt="执行一个很长的任务",
+    )
+    stream = runtime.stream_messages(command)
+
+    first = await anext(stream)
+    assert first.sdk_event["type"] == "assistant_message"
+
+    stopped = await runtime.interrupt_session("chat_interrupt")
+    remaining = [envelope async for envelope in stream]
+
+    assert stopped is True
+    assert len(clients) == 1
+    assert clients[0].interrupt_count == 1
+    assert clients[0].disconnect_count == 1
+    assert remaining[-1].sdk_event["type"] == "result_message"
+    assert remaining[-1].sdk_event["subtype"] == "error_during_execution"
+
+
+class InterruptibleFakeClient:
+    def __init__(self, options: object) -> None:
+        self.options = options
+        self.interrupted = asyncio.Event()
+        self.interrupt_count = 0
+        self.disconnect_count = 0
+
+    async def connect(self, prompt: object | None = None) -> None:
+        del prompt
+
+    async def query(self, prompt: object, session_id: str = "default") -> None:
+        del prompt, session_id
+
+    async def interrupt(self) -> None:
+        self.interrupt_count += 1
+        self.interrupted.set()
+
+    async def disconnect(self) -> None:
+        self.disconnect_count += 1
+
+    async def receive_response(self) -> AsyncIterator[object]:
+        session_id = "sdk_interrupted_1"
+        yield AssistantMessage(
+            content=[TextBlock(text="开始执行")],
+            model="claude-sonnet-4",
+            message_id="sdk_interrupt_msg_1",
+            session_id=session_id,
+        )
+        await self.interrupted.wait()
+        yield ResultMessage(
+            subtype="error_during_execution",
+            duration_ms=10,
+            duration_api_ms=10,
+            is_error=True,
+            num_turns=1,
+            session_id=session_id,
+            result=None,
+            uuid="sdk_interrupt_result_1",
+        )
 
 
 def test_runtime_uses_configured_tools_and_adds_system_skill_tool() -> None:

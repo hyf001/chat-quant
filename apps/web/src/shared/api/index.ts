@@ -38,6 +38,7 @@ export {
   runBacktest,
   sendAgentChatMessage,
   sendChatMessage,
+  stopAgentChatSession,
   getMindgoSourceSchema,
   queryMindgoSource,
   queryDatasets,
