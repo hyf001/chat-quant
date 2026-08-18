@@ -309,12 +309,25 @@ export type MindgoSourceStorageSpec = {
   partition_count: number;
 };
 
+export type MindgoSourceSyncQueryWindow = {
+  start_offset_days: number;
+  end_offset_days: number;
+};
+
+export type MindgoSourceSyncSpec = {
+  supports_query_window: boolean;
+  default_query_window: MindgoSourceSyncQueryWindow;
+  min_start_offset_days: number;
+  max_end_offset_days: number;
+};
+
 export type MindgoSourceSchema = {
   name: string;
   category_path: string[];
   description: string;
   mindgo_function: string;
   storage: MindgoSourceStorageSpec;
+  sync: MindgoSourceSyncSpec;
   query_params: MindgoParameterSpec[];
   result_schema: MindgoFieldSpec[];
 };
@@ -352,6 +365,7 @@ export type MindgoSourceSyncPayload = {
   trigger_end_date: string;
   trigger_time: string;
   write_mode: MindgoSourceSyncWriteMode;
+  query_window: MindgoSourceSyncQueryWindow;
   params: Record<string, MindgoJsonValue>;
 };
 
@@ -422,6 +436,7 @@ export type MindgoSourceSyncTriggerResponse = {
 export type MindgoSourceSyncSchedulerPayload = {
   cron: string;
   write_mode: MindgoSourceSyncWriteMode;
+  query_window: MindgoSourceSyncQueryWindow;
   params: Record<string, MindgoJsonValue>;
 };
 
@@ -430,6 +445,7 @@ export type MindgoSourceSyncSchedulerState = {
   scheduler_id: string | null;
   cron: string | null;
   write_mode: MindgoSourceSyncWriteMode;
+  query_window: MindgoSourceSyncQueryWindow;
   params: Record<string, MindgoJsonValue>;
   last_run_at: string | null;
   next_run_at: string | null;

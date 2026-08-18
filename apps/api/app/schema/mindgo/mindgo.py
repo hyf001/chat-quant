@@ -58,12 +58,38 @@ class MindgoSourceStorageSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class MindgoSourceSyncQueryWindow(BaseModel):
+    start_offset_days: int = 0
+    end_offset_days: int = 0
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_offset_range(self) -> MindgoSourceSyncQueryWindow:
+        if self.start_offset_days > self.end_offset_days:
+            msg = "start_offset_days must be less than or equal to end_offset_days"
+            raise ValueError(msg)
+        return self
+
+
+class MindgoSourceSyncSpec(BaseModel):
+    supports_query_window: bool = False
+    default_query_window: MindgoSourceSyncQueryWindow = Field(
+        default_factory=MindgoSourceSyncQueryWindow
+    )
+    min_start_offset_days: int = 0
+    max_end_offset_days: int = 0
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class MindgoSourceSchema(BaseModel):
     name: str = Field(min_length=1)
     category_path: list[str] = Field(min_length=1)
     description: str = ""
     mindgo_function: str = Field(min_length=1)
     storage: MindgoSourceStorageSpec
+    sync: MindgoSourceSyncSpec = Field(default_factory=MindgoSourceSyncSpec)
     query_params: list[MindgoParameterSpec]
     result_schema: list[MindgoFieldSpec]
 
@@ -94,6 +120,9 @@ class MindgoSourceSyncRequest(BaseModel):
     start_date: date
     end_date: date
     write_mode: MindgoSourceSyncWriteMode = MindgoSourceSyncWriteMode.OVERWRITE
+    query_window: MindgoSourceSyncQueryWindow = Field(
+        default_factory=MindgoSourceSyncQueryWindow
+    )
     params: dict[str, MindgoJsonValue] = Field(default_factory=dict)
 
     model_config = ConfigDict(extra="forbid")
@@ -111,6 +140,9 @@ class MindgoSourceSyncTriggerRequest(BaseModel):
     trigger_end_date: date
     trigger_time: time
     write_mode: MindgoSourceSyncWriteMode = MindgoSourceSyncWriteMode.OVERWRITE
+    query_window: MindgoSourceSyncQueryWindow = Field(
+        default_factory=MindgoSourceSyncQueryWindow
+    )
     params: dict[str, MindgoJsonValue] = Field(default_factory=dict)
 
     model_config = ConfigDict(extra="forbid")
@@ -141,6 +173,9 @@ class MindgoSourceSyncTriggerResponse(BaseModel):
 class MindgoSourceSyncSchedulerRequest(BaseModel):
     cron: str = Field(min_length=1, max_length=120)
     write_mode: MindgoSourceSyncWriteMode = MindgoSourceSyncWriteMode.OVERWRITE
+    query_window: MindgoSourceSyncQueryWindow = Field(
+        default_factory=MindgoSourceSyncQueryWindow
+    )
     params: dict[str, MindgoJsonValue] = Field(default_factory=dict)
 
     model_config = ConfigDict(extra="forbid")
@@ -151,6 +186,9 @@ class MindgoSourceSyncSchedulerState(BaseModel):
     scheduler_id: str | None = None
     cron: str | None = None
     write_mode: MindgoSourceSyncWriteMode = MindgoSourceSyncWriteMode.OVERWRITE
+    query_window: MindgoSourceSyncQueryWindow = Field(
+        default_factory=MindgoSourceSyncQueryWindow
+    )
     params: dict[str, MindgoJsonValue] = Field(default_factory=dict)
     last_run_at: datetime | None = None
     next_run_at: datetime | None = None

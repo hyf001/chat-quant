@@ -4,13 +4,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Database,
+  Eye,
   FolderOpen,
   Loader2,
   Play,
   Power,
   PowerOff,
   RefreshCw,
-  RotateCcw,
   Save,
   Settings,
   Server,
@@ -39,6 +39,8 @@ import {
   type MindgoSourceSchema,
   type MindgoSourceSummary,
   type MindgoSourceStorageSpec,
+  type MindgoSourceSyncQueryWindow,
+  type MindgoSourceSyncSpec,
   type MindgoSourceSyncStatusResponse,
   type MindgoSourceSyncWriteMode,
   type MindgoJsonValue,
@@ -75,12 +77,23 @@ const defaultSyncTime = formatLocalTime(new Date());
 const defaultSyncCron = "0 18 * * 1-5";
 const defaultSyncWriteMode: MindgoSourceSyncWriteMode = "overwrite";
 const defaultSyncInstancePageSize = 8;
+const hiddenMindgoQueryParamNames = new Set(["fields", "fq"]);
+const hiddenMindgoSyncParamNames = new Set([
+  ...hiddenMindgoQueryParamNames,
+  "baseDay",
+  "start_date",
+  "end_date",
+  "bar_count",
+]);
 const mindgoSourceUiMeta: Record<string, MindgoSourceUiMeta> = {
   stock_a_daily_price: {
     badge: "1015 日行情",
   },
   stock_a_adjust_factor: {
     badge: "1016 复权因子",
+  },
+  index_a_daily_price: {
+    badge: "指数日行情",
   },
 };
 const syncInstanceStatusOptions: Array<{ value: SyncInstanceStatusFilter; label: string }> = [
@@ -158,6 +171,11 @@ export function DataSourceSettingsForm({
   const [syncStartDateDraft, setSyncStartDateDraft] = useState(today);
   const [syncEndDateDraft, setSyncEndDateDraft] = useState(today);
   const [syncTimeDraft, setSyncTimeDraft] = useState(defaultSyncTime);
+  const [manualQueryWindowDraft, setManualQueryWindowDraft] =
+    useState<MindgoSourceSyncQueryWindow>({
+      start_offset_days: 0,
+      end_offset_days: 0,
+    });
 
   const selectedSource = useMemo(
     () => sources.find((source) => source.id === selectedSourceId) ?? sources[0] ?? null,
@@ -336,7 +354,7 @@ export function DataSourceSettingsForm({
     setIsQuerying(true);
     try {
       const response = await queryMindgoSource(selectedSourceId, {
-        params: cleanParams(params),
+        params: cleanVisibleParams(params),
         page: nextPage,
         page_size: pageSize,
       });
@@ -359,7 +377,8 @@ export function DataSourceSettingsForm({
         trigger_end_date: syncEndDateDraft,
         trigger_time: syncTimeDraft,
         write_mode: manualWriteModeDraft,
-        params: {},
+        query_window: normalizeQueryWindow(manualQueryWindowDraft, schema?.sync ?? null),
+        params: cleanVisibleSyncParams(params),
       });
       const instances = response.instances.length > 0 ? response.instances : [response.instance];
       await loadSyncStatus(selectedSourceId, syncInstanceStatusFilter);
@@ -475,7 +494,11 @@ export function DataSourceSettingsForm({
       const response = await upsertMindgoSourceSyncScheduler(selectedSourceId, {
         cron: cronDraft,
         write_mode: schedulerWriteModeDraft,
-        params: {},
+        query_window: schema?.sync.default_query_window ?? {
+          start_offset_days: 0,
+          end_offset_days: 0,
+        },
+        params: cleanVisibleSyncParams(params),
       });
       setSyncStatus(response);
       setCronDraft(response.scheduler.cron ?? defaultSyncCron);
@@ -505,6 +528,12 @@ export function DataSourceSettingsForm({
     setSyncStartDateDraft(today);
     setSyncEndDateDraft(today);
     setSyncTimeDraft(formatLocalTime(new Date()));
+    setManualQueryWindowDraft(
+      schema?.sync.default_query_window ?? {
+        start_offset_days: 0,
+        end_offset_days: 0,
+      },
+    );
     setIsManualSyncOpen(true);
   };
 
@@ -736,7 +765,7 @@ export function DataSourceSettingsForm({
 
                 {queryMode === "mindgo" ? (
                   <div className="grid gap-3 md:grid-cols-2">
-                    {schema.query_params.map((param) => (
+                    {visibleMindgoQueryParams(schema).map((param) => (
                       <ParamField
                         key={param.name}
                         param={param}
@@ -746,25 +775,39 @@ export function DataSourceSettingsForm({
                     ))}
                   </div>
                 ) : (
-                  <SyncRuntimePanel
-                    disabled={!canUseSource || isBusy || isLoadingSyncStatus || isLoadingSyncInstances}
-                    instancePage={syncInstancePage}
-                    instancePageSize={syncInstancePageSize}
-                    instances={syncInstances}
-                    isLoading={isLoadingSyncStatus || isLoadingSyncInstances}
-                    isSyncing={isSyncing}
-                    mutatingInstanceId={mutatingInstanceId}
-                    statusFilter={syncInstanceStatusFilter}
-                    status={syncStatus}
-                    onDeleteInstance={handleDeleteInstance}
-                    onInstancePageChange={(nextPage) => void handleSyncInstancePageChange(nextPage)}
-                    onInstancePageSizeChange={(nextPageSize) => void handleSyncInstancePageSizeChange(nextPageSize)}
-                    onInstanceStatusFilterChange={(nextStatus) => void handleSyncInstanceStatusFilterChange(nextStatus)}
-                    onOpenManualSync={handleOpenManualSyncDialog}
-                    onOpenSchedulerSettings={handleOpenSchedulerSettingsDialog}
-                    onRefresh={() => void handleRefreshSyncRuntime()}
-                    onRerunInstance={handleRerunInstance}
-                  />
+                  <div className="grid gap-4">
+                    {visibleMindgoSyncParams(schema).length > 0 ? (
+                      <div className="grid gap-3 rounded-md border border-line bg-soft p-3 md:grid-cols-2">
+                        {visibleMindgoSyncParams(schema).map((param) => (
+                          <ParamField
+                            key={param.name}
+                            param={param}
+                            value={params[param.name]}
+                            onChange={(value) => updateParam(param.name, value)}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                    <SyncRuntimePanel
+                      disabled={!canUseSource || isBusy || isLoadingSyncStatus || isLoadingSyncInstances}
+                      instancePage={syncInstancePage}
+                      instancePageSize={syncInstancePageSize}
+                      instances={syncInstances}
+                      isLoading={isLoadingSyncStatus || isLoadingSyncInstances}
+                      isSyncing={isSyncing}
+                      mutatingInstanceId={mutatingInstanceId}
+                      statusFilter={syncInstanceStatusFilter}
+                      status={syncStatus}
+                      onDeleteInstance={handleDeleteInstance}
+                      onInstancePageChange={(nextPage) => void handleSyncInstancePageChange(nextPage)}
+                      onInstancePageSizeChange={(nextPageSize) => void handleSyncInstancePageSizeChange(nextPageSize)}
+                      onInstanceStatusFilterChange={(nextStatus) => void handleSyncInstanceStatusFilterChange(nextStatus)}
+                      onOpenManualSync={handleOpenManualSyncDialog}
+                      onOpenSchedulerSettings={handleOpenSchedulerSettingsDialog}
+                      onRefresh={() => void handleRefreshSyncRuntime()}
+                      onRerunInstance={handleRerunInstance}
+                    />
+                  </div>
                 )}
               </div>
             ) : null}
@@ -817,11 +860,14 @@ export function DataSourceSettingsForm({
           disabled={isSyncing || isSavingScheduler}
           endDate={syncEndDateDraft}
           isSyncing={isSyncing}
+          queryWindow={manualQueryWindowDraft}
           startDate={syncStartDateDraft}
+          syncSpec={schema?.sync ?? null}
           triggerTime={syncTimeDraft}
           writeMode={manualWriteModeDraft}
           onCancel={() => setIsManualSyncOpen(false)}
           onEndDateChange={setSyncEndDateDraft}
+          onQueryWindowChange={setManualQueryWindowDraft}
           onStartDateChange={(value) => {
             setSyncStartDateDraft(value);
             setSyncEndDateDraft((current) => (current < value ? value : current));
@@ -1238,11 +1284,14 @@ function ManualSyncDialog({
   disabled,
   endDate,
   isSyncing,
+  queryWindow,
   startDate,
+  syncSpec,
   triggerTime,
   writeMode,
   onCancel,
   onEndDateChange,
+  onQueryWindowChange,
   onStartDateChange,
   onSync,
   onTriggerTimeChange,
@@ -1251,17 +1300,28 @@ function ManualSyncDialog({
   disabled: boolean;
   endDate: string;
   isSyncing: boolean;
+  queryWindow: MindgoSourceSyncQueryWindow;
   startDate: string;
+  syncSpec: MindgoSourceSyncSpec | null;
   triggerTime: string;
   writeMode: MindgoSourceSyncWriteMode;
   onCancel: () => void;
   onEndDateChange: (value: string) => void;
+  onQueryWindowChange: (value: MindgoSourceSyncQueryWindow) => void;
   onStartDateChange: (value: string) => void;
   onSync: () => void;
   onTriggerTimeChange: (value: string) => void;
   onWriteModeChange: (value: MindgoSourceSyncWriteMode) => void;
 }) {
-  const invalidRange = !startDate || !endDate || startDate > endDate || !triggerTime;
+  const supportsQueryWindow = Boolean(syncSpec?.supports_query_window);
+  const minStartOffset = syncSpec?.min_start_offset_days ?? 0;
+  const maxEndOffset = syncSpec?.max_end_offset_days ?? 0;
+  const queryWindowError = supportsQueryWindow
+    ? queryWindowValidationError(queryWindow, minStartOffset, maxEndOffset)
+    : null;
+  const invalidQueryWindow = Boolean(queryWindowError);
+  const invalidRange =
+    !startDate || !endDate || startDate > endDate || !triggerTime || invalidQueryWindow;
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-ink/20 p-4">
       <div className="grid w-full max-w-md gap-4 rounded-md border border-line bg-panel p-4 shadow-lift">
@@ -1309,6 +1369,52 @@ function ManualSyncDialog({
               />
             </label>
           </div>
+          {supportsQueryWindow ? (
+            <div className="grid gap-3 border-t border-line pt-3 sm:grid-cols-2">
+              <label className="grid gap-1.5">
+                <span className="text-xs font-semibold text-graphite">开始偏移</span>
+                <input
+                  className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
+                  max={inputNumberValue(queryWindow.end_offset_days)}
+                  min={minStartOffset}
+                  step={1}
+                  type="number"
+                  value={inputNumberValue(queryWindow.start_offset_days)}
+                  onChange={(event) =>
+                    onQueryWindowChange({
+                      ...queryWindow,
+                      start_offset_days: numberInputValue(event.currentTarget.value),
+                    })
+                  }
+                />
+              </label>
+              <label className="grid gap-1.5">
+                <span className="text-xs font-semibold text-graphite">结束偏移</span>
+                <input
+                  className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
+                  max={maxEndOffset}
+                  min={inputNumberValue(queryWindow.start_offset_days)}
+                  step={1}
+                  type="number"
+                  value={inputNumberValue(queryWindow.end_offset_days)}
+                  onChange={(event) =>
+                    onQueryWindowChange({
+                      ...queryWindow,
+                      end_offset_days: numberInputValue(event.currentTarget.value),
+                    })
+                  }
+                />
+              </label>
+              <div className="sm:col-span-2">
+                <p className="text-[11px] text-muted">
+                  允许范围：{minStartOffset} 到 {maxEndOffset}
+                </p>
+                {queryWindowError ? (
+                  <p className="mt-1 text-[11px] font-semibold text-risk">{queryWindowError}</p>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           <div className="flex flex-wrap justify-end gap-2">
             <button
               className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-60"
@@ -1716,6 +1822,7 @@ function SyncRuntimePanel({
   onRefresh: () => void;
   onRerunInstance: (instance: JobRuntimeInstance) => void;
 }) {
+  const [detailInstance, setDetailInstance] = useState<JobRuntimeInstance | null>(null);
   const schedulerConfigured = Boolean(status?.scheduler.configured);
   const instanceRows = instances?.items ?? [];
   const totalPages = instances?.total_pages ?? 0;
@@ -1860,12 +1967,22 @@ function SyncRuntimePanel({
                         <button
                           className="grid h-7 w-7 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
                           type="button"
+                          title="详情"
+                          aria-label={`查看实例 ${instance.id} 详情`}
+                          disabled={disabled}
+                          onClick={() => setDetailInstance(instance)}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          className="grid h-7 w-7 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                          type="button"
                           title="重新执行"
                           aria-label={`重新执行实例 ${instance.id}`}
                           disabled={disabled || Boolean(mutatingInstanceId)}
                           onClick={() => onRerunInstance(instance)}
                         >
-                          {isMutating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                          {isMutating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                         </button>
                         <button
                           className="grid h-7 w-7 place-items-center rounded-md border border-line bg-panel text-muted transition-colors hover:border-risk hover:text-risk disabled:cursor-not-allowed disabled:opacity-50"
@@ -1914,6 +2031,91 @@ function SyncRuntimePanel({
           </button>
         </div>
       </div>
+      {detailInstance ? (
+        <JobInstanceDetailDialog
+          instance={detailInstance}
+          onClose={() => setDetailInstance(null)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function JobInstanceDetailDialog({
+  instance,
+  onClose,
+}: {
+  instance: JobRuntimeInstance;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/45 px-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="实例详情"
+    >
+      <div className="flex max-h-[calc(100vh-48px)] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
+        <div className="flex items-center justify-between gap-3 border-b border-line p-4">
+          <div className="min-w-0">
+            <div className="font-mono text-[10px] font-bold uppercase text-muted">Job Instance</div>
+            <h2 className="mt-1 truncate font-mono text-base font-semibold text-ink">
+              {instance.id}
+            </h2>
+          </div>
+          <button
+            className="grid h-8 w-8 place-items-center rounded-md text-muted transition-colors hover:bg-soft hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+            type="button"
+            aria-label="关闭"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="min-h-0 overflow-y-auto p-4">
+          <div className="grid gap-3">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <InstanceDetailField label="触发方式" value={triggerTypeLabel(instance.trigger_type)} />
+              <InstanceDetailField label="状态" value={instanceStatusLabel(instance.status)} />
+              <InstanceDetailField label="job_type" value={instance.job_type} />
+              <InstanceDetailField label="job_id" value={instance.job_id} />
+              <InstanceDetailField label="trigger_key" value={instance.trigger_key} />
+              <InstanceDetailField label="priority" value={String(instance.priority)} />
+              <InstanceDetailField label="触发时间" value={formatDateTime(instance.scheduled_for)} />
+              <InstanceDetailField label="创建时间" value={formatDateTime(instance.created_at)} />
+              <InstanceDetailField label="开始时间" value={formatDateTime(instance.started_at)} />
+              <InstanceDetailField label="结束时间" value={formatDateTime(instance.completed_at)} />
+              <InstanceDetailField label="更新时间" value={formatDateTime(instance.updated_at)} />
+              <InstanceDetailField label="结果" value={instance.result_status || "-"} />
+            </div>
+            {instance.summary || instance.error_message ? (
+              <div className="rounded-md border border-line bg-soft p-3">
+                <div className="text-xs font-semibold text-graphite">
+                  {instance.error_message ? "错误信息" : "summary"}
+                </div>
+                <div className="mt-2 whitespace-pre-wrap break-words text-xs leading-5 text-ink">
+                  {instance.error_message || instance.summary}
+                </div>
+              </div>
+            ) : null}
+            <div className="rounded-md border border-line bg-soft p-3">
+              <div className="text-xs font-semibold text-graphite">payload</div>
+              <pre className="mt-2 max-h-[42vh] overflow-auto whitespace-pre-wrap break-words rounded-md bg-panel p-3 font-mono text-[11px] leading-5 text-ink">
+                {formatJson(instance.payload)}
+              </pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InstanceDetailField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-md border border-line bg-soft px-3 py-2">
+      <div className="text-[10px] font-semibold uppercase text-muted">{label}</div>
+      <div className="mt-1 break-all font-mono text-[11px] leading-5 text-ink">{value}</div>
     </div>
   );
 }
@@ -2032,6 +2234,87 @@ function defaultParamsFromSchema(schema: MindgoSourceSchema): MindgoParamDraft {
   return draft;
 }
 
+function visibleMindgoQueryParams(schema: MindgoSourceSchema): MindgoParameterSpec[] {
+  return schema.query_params.filter((param) => !hiddenMindgoQueryParamNames.has(param.name));
+}
+
+function visibleMindgoSyncParams(schema: MindgoSourceSchema): MindgoParameterSpec[] {
+  return schema.query_params.filter((param) => !hiddenMindgoSyncParamNames.has(param.name));
+}
+
+function cleanVisibleParams(params: MindgoParamDraft): Record<string, MindgoJsonValue> {
+  return cleanParams(
+    Object.fromEntries(
+      Object.entries(params).filter(([name]) => !hiddenMindgoQueryParamNames.has(name)),
+    ),
+  );
+}
+
+function cleanVisibleSyncParams(params: MindgoParamDraft): Record<string, MindgoJsonValue> {
+  return cleanParams(
+    Object.fromEntries(
+      Object.entries(params).filter(([name]) => !hiddenMindgoSyncParamNames.has(name)),
+    ),
+  );
+}
+
+function normalizeQueryWindow(
+  queryWindow: MindgoSourceSyncQueryWindow,
+  syncSpec: MindgoSourceSyncSpec | null,
+): MindgoSourceSyncQueryWindow {
+  if (!syncSpec?.supports_query_window) {
+    return {
+      start_offset_days: 0,
+      end_offset_days: 0,
+    };
+  }
+  return {
+    start_offset_days: toInteger(queryWindow.start_offset_days),
+    end_offset_days: toInteger(queryWindow.end_offset_days),
+  };
+}
+
+function queryWindowValidationError(
+  queryWindow: MindgoSourceSyncQueryWindow,
+  minStartOffset: number,
+  maxEndOffset: number,
+): string | null {
+  if (!Number.isFinite(queryWindow.start_offset_days) || !Number.isFinite(queryWindow.end_offset_days)) {
+    return "偏移量必须是整数";
+  }
+  if (!Number.isInteger(queryWindow.start_offset_days) || !Number.isInteger(queryWindow.end_offset_days)) {
+    return "偏移量必须是整数";
+  }
+  if (queryWindow.start_offset_days > queryWindow.end_offset_days) {
+    return "开始偏移不能大于结束偏移";
+  }
+  if (queryWindow.start_offset_days < minStartOffset) {
+    return `开始偏移不能小于 ${minStartOffset}`;
+  }
+  if (queryWindow.end_offset_days > maxEndOffset) {
+    return `结束偏移不能大于 ${maxEndOffset}`;
+  }
+  return null;
+}
+
+function numberInputValue(value: string): number {
+  if (value.trim() === "") {
+    return Number.NaN;
+  }
+  return Number(value);
+}
+
+function inputNumberValue(value: number): number | "" {
+  return Number.isFinite(value) ? value : "";
+}
+
+function toInteger(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.trunc(value);
+}
+
 function cleanParams(params: MindgoParamDraft): Record<string, MindgoJsonValue> {
   return Object.fromEntries(
     Object.entries(params).filter(([, value]) => {
@@ -2094,4 +2377,8 @@ function formatCell(value: MindgoJsonValue | undefined): string {
     return JSON.stringify(value);
   }
   return String(value);
+}
+
+function formatJson(value: MindgoJsonValue | Record<string, MindgoJsonValue>): string {
+  return JSON.stringify(value, null, 2);
 }

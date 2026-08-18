@@ -23,6 +23,12 @@ from app.schema.mindgo import (
     MindgoSourceSyncTriggerRequest,
     MindgoSourceSyncTriggerResponse,
 )
+from app.service.datasource.mindgo.index_a_daily_price.constants import (
+    INDEX_A_DAILY_PRICE_SOURCE_ID,
+)
+from app.service.datasource.mindgo.index_a_daily_price.job import (
+    index_a_daily_price_sync_job_ref,
+)
 from app.service.datasource.mindgo.stock_a_adjust_factor.constants import (
     STOCK_A_ADJUST_FACTOR_SOURCE_ID,
 )
@@ -114,13 +120,18 @@ async def sync_mindgo_source(
     payload: MindgoSourceSyncTriggerRequest,
     db: DatabaseSession,
 ) -> MindgoSourceSyncTriggerResponse:
+    if _has_query_window(payload) and not _source_supports_query_window(source_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"MindGo 数据源不支持查询窗口：{source_id}",
+        )
     job_ref = _sync_job_ref_for_source(source_id)
     register_default_job_runtime_events(job_runtime_registry)
     instance_service = JobRuntimeInstanceService(registry=job_runtime_registry)
     instances = []
-    for sync_day in _date_range(payload.trigger_start_date, payload.trigger_end_date):
-        scheduled_for = _manual_scheduled_for(sync_day, payload.trigger_time)
-        daily_payload = _sync_payload_for_scheduled_for(payload, scheduled_for)
+    for base_date in _date_range(payload.trigger_start_date, payload.trigger_end_date):
+        scheduled_for = _manual_scheduled_for(base_date, payload.trigger_time)
+        instance_payload = _sync_payload_for_base_date(payload, base_date)
         try:
             instances.append(
                 await instance_service.create_job_instance(
@@ -129,7 +140,7 @@ async def sync_mindgo_source(
                     trigger_type=TriggerType.MANUAL,
                     trigger_key=f"manual:{source_id}:{scheduled_for.isoformat()}",
                     scheduled_for=scheduled_for,
-                    payload=daily_payload.model_dump(mode="json"),
+                    payload=instance_payload.model_dump(mode="json"),
                 )
             )
         except DuplicateJobInstanceError as error:
@@ -153,6 +164,11 @@ async def upsert_mindgo_source_sync_scheduler(
     payload: MindgoSourceSyncSchedulerRequest,
     db: DatabaseSession,
 ) -> MindgoSourceSyncStatusResponse:
+    if _has_query_window(payload) and not _source_supports_query_window(source_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"MindGo 数据源不支持查询窗口：{source_id}",
+        )
     job_ref = _sync_job_ref_for_source(source_id)
     register_default_job_runtime_events(job_runtime_registry)
     schedule_service = JobRuntimeScheduleService(registry=job_runtime_registry)
@@ -163,6 +179,7 @@ async def upsert_mindgo_source_sync_scheduler(
             cron=payload.cron,
             payload={
                 "write_mode": payload.write_mode,
+                "query_window": payload.query_window.model_dump(mode="json"),
                 "params": payload.params,
             },
         )
@@ -197,6 +214,19 @@ def _sync_job_ref_for_source(source_id: str) -> JobRef:
         return stock_a_daily_price_sync_job_ref()
     if source_id == STOCK_A_ADJUST_FACTOR_SOURCE_ID:
         return stock_a_adjust_factor_sync_job_ref()
+    if source_id == INDEX_A_DAILY_PRICE_SOURCE_ID:
+        return index_a_daily_price_sync_job_ref()
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"MindGo 数据源暂未配置同步任务：{source_id}",
+    )
+
+
+def _source_supports_query_window(source_id: str) -> bool:
+    if source_id == INDEX_A_DAILY_PRICE_SOURCE_ID:
+        return True
+    if source_id in {STOCK_A_DAILY_PRICE_SOURCE_ID, STOCK_A_ADJUST_FACTOR_SOURCE_ID}:
+        return False
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail=f"MindGo 数据源暂未配置同步任务：{source_id}",
@@ -234,6 +264,7 @@ def _scheduler_state(scheduler: JobSchedulerRow | None) -> MindgoSourceSyncSched
         scheduler_id=scheduler.id,
         cron=scheduler.cron,
         write_mode=payload.get("write_mode", "overwrite"),
+        query_window=payload.get("query_window") or {},
         params=dict(params) if isinstance(params, dict) else {},
         last_run_at=scheduler.last_run_at,
         next_run_at=scheduler.next_run_at,
@@ -254,14 +285,23 @@ def _manual_scheduled_for(sync_day: date, trigger_time: time) -> datetime:
     )
 
 
-def _sync_payload_for_scheduled_for(
+def _has_query_window(payload: Any) -> bool:
+    return (
+        payload.query_window.start_offset_days != 0
+        or payload.query_window.end_offset_days != 0
+    )
+
+
+def _sync_payload_for_base_date(
     payload: MindgoSourceSyncTriggerRequest,
-    scheduled_for: datetime,
+    base_date: date,
 ) -> MindgoSourceSyncRequest:
-    sync_date = scheduled_for.date()
+    start_date = base_date + timedelta(days=payload.query_window.start_offset_days)
+    end_date = base_date + timedelta(days=payload.query_window.end_offset_days)
     return MindgoSourceSyncRequest(
-        start_date=sync_date,
-        end_date=sync_date,
+        start_date=start_date,
+        end_date=end_date,
         write_mode=payload.write_mode,
+        query_window=payload.query_window,
         params=dict(payload.params),
     )

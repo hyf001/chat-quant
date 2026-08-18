@@ -3,13 +3,14 @@ from datetime import date
 import pandas as pd
 import pytest
 from app.schema.mindgo import (
+    MindgoFieldSpec,
+    MindgoParameterSpec,
     MindgoSourceQueryRequest,
     MindgoSourceSchema,
     MindgoSourceStorageSpec,
+    MindgoSourceSyncQueryWindow,
     MindgoSourceSyncRequest,
     MindgoSourceSyncResult,
-    MindgoFieldSpec,
-    MindgoParameterSpec,
 )
 from pydantic import ValidationError
 
@@ -75,6 +76,7 @@ def test_mindgo_query_and_sync_payload_contracts() -> None:
     assert query_request.page == 2
     assert sync_request.start_date == date(2023, 2, 1)
     assert sync_request.end_date == date(2023, 2, 3)
+    assert sync_request.query_window == MindgoSourceSyncQueryWindow()
     assert sync_request.params["securities"] == ["000001.SZ"]
 
 

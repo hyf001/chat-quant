@@ -19,6 +19,12 @@ from app.schema.mindgo import (
     MindgoSourceSyncRequest,
     MindgoSourceSyncResult,
 )
+from app.service.datasource.mindgo.index_a_daily_price.adaptor import (
+    IndexADailyPriceAdapter,
+)
+from app.service.datasource.mindgo.index_a_daily_price.constants import (
+    INDEX_A_DAILY_PRICE_SOURCE_ID,
+)
 from app.service.datasource.mindgo.jupyter_runner import (
     DEFAULT_MINDGO_AUTH_SCHEME,
     DEFAULT_MINDGO_NOTEBOOK_PATH,
@@ -121,7 +127,11 @@ async def sync_source(
 
 
 def _source_ids() -> tuple[str, ...]:
-    return (STOCK_A_DAILY_PRICE_SOURCE_ID, STOCK_A_ADJUST_FACTOR_SOURCE_ID)
+    return (
+        STOCK_A_DAILY_PRICE_SOURCE_ID,
+        STOCK_A_ADJUST_FACTOR_SOURCE_ID,
+        INDEX_A_DAILY_PRICE_SOURCE_ID,
+    )
 
 
 async def _schema_for_source(source_id: str) -> MindgoSourceSchema:
@@ -142,6 +152,8 @@ def _adapter_for_source(
         return StockADailyPriceAdapter(runner, storage=storage)
     if source_id == STOCK_A_ADJUST_FACTOR_SOURCE_ID:
         return StockAAdjustFactorAdapter(runner, storage=storage)
+    if source_id == INDEX_A_DAILY_PRICE_SOURCE_ID:
+        return IndexADailyPriceAdapter(runner, storage=storage)
     raise MindgoSourceNotFoundError(source_id)
 
 
