@@ -199,7 +199,7 @@ def _dataset_response(row: DatasetRow) -> DatasetResponse:
     return DatasetResponse(
         id=row.id,
         name=row.name,
-        name_zh=row.description,
+        name_zh=_dataset_name_zh(category_path, row.description),
         name_en=row.name,
         description=row.description,
         category_path=category_path,
@@ -231,6 +231,12 @@ def _category_path(value: object) -> list[str]:
 
 def _dataset_category_path(row: DatasetRow) -> list[str]:
     return _category_path(row.category_path_json)
+
+
+def _dataset_name_zh(category_path: list[str], fallback: str) -> str:
+    if len(category_path) >= 4:
+        return "".join(category_path[:4])
+    return fallback
 
 
 def _category_path_en(category_path: list[str], name: str) -> list[str]:

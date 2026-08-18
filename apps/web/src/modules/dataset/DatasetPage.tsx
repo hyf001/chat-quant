@@ -116,6 +116,7 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
       [
         dataset.id,
         dataset.name,
+        dataset.name_zh,
         dataset.description,
         dataset.category_path.join("/"),
       ]
@@ -177,7 +178,7 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
     try {
       const nextDetail = await getDataset(datasetId);
       setDetail(nextDetail);
-      setEditDraft(formFromDetail(nextDetail));
+      setEditDraft(formFromDetail(nextDetail, sources));
       setSql((current) => current.trim() || `SELECT * FROM ${nextDetail.name}`);
       setQueryResult(null);
       setPage(1);
@@ -187,7 +188,7 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
     } finally {
       setIsDetailLoading(false);
     }
-  }, [showToast]);
+  }, [showToast, sources]);
 
   useEffect(() => {
     void loadDatasets();
@@ -255,7 +256,7 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
     try {
       const generated = generatedNaming(editDraft);
       await updateDataset(detail.id, {
-        description: generated.nameZh,
+        description: editDraft.description.trim(),
         category_path: generated.categoryPath,
         exposed_to_agent: editDraft.exposedToAgent,
       });
@@ -270,7 +271,7 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
   };
 
   const handleDelete = async () => {
-    if (!detail || !window.confirm(`删除数据集“${detail.description || detail.name}”？`)) {
+    if (!detail || !window.confirm(`删除数据集“${detail.name_zh || detail.name}”？`)) {
       return;
     }
     setIsSubmitting(true);
@@ -413,7 +414,7 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-semibold text-ink">
-                            {dataset.description || dataset.name}
+                            {dataset.name_zh || dataset.name}
                           </span>
                           <span className="mt-1 block truncate font-mono text-[10px] text-muted">
                             {dataset.name}
@@ -569,7 +570,6 @@ function DatasetDialog({
       ...form,
       ...patch,
       name: next.name,
-      description: next.nameZh,
       categoryPath: next.categoryPathText,
       createSql: nextSql,
     });
@@ -662,6 +662,12 @@ function DatasetDialog({
             />
             <ReadOnlyField label="view name" value={generated.name} />
             <ReadOnlyField label="中文名" value={generated.nameZh} />
+            <DescriptionField
+              label="描述"
+              value={form.description}
+              rows={3}
+              onChange={(description) => onChange({ ...form, description })}
+            />
             <ReadOnlyField label="分类路径" value={generated.categoryPathText} />
             <label className="flex items-center justify-between rounded-md border border-line bg-soft px-3 py-2 text-xs">
               <span className="font-semibold text-ink">暴露给智能体</span>
@@ -739,7 +745,7 @@ function DatasetMetadataDialog({
           <div className="min-w-0">
             <div className="font-mono text-[10px] font-bold uppercase text-muted">Metadata</div>
             <h2 className="mt-1 truncate text-base font-semibold text-ink">
-              {detail?.description || detail?.name || "数据集详情"}
+              {detail?.name_zh || detail?.name || "数据集详情"}
             </h2>
           </div>
           <button
@@ -766,12 +772,22 @@ function DatasetMetadataDialog({
                   onChange({
                     ...draft,
                     ...patch,
-                    description: next.nameZh,
                     categoryPath: next.categoryPathText,
                   });
                 }}
               />
               <ReadOnlyField label="中文名" value={generated.nameZh} />
+              <DescriptionField
+                label="描述"
+                value={draft.description}
+                rows={3}
+                onChange={(description) =>
+                  onChange({
+                    ...draft,
+                    description,
+                  })
+                }
+              />
               <ReadOnlyField label="分类路径" value={generated.categoryPathText} />
               <label className="flex items-center justify-between rounded-md border border-line bg-soft px-3 py-2 text-xs">
                 <span className="font-semibold text-ink">暴露给智能体</span>
@@ -1018,6 +1034,30 @@ function TextField({
   );
 }
 
+function DescriptionField({
+  label,
+  value,
+  rows,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  rows: number;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="grid gap-1.5">
+      <span className="font-mono text-[10px] font-bold uppercase text-muted">{label}</span>
+      <textarea
+        className="w-full resize-none rounded-md border border-line bg-panel p-3 text-xs leading-5 text-ink outline-none placeholder:text-muted/70 focus:border-signal"
+        rows={rows}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  );
+}
+
 function Textarea({
   label,
   value,
@@ -1115,12 +1155,19 @@ function Notice({ text }: { text: string }) {
   );
 }
 
-function formFromDetail(detail: DatasetDetail): DatasetForm {
+function formFromDetail(detail: DatasetDetail, sources: MindgoSourceSummary[] = []): DatasetForm {
   const categoryPath = detail.category_path;
   const categoryPathEn = detail.category_path_en;
+  const generatedNameZh = detail.name_zh || categoryPath.slice(0, 4).join("");
+  const sourceDescription = sourceDescriptionForDataset(detail, sources);
+  const description =
+    sourceDescription &&
+    (!detail.description.trim() || detail.description.trim() === generatedNameZh)
+      ? sourceDescription
+      : detail.description;
   return {
     name: detail.name,
-    description: detail.description,
+    description,
     categoryPath: detail.category_path.join(" / "),
     market: categoryPath[0] ?? emptyForm.market,
     marketEn: categoryPathEn[0] ?? emptyForm.marketEn,
@@ -1128,7 +1175,7 @@ function formFromDetail(detail: DatasetDetail): DatasetForm {
     assetClassEn: categoryPathEn[1] ?? emptyForm.assetClassEn,
     frequency: categoryPath[2] ?? emptyForm.frequency,
     frequencyEn: categoryPathEn[2] ?? emptyForm.frequencyEn,
-    topicZh: categoryPath[3] ?? detail.description,
+    topicZh: categoryPath[3] ?? detail.name_zh ?? detail.description,
     topicEn: categoryPathEn[3] ?? topicEnFromName(detail.name),
     exposedToAgent: detail.exposed_to_agent,
     createSql: detail.create_sql,
@@ -1139,7 +1186,7 @@ function payloadFromForm(form: DatasetForm): DatasetPayload {
   const generated = generatedNaming(form);
   return {
     name: generated.name,
-    description: generated.nameZh,
+    description: form.description.trim(),
     category_path: generated.categoryPath,
     exposed_to_agent: form.exposedToAgent,
     create_sql: form.createSql.trim(),
@@ -1152,7 +1199,7 @@ function formFromSource(source: MindgoSourceSummary): DatasetForm {
   return generatedForm({
     ...emptyForm,
     name: source.name_en || source.id,
-    description: source.name_zh || source.name,
+    description: source.description || source.name_zh || source.name,
     categoryPath: categoryPath.join(" / "),
     market: categoryPath[0] ?? emptyForm.market,
     marketEn: categoryPathEn[0] ?? emptyForm.marketEn,
@@ -1170,9 +1217,22 @@ function generatedForm(form: DatasetForm): DatasetForm {
   return {
     ...form,
     name: generated.name,
-    description: generated.nameZh,
     categoryPath: generated.categoryPathText,
   };
+}
+
+function sourceDescriptionForDataset(
+  detail: DatasetDetail,
+  sources: MindgoSourceSummary[],
+): string {
+  const source = sources.find(
+    (item) =>
+      item.name_en === detail.name ||
+      item.id === detail.name ||
+      item.name === detail.name ||
+      item.name_zh === detail.name_zh,
+  );
+  return source?.description.trim() ?? "";
 }
 
 function generatedNaming(form: DatasetForm): {

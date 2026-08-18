@@ -21,7 +21,7 @@ def test_dataset_api_creates_and_lists_dataset_metadata(client: TestClient) -> N
     assert dataset["id"].startswith("ds_")
     assert dataset["id"] != dataset["name"]
     assert dataset["name"] == "a_stock_daily_price_pre_adjusted"
-    assert dataset["name_zh"] == "A股前复权日行情"
+    assert dataset["name_zh"] == "A股股票日行情数据（前复权）"
     assert dataset["name_en"] == "a_stock_daily_price_pre_adjusted"
     assert dataset["description"] == "A股前复权日行情"
     assert dataset["category_path"] == ["A股", "股票", "日", "行情数据（前复权）"]
@@ -105,7 +105,7 @@ def test_dataset_api_updates_and_deletes_dataset_metadata(client: TestClient) ->
     updated = update_response.json()
     assert updated["name"] == "a_stock_daily_adjust_factor"
     assert updated["description"] == "A股日频复权因子"
-    assert updated["name_zh"] == "A股日频复权因子"
+    assert updated["name_zh"] == "A股股票日行情数据"
     assert updated["name_en"] == "a_stock_daily_adjust_factor"
     assert updated["category_path"] == ["A股", "股票", "日", "行情数据"]
     assert updated["category_path_en"] == ["a", "stock", "daily", "adjust_factor"]
