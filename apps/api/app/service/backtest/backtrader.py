@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 import sys
-from collections.abc import Callable
 from datetime import date, datetime, time
 from decimal import ROUND_HALF_UP, Decimal
 from uuid import uuid4
@@ -29,6 +28,11 @@ from app.schema.backtest import (
 )
 from app.schema.strategy import StrategyVersionRecord
 from app.service.backtest.execution import StrategyBacktestError
+from app.service.backtest.market_data import (
+    backtest_dataset_source_metadata,
+    load_backtest_benchmark_frame,
+    load_backtest_market_frame,
+)
 from app.service.strategy.protocol import (
     StrategyProtocolError,
     load_strategy_class,
@@ -149,14 +153,7 @@ class BacktraderStrategyBacktestEngine:
             warnings=warnings,
             engine=self.name,
             protocol=self.protocol_name,
-            data_source={
-                "mode": "akshare_ohlcv",
-                "asset_class": backtest.config.asset_class,
-                "market": backtest.config.market,
-                "symbols": backtest.config.symbols,
-                "timeframe": backtest.config.timeframe,
-                "data_adjust": backtest.config.data_adjust,
-            },
+            data_source=backtest_dataset_source_metadata(backtest.config.symbols),
         )
 
     def _load_strategy_class(
@@ -289,321 +286,35 @@ def _load_market_data_feed(
     backtest: StrategyBacktestRecord,
 ) -> tuple[bt.feeds.PandasData, pd.DataFrame]:
     try:
-        raw_frame = _fetch_akshare_history(
+        result = load_backtest_market_frame(
             symbol=symbol,
-            market=backtest.config.market,
-            asset_class=backtest.config.asset_class,
             start_date=backtest.config.start_date,
             end_date=backtest.config.end_date,
-            adjust=backtest.config.data_adjust,
         )
-        frame = _normalize_ohlcv_frame(raw_frame)
     except StrategyBacktestError:
         raise
     except Exception as exc:
         raise StrategyBacktestError(
-            "STRATEGY_DATA_FETCH_FAILED",
+            "BACKTEST_DATASET_LOAD_FAILED",
             f"Failed to load market data for {symbol}: {exc}",
             detail={
                 "symbol": symbol,
-                "market": backtest.config.market,
-                "asset_class": backtest.config.asset_class,
                 "exception_type": type(exc).__name__,
             },
         ) from exc
 
+    frame = result.frame
     if frame.empty:
         raise StrategyBacktestError(
-            "STRATEGY_DATA_EMPTY",
+            "BACKTEST_DATASET_EMPTY",
             f"No market data returned for {symbol}",
             detail={
                 "symbol": symbol,
-                "market": backtest.config.market,
-                "asset_class": backtest.config.asset_class,
                 "start_date": backtest.config.start_date.isoformat(),
                 "end_date": backtest.config.end_date.isoformat(),
             },
         )
     return bt.feeds.PandasData(dataname=frame), frame
-
-
-def _fetch_akshare_history(
-    *,
-    symbol: str,
-    market: str,
-    asset_class: str,
-    start_date: date,
-    end_date: date,
-    adjust: str,
-) -> pd.DataFrame:
-    import akshare as ak
-
-    start = start_date.strftime("%Y%m%d")
-    end = end_date.strftime("%Y%m%d")
-    normalized_symbol = _normalize_akshare_symbol(symbol, market=market, asset_class=asset_class)
-    normalized_adjust = "" if adjust == "none" else adjust
-
-    if market == "CN" and asset_class == "stock":
-        return _fetch_cn_stock_history(
-            ak=ak,
-            symbol=symbol,
-            normalized_symbol=normalized_symbol,
-            start_date=start,
-            end_date=end,
-            adjust=normalized_adjust,
-        )
-    if market == "CN" and asset_class == "etf":
-        return ak.fund_etf_hist_em(
-            symbol=normalized_symbol,
-            period="daily",
-            start_date=start,
-            end_date=end,
-            adjust=normalized_adjust,
-        )
-    if market == "CN" and asset_class == "index":
-        return _fetch_cn_index_history(
-            ak=ak,
-            symbol=symbol,
-            normalized_symbol=normalized_symbol,
-            start_date=start,
-            end_date=end,
-        )
-    if market == "HK" and asset_class == "stock":
-        return ak.stock_hk_hist(
-            symbol=normalized_symbol,
-            period="daily",
-            start_date=start,
-            end_date=end,
-            adjust=normalized_adjust,
-        )
-    if market == "US" and asset_class == "stock":
-        if "." not in normalized_symbol:
-            raise StrategyBacktestError(
-                "STRATEGY_DATA_SYMBOL_UNSUPPORTED",
-                "US stocks require an AKShare stock_us_hist code, for example 105.MSFT",
-                detail={"symbol": symbol},
-            )
-        return ak.stock_us_hist(
-            symbol=normalized_symbol,
-            period="daily",
-            start_date=start,
-            end_date=end,
-            adjust=normalized_adjust,
-        )
-    raise StrategyBacktestError(
-        "STRATEGY_DATA_SOURCE_UNSUPPORTED",
-        "No real market data adapter is configured for this market and asset class",
-        detail={"market": market, "asset_class": asset_class},
-    )
-
-
-def _fetch_cn_stock_history(
-    *,
-    ak: object,
-    symbol: str,
-    normalized_symbol: str,
-    start_date: str,
-    end_date: str,
-    adjust: str,
-) -> pd.DataFrame:
-    exchange_symbol = _cn_exchange_symbol(symbol)
-    attempts: list[tuple[str, Callable[[], pd.DataFrame]]] = [
-        (
-            "stock_zh_a_hist",
-            lambda: ak.stock_zh_a_hist(
-                symbol=normalized_symbol,
-                period="daily",
-                start_date=start_date,
-                end_date=end_date,
-                adjust=adjust,
-                timeout=15,
-            ),
-        ),
-        (
-            "stock_zh_a_hist_tx",
-            lambda: ak.stock_zh_a_hist_tx(
-                symbol=exchange_symbol,
-                start_date=start_date,
-                end_date=end_date,
-                adjust=adjust,
-                timeout=15,
-            ),
-        ),
-        (
-            "stock_zh_a_daily",
-            lambda: ak.stock_zh_a_daily(
-                symbol=exchange_symbol,
-                start_date=start_date,
-                end_date=end_date,
-                adjust=adjust,
-            ),
-        ),
-    ]
-    errors: list[dict[str, str]] = []
-    for source_name, fetch in attempts:
-        try:
-            frame = fetch()
-        except Exception as exc:  # noqa: BLE001 - collect provider failures and try the next source.
-            errors.append(
-                {
-                    "source": source_name,
-                    "exception_type": type(exc).__name__,
-                    "message": str(exc),
-                }
-            )
-            continue
-        if not frame.empty:
-            return frame
-        errors.append({"source": source_name, "exception_type": "EmptyDataFrame", "message": ""})
-
-    raise StrategyBacktestError(
-        "STRATEGY_DATA_FETCH_FAILED",
-        f"Failed to load CN stock market data for {symbol}",
-        detail={"symbol": symbol, "attempts": errors},
-    )
-
-
-def _fetch_cn_index_history(
-    *,
-    ak: object,
-    symbol: str,
-    normalized_symbol: str,
-    start_date: str,
-    end_date: str,
-) -> pd.DataFrame:
-    exchange_symbol = _cn_exchange_symbol(symbol)
-    attempts: list[tuple[str, Callable[[], pd.DataFrame]]] = [
-        (
-            "index_zh_a_hist",
-            lambda: ak.index_zh_a_hist(
-                symbol=normalized_symbol,
-                period="daily",
-                start_date=start_date,
-                end_date=end_date,
-            ),
-        ),
-        (
-            "stock_zh_index_daily_tx",
-            lambda: ak.stock_zh_index_daily_tx(
-                symbol=exchange_symbol,
-                start_date=start_date,
-                end_date=end_date,
-            ),
-        ),
-    ]
-    errors: list[dict[str, str]] = []
-    for source_name, fetch in attempts:
-        try:
-            frame = fetch()
-        except Exception as exc:  # noqa: BLE001 - collect provider failures and try the next source.
-            errors.append(
-                {
-                    "source": source_name,
-                    "exception_type": type(exc).__name__,
-                    "message": str(exc),
-                }
-            )
-            continue
-        if not frame.empty:
-            return frame
-        errors.append({"source": source_name, "exception_type": "EmptyDataFrame", "message": ""})
-
-    raise StrategyBacktestError(
-        "STRATEGY_DATA_FETCH_FAILED",
-        f"Failed to load CN index market data for {symbol}",
-        detail={"symbol": symbol, "attempts": errors},
-    )
-
-
-def _normalize_akshare_symbol(symbol: str, *, market: str, asset_class: str) -> str:
-    value = symbol.strip().upper()
-    if market == "CN":
-        if value.startswith(("SH", "SZ", "BJ")):
-            return value[2:]
-        if value.endswith((".SH", ".SZ", ".BJ")):
-            return value.split(".", 1)[0]
-        return value
-    if market == "HK":
-        if value.startswith("HK"):
-            value = value[2:]
-        if value.endswith(".HK"):
-            value = value[:-3]
-        return value.zfill(5) if value.isdigit() else value
-    return value
-
-
-def _cn_exchange_symbol(symbol: str) -> str:
-    value = symbol.strip().upper()
-    if value.startswith(("SH", "SZ", "BJ")):
-        return value.lower()
-    if value.endswith((".SH", ".SZ", ".BJ")):
-        code, exchange = value.split(".", 1)
-        return f"{exchange.lower()}{code}"
-    if value.startswith("6"):
-        return f"sh{value}"
-    if value.startswith(("0", "3")):
-        return f"sz{value}"
-    if value.startswith(("4", "8")):
-        return f"bj{value}"
-    return value.lower()
-
-
-def _normalize_ohlcv_frame(raw_frame: pd.DataFrame) -> pd.DataFrame:
-    required_columns = _ohlcv_column_mapping(raw_frame)
-    missing = [column for column in required_columns if column not in raw_frame.columns]
-    if missing:
-        raise StrategyBacktestError(
-            "STRATEGY_DATA_FORMAT_INVALID",
-            "Market data does not contain required OHLCV columns",
-            detail={"missing_columns": missing},
-        )
-
-    frame = raw_frame.rename(columns=required_columns)
-    frame = frame[list(required_columns.values())].copy()
-    frame["datetime"] = pd.to_datetime(frame["datetime"])
-    for column in ["open", "high", "low", "close", "volume"]:
-        frame[column] = pd.to_numeric(frame[column], errors="coerce")
-    frame = frame.dropna(subset=["datetime", "open", "high", "low", "close", "volume"])
-    frame = frame.sort_values("datetime").set_index("datetime")
-    frame["openinterest"] = 0
-    return frame[["open", "high", "low", "close", "volume", "openinterest"]]
-
-
-def _ohlcv_column_mapping(raw_frame: pd.DataFrame) -> dict[str, str]:
-    chinese_columns = {
-        "日期": "datetime",
-        "开盘": "open",
-        "最高": "high",
-        "最低": "low",
-        "收盘": "close",
-        "成交量": "volume",
-    }
-    if all(column in raw_frame.columns for column in chinese_columns):
-        return chinese_columns
-
-    english_columns = {
-        "date": "datetime",
-        "open": "open",
-        "high": "high",
-        "low": "low",
-        "close": "close",
-        "volume": "volume",
-    }
-    if all(column in raw_frame.columns for column in english_columns):
-        return english_columns
-
-    english_amount_columns = {
-        "date": "datetime",
-        "open": "open",
-        "high": "high",
-        "low": "low",
-        "close": "close",
-        "amount": "volume",
-    }
-    if all(column in raw_frame.columns for column in english_amount_columns):
-        return english_amount_columns
-
-    return english_columns
 
 
 def _build_metrics(
@@ -763,21 +474,20 @@ def _build_benchmark_series(
         return None
 
     try:
-        raw_frame = _fetch_akshare_history(
+        result = load_backtest_benchmark_frame(
             symbol=benchmark_symbol,
-            market=backtest.config.market,
-            asset_class=_benchmark_asset_class(backtest.config.market),
             start_date=backtest.config.start_date,
             end_date=backtest.config.end_date,
-            adjust=backtest.config.data_adjust,
         )
-        frame = _normalize_ohlcv_frame(raw_frame)
+        if result is None:
+            return None
+        frame = result.frame
     except Exception as exc:  # noqa: BLE001 - benchmark is comparative context, not core execution.
-        warnings.append(f"基准 {benchmark_symbol} 行情加载失败：{exc}")
+        warnings.append(f"基准行情加载失败：{exc}")
         return None
 
     if frame.empty:
-        warnings.append(f"基准 {benchmark_symbol} 没有返回行情")
+        warnings.append("基准没有返回行情")
         return None
 
     initial_close = Decimal(str(frame.iloc[0].close))
@@ -796,10 +506,6 @@ def _build_benchmark_series(
         total_return_pct=points[-1].normalized_value if points else None,
         points=points,
     )
-
-
-def _benchmark_asset_class(market: str) -> str:
-    return "index" if market == "CN" else "stock"
 
 
 def _sharpe_ratio(returns: list[Decimal]) -> Decimal | None:

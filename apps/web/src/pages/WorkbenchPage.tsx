@@ -585,7 +585,7 @@ async function selectOpenProjectPath(): Promise<string | null> {
 }
 
 function routeFromPath(pathname: string): PrimaryRoute {
-  if (pathname.endsWith(routePaths.settings)) {
+  if (pathname === routePaths.settings || pathname.startsWith(`${routePaths.settings}/`)) {
     return "settings";
   }
   return pathname.endsWith(routePaths.strategies) ? "strategies" : "new-task";

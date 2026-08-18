@@ -94,11 +94,58 @@ class MindgoSettingsUpdatePayload(BaseModel):
     storage_root: str | None = Field(default=None, min_length=1)
 
 
+class BacktestMarketDatasetSettingsPayload(BaseModel):
+    dataset_id: str = ""
+    symbol_field: str = ""
+    datetime_field: str = ""
+    open_field: str = ""
+    high_field: str = ""
+    low_field: str = ""
+    close_field: str = ""
+    volume_field: str = ""
+
+
+class BacktestBenchmarkDatasetSettingsPayload(BaseModel):
+    dataset_id: str = ""
+    symbol_field: str = ""
+    datetime_field: str = ""
+    close_field: str = ""
+
+
+class BacktestSettingsPayload(BaseModel):
+    market_dataset: BacktestMarketDatasetSettingsPayload
+    benchmark_dataset: BacktestBenchmarkDatasetSettingsPayload
+
+
+class BacktestMarketDatasetSettingsUpdatePayload(BaseModel):
+    dataset_id: str | None = None
+    symbol_field: str | None = None
+    datetime_field: str | None = None
+    open_field: str | None = None
+    high_field: str | None = None
+    low_field: str | None = None
+    close_field: str | None = None
+    volume_field: str | None = None
+
+
+class BacktestBenchmarkDatasetSettingsUpdatePayload(BaseModel):
+    dataset_id: str | None = None
+    symbol_field: str | None = None
+    datetime_field: str | None = None
+    close_field: str | None = None
+
+
+class BacktestSettingsUpdatePayload(BaseModel):
+    market_dataset: BacktestMarketDatasetSettingsUpdatePayload | None = None
+    benchmark_dataset: BacktestBenchmarkDatasetSettingsUpdatePayload | None = None
+
+
 class AppSettingsPayload(BaseModel):
     system: SystemSettingsPayload
     logging: LoggingSettingsPayload
     agent: AgentSettingsPayload
     mindgo: MindgoSettingsPayload
+    backtest: BacktestSettingsPayload
 
 
 class AppSettingsUpdatePayload(BaseModel):
@@ -106,6 +153,7 @@ class AppSettingsUpdatePayload(BaseModel):
     logging: LoggingSettingsUpdatePayload | None = None
     agent: AgentSettingsUpdatePayload | None = None
     mindgo: MindgoSettingsUpdatePayload | None = None
+    backtest: BacktestSettingsUpdatePayload | None = None
 
 
 class ConfigFieldDefinitionResponse(BaseModel):

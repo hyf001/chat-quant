@@ -22,6 +22,9 @@ from app.schema.config import (
     AppConfigResponse,
     AppSettingsPayload,
     AppSettingsUpdatePayload,
+    BacktestBenchmarkDatasetSettingsPayload,
+    BacktestMarketDatasetSettingsPayload,
+    BacktestSettingsPayload,
     BootstrapConfigResponse,
     ConfigFieldDefinitionResponse,
     LoggingSettingsPayload,
@@ -167,6 +170,14 @@ def _payload_from_settings(settings: Settings) -> AppSettingsPayload:
             timeout_seconds=settings.mindgo_timeout_seconds,
             storage_root=settings.mindgo_storage_root,
         ),
+        backtest=BacktestSettingsPayload(
+            market_dataset=BacktestMarketDatasetSettingsPayload(
+                **settings.backtest_market_dataset
+            ),
+            benchmark_dataset=BacktestBenchmarkDatasetSettingsPayload(
+                **settings.backtest_benchmark_dataset
+            ),
+        ),
     )
 
 
@@ -231,4 +242,32 @@ def _flatten_payload(payload: AppSettingsUpdatePayload) -> dict[str, ConfigValue
             values["mindgo_timeout_seconds"] = payload.mindgo.timeout_seconds
         if payload.mindgo.storage_root is not None:
             values["mindgo_storage_root"] = payload.mindgo.storage_root
+    if payload.backtest is not None:
+        if payload.backtest.market_dataset is not None:
+            current_market = _only_keys(
+                get_settings().backtest_market_dataset,
+                {
+                    "dataset_id",
+                    "symbol_field",
+                    "datetime_field",
+                    "open_field",
+                    "high_field",
+                    "low_field",
+                    "close_field",
+                    "volume_field",
+                },
+            )
+            market_patch = payload.backtest.market_dataset.model_dump(exclude_unset=True)
+            values["backtest_market_dataset"] = {**current_market, **market_patch}
+        if payload.backtest.benchmark_dataset is not None:
+            current_benchmark = _only_keys(
+                get_settings().backtest_benchmark_dataset,
+                {"dataset_id", "symbol_field", "datetime_field", "close_field"},
+            )
+            benchmark_patch = payload.backtest.benchmark_dataset.model_dump(exclude_unset=True)
+            values["backtest_benchmark_dataset"] = {**current_benchmark, **benchmark_patch}
     return values
+
+
+def _only_keys(value: dict[str, object], keys: set[str]) -> dict[str, object]:
+    return {key: raw_value for key, raw_value in value.items() if key in keys}

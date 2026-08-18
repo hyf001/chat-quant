@@ -2,7 +2,6 @@ import logging
 from datetime import date
 from decimal import Decimal
 
-import pandas as pd
 import pytest
 from app.schema.backtest import StrategyBacktestConfig
 from fastapi.testclient import TestClient
@@ -12,29 +11,69 @@ pytestmark = pytest.mark.usefixtures("project_test")
 
 
 @pytest.fixture(autouse=True)
-def fake_akshare_market_data(monkeypatch: pytest.MonkeyPatch) -> None:
-    from app.service.backtest import backtrader
-
-    def fake_fetch_akshare_history(**_: object) -> pd.DataFrame:
-        dates = pd.date_range("2024-01-01", "2024-04-30", freq="D")
-        rows = []
-        close = 100.0
-        for index, current_date in enumerate(dates):
-            open_price = close
-            close = close * (1.001 + (0.0005 if index > 70 else 0))
-            rows.append(
-                {
-                    "日期": current_date.date().isoformat(),
-                    "开盘": open_price,
-                    "收盘": close,
-                    "最高": max(open_price, close) * 1.01,
-                    "最低": min(open_price, close) * 0.99,
-                    "成交量": 1000000 + index,
+def configured_backtest_datasets(client: TestClient, project_test: None) -> None:
+    market_values = _price_values_sql("600519.SH", close_start=100.0)
+    benchmark_values = _price_values_sql("000300.SH", close_start=3800.0)
+    market_response = client.post(
+        "/api/datasets",
+        json={
+            "id": "ds_backtest_market",
+            "name": "backtest_market_prices",
+            "description": "回测行情测试数据",
+            "category_path": ["CN", "股票", "日频", "回测行情"],
+            "exposed_to_agent": False,
+            "create_sql": (
+                "CREATE VIEW backtest_market_prices AS "
+                "SELECT * FROM (VALUES "
+                f"{market_values}"
+                ") AS t(symbol, date, open, high, low, close, volume)"
+            ),
+        },
+    )
+    assert market_response.status_code == 201
+    benchmark_response = client.post(
+        "/api/datasets",
+        json={
+            "id": "ds_backtest_benchmark",
+            "name": "backtest_benchmark_prices",
+            "description": "回测基准测试数据",
+            "category_path": ["CN", "指数", "日频", "回测基准"],
+            "exposed_to_agent": False,
+            "create_sql": (
+                "CREATE VIEW backtest_benchmark_prices AS "
+                "SELECT * FROM (VALUES "
+                f"{benchmark_values}"
+                ") AS t(symbol, date, open, high, low, close, volume)"
+            ),
+        },
+    )
+    assert benchmark_response.status_code == 201
+    config_response = client.put(
+        "/api/config",
+        json={
+            "settings": {
+                "backtest": {
+                    "market_dataset": {
+                        "dataset_id": "ds_backtest_market",
+                        "symbol_field": "symbol",
+                        "datetime_field": "date",
+                        "open_field": "open",
+                        "high_field": "high",
+                        "low_field": "low",
+                        "close_field": "close",
+                        "volume_field": "volume",
+                    },
+                    "benchmark_dataset": {
+                        "dataset_id": "ds_backtest_benchmark",
+                        "symbol_field": "symbol",
+                        "datetime_field": "date",
+                        "close_field": "close",
+                    },
                 }
-            )
-        return pd.DataFrame(rows)
-
-    monkeypatch.setattr(backtrader, "_fetch_akshare_history", fake_fetch_akshare_history)
+            }
+        },
+    )
+    assert config_response.status_code == 200
 
 
 def create_strategy(client: TestClient) -> dict[str, object]:
@@ -109,7 +148,8 @@ def test_backtest_strategy_returns_backtest_result(client: TestClient, caplog) -
     assert data["backtest"]["config"]["symbols"] == ["600519.SH"]
     assert data["result"]["protocol"] == "chatq_backtrader_strategy_v2"
     assert data["result"]["engine"] == "backtrader"
-    assert data["result"]["data_source"]["mode"] == "akshare_ohlcv"
+    assert data["result"]["data_source"]["mode"] == "dataset"
+    assert data["result"]["data_source"]["market_dataset"]["dataset_id"] == "ds_backtest_market"
     assert data["result"]["market_data"][0]["symbol"] == "600519.SH"
     assert data["result"]["market_data"][0]["candles"][0]["open"]
     assert data["result"]["trades"][0]["side"] in {"buy", "sell"}
@@ -208,3 +248,22 @@ def _one_year_before(value: date) -> date:
         return value.replace(year=value.year - 1)
     except ValueError:
         return value.replace(year=value.year - 1, day=28)
+
+
+def _price_values_sql(symbol: str, *, close_start: float) -> str:
+    close = close_start
+    rows: list[str] = []
+    current = date(2024, 1, 1)
+    for index in range(121):
+        open_price = close
+        close = close * (1.001 + (0.0005 if index > 70 else 0))
+        high = max(open_price, close) * 1.01
+        low = min(open_price, close) * 0.99
+        rows.append(
+            (
+                f"('{symbol}', DATE '{current.isoformat()}', "
+                f"{open_price:.6f}, {high:.6f}, {low:.6f}, {close:.6f}, {1000000 + index})"
+            )
+        )
+        current = date.fromordinal(current.toordinal() + 1)
+    return ", ".join(rows)

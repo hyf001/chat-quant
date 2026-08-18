@@ -8,8 +8,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-JsonPrimitive = str | int | bool | None
-ConfigValue = JsonPrimitive | list[str]
+JsonPrimitive = str | int | float | bool | None
+JsonObject = dict[str, object]
+ConfigValue = JsonPrimitive | list[str] | JsonObject
 DEFAULT_CONFIG_FILE_PATH = Path("config.json")
 DEFAULT_DATABASE_PATH = Path("data/chat-quant.db")
 DEFAULT_API_HOST = "127.0.0.1"
@@ -18,6 +19,22 @@ DEFAULT_WEB_HOST = "127.0.0.1"
 DEFAULT_WEB_PORT = 12346
 DEFAULT_MINDGO_NOTEBOOK_PATH = "deepsolo_v3/少标的分时实时.ipynb"
 DEFAULT_MINDGO_STORAGE_ROOT = "data/mindgo/parquet"
+DEFAULT_BACKTEST_MARKET_DATASET: JsonObject = {
+    "dataset_id": "",
+    "symbol_field": "",
+    "datetime_field": "",
+    "open_field": "",
+    "high_field": "",
+    "low_field": "",
+    "close_field": "",
+    "volume_field": "",
+}
+DEFAULT_BACKTEST_BENCHMARK_DATASET: JsonObject = {
+    "dataset_id": "",
+    "symbol_field": "",
+    "datetime_field": "",
+    "close_field": "",
+}
 DEFAULT_MODEL_PROVIDER_ID = "provider_anthropic_default"
 DEFAULT_MODEL_PROVIDER_NAME = "Anthropic"
 DEFAULT_AGENT_TOOLS = [
@@ -51,7 +68,7 @@ class ConfigDefinition:
     key: str
     label: str
     group: str
-    value_type: Literal["string", "password", "integer", "boolean", "list", "select"]
+    value_type: Literal["string", "password", "integer", "boolean", "list", "select", "json"]
     default: ConfigValue
     description: str
     options: tuple[str, ...] = ()
@@ -258,6 +275,22 @@ APP_CONFIG_DEFINITIONS: tuple[ConfigDefinition, ...] = (
         DEFAULT_MINDGO_STORAGE_ROOT,
         "MindGo 数据源本地存储根目录；数据按 storage_root/source_id/partition 管理。",
     ),
+    ConfigDefinition(
+        "backtest_market_dataset",
+        "回测行情数据集",
+        "backtest",
+        "json",
+        DEFAULT_BACKTEST_MARKET_DATASET,
+        "Backtrader 回测使用的数据集和 OHLCV 字段映射。",
+    ),
+    ConfigDefinition(
+        "backtest_benchmark_dataset",
+        "回测基准数据集",
+        "backtest",
+        "json",
+        DEFAULT_BACKTEST_BENCHMARK_DATASET,
+        "Backtrader 回测使用的基准指数数据集和字段映射。",
+    ),
 )
 
 
@@ -298,6 +331,12 @@ class Settings(BaseModel):
     mindgo_kernel_id: str | None = None
     mindgo_timeout_seconds: int = 120
     mindgo_storage_root: str = DEFAULT_MINDGO_STORAGE_ROOT
+    backtest_market_dataset: JsonObject = Field(
+        default_factory=lambda: dict(DEFAULT_BACKTEST_MARKET_DATASET)
+    )
+    backtest_benchmark_dataset: JsonObject = Field(
+        default_factory=lambda: dict(DEFAULT_BACKTEST_BENCHMARK_DATASET)
+    )
 
     @field_validator("agent_available_tools", mode="before")
     @classmethod
@@ -359,6 +398,9 @@ def coerce_config_value(definition: ConfigDefinition, value: object) -> ConfigVa
             return [item.strip() for item in value.split(",") if item.strip()]
         if isinstance(value, list):
             return [str(item).strip() for item in value if str(item).strip()]
+    if definition.value_type == "json":
+        if isinstance(value, dict):
+            return dict(value)
     raise ValueError(f"unsupported value for {definition.key}")
 
 

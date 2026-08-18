@@ -86,6 +86,13 @@ def test_config_api_returns_structured_settings(client: TestClient) -> None:
     assert payload["settings"]["mindgo"]["notebook_path"] == "deepsolo_v3/少标的分时实时.ipynb"
     assert payload["settings"]["mindgo"]["timeout_seconds"] == 120
     assert payload["settings"]["mindgo"]["storage_root"] == "data/mindgo/parquet"
+    assert payload["settings"]["backtest"]["market_dataset"]["dataset_id"] == ""
+    assert payload["settings"]["backtest"]["market_dataset"]["open_field"] == ""
+    assert "openinterest_field" not in payload["settings"]["backtest"]["market_dataset"]
+    assert payload["settings"]["backtest"]["benchmark_dataset"]["dataset_id"] == ""
+    assert payload["settings"]["backtest"]["benchmark_dataset"]["symbol_field"] == ""
+    assert payload["settings"]["backtest"]["benchmark_dataset"]["close_field"] == ""
+    assert "symbol" not in payload["settings"]["backtest"]["benchmark_dataset"]
     assert payload["settings"]["system"]["job_runtime_creation_tick_minutes"] == 1
     assert payload["settings"]["system"]["job_runtime_dispatch_interval_seconds"] == 30
     assert payload["settings"]["system"]["job_runtime_dispatch_limit"] == 20
@@ -131,6 +138,46 @@ def test_config_api_updates_mindgo_settings(client: TestClient) -> None:
     assert get_settings().mindgo_jupyter_token == "token-1"
     assert get_settings().mindgo_notebook_path == "research/data.ipynb"
     assert get_settings().mindgo_storage_root == "/tmp/chatq-mindgo"
+
+
+def test_config_api_updates_backtest_dataset_settings(client: TestClient) -> None:
+    response = client.put(
+        "/api/config",
+        json={
+            "settings": {
+                "backtest": {
+                    "market_dataset": {
+                        "dataset_id": "ds_market",
+                        "symbol_field": "ts_code",
+                        "datetime_field": "trade_date",
+                        "open_field": "open_px",
+                        "high_field": "high_px",
+                        "low_field": "low_px",
+                        "close_field": "close_px",
+                        "volume_field": "vol",
+                    },
+                    "benchmark_dataset": {
+                        "dataset_id": "ds_index",
+                        "symbol_field": "index_code",
+                        "datetime_field": "trade_date",
+                        "close_field": "close_px",
+                    },
+                }
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    updated = response.json()["settings"]["backtest"]
+    assert updated["market_dataset"]["dataset_id"] == "ds_market"
+    assert updated["market_dataset"]["open_field"] == "open_px"
+    assert "openinterest_field" not in updated["market_dataset"]
+    assert updated["benchmark_dataset"]["dataset_id"] == "ds_index"
+    assert "symbol" not in updated["benchmark_dataset"]
+    assert updated["benchmark_dataset"]["symbol_field"] == "index_code"
+    assert get_settings().backtest_market_dataset["symbol_field"] == "ts_code"
+    assert get_settings().backtest_benchmark_dataset["symbol_field"] == "index_code"
+    assert get_settings().backtest_benchmark_dataset["close_field"] == "close_px"
 
 
 def test_config_api_updates_sqlite_backed_settings(client: TestClient) -> None:

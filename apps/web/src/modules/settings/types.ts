@@ -1,6 +1,6 @@
 import type { ModelProviderPayload } from "../../shared/api";
 
-export type SettingsTab = "agent" | "system" | "logging" | "data" | "datasets";
+export type SettingsTab = "agent" | "system" | "logging" | "data" | "datasets" | "backtest";
 
 export type ProviderDraft = ModelProviderPayload & {
   id: string | null;

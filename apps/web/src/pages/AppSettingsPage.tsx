@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  BarChart3,
   Bot,
   Database,
   Loader2,
@@ -13,6 +14,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DatasetPage } from "../modules/dataset";
 import { AgentSettingsForm } from "../modules/settings/AgentSettingsForm";
+import { BacktestSettingsForm } from "../modules/settings/BacktestSettingsForm";
 import { DataSourceSettingsForm } from "../modules/settings/DataSourceSettingsForm";
 import { LoggingSettingsForm } from "../modules/settings/LoggingSettingsForm";
 import { SystemSettingsForm } from "../modules/settings/SystemSettingsForm";
@@ -55,10 +57,13 @@ const tabs: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
   { id: "logging", label: "日志", icon: ScrollText },
   { id: "data", label: "数据源", icon: Database },
   { id: "datasets", label: "数据集", icon: TableProperties },
+  { id: "backtest", label: "回测", icon: BarChart3 },
 ];
 
 export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("agent");
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() =>
+    settingsTabFromPath(window.location.pathname),
+  );
   const [isSettingsNavCollapsed, setIsSettingsNavCollapsed] = useState(false);
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [draft, setDraft] = useState<AppSettings | null>(null);
@@ -155,6 +160,14 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
   }, [loadSettings]);
 
   useEffect(() => {
+    const handlePopState = () => {
+      setActiveTab(settingsTabFromPath(window.location.pathname));
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
     if (!toast) {
       return;
     }
@@ -205,6 +218,7 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
         system: patch.system ? nextConfig.settings.system : current.system,
         logging: patch.logging ? nextConfig.settings.logging : current.logging,
         mindgo: patch.mindgo ? nextConfig.settings.mindgo : current.mindgo,
+        backtest: patch.backtest ? nextConfig.settings.backtest : current.backtest,
         agent: patch.agent
           ? {
               ...current.agent,
@@ -426,7 +440,13 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
                   type="button"
                   title={tab.label}
                   aria-label={tab.label}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    const path = settingsPathForTab(tab.id);
+                    if (window.location.pathname !== path) {
+                      window.history.pushState({}, "", path);
+                    }
+                  }}
                 >
                   <TabIcon className="h-3.5 w-3.5 shrink-0" />
                   <span className={isSettingsNavCollapsed ? "xl:hidden" : ""}>{tab.label}</span>
@@ -499,6 +519,16 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
                 />
               ) : null}
               {activeTab === "datasets" ? <DatasetPage embedded /> : null}
+              {activeTab === "backtest" ? (
+                <BacktestSettingsForm
+                  draft={draft}
+                  onChange={setDraft}
+                  onSaveBacktestSettings={(backtest, message) =>
+                    void saveSettingsField({ backtest }, message)
+                  }
+                  onToast={showToast}
+                />
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -507,6 +537,19 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
       {toast ? <SettingsToast toast={toast} /> : null}
     </section>
   );
+}
+
+function settingsPathForTab(tab: SettingsTab): string {
+  return tab === "agent" ? "/settings" : `/settings/${tab}`;
+}
+
+function settingsTabFromPath(pathname: string): SettingsTab {
+  const parts = pathname.split("/").filter(Boolean);
+  const suffix = parts[parts.length - 1];
+  if (suffix === "system" || suffix === "logging" || suffix === "data" || suffix === "datasets") {
+    return suffix;
+  }
+  return suffix === "backtest" ? "backtest" : "agent";
 }
 
 function SettingsToast({ toast }: { toast: ToastState }) {

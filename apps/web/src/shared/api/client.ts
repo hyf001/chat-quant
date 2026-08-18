@@ -173,11 +173,35 @@ export type MindgoSettings = {
   storage_root: string;
 };
 
+export type BacktestMarketDatasetSettings = {
+  dataset_id: string;
+  symbol_field: string;
+  datetime_field: string;
+  open_field: string;
+  high_field: string;
+  low_field: string;
+  close_field: string;
+  volume_field: string;
+};
+
+export type BacktestBenchmarkDatasetSettings = {
+  dataset_id: string;
+  symbol_field: string;
+  datetime_field: string;
+  close_field: string;
+};
+
+export type BacktestSettings = {
+  market_dataset: BacktestMarketDatasetSettings;
+  benchmark_dataset: BacktestBenchmarkDatasetSettings;
+};
+
 export type AppSettings = {
   system: SystemSettings;
   logging: LoggingSettings;
   agent: AgentSettings;
   mindgo: MindgoSettings;
+  backtest: BacktestSettings;
 };
 
 export type AppSettingsUpdate = {
@@ -187,6 +211,10 @@ export type AppSettingsUpdate = {
     thinking?: Partial<AgentSettings["thinking"]>;
   };
   mindgo?: Partial<MindgoSettings>;
+  backtest?: {
+    market_dataset?: Partial<BacktestMarketDatasetSettings>;
+    benchmark_dataset?: Partial<BacktestBenchmarkDatasetSettings>;
+  };
 };
 
 export type ConfigFieldDefinition = {
