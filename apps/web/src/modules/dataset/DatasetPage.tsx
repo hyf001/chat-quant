@@ -18,12 +18,15 @@ import {
   createDataset,
   deleteDataset,
   getDataset,
+  getDatasetNamingOptions,
   listDatasets,
   listMindgoSources,
   queryDatasets,
   updateDataset,
   type Dataset,
   type DatasetDetail,
+  type DatasetNamingOption,
+  type DatasetNamingOptionsResponse,
   type DatasetPayload,
   type DatasetQueryResponse,
   type MindgoSourceSummary,
@@ -34,6 +37,14 @@ type DatasetForm = {
   name: string;
   description: string;
   categoryPath: string;
+  market: string;
+  marketEn: string;
+  assetClass: string;
+  assetClassEn: string;
+  frequency: string;
+  frequencyEn: string;
+  topicZh: string;
+  topicEn: string;
   exposedToAgent: boolean;
   createSql: string;
 };
@@ -46,9 +57,26 @@ type ToastState = {
 const emptyForm: DatasetForm = {
   name: "",
   description: "",
-  categoryPath: "股票 / A股",
+  categoryPath: "A股 / 股票 / 日 / 行情数据",
+  market: "A股",
+  marketEn: "a",
+  assetClass: "股票",
+  assetClassEn: "stock",
+  frequency: "日",
+  frequencyEn: "daily",
+  topicZh: "行情数据",
+  topicEn: "price",
   exposedToAgent: true,
   createSql: "",
+};
+
+const defaultNamingOptions: DatasetNamingOptionsResponse = {
+  markets: [{ value: "A股", label: "A股", name_en: "a" }],
+  asset_classes: [
+    { value: "股票", label: "股票", name_en: "stock" },
+    { value: "指数", label: "指数", name_en: "index" },
+  ],
+  frequencies: [{ value: "日", label: "日", name_en: "daily" }],
 };
 
 type DatasetPageProps = {
@@ -73,6 +101,8 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
   const [pageSize, setPageSize] = useState(50);
   const [queryResult, setQueryResult] = useState<DatasetQueryResponse | null>(null);
   const [sources, setSources] = useState<MindgoSourceSummary[]>([]);
+  const [namingOptions, setNamingOptions] =
+    useState<DatasetNamingOptionsResponse>(defaultNamingOptions);
   const [isSourcesLoading, setIsSourcesLoading] = useState(false);
   const [isQuerying, setIsQuerying] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -134,6 +164,14 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
     }
   }, [showToast]);
 
+  const loadNamingOptions = useCallback(async () => {
+    try {
+      setNamingOptions(await getDatasetNamingOptions());
+    } catch (caught) {
+      showToast(caught instanceof Error ? caught.message : "命名选项加载失败", "error");
+    }
+  }, [showToast]);
+
   const loadDetail = useCallback(async (datasetId: string) => {
     setIsDetailLoading(true);
     try {
@@ -154,7 +192,8 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
   useEffect(() => {
     void loadDatasets();
     void loadSources();
-  }, [loadDatasets, loadSources]);
+    void loadNamingOptions();
+  }, [loadDatasets, loadNamingOptions, loadSources]);
 
   useEffect(() => {
     if (selectedDataset?.id) {
@@ -214,9 +253,10 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
     }
     setIsSubmitting(true);
     try {
+      const generated = generatedNaming(editDraft);
       await updateDataset(detail.id, {
-        description: editDraft.description.trim(),
-        category_path: categoryPathFromText(editDraft.categoryPath),
+        description: generated.nameZh,
+        category_path: generated.categoryPath,
         exposed_to_agent: editDraft.exposedToAgent,
       });
       showToast("数据集已保存", "success");
@@ -469,6 +509,7 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
       {isCreateOpen ? (
         <DatasetDialog
           form={form}
+          namingOptions={namingOptions}
           sources={sources}
           isSourcesLoading={isSourcesLoading}
           isSubmitting={isSubmitting}
@@ -481,6 +522,7 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
         <DatasetMetadataDialog
           detail={detail}
           draft={editDraft}
+          namingOptions={namingOptions}
           isLoading={isDetailLoading}
           isSubmitting={isSubmitting}
           onChange={setEditDraft}
@@ -495,6 +537,7 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
 
 function DatasetDialog({
   form,
+  namingOptions,
   sources,
   isSourcesLoading,
   isSubmitting,
@@ -503,6 +546,7 @@ function DatasetDialog({
   onSubmit,
 }: {
   form: DatasetForm;
+  namingOptions: DatasetNamingOptionsResponse;
   sources: MindgoSourceSummary[];
   isSourcesLoading: boolean;
   isSubmitting: boolean;
@@ -510,28 +554,36 @@ function DatasetDialog({
   onClose: () => void;
   onSubmit: () => void;
 }) {
-  const updateName = (name: string) => {
+  const generated = generatedNaming(form);
+
+  const updateNaming = (patch: Partial<DatasetForm>) => {
+    const previousName = generated.name;
+    const next = generatedNaming({ ...form, ...patch });
     const nextSql =
-      form.createSql.trim() && !form.createSql.includes("sample_value")
+      form.createSql.trim() &&
+      !form.createSql.includes("sample_value") &&
+      !form.createSql.includes(previousName)
         ? form.createSql
-        : `CREATE VIEW ${name || "dataset_view"} AS\nSELECT 1 AS sample_value`;
+        : `CREATE VIEW ${next.name || "dataset_view"} AS\nSELECT 1 AS sample_value`;
     onChange({
       ...form,
-      name,
+      ...patch,
+      name: next.name,
+      description: next.nameZh,
+      categoryPath: next.categoryPathText,
       createSql: nextSql,
     });
   };
 
   const applySourceExample = (source: MindgoSourceSummary) => {
-    const viewName = form.name.trim() || sanitizeDuckDBIdentifier(`${source.id}_view`);
+    const sourceNaming = formFromSource(source);
+    const viewName = sourceNaming.name;
     onChange({
       ...form,
+      ...sourceNaming,
       name: viewName,
-      description: form.description.trim() || source.description || source.name,
-      categoryPath:
-        form.categoryPath.trim() && form.categoryPath !== emptyForm.categoryPath
-          ? form.categoryPath
-          : source.category_path.join(" / "),
+      description: sourceNaming.description,
+      categoryPath: sourceNaming.categoryPath,
       createSql: sourceCreateSql(viewName, source),
     });
   };
@@ -603,17 +655,14 @@ function DatasetDialog({
             </div>
           </section>
           <div className="grid content-start gap-3">
-            <TextField label="view name" value={form.name} onChange={updateName} />
-            <TextField
-              label="中文名"
-              value={form.description}
-              onChange={(description) => onChange({ ...form, description })}
+            <NamingFields
+              form={form}
+              namingOptions={namingOptions}
+              onChange={updateNaming}
             />
-            <TextField
-              label="分类路径"
-              value={form.categoryPath}
-              onChange={(categoryPath) => onChange({ ...form, categoryPath })}
-            />
+            <ReadOnlyField label="view name" value={generated.name} />
+            <ReadOnlyField label="中文名" value={generated.nameZh} />
+            <ReadOnlyField label="分类路径" value={generated.categoryPathText} />
             <label className="flex items-center justify-between rounded-md border border-line bg-soft px-3 py-2 text-xs">
               <span className="font-semibold text-ink">暴露给智能体</span>
               <input
@@ -658,6 +707,7 @@ function DatasetDialog({
 function DatasetMetadataDialog({
   detail,
   draft,
+  namingOptions,
   isLoading,
   isSubmitting,
   onChange,
@@ -667,6 +717,7 @@ function DatasetMetadataDialog({
 }: {
   detail: DatasetDetail | null;
   draft: DatasetForm;
+  namingOptions: DatasetNamingOptionsResponse;
   isLoading: boolean;
   isSubmitting: boolean;
   onChange: (form: DatasetForm) => void;
@@ -674,6 +725,8 @@ function DatasetMetadataDialog({
   onDelete: () => void;
   onSave: () => void;
 }) {
+  const generated = generatedNaming(draft);
+
   return (
     <div
       className="fixed inset-0 z-50 grid place-items-center bg-black/45 px-4"
@@ -705,16 +758,21 @@ function DatasetMetadataDialog({
             <div className="grid gap-3">
               <ReadOnlyField label="id" value={detail.id} />
               <ReadOnlyField label="view name" value={detail.name} />
-              <TextField
-                label="中文名"
-                value={draft.description}
-                onChange={(description) => onChange({ ...draft, description })}
+              <NamingFields
+                form={draft}
+                namingOptions={namingOptions}
+                onChange={(patch) => {
+                  const next = generatedNaming({ ...draft, ...patch });
+                  onChange({
+                    ...draft,
+                    ...patch,
+                    description: next.nameZh,
+                    categoryPath: next.categoryPathText,
+                  });
+                }}
               />
-              <TextField
-                label="分类路径"
-                value={draft.categoryPath}
-                onChange={(categoryPath) => onChange({ ...draft, categoryPath })}
-              />
+              <ReadOnlyField label="中文名" value={generated.nameZh} />
+              <ReadOnlyField label="分类路径" value={generated.categoryPathText} />
               <label className="flex items-center justify-between rounded-md border border-line bg-soft px-3 py-2 text-xs">
                 <span className="font-semibold text-ink">暴露给智能体</span>
                 <input
@@ -851,6 +909,94 @@ function QueryResultTable({
   );
 }
 
+function NamingFields({
+  form,
+  namingOptions,
+  onChange,
+}: {
+  form: DatasetForm;
+  namingOptions: DatasetNamingOptionsResponse;
+  onChange: (patch: Partial<DatasetForm>) => void;
+}) {
+  return (
+    <div className="grid gap-3">
+      <div className="grid gap-2 sm:grid-cols-3">
+        <SelectField
+          label="市场"
+          value={form.market}
+          options={namingOptions.markets}
+          onChange={(option) =>
+            onChange({ market: option.value, marketEn: option.name_en })
+          }
+        />
+        <SelectField
+          label="品类"
+          value={form.assetClass}
+          options={namingOptions.asset_classes}
+          onChange={(option) =>
+            onChange({ assetClass: option.value, assetClassEn: option.name_en })
+          }
+        />
+        <SelectField
+          label="频率"
+          value={form.frequency}
+          options={namingOptions.frequencies}
+          onChange={(option) =>
+            onChange({ frequency: option.value, frequencyEn: option.name_en })
+          }
+        />
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <TextField
+          label="中文主题"
+          value={form.topicZh}
+          onChange={(topicZh) => onChange({ topicZh })}
+        />
+        <TextField
+          label="英文主题"
+          value={form.topicEn}
+          onChange={(topicEn) => onChange({ topicEn: sanitizeNamePart(topicEn) })}
+        />
+      </div>
+    </div>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: DatasetNamingOption[];
+  onChange: (option: DatasetNamingOption) => void;
+}) {
+  return (
+    <label className="grid gap-1.5">
+      <span className="font-mono text-[10px] font-bold uppercase text-muted">{label}</span>
+      <select
+        className="h-9 rounded-md border border-line bg-panel px-3 text-xs text-ink outline-none focus:border-signal"
+        value={value}
+        onChange={(event) => {
+          const option =
+            options.find((item) => item.value === event.target.value) ?? options[0];
+          if (option) {
+            onChange(option);
+          }
+        }}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function TextField({
   label,
   value,
@@ -970,22 +1116,88 @@ function Notice({ text }: { text: string }) {
 }
 
 function formFromDetail(detail: DatasetDetail): DatasetForm {
+  const categoryPath = detail.category_path;
+  const categoryPathEn = detail.category_path_en;
   return {
     name: detail.name,
     description: detail.description,
     categoryPath: detail.category_path.join(" / "),
+    market: categoryPath[0] ?? emptyForm.market,
+    marketEn: categoryPathEn[0] ?? emptyForm.marketEn,
+    assetClass: categoryPath[1] ?? emptyForm.assetClass,
+    assetClassEn: categoryPathEn[1] ?? emptyForm.assetClassEn,
+    frequency: categoryPath[2] ?? emptyForm.frequency,
+    frequencyEn: categoryPathEn[2] ?? emptyForm.frequencyEn,
+    topicZh: categoryPath[3] ?? detail.description,
+    topicEn: categoryPathEn[3] ?? topicEnFromName(detail.name),
     exposedToAgent: detail.exposed_to_agent,
     createSql: detail.create_sql,
   };
 }
 
 function payloadFromForm(form: DatasetForm): DatasetPayload {
+  const generated = generatedNaming(form);
   return {
-    name: form.name.trim(),
-    description: form.description.trim(),
-    category_path: categoryPathFromText(form.categoryPath),
+    name: generated.name,
+    description: generated.nameZh,
+    category_path: generated.categoryPath,
     exposed_to_agent: form.exposedToAgent,
     create_sql: form.createSql.trim(),
+  };
+}
+
+function formFromSource(source: MindgoSourceSummary): DatasetForm {
+  const categoryPath = source.category_path;
+  const categoryPathEn = source.category_path_en;
+  return generatedForm({
+    ...emptyForm,
+    name: source.name_en || source.id,
+    description: source.name_zh || source.name,
+    categoryPath: categoryPath.join(" / "),
+    market: categoryPath[0] ?? emptyForm.market,
+    marketEn: categoryPathEn[0] ?? emptyForm.marketEn,
+    assetClass: categoryPath[1] ?? emptyForm.assetClass,
+    assetClassEn: categoryPathEn[1] ?? emptyForm.assetClassEn,
+    frequency: categoryPath[2] ?? emptyForm.frequency,
+    frequencyEn: categoryPathEn[2] ?? emptyForm.frequencyEn,
+    topicZh: categoryPath[3] ?? source.name,
+    topicEn: categoryPathEn[3] ?? topicEnFromName(source.name_en || source.id),
+  });
+}
+
+function generatedForm(form: DatasetForm): DatasetForm {
+  const generated = generatedNaming(form);
+  return {
+    ...form,
+    name: generated.name,
+    description: generated.nameZh,
+    categoryPath: generated.categoryPathText,
+  };
+}
+
+function generatedNaming(form: DatasetForm): {
+  name: string;
+  nameZh: string;
+  categoryPath: string[];
+  categoryPathText: string;
+} {
+  const topicZh = form.topicZh.trim();
+  const topicEn = sanitizeNamePart(form.topicEn);
+  const name = [form.marketEn, form.assetClassEn, form.frequencyEn, topicEn]
+    .map(sanitizeNamePart)
+    .filter(Boolean)
+    .join("_");
+  const categoryPath = [
+    form.market.trim(),
+    form.assetClass.trim(),
+    form.frequency.trim(),
+    topicZh,
+  ].filter(Boolean);
+  return {
+    name: sanitizeDuckDBIdentifier(name),
+    nameZh: `${form.market}${form.assetClass}${form.frequency}${topicZh}`,
+    categoryPath,
+    categoryPathText: categoryPath.join(" / "),
   };
 }
 
@@ -1016,6 +1228,20 @@ function sourceParquetGlob(source: MindgoSourceSummary): string {
 function sanitizeDuckDBIdentifier(value: string): string {
   const identifier = value.trim().replace(/[^A-Za-z0-9_]/g, "_") || "dataset_view";
   return /^[A-Za-z_]/.test(identifier) ? identifier : `dataset_${identifier}`;
+}
+
+function sanitizeNamePart(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
+}
+
+function topicEnFromName(name: string): string {
+  const parts = name.split("_");
+  return parts.length > 3 ? parts.slice(3).join("_") : "";
 }
 
 function escapeSqlString(value: string): string {

@@ -1,2 +1,2 @@
-STOCK_A_ADJUST_FACTOR_SOURCE_ID = "stock_a_adjust_factor"
-STOCK_A_ADJUST_FACTOR_SYNC_JOB_TYPE = "mindgo.stock_a_adjust_factor.sync"
+STOCK_A_ADJUST_FACTOR_SOURCE_ID = "a_stock_daily_adjust_factor"
+STOCK_A_ADJUST_FACTOR_SYNC_JOB_TYPE = "mindgo.a_stock_daily_adjust_factor.sync"

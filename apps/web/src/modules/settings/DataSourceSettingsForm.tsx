@@ -86,13 +86,13 @@ const hiddenMindgoSyncParamNames = new Set([
   "bar_count",
 ]);
 const mindgoSourceUiMeta: Record<string, MindgoSourceUiMeta> = {
-  stock_a_daily_price: {
+  a_stock_daily_price: {
     badge: "1015 日行情",
   },
-  stock_a_adjust_factor: {
+  a_stock_daily_adjust_factor: {
     badge: "1016 复权因子",
   },
-  index_a_daily_price: {
+  a_index_daily_price: {
     badge: "指数日行情",
   },
 };
@@ -136,7 +136,7 @@ export function DataSourceSettingsForm({
   onToast,
 }: DataSourceSettingsFormProps) {
   const [sources, setSources] = useState<MindgoSourceSummary[]>([]);
-  const [selectedSourceId, setSelectedSourceId] = useState("stock_a_daily_price");
+  const [selectedSourceId, setSelectedSourceId] = useState("a_stock_daily_price");
   const [schema, setSchema] = useState<MindgoSourceSchema | null>(null);
   const [params, setParams] = useState<MindgoParamDraft>({});
   const [queryMode, setQueryMode] = useState<MindgoSourceMode>("mindgo");

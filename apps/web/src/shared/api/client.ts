@@ -324,7 +324,10 @@ export type MindgoSourceSyncSpec = {
 
 export type MindgoSourceSchema = {
   name: string;
+  name_zh: string;
+  name_en: string;
   category_path: string[];
+  category_path_en: string[];
   description: string;
   mindgo_function: string;
   storage: MindgoSourceStorageSpec;
@@ -336,7 +339,10 @@ export type MindgoSourceSchema = {
 export type MindgoSourceSummary = {
   id: string;
   name: string;
+  name_zh: string;
+  name_en: string;
   category_path: string[];
+  category_path_en: string[];
   description: string;
   storage: MindgoSourceStorageSpec;
 };
@@ -469,8 +475,11 @@ export type MindgoConnectionTestResponse = {
 export type Dataset = {
   id: string;
   name: string;
+  name_zh: string;
+  name_en: string;
   description: string;
   category_path: string[];
+  category_path_en: string[];
   exposed_to_agent: boolean;
   created_at: string;
   updated_at: string;
@@ -495,6 +504,18 @@ export type DatasetUpdatePayload = Partial<
 
 export type DatasetListResponse = {
   datasets: Dataset[];
+};
+
+export type DatasetNamingOption = {
+  value: string;
+  label: string;
+  name_en: string;
+};
+
+export type DatasetNamingOptionsResponse = {
+  markets: DatasetNamingOption[];
+  asset_classes: DatasetNamingOption[];
+  frequencies: DatasetNamingOption[];
 };
 
 export type DatasetQueryColumn = {
@@ -682,6 +703,10 @@ export async function listDatasets(
   }
   const query = searchParams.toString();
   return requestJson<DatasetListResponse>(`/api/datasets${query ? `?${query}` : ""}`);
+}
+
+export async function getDatasetNamingOptions(): Promise<DatasetNamingOptionsResponse> {
+  return requestJson<DatasetNamingOptionsResponse>("/api/datasets/naming-options");
 }
 
 export async function createDataset(

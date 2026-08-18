@@ -85,7 +85,10 @@ class MindgoSourceSyncSpec(BaseModel):
 
 class MindgoSourceSchema(BaseModel):
     name: str = Field(min_length=1)
+    name_zh: str = ""
+    name_en: str = ""
     category_path: list[str] = Field(min_length=1)
+    category_path_en: list[str] = Field(default_factory=list)
     description: str = ""
     mindgo_function: str = Field(min_length=1)
     storage: MindgoSourceStorageSpec
@@ -210,7 +213,10 @@ class MindgoSourceSyncStatusResponse(BaseModel):
 class MindgoSourceSummary(BaseModel):
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
+    name_zh: str = ""
+    name_en: str = ""
     category_path: list[str] = Field(min_length=1)
+    category_path_en: list[str] = Field(default_factory=list)
     description: str = ""
     storage: MindgoSourceStorageSpec
 

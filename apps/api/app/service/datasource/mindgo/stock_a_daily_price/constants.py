@@ -1,2 +1,2 @@
-STOCK_A_DAILY_PRICE_SOURCE_ID = "stock_a_daily_price"
-STOCK_A_DAILY_PRICE_SYNC_JOB_TYPE = "mindgo.stock_a_daily_price.sync"
+STOCK_A_DAILY_PRICE_SOURCE_ID = "a_stock_daily_price"
+STOCK_A_DAILY_PRICE_SYNC_JOB_TYPE = "mindgo.a_stock_daily_price.sync"

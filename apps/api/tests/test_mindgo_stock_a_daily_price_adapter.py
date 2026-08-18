@@ -76,9 +76,13 @@ async def test_stock_a_daily_price_schema_contract() -> None:
     schema = await adapter.get_source_schema()
 
     assert adapter.source_id == STOCK_A_DAILY_PRICE_SOURCE_ID
-    assert schema.name == "A股历史行情数据(日)"
+    assert schema.name == "A股股票日行情数据"
+    assert schema.name_zh == "A股股票日行情数据"
+    assert schema.name_en == "a_stock_daily_price"
+    assert schema.category_path == ["A股", "股票", "日", "行情数据"]
+    assert schema.category_path_en == ["a", "stock", "daily", "price"]
     assert schema.mindgo_function == "query_index"
-    assert schema.storage.path.endswith("/stock_a_daily_price")
+    assert schema.storage.path.endswith("/a_stock_daily_price")
     assert schema.storage.format == "parquet"
     assert schema.storage.partitioned_by == ["trade_day"]
     assert [param.name for param in schema.query_params][:2] == [
@@ -100,7 +104,7 @@ async def test_stock_a_daily_price_schema_contract() -> None:
     assert "query_id" not in field_options
 
 
-async def test_stock_a_daily_price_query_from_mindgo_returns_dataframe() -> None:
+async def test_a_stock_daily_price_query_from_mindgo_returns_dataframe() -> None:
     runner = FakeMindgoRunner(
         {
             "data": [
@@ -276,7 +280,7 @@ def test_normalize_stock_a_daily_price_maps_query_1015_columns_to_standard_colum
     assert "query_id" not in frame.columns
 
 
-async def test_stock_a_daily_price_sync_writes_daily_partitions_with_storage_protocol() -> None:
+async def test_a_stock_daily_price_sync_writes_daily_partitions_with_storage_protocol() -> None:
     runner = FakeMindgoRunner(
         {
             "data": [
@@ -306,7 +310,7 @@ async def test_stock_a_daily_price_sync_writes_daily_partitions_with_storage_pro
     assert writer.calls[0]["source_id"] == STOCK_A_DAILY_PRICE_SOURCE_ID
     assert writer.calls[0]["partition_values"] == {"trade_day": "20260813"}
     assert writer.calls[0]["path"].as_posix().endswith(
-        "/stock_a_daily_price/trade_day=20260813/data.parquet"
+        "/a_stock_daily_price/trade_day=20260813/data.parquet"
     )
     assert writer.calls[0]["start_date"] == date(2026, 8, 14)
     assert writer.calls[0]["end_date"] == date(2026, 8, 14)
@@ -314,7 +318,7 @@ async def test_stock_a_daily_price_sync_writes_daily_partitions_with_storage_pro
     assert '"baseDay": "2026-08-14"' in runner.calls[0]["code"]
 
 
-async def test_stock_a_daily_price_sync_imports_multiple_days_to_duckdb_parquet(
+async def test_a_stock_daily_price_sync_imports_multiple_days_to_duckdb_parquet(
     tmp_path,
 ) -> None:
     class DailyMindgoRunner:

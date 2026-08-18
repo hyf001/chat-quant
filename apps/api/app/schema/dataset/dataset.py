@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 _DUCKDB_VIEW_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 type DatasetJsonScalar = str | int | float | bool | None
@@ -55,15 +55,6 @@ class DatasetPayload(BaseModel):
             raise ValueError(msg)
         return stripped
 
-    @model_validator(mode="after")
-    def validate_category_path(self) -> DatasetPayload:
-        cleaned = [part.strip() for part in self.category_path if part.strip()]
-        if not cleaned:
-            msg = "category_path must contain at least one non-empty item"
-            raise ValueError(msg)
-        self.category_path = cleaned
-        return self
-
 
 class DatasetUpdatePayload(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
@@ -71,17 +62,6 @@ class DatasetUpdatePayload(BaseModel):
     exposed_to_agent: bool | None = None
 
     model_config = ConfigDict(extra="forbid")
-
-    @model_validator(mode="after")
-    def validate_category_path(self) -> DatasetUpdatePayload:
-        if self.category_path is None:
-            return self
-        cleaned = [part.strip() for part in self.category_path if part.strip()]
-        if not cleaned:
-            msg = "category_path must contain at least one non-empty item"
-            raise ValueError(msg)
-        self.category_path = cleaned
-        return self
 
 
 class DatasetQueryPayload(BaseModel):
@@ -104,8 +84,11 @@ class DatasetQueryPayload(BaseModel):
 class DatasetResponse(BaseModel):
     id: str
     name: str
+    name_zh: str = ""
+    name_en: str = ""
     description: str
     category_path: list[str]
+    category_path_en: list[str] = Field(default_factory=list)
     exposed_to_agent: bool
     created_at: datetime
     updated_at: datetime
@@ -119,6 +102,22 @@ class DatasetDetailResponse(DatasetResponse):
 
 class DatasetListResponse(BaseModel):
     datasets: list[DatasetResponse]
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class DatasetNamingOption(BaseModel):
+    value: str
+    label: str
+    name_en: str
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class DatasetNamingOptionsResponse(BaseModel):
+    markets: list[DatasetNamingOption]
+    asset_classes: list[DatasetNamingOption]
+    frequencies: list[DatasetNamingOption]
 
     model_config = ConfigDict(extra="forbid")
 

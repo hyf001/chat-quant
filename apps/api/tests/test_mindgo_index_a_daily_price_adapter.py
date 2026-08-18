@@ -77,9 +77,12 @@ async def test_index_a_daily_price_schema_contract() -> None:
 
     assert adapter.source_id == INDEX_A_DAILY_PRICE_SOURCE_ID
     assert schema.name == "A股指数日行情数据"
-    assert schema.category_path == ["指数", "指数行情数据"]
+    assert schema.name_zh == "A股指数日行情数据"
+    assert schema.name_en == "a_index_daily_price"
+    assert schema.category_path == ["A股", "指数", "日", "行情数据"]
+    assert schema.category_path_en == ["a", "index", "daily", "price"]
     assert schema.mindgo_function == "get_price"
-    assert schema.storage.path.endswith("/index_a_daily_price")
+    assert schema.storage.path.endswith("/a_index_daily_price")
     assert schema.storage.format == "parquet"
     assert schema.storage.partitioned_by == ["trade_day"]
     assert schema.sync.supports_query_window is True
@@ -127,7 +130,7 @@ async def test_index_a_daily_price_schema_contract() -> None:
     ]
 
 
-async def test_index_a_daily_price_query_from_mindgo_returns_dataframe() -> None:
+async def test_a_index_daily_price_query_from_mindgo_returns_dataframe() -> None:
     runner = FakeMindgoRunner(
         {
             "data": [
@@ -250,7 +253,7 @@ def test_normalize_index_a_daily_price_maps_panel_dict_to_standard_rows() -> Non
     ]
 
 
-async def test_index_a_daily_price_sync_writes_daily_partitions_with_storage_protocol() -> None:
+async def test_a_index_daily_price_sync_writes_daily_partitions_with_storage_protocol() -> None:
     runner = FakeMindgoRunner(
         {
             "data": [
@@ -280,14 +283,14 @@ async def test_index_a_daily_price_sync_writes_daily_partitions_with_storage_pro
     assert writer.calls[0]["source_id"] == INDEX_A_DAILY_PRICE_SOURCE_ID
     assert writer.calls[0]["partition_values"] == {"trade_day": "20230403"}
     assert writer.calls[0]["path"].as_posix().endswith(
-        "/index_a_daily_price/trade_day=20230403/data.parquet"
+        "/a_index_daily_price/trade_day=20230403/data.parquet"
     )
     assert writer.calls[0]["order_by"] == ["trade_date", "symbol"]
     assert '"start_date": "2023-04-03"' in runner.calls[0]["code"]
     assert '"end_date": "2023-04-03"' in runner.calls[0]["code"]
 
 
-async def test_index_a_daily_price_sync_imports_multiple_days_to_duckdb_parquet(
+async def test_a_index_daily_price_sync_imports_multiple_days_to_duckdb_parquet(
     tmp_path,
 ) -> None:
     class DailyMindgoRunner:

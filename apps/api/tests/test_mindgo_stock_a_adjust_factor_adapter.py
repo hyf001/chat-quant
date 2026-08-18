@@ -72,9 +72,13 @@ async def test_stock_a_adjust_factor_schema_contract() -> None:
     schema = await adapter.get_source_schema()
 
     assert adapter.source_id == STOCK_A_ADJUST_FACTOR_SOURCE_ID
-    assert schema.name == "A股复权因子(日)"
+    assert schema.name == "A股股票日复权因子"
+    assert schema.name_zh == "A股股票日复权因子"
+    assert schema.name_en == "a_stock_daily_adjust_factor"
+    assert schema.category_path == ["A股", "股票", "日", "复权因子"]
+    assert schema.category_path_en == ["a", "stock", "daily", "adjust_factor"]
     assert schema.mindgo_function == "query_index"
-    assert schema.storage.path.endswith("/stock_a_adjust_factor")
+    assert schema.storage.path.endswith("/a_stock_daily_adjust_factor")
     assert schema.storage.format == "parquet"
     assert schema.storage.partitioned_by == ["trade_day"]
     assert [field.name for field in schema.result_schema] == [
@@ -88,7 +92,7 @@ async def test_stock_a_adjust_factor_schema_contract() -> None:
     assert field_options == ["symbol", "trade_date", "name", "factor"]
 
 
-async def test_stock_a_adjust_factor_query_from_mindgo_returns_dataframe() -> None:
+async def test_a_stock_daily_adjust_factor_query_from_mindgo_returns_dataframe() -> None:
     runner = FakeMindgoRunner(
         {
             "data": [
@@ -207,7 +211,7 @@ def test_normalize_stock_a_adjust_factor_accepts_dataframe_and_aliases() -> None
     ]
 
 
-async def test_stock_a_adjust_factor_sync_writes_daily_partitions(tmp_path) -> None:
+async def test_a_stock_daily_adjust_factor_sync_writes_daily_partitions(tmp_path) -> None:
     runner = FakeMindgoRunner(
         {
             "data": [

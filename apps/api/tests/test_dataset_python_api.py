@@ -20,33 +20,33 @@ def test_dataset_python_api_lists_describes_and_queries_exposed_dataset(
 ) -> None:
     _create_dataset(
         client,
-        name="stock_a_daily_price",
+        name="a_stock_daily_price",
         exposed_to_agent=True,
         create_sql=(
-            "CREATE VIEW stock_a_daily_price AS "
+            "CREATE VIEW a_stock_daily_price AS "
             "SELECT '600519.SH' AS symbol, DATE '2024-01-02' AS trade_date, 1688.5 AS close "
             "UNION ALL SELECT '000001.SZ' AS symbol, DATE '2024-01-02' AS trade_date, 10.2 AS close"
         ),
     )
 
     datasets = list_datasets()
-    assert datasets["id"].tolist() == ["stock_a_daily_price"]
+    assert datasets["id"].tolist() == ["a_stock_daily_price"]
 
-    detail = describe_dataset("stock_a_daily_price")
-    assert detail["id"] == "stock_a_daily_price"
+    detail = describe_dataset("a_stock_daily_price")
+    assert detail["id"] == "a_stock_daily_price"
     assert [column["name"] for column in detail["columns"]] == [
         "symbol",
         "trade_date",
         "close",
     ]
 
-    preview = preview_dataset("stock_a_daily_price", limit=1)
+    preview = preview_dataset("a_stock_daily_price", limit=1)
     assert preview.shape == (1, 3)
 
     queried = query_dataset(
         """
         SELECT symbol, close
-        FROM stock_a_daily_price
+        FROM a_stock_daily_price
         WHERE symbol = '600519.SH'
         """
     )
@@ -92,17 +92,17 @@ def test_chatq_python_can_import_dataset_python_api(
 ) -> None:
     _create_dataset(
         client,
-        name="stock_a_daily_price",
+        name="a_stock_daily_price",
         exposed_to_agent=True,
         create_sql=(
-            "CREATE VIEW stock_a_daily_price AS "
+            "CREATE VIEW a_stock_daily_price AS "
             "SELECT '600519.SH' AS symbol, 1688.5 AS close"
         ),
     )
     code = """
 from app.service.dataset.python_api import query_dataset
 
-df = query_dataset("SELECT symbol, close FROM stock_a_daily_price")
+df = query_dataset("SELECT symbol, close FROM a_stock_daily_price")
 print(df.to_dict(orient="records"))
 """
 
@@ -130,7 +130,7 @@ def _create_dataset(
         json={
             "name": name,
             "description": name,
-            "category_path": ["股票", "A股"],
+            "category_path": ["A股", "股票", "日", "行情数据"],
             "exposed_to_agent": exposed_to_agent,
             "create_sql": create_sql,
         },

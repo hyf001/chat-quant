@@ -4,13 +4,23 @@ from fastapi import APIRouter, Query, Response, status
 
 from app.api.v1.dependencies import DatabaseSession
 from app.schema.dataset import (
+    DatasetAssetClass,
     DatasetDetailResponse,
+    DatasetFrequency,
     DatasetListResponse,
+    DatasetMarket,
+    DatasetNamingOption,
+    DatasetNamingOptionsResponse,
     DatasetPayload,
     DatasetQueryPayload,
     DatasetQueryResponse,
     DatasetResponse,
     DatasetUpdatePayload,
+)
+from app.schema.dataset.taxonomy import (
+    ASSET_CLASS_ENGLISH,
+    FREQUENCY_ENGLISH,
+    MARKET_ENGLISH,
 )
 from app.service.dataset import DatasetService
 
@@ -39,6 +49,36 @@ async def query_datasets(
     db: DatabaseSession,
 ) -> DatasetQueryResponse:
     return await DatasetService(db).query_dataset_sql(payload)
+
+
+@router.get("/naming-options", response_model=DatasetNamingOptionsResponse)
+async def get_dataset_naming_options() -> DatasetNamingOptionsResponse:
+    return DatasetNamingOptionsResponse(
+        markets=[
+            DatasetNamingOption(
+                value=item.value,
+                label=item.value,
+                name_en=MARKET_ENGLISH[item],
+            )
+            for item in DatasetMarket
+        ],
+        asset_classes=[
+            DatasetNamingOption(
+                value=item.value,
+                label=item.value,
+                name_en=ASSET_CLASS_ENGLISH[item],
+            )
+            for item in DatasetAssetClass
+        ],
+        frequencies=[
+            DatasetNamingOption(
+                value=item.value,
+                label=item.value,
+                name_en=FREQUENCY_ENGLISH[item],
+            )
+            for item in DatasetFrequency
+        ],
+    )
 
 
 @router.get("/{dataset_id}", response_model=DatasetDetailResponse)

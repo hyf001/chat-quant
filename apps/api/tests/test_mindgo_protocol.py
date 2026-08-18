@@ -18,11 +18,11 @@ from pydantic import ValidationError
 def test_mindgo_source_schema_protocol_supports_result_schema() -> None:
     schema = MindgoSourceSchema(
         name="股票日行情数据(A股)",
-        category_path=["股票", "A股", "行情数据(A股)"],
+        category_path=["A股", "股票", "日", "行情数据"],
         description="A股股票日频行情数据",
         mindgo_function="get_price",
         storage=MindgoSourceStorageSpec(
-            path="data/mindgo/parquet/stock_a_daily_price",
+            path="data/mindgo/parquet/a_stock_daily_price",
             format="parquet",
             partitioned_by=["trade_day"],
         ),
@@ -52,7 +52,7 @@ def test_mindgo_source_schema_protocol_supports_result_schema() -> None:
     )
 
     assert schema.name == "股票日行情数据(A股)"
-    assert schema.storage.path == "data/mindgo/parquet/stock_a_daily_price"
+    assert schema.storage.path == "data/mindgo/parquet/a_stock_daily_price"
     assert schema.storage.partitioned_by == ["trade_day"]
     assert schema.storage.min_partition is None
     assert schema.storage.max_partition is None
@@ -104,15 +104,15 @@ def test_mindgo_sync_result_contract() -> None:
 
 async def test_mindgo_source_adapter_query_entries_return_dataframes() -> None:
     class FakeMindgoSourceAdapter:
-        source_id = "stock_a_daily_price"
+        source_id = "a_stock_daily_price"
 
         async def get_source_schema(self) -> MindgoSourceSchema:
             return MindgoSourceSchema(
                 name="股票日行情数据(A股)",
-                category_path=["股票", "A股", "行情数据(A股)"],
+                category_path=["A股", "股票", "日", "行情数据"],
                 mindgo_function="get_price",
                 storage=MindgoSourceStorageSpec(
-                    path="data/mindgo/parquet/stock_a_daily_price",
+                    path="data/mindgo/parquet/a_stock_daily_price",
                     format="parquet",
                     partitioned_by=["trade_day"],
                 ),

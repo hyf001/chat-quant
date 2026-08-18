@@ -13,14 +13,14 @@ from sqlalchemy import create_engine
 def test_job_runtime_instances_list_returns_paginated_full_fields(client: TestClient) -> None:
     _insert_instance(
         "inst_old",
-        job_id="stock_a_daily_price",
+        job_id="a_stock_daily_price",
         trigger_type=TriggerType.MANUAL,
         scheduled_for=datetime(2026, 8, 14, 10, 0),
         summary="old summary",
     )
     _insert_instance(
         "inst_new",
-        job_id="stock_a_daily_price",
+        job_id="a_stock_daily_price",
         trigger_type=TriggerType.SCHEDULE,
         scheduled_for=datetime(2026, 8, 15, 10, 0),
         summary="new summary",
@@ -31,7 +31,7 @@ def test_job_runtime_instances_list_returns_paginated_full_fields(client: TestCl
         "/api/job-runtime/instances",
         params={
             "job_type": "mindgo_dataset_sync",
-            "job_id": "stock_a_daily_price",
+            "job_id": "a_stock_daily_price",
             "page": 1,
             "page_size": 1,
         },
@@ -54,7 +54,7 @@ def test_job_runtime_instances_list_returns_paginated_full_fields(client: TestCl
     assert payload["items"][0] == {
         "id": "inst_new",
         "job_type": "mindgo_dataset_sync",
-        "job_id": "stock_a_daily_price",
+        "job_id": "a_stock_daily_price",
         "trigger_type": "schedule",
         "trigger_key": "trigger_inst_new",
         "payload": {"source": "test"},
@@ -74,7 +74,7 @@ def test_job_runtime_instances_list_returns_paginated_full_fields(client: TestCl
         "/api/job-runtime/instances",
         params={
             "job_type": "mindgo_dataset_sync",
-            "job_id": "stock_a_daily_price",
+            "job_id": "a_stock_daily_price",
             "status": "waiting",
         },
     )
@@ -91,7 +91,7 @@ def test_job_runtime_instances_list_returns_paginated_full_fields(client: TestCl
 def test_job_runtime_instances_rerun_and_delete(client: TestClient) -> None:
     _insert_instance(
         "inst_rerun",
-        job_id="stock_a_daily_price",
+        job_id="a_stock_daily_price",
         trigger_type=TriggerType.SCHEDULE,
         scheduled_for=datetime(2026, 8, 15, 10, 0),
         started_at=datetime(2026, 8, 15, 10, 1),
@@ -120,7 +120,7 @@ def test_job_runtime_instances_rerun_and_delete(client: TestClient) -> None:
     assert delete_response.status_code == 204
     list_response = client.get(
         "/api/job-runtime/instances",
-        params={"job_id": "stock_a_daily_price"},
+        params={"job_id": "a_stock_daily_price"},
     )
     assert list_response.status_code == 200
     assert list_response.json()["items"] == []

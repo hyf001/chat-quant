@@ -16,6 +16,14 @@ from app.core.config import get_settings
 from app.db.schema import ensure_database_schema
 from app.db.session import sync_database_url
 from app.model.dataset import DatasetRow
+from app.schema.dataset.taxonomy import (
+    ASSET_CLASS_ENGLISH,
+    FREQUENCY_ENGLISH,
+    MARKET_ENGLISH,
+    DatasetAssetClass,
+    DatasetFrequency,
+    DatasetMarket,
+)
 from app.storage import DuckDBViewStore, DuckDBViewStoreError, duckdb_dataset_path
 
 DEFAULT_PREVIEW_LIMIT = 20
@@ -54,8 +62,11 @@ def list_datasets(
         columns=[
             "id",
             "name",
+            "name_zh",
+            "name_en",
             "description",
             "category_path",
+            "category_path_en",
             "exposed_to_agent",
             "created_at",
             "updated_at",
@@ -181,11 +192,15 @@ def _view_store() -> DuckDBViewStore:
 
 
 def _dataset_record(row: DatasetRow) -> dict[str, Any]:
+    category_path = _dataset_category_path(row)
     return {
         "id": row.id,
         "name": row.name,
+        "name_zh": row.description,
+        "name_en": row.name,
         "description": row.description,
-        "category_path": _category_path(row.category_path_json),
+        "category_path": category_path,
+        "category_path_en": _category_path_en(category_path, row.name),
         "exposed_to_agent": row.exposed_to_agent,
         "created_at": row.created_at,
         "updated_at": row.updated_at,
@@ -196,6 +211,32 @@ def _category_path(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item) for item in value if str(item).strip()]
+
+
+def _dataset_category_path(row: DatasetRow) -> list[str]:
+    return _category_path(row.category_path_json)
+
+
+def _category_path_en(category_path: list[str], name: str) -> list[str]:
+    if len(category_path) != 4:
+        return []
+    try:
+        prefix = [
+            MARKET_ENGLISH[DatasetMarket(category_path[0])],
+            ASSET_CLASS_ENGLISH[DatasetAssetClass(category_path[1])],
+            FREQUENCY_ENGLISH[DatasetFrequency(category_path[2])],
+        ]
+    except ValueError:
+        return []
+    topic = _topic_en_from_name(name, prefix)
+    return [*prefix, topic] if topic else []
+
+
+def _topic_en_from_name(name: str, prefix: list[str]) -> str:
+    prefix_text = "_".join(prefix) + "_"
+    if name.startswith(prefix_text):
+        return name[len(prefix_text):]
+    return ""
 
 
 def _category_prefix(category: str | list[str] | None) -> list[str]:

@@ -51,7 +51,7 @@ MindGo can use this generic layout from its own service layer:
 data/
   mindgo/
     parquet/
-      stock_a_daily_price/
+      a_stock_daily_price/
         trade_year=2024/
           data.parquet
         trade_year=2025/
@@ -78,7 +78,7 @@ frame = store.query(
     WHERE trade_date = $trade_date
     """,
     params={
-        "path": "data/mindgo/parquet/stock_a_daily_price/trade_year=*/data.parquet",
+        "path": "data/mindgo/parquet/a_stock_daily_price/trade_year=*/data.parquet",
         "trade_date": "2026-08-13",
     },
 )
@@ -89,7 +89,7 @@ Write one Parquet file:
 ```python
 count = store.write(
     frame,
-    "data/mindgo/parquet/stock_a_daily_price/trade_year=2026/data.parquet",
+    "data/mindgo/parquet/a_stock_daily_price/trade_year=2026/data.parquet",
     options=ParquetWriteOptions(order_by=["trade_date", "symbol"]),
 )
 ```

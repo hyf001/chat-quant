@@ -64,7 +64,10 @@ async def list_sources() -> MindgoSourceListResponse:
             MindgoSourceSummary(
                 id=source_id,
                 name=schema.name,
+                name_zh=schema.name_zh,
+                name_en=schema.name_en,
                 category_path=schema.category_path,
+                category_path_en=schema.category_path_en,
                 description=schema.description,
                 storage=schema.storage,
             )
@@ -73,7 +76,7 @@ async def list_sources() -> MindgoSourceListResponse:
 
 
 async def get_source_schema(source_id: str) -> MindgoSourceSchema:
-    return await _schema_for_source(source_id)
+    return await _schema_for_source(_canonical_source_id(source_id))
 
 
 async def test_connection(request: MindgoConnectionTestRequest) -> MindgoConnectionTestResponse:
@@ -106,11 +109,12 @@ async def query_source(
     source_id: str,
     request: MindgoSourceQueryRequest,
 ) -> MindgoSourceQueryResponse:
-    adapter = _adapter_for_source(source_id)
+    canonical_source_id = _canonical_source_id(source_id)
+    adapter = _adapter_for_source(canonical_source_id)
     schema = await adapter.get_source_schema()
     frame = await adapter.query_from_mindgo(request)
     return _frame_query_response(
-        source_id,
+        canonical_source_id,
         frame,
         columns=schema.result_schema,
         page=request.page,
@@ -122,7 +126,7 @@ async def sync_source(
     source_id: str,
     request: MindgoSourceSyncRequest,
 ) -> MindgoSourceSyncResult:
-    adapter = _adapter_for_source(source_id)
+    adapter = _adapter_for_source(_canonical_source_id(source_id))
     return await adapter.sync(request)
 
 
@@ -144,6 +148,7 @@ def _adapter_for_source(
     *,
     allow_missing_runner: bool = False,
 ) -> MindgoSourceAdapter:
+    source_id = _canonical_source_id(source_id)
     settings = _fresh_settings()
     connection = _connection_from_settings(settings)
     runner = None if allow_missing_runner else _runner_from_connection(connection)
@@ -154,6 +159,13 @@ def _adapter_for_source(
         return StockAAdjustFactorAdapter(runner, storage=storage)
     if source_id == INDEX_A_DAILY_PRICE_SOURCE_ID:
         return IndexADailyPriceAdapter(runner, storage=storage)
+    raise MindgoSourceNotFoundError(source_id)
+
+
+def _canonical_source_id(source_id: str) -> str:
+    stripped = source_id.strip()
+    if stripped in _source_ids():
+        return stripped
     raise MindgoSourceNotFoundError(source_id)
 
 

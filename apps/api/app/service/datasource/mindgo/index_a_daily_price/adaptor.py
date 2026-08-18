@@ -11,6 +11,15 @@ from typing import Any, Protocol
 
 import pandas as pd
 
+from app.schema.dataset.taxonomy import (
+    DatasetAssetClass,
+    DatasetFrequency,
+    DatasetMarket,
+    category_path,
+    category_path_en,
+    dataset_name_en,
+    dataset_name_zh,
+)
 from app.schema.mindgo import (
     MindgoFieldSpec,
     MindgoParameterOption,
@@ -205,9 +214,18 @@ def index_a_daily_price_schema(
         INDEX_A_DAILY_PRICE_SOURCE_ID,
         partitioned_by,
     )
+    market = DatasetMarket.A
+    asset_class = DatasetAssetClass.INDEX
+    frequency = DatasetFrequency.DAILY
+    topic_zh = "行情数据"
+    topic_en = "price"
+    name_zh = dataset_name_zh(market, asset_class, frequency, topic_zh)
     return MindgoSourceSchema(
-        name="A股指数日行情数据",
-        category_path=["指数", "指数行情数据"],
+        name=name_zh,
+        name_zh=name_zh,
+        name_en=dataset_name_en(market, asset_class, frequency, topic_en),
+        category_path=category_path(market, asset_class, frequency, topic_zh),
+        category_path_en=category_path_en(market, asset_class, frequency, topic_en),
         description="常用 A 股指数日频行情数据",
         mindgo_function="get_price",
         storage=MindgoSourceStorageSpec(

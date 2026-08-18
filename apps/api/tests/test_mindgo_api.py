@@ -14,11 +14,17 @@ def test_mindgo_api_lists_first_source(client: TestClient) -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["sources"][0]["id"] == "stock_a_daily_price"
-    assert payload["sources"][1]["id"] == "stock_a_adjust_factor"
-    assert payload["sources"][2]["id"] == "index_a_daily_price"
+    assert payload["sources"][0]["id"] == "a_stock_daily_price"
+    assert payload["sources"][1]["id"] == "a_stock_daily_adjust_factor"
+    assert payload["sources"][2]["id"] == "a_index_daily_price"
+    assert payload["sources"][0]["category_path_en"] == [
+        "a",
+        "stock",
+        "daily",
+        "price",
+    ]
     assert payload["sources"][0]["storage"] == {
-        "path": "data/mindgo/parquet/stock_a_daily_price",
+        "path": "data/mindgo/parquet/a_stock_daily_price",
         "format": "parquet",
         "partitioned_by": ["trade_day"],
         "min_partition": None,
@@ -28,14 +34,17 @@ def test_mindgo_api_lists_first_source(client: TestClient) -> None:
 
 
 def test_mindgo_api_returns_stock_daily_schema(client: TestClient) -> None:
-    response = client.get("/api/mindgo/sources/stock_a_daily_price/schema")
+    response = client.get("/api/mindgo/sources/a_stock_daily_price/schema")
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["name"] == "A股历史行情数据(日)"
-    assert payload["category_path"] == ["股票", "A股", "行情数据(A股)"]
+    assert payload["name"] == "A股股票日行情数据"
+    assert payload["name_zh"] == "A股股票日行情数据"
+    assert payload["name_en"] == "a_stock_daily_price"
+    assert payload["category_path"] == ["A股", "股票", "日", "行情数据"]
+    assert payload["category_path_en"] == ["a", "stock", "daily", "price"]
     assert "sync_table_name" not in payload
-    assert payload["storage"]["path"] == "data/mindgo/parquet/stock_a_daily_price"
+    assert payload["storage"]["path"] == "data/mindgo/parquet/a_stock_daily_price"
     assert payload["storage"]["format"] == "parquet"
     assert payload["storage"]["partitioned_by"] == ["trade_day"]
     assert payload["storage"]["min_partition"] is None
@@ -45,13 +54,21 @@ def test_mindgo_api_returns_stock_daily_schema(client: TestClient) -> None:
 
 
 def test_mindgo_api_returns_stock_adjust_factor_schema(client: TestClient) -> None:
-    response = client.get("/api/mindgo/sources/stock_a_adjust_factor/schema")
+    response = client.get("/api/mindgo/sources/a_stock_daily_adjust_factor/schema")
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["name"] == "A股复权因子(日)"
-    assert payload["category_path"] == ["股票", "A股", "行情数据(A股)"]
-    assert payload["storage"]["path"] == "data/mindgo/parquet/stock_a_adjust_factor"
+    assert payload["name"] == "A股股票日复权因子"
+    assert payload["name_zh"] == "A股股票日复权因子"
+    assert payload["name_en"] == "a_stock_daily_adjust_factor"
+    assert payload["category_path"] == ["A股", "股票", "日", "复权因子"]
+    assert payload["category_path_en"] == [
+        "a",
+        "stock",
+        "daily",
+        "adjust_factor",
+    ]
+    assert payload["storage"]["path"] == "data/mindgo/parquet/a_stock_daily_adjust_factor"
     assert payload["storage"]["format"] == "parquet"
     assert payload["storage"]["partitioned_by"] == ["trade_day"]
     assert [field["name"] for field in payload["result_schema"]] == [
@@ -63,14 +80,17 @@ def test_mindgo_api_returns_stock_adjust_factor_schema(client: TestClient) -> No
 
 
 def test_mindgo_api_returns_index_daily_schema(client: TestClient) -> None:
-    response = client.get("/api/mindgo/sources/index_a_daily_price/schema")
+    response = client.get("/api/mindgo/sources/a_index_daily_price/schema")
 
     assert response.status_code == 200
     payload = response.json()
     assert payload["name"] == "A股指数日行情数据"
-    assert payload["category_path"] == ["指数", "指数行情数据"]
+    assert payload["name_zh"] == "A股指数日行情数据"
+    assert payload["name_en"] == "a_index_daily_price"
+    assert payload["category_path"] == ["A股", "指数", "日", "行情数据"]
+    assert payload["category_path_en"] == ["a", "index", "daily", "price"]
     assert payload["mindgo_function"] == "get_price"
-    assert payload["storage"]["path"] == "data/mindgo/parquet/index_a_daily_price"
+    assert payload["storage"]["path"] == "data/mindgo/parquet/a_index_daily_price"
     assert payload["storage"]["format"] == "parquet"
     assert payload["storage"]["partitioned_by"] == ["trade_day"]
     assert [field["name"] for field in payload["result_schema"]] == [
@@ -102,7 +122,7 @@ def test_mindgo_query_uses_default_connection(
     monkeypatch,
 ) -> None:
     class FakeAdapter:
-        source_id = "stock_a_daily_price"
+        source_id = "a_stock_daily_price"
 
         async def get_source_schema(self):
             return stock_a_daily_price_schema()
@@ -122,7 +142,7 @@ def test_mindgo_query_uses_default_connection(
     )
 
     response = client.post(
-        "/api/mindgo/sources/stock_a_daily_price/query",
+        "/api/mindgo/sources/a_stock_daily_price/query",
         json={
             "params": {
                 "baseDay": "2026-08-13",
@@ -226,7 +246,7 @@ def test_mindgo_query_paginates_dataframe_rows(
     monkeypatch,
 ) -> None:
     class FakeAdapter:
-        source_id = "stock_a_daily_price"
+        source_id = "a_stock_daily_price"
 
         async def get_source_schema(self):
             return stock_a_daily_price_schema()
@@ -250,7 +270,7 @@ def test_mindgo_query_paginates_dataframe_rows(
     )
 
     response = client.post(
-        "/api/mindgo/sources/stock_a_daily_price/query",
+        "/api/mindgo/sources/a_stock_daily_price/query",
         json={"params": {}, "page": 2, "page_size": 2},
     )
 
@@ -276,7 +296,7 @@ def test_mindgo_sync_runs_immediate_import(
     )
 
     response = client.post(
-        "/api/mindgo/sources/stock_a_daily_price/sync",
+        "/api/mindgo/sources/a_stock_daily_price/sync",
         json={
             "trigger_start_date": "2026-08-13",
             "trigger_end_date": "2026-08-15",
@@ -317,7 +337,7 @@ def test_mindgo_sync_supports_stock_adjust_factor(
     monkeypatch,
 ) -> None:
     class FakeAdapter:
-        source_id = "stock_a_adjust_factor"
+        source_id = "a_stock_daily_adjust_factor"
 
         async def get_source_schema(self):
             return stock_a_adjust_factor_schema()
@@ -335,7 +355,7 @@ def test_mindgo_sync_supports_stock_adjust_factor(
     )
 
     response = client.post(
-        "/api/mindgo/sources/stock_a_adjust_factor/sync",
+        "/api/mindgo/sources/a_stock_daily_adjust_factor/sync",
         json={
             "trigger_start_date": "2026-08-13",
             "trigger_end_date": "2026-08-13",
@@ -347,7 +367,7 @@ def test_mindgo_sync_supports_stock_adjust_factor(
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["instance"]["job_type"] == "mindgo.stock_a_adjust_factor.sync"
+    assert payload["instance"]["job_type"] == "mindgo.a_stock_daily_adjust_factor.sync"
     assert payload["instance"]["payload"]["params"] == {"fields": ["factor"]}
 
 
@@ -356,7 +376,7 @@ def test_mindgo_sync_supports_index_daily_price(
     monkeypatch,
 ) -> None:
     class FakeAdapter:
-        source_id = "index_a_daily_price"
+        source_id = "a_index_daily_price"
 
         async def get_source_schema(self):
             return index_a_daily_price_schema()
@@ -374,7 +394,7 @@ def test_mindgo_sync_supports_index_daily_price(
     )
 
     response = client.post(
-        "/api/mindgo/sources/index_a_daily_price/sync",
+        "/api/mindgo/sources/a_index_daily_price/sync",
         json={
             "trigger_start_date": "2023-04-03",
             "trigger_end_date": "2023-04-03",
@@ -386,7 +406,7 @@ def test_mindgo_sync_supports_index_daily_price(
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["instance"]["job_type"] == "mindgo.index_a_daily_price.sync"
+    assert payload["instance"]["job_type"] == "mindgo.a_index_daily_price.sync"
     assert payload["instance"]["payload"]["params"] == {
         "securities": ["000905.SH"],
         "fields": ["close"],
@@ -398,7 +418,7 @@ def test_mindgo_sync_applies_query_window_offsets_to_index_daily_price(
     monkeypatch,
 ) -> None:
     class FakeAdapter:
-        source_id = "index_a_daily_price"
+        source_id = "a_index_daily_price"
 
         async def get_source_schema(self):
             return index_a_daily_price_schema()
@@ -416,7 +436,7 @@ def test_mindgo_sync_applies_query_window_offsets_to_index_daily_price(
     )
 
     response = client.post(
-        "/api/mindgo/sources/index_a_daily_price/sync",
+        "/api/mindgo/sources/a_index_daily_price/sync",
         json={
             "trigger_start_date": "2023-04-03",
             "trigger_end_date": "2023-04-05",
