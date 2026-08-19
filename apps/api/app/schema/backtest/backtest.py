@@ -60,30 +60,14 @@ class StrategyBacktestConfig(BaseModel):
     asset_class: Literal["stock", "etf", "index", "crypto", "futures"] = "stock"
     market: Literal["CN", "US", "HK"] = "CN"
     symbols: list[str] = Field(default_factory=lambda: ["600519.SH"])
-    symbol_source: Literal["manual", "strategy_fixed", "universe"] = "manual"
     universe: str | None = None
     benchmark_symbol: str | None = "000016.SH"
     start_date: date = Field(default_factory=default_backtest_start_date)
     end_date: date = Field(default_factory=default_backtest_end_date)
     timeframe: Literal["1d"] = "1d"
     initial_cash: Decimal = Field(default=Decimal("100000"), gt=0)
-    commission: Decimal = Field(default=Decimal("0.001"), ge=0)
+    commission: Decimal = Field(default=Decimal("0.0005"), ge=0)
     slippage: Decimal = Field(default=Decimal("0"), ge=0)
-    data_adjust: str = "qfq"
-    currency: Literal["CNY", "USD", "HKD"] = "CNY"
-    rebalance_frequency: Literal["none", "daily", "weekly", "monthly", "quarterly"] = "none"
-    position_sizing: Literal[
-        "fixed_percent",
-        "equal_weight",
-        "target_weight",
-        "cash_per_order",
-    ] = "fixed_percent"
-    max_position_count: int | None = Field(default=None, ge=1)
-    allow_short: bool = False
-    risk_control_enabled: bool = False
-    stop_loss_pct: float | None = Field(default=None, ge=0)
-    take_profit_pct: float | None = Field(default=None, ge=0)
-    max_drawdown_stop_pct: float | None = Field(default=None, ge=0)
     notes: list[str] = Field(default_factory=list)
     params: dict[str, JsonValue] = Field(default_factory=dict)
 
@@ -92,11 +76,11 @@ class StrategyBacktestConfig(BaseModel):
     @model_validator(mode="after")
     def validate_run_config(self) -> StrategyBacktestConfig:
         symbols = [symbol.strip().upper() for symbol in self.symbols if symbol.strip()]
-        if self.symbol_source != "universe" and not symbols:
+        if not symbols:
             raise ValueError("symbols must contain at least one non-empty symbol")
         self.symbols = symbols
-        if self.symbol_source == "universe" and not self.universe:
-            raise ValueError("universe is required when symbol_source is universe")
+        if self.strategy_mode == "universe_selection" and not self.universe:
+            raise ValueError("universe is required when strategy_mode is universe_selection")
         if self.strategy_mode == "single_symbol" and len(self.symbols) != 1:
             raise ValueError("single_symbol strategy_mode requires exactly one symbol")
         if self.strategy_mode in {"multi_symbol", "portfolio"} and len(self.symbols) < 2:

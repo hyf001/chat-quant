@@ -83,7 +83,6 @@ export type StrategyBacktestConfig = {
   asset_class: "stock" | "etf" | "index" | "crypto" | "futures";
   market: "CN" | "US" | "HK";
   symbols: string[];
-  symbol_source: "manual" | "strategy_fixed" | "universe";
   universe?: string | null;
   benchmark_symbol?: string | null;
   start_date: string;
@@ -92,16 +91,6 @@ export type StrategyBacktestConfig = {
   initial_cash: string;
   commission: string;
   slippage?: string;
-  data_adjust?: string;
-  currency?: "CNY" | "USD" | "HKD";
-  rebalance_frequency?: "none" | "daily" | "weekly" | "monthly" | "quarterly";
-  position_sizing?: "fixed_percent" | "equal_weight" | "target_weight" | "cash_per_order";
-  max_position_count?: number | null;
-  allow_short?: boolean;
-  risk_control_enabled?: boolean;
-  stop_loss_pct?: number | null;
-  take_profit_pct?: number | null;
-  max_drawdown_stop_pct?: number | null;
   notes?: string[];
   params?: Record<string, StrategyJsonValue>;
 };

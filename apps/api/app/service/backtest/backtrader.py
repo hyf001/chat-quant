@@ -64,7 +64,7 @@ class BacktraderStrategyBacktestEngine:
                 raise StrategyBacktestError(
                     "STRATEGY_DATA_UNAVAILABLE",
                     "Backtest execution requires resolved symbols",
-                    detail={"symbol_source": backtest.config.symbol_source},
+                    detail={"strategy_mode": backtest.config.strategy_mode.value},
                 )
 
             market_frames: dict[str, pd.DataFrame] = {}

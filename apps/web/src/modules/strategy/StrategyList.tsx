@@ -68,7 +68,6 @@ type BacktestForm = {
   assetClass: StrategyBacktestConfig["asset_class"];
   market: StrategyBacktestConfig["market"];
   symbols: string;
-  symbolSource: StrategyBacktestConfig["symbol_source"];
   universe: string;
   benchmarkPreset: string;
   benchmarkSymbol: string;
@@ -77,16 +76,6 @@ type BacktestForm = {
   initialCash: string;
   commission: string;
   slippage: string;
-  dataAdjust: string;
-  currency: NonNullable<StrategyBacktestConfig["currency"]>;
-  rebalanceFrequency: NonNullable<StrategyBacktestConfig["rebalance_frequency"]>;
-  positionSizing: NonNullable<StrategyBacktestConfig["position_sizing"]>;
-  maxPositionCount: string;
-  allowShort: boolean;
-  riskControlEnabled: boolean;
-  stopLossPct: string;
-  takeProfitPct: string;
-  maxDrawdownStopPct: string;
   notes: string;
   customParamValues: Record<string, string>;
 };
@@ -194,37 +183,11 @@ const cnAssetClassOptions: SelectOption[] = [
 
 const stockOnlyAssetClassOptions: SelectOption[] = [{ value: "stock", label: "股票" }];
 
-const symbolSourceOptions: SelectOption[] = [
-  { value: "manual", label: "手动输入" },
-  { value: "strategy_fixed", label: "策略内固定" },
-  { value: "universe", label: "股票池" },
-];
-
-const dataAdjustOptions: SelectOption[] = [
-  { value: "none", label: "不复权" },
-  { value: "qfq", label: "前复权" },
-  { value: "hfq", label: "后复权" },
-];
-
-const currencyOptions: SelectOption[] = [
-  { value: "CNY", label: "人民币" },
-  { value: "HKD", label: "港币" },
-  { value: "USD", label: "美元" },
-];
-
-const rebalanceFrequencyOptions: SelectOption[] = [
-  { value: "none", label: "不调仓" },
-  { value: "daily", label: "每日" },
-  { value: "weekly", label: "每周" },
-  { value: "monthly", label: "每月" },
-  { value: "quarterly", label: "每季度" },
-];
-
-const positionSizingOptions: SelectOption[] = [
-  { value: "fixed_percent", label: "固定比例" },
-  { value: "equal_weight", label: "等权" },
-  { value: "target_weight", label: "目标权重" },
-  { value: "cash_per_order", label: "单笔金额" },
+const backtestDateRangePresets = [
+  { years: 1, label: "最近1年" },
+  { years: 2, label: "最近2年" },
+  { years: 3, label: "最近3年" },
+  { years: 5, label: "最近5年" },
 ];
 
 const defaultCode = [
@@ -1257,6 +1220,12 @@ function BacktestRunDialog({
   const setField = <Key extends keyof BacktestForm>(field: Key, value: BacktestForm[Key]) => {
     onChange(applyBacktestFieldUpdate(form, field, value));
   };
+  const setDateRangePreset = (years: number) => {
+    onChange({
+      ...form,
+      ...backtestDateRangeForYears(years),
+    });
+  };
   const setParamValue = (name: string, value: string) => {
     onChange({
       ...form,
@@ -1286,15 +1255,21 @@ function BacktestRunDialog({
                 <Select label="市场" required value={form.market} disabled={disabled} options={marketOptions} onChange={(value) => setField("market", value as BacktestForm["market"])} />
                 <Select label="资产类别" required value={form.assetClass} disabled={disabled} options={assetClassOptionsForMarket(form.market)} onChange={(value) => setField("assetClass", value as BacktestForm["assetClass"])} />
                 <Input label={symbolInputLabel(form.strategyMode)} required value={form.symbols} disabled={disabled} onChange={(value) => setField("symbols", value)} />
-                {form.symbolSource === "universe" ? (
+                {form.strategyMode === "universe_selection" ? (
                   <Input label="股票池" required value={form.universe} disabled={disabled} onChange={(value) => setField("universe", value)} />
                 ) : null}
                 <Select label="基准" value={form.benchmarkPreset} disabled={disabled} options={benchmarkOptionsForMarket(form.market)} onChange={(value) => setField("benchmarkPreset", value)} />
                 {form.benchmarkPreset === customBenchmarkValue ? (
                   <Input label="其他基准代码" required value={form.benchmarkSymbol} disabled={disabled} onChange={(value) => setField("benchmarkSymbol", value)} />
                 ) : null}
-                <Input label="开始日期" required value={form.startDate} disabled={disabled} onChange={(value) => setField("startDate", value)} />
-                <Input label="结束日期" required value={form.endDate} disabled={disabled} onChange={(value) => setField("endDate", value)} />
+                <DateRangeField
+                  startDate={form.startDate}
+                  endDate={form.endDate}
+                  disabled={disabled}
+                  onStartChange={(value) => setField("startDate", value)}
+                  onEndChange={(value) => setField("endDate", value)}
+                  onPreset={setDateRangePreset}
+                />
                 <Input label="初始资金" required value={form.initialCash} disabled={disabled} onChange={(value) => setField("initialCash", value)} />
                 <Input label="手续费" required value={form.commission} disabled={disabled} onChange={(value) => setField("commission", value)} />
               </div>
@@ -1309,20 +1284,7 @@ function BacktestRunDialog({
               {showMore ? (
                 <div className="grid gap-3 border-t border-zinc-100 pt-3">
                   <div className="grid grid-cols-3 gap-3 max-md:grid-cols-2 max-sm:grid-cols-1">
-                    <Select label="标的来源" value={form.symbolSource} disabled={disabled} options={symbolSourceOptionsForMode(form.strategyMode)} onChange={(value) => setField("symbolSource", value as BacktestForm["symbolSource"])} />
-                    <Select label="复权" value={form.dataAdjust} disabled={disabled} options={dataAdjustOptions} onChange={(value) => setField("dataAdjust", value)} />
-                    <Select label="货币" value={form.currency} disabled={disabled} options={currencyOptions} onChange={(value) => setField("currency", value as BacktestForm["currency"])} />
                     <Input label="滑点" value={form.slippage} disabled={disabled} onChange={(value) => setField("slippage", value)} />
-                    <Select label="调仓频率" value={form.rebalanceFrequency} disabled={disabled} options={rebalanceFrequencyOptions} onChange={(value) => setField("rebalanceFrequency", value as BacktestForm["rebalanceFrequency"])} />
-                    <Select label="仓位方式" value={form.positionSizing} disabled={disabled} options={positionSizingOptions} onChange={(value) => setField("positionSizing", value as BacktestForm["positionSizing"])} />
-                    <Input label="最大持仓数" value={form.maxPositionCount} disabled={disabled} onChange={(value) => setField("maxPositionCount", value)} />
-                    <Input label="止损比例" value={form.stopLossPct} disabled={disabled} onChange={(value) => setField("stopLossPct", value)} />
-                    <Input label="止盈比例" value={form.takeProfitPct} disabled={disabled} onChange={(value) => setField("takeProfitPct", value)} />
-                    <Input label="回撤止损" value={form.maxDrawdownStopPct} disabled={disabled} onChange={(value) => setField("maxDrawdownStopPct", value)} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
-                    <Checkbox label="允许做空" checked={form.allowShort} disabled={disabled} onChange={(checked) => setField("allowShort", checked)} />
-                    <Checkbox label="启用风控" checked={form.riskControlEnabled} disabled={disabled} onChange={(checked) => setField("riskControlEnabled", checked)} />
                   </div>
                   <Textarea label="备注" value={form.notes} rows={2} disabled={disabled} onChange={(value) => setField("notes", value)} />
                 </div>
@@ -2277,13 +2239,71 @@ function FieldLabel({ label, required }: { label: string; required?: boolean }) 
   );
 }
 
-function Input({ label, value, required, disabled, onChange }: { label: string; value: string; required?: boolean; disabled?: boolean; onChange: (value: string) => void }) {
+function Input({ label, value, type = "text", required, disabled, onChange }: { label: string; value: string; type?: "text" | "date"; required?: boolean; disabled?: boolean; onChange: (value: string) => void }) {
   return (
     <label className="grid gap-1 text-xs">
       <FieldLabel label={label} required={required} />
       <input
         className="h-9 rounded-md border border-line bg-panel px-3 text-xs text-ink outline-none focus:border-signal disabled:cursor-not-allowed disabled:bg-soft disabled:text-muted"
         disabled={disabled}
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  );
+}
+
+function DateRangeField({
+  startDate,
+  endDate,
+  disabled,
+  onStartChange,
+  onEndChange,
+  onPreset,
+}: {
+  startDate: string;
+  endDate: string;
+  disabled?: boolean;
+  onStartChange: (value: string) => void;
+  onEndChange: (value: string) => void;
+  onPreset: (years: number) => void;
+}) {
+  return (
+    <fieldset className="col-span-3 grid gap-2 text-xs max-md:col-span-2 max-sm:col-span-1">
+      <FieldLabel label="回测区间" required />
+      <div className="grid gap-2 rounded-md border border-line bg-panel p-2">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2 max-sm:grid-cols-1">
+          <DateInput label="开始" value={startDate} disabled={disabled} onChange={onStartChange} />
+          <span className="pb-2 text-center font-semibold text-muted max-sm:hidden">至</span>
+          <DateInput label="结束" value={endDate} disabled={disabled} onChange={onEndChange} />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {backtestDateRangePresets.map((preset) => (
+            <button
+              className="h-7 rounded border border-line bg-soft px-2 text-[11px] font-semibold text-graphite transition-colors hover:border-strong hover:bg-panel hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:text-muted/50"
+              key={preset.years}
+              type="button"
+              disabled={disabled}
+              onClick={() => onPreset(preset.years)}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </fieldset>
+  );
+}
+
+function DateInput({ label, value, disabled, onChange }: { label: string; value: string; disabled?: boolean; onChange: (value: string) => void }) {
+  return (
+    <label className="grid gap-1">
+      <span className="font-semibold text-muted">{label}</span>
+      <input
+        className="h-9 rounded-md border border-line bg-panel px-3 text-xs text-ink outline-none focus:border-signal disabled:cursor-not-allowed disabled:bg-soft disabled:text-muted"
+        disabled={disabled}
+        type="date"
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
@@ -2335,30 +2355,6 @@ function Select({
           );
         })}
       </select>
-    </label>
-  );
-}
-
-function Checkbox({
-  label,
-  checked,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  disabled?: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <label className="flex h-9 items-center gap-2 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-muted">
-      <input
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.checked)}
-      />
-      {label}
     </label>
   );
 }
@@ -2541,25 +2537,14 @@ function newBacktestForm(
     assetClass: "stock",
     market: "CN",
     symbols: strategyMode === "single_symbol" ? "600519.SH" : "600519.SH, 000001.SZ",
-    symbolSource: strategyMode === "universe_selection" ? "universe" : "manual",
     universe: "",
     benchmarkPreset: benchmarkSymbol,
     benchmarkSymbol,
-    dataAdjust: "qfq",
-    currency: "CNY",
     startDate: defaultDateRange.startDate,
     endDate: defaultDateRange.endDate,
     initialCash: "100000",
-    commission: "0.001",
+    commission: "0.0005",
     slippage: "0.0002",
-    rebalanceFrequency: "none",
-    positionSizing: "fixed_percent",
-    maxPositionCount: "",
-    allowShort: false,
-    riskControlEnabled: false,
-    stopLossPct: "",
-    takeProfitPct: "",
-    maxDrawdownStopPct: "",
     notes: "",
     customParamValues: Object.fromEntries(
       params.map((param) => [param.name_en, String(param.default)]),
@@ -2572,10 +2557,14 @@ function newBacktestForm(
 }
 
 function defaultBacktestDateRange(): { startDate: string; endDate: string } {
+  return backtestDateRangeForYears(1);
+}
+
+function backtestDateRangeForYears(years: number): { startDate: string; endDate: string } {
   const end = new Date();
   const start = new Date(end);
   const endMonth = end.getMonth();
-  start.setFullYear(end.getFullYear() - 1);
+  start.setFullYear(end.getFullYear() - years);
   if (start.getMonth() !== endMonth) {
     start.setDate(0);
   }
@@ -2601,23 +2590,11 @@ function applyBacktestFieldUpdate<Key extends keyof BacktestForm>(
 
   if (field === "strategyMode") {
     const strategyMode = value as BacktestForm["strategyMode"];
-    if (strategyMode === "universe_selection") {
-      next.symbolSource = "universe";
-    } else if (form.symbolSource === "universe") {
-      next.symbolSource = "manual";
-    }
     if (strategyMode === "single_symbol") {
       next.symbols = splitList(form.symbols).at(0) ?? form.symbols;
     }
-  }
-
-  if (field === "symbolSource") {
-    const symbolSource = value as BacktestForm["symbolSource"];
-    if (form.strategyMode === "universe_selection" && symbolSource !== "universe") {
-      next.symbolSource = "universe";
-    }
-    if (form.strategyMode !== "universe_selection" && symbolSource === "universe") {
-      next.symbolSource = "manual";
+    if (strategyMode === "universe_selection" && !form.universe.trim()) {
+      next.universe = "沪深300";
     }
   }
 
@@ -2664,13 +2641,6 @@ function assetClassOptionsForMarket(market: BacktestForm["market"]): SelectOptio
 
 function benchmarkOptionsForMarket(market: BacktestForm["market"]): SelectOption[] {
   return benchmarkOptionsByMarket[market];
-}
-
-function symbolSourceOptionsForMode(strategyMode: BacktestForm["strategyMode"]): SelectOption[] {
-  if (strategyMode === "universe_selection") {
-    return symbolSourceOptions.filter((option) => normalizeSelectOption(option).value === "universe");
-  }
-  return symbolSourceOptions.filter((option) => normalizeSelectOption(option).value !== "universe");
 }
 
 function symbolInputLabel(strategyMode: BacktestForm["strategyMode"]): string {
@@ -2779,24 +2749,6 @@ function splitList(value: string): string[] {
     .filter(Boolean);
 }
 
-function optionalInteger(value: string): number | null {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const parsed = Number(trimmed);
-  return Number.isInteger(parsed) ? parsed : null;
-}
-
-function optionalNumber(value: string): number | null {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const parsed = Number(trimmed);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function isFinitePositiveNumber(value: string): boolean {
   const parsed = Number(value.trim());
   return Number.isFinite(parsed) && parsed > 0;
@@ -2897,27 +2849,11 @@ function buildBacktestConfig(
   if ((form.strategyMode === "multi_symbol" || form.strategyMode === "portfolio") && symbols.length < 2) {
     return { ok: false, message: "多股票或组合模式至少填写两个标的" };
   }
-  if (form.symbolSource === "universe" && !form.universe.trim()) {
+  if (form.strategyMode === "universe_selection" && !form.universe.trim()) {
     return { ok: false, message: "请选择或填写股票池" };
   }
   if (form.benchmarkPreset === customBenchmarkValue && !form.benchmarkSymbol.trim()) {
     return { ok: false, message: "请填写其他基准代码" };
-  }
-  const maxPositionCount = optionalInteger(form.maxPositionCount);
-  if (form.maxPositionCount.trim() && maxPositionCount === null) {
-    return { ok: false, message: "最大持仓数必须是整数" };
-  }
-  const stopLossPct = optionalNumber(form.stopLossPct);
-  const takeProfitPct = optionalNumber(form.takeProfitPct);
-  const maxDrawdownStopPct = optionalNumber(form.maxDrawdownStopPct);
-  if (form.stopLossPct.trim() && stopLossPct === null) {
-    return { ok: false, message: "止损比例必须是数字" };
-  }
-  if (form.takeProfitPct.trim() && takeProfitPct === null) {
-    return { ok: false, message: "止盈比例必须是数字" };
-  }
-  if (form.maxDrawdownStopPct.trim() && maxDrawdownStopPct === null) {
-    return { ok: false, message: "回撤止损必须是数字" };
   }
 
   const params: Record<string, string | number | boolean> = {};
@@ -2939,8 +2875,7 @@ function buildBacktestConfig(
       asset_class: form.assetClass,
       market: form.market,
       symbols,
-      symbol_source: form.symbolSource,
-      universe: form.universe.trim() || null,
+      universe: form.strategyMode === "universe_selection" ? form.universe.trim() : null,
       benchmark_symbol: form.benchmarkSymbol.trim() || null,
       start_date: form.startDate,
       end_date: form.endDate,
@@ -2948,16 +2883,6 @@ function buildBacktestConfig(
       initial_cash: form.initialCash,
       commission: form.commission,
       slippage: form.slippage.trim() || "0",
-      data_adjust: form.dataAdjust,
-      currency: form.currency,
-      rebalance_frequency: form.rebalanceFrequency,
-      position_sizing: form.positionSizing,
-      max_position_count: maxPositionCount,
-      allow_short: form.allowShort,
-      risk_control_enabled: form.riskControlEnabled,
-      stop_loss_pct: stopLossPct,
-      take_profit_pct: takeProfitPct,
-      max_drawdown_stop_pct: maxDrawdownStopPct,
       notes: form.notes.split("\n").map((note) => note.trim()).filter(Boolean),
       params,
     },

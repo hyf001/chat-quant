@@ -320,7 +320,6 @@ def add_backtest_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--asset-class", choices=["stock", "etf", "index", "crypto", "futures"])
     parser.add_argument("--market", choices=["CN", "US", "HK"])
     parser.add_argument("--symbol", action="append", dest="symbols")
-    parser.add_argument("--symbol-source", choices=["manual", "strategy_fixed", "universe"])
     parser.add_argument("--universe")
     parser.add_argument("--benchmark-symbol")
     parser.add_argument("--start", dest="start_date")
@@ -329,22 +328,6 @@ def add_backtest_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--cash", dest="initial_cash")
     parser.add_argument("--commission")
     parser.add_argument("--slippage")
-    parser.add_argument("--data-adjust")
-    parser.add_argument("--currency", choices=["CNY", "USD", "HKD"])
-    parser.add_argument(
-        "--rebalance-frequency",
-        choices=["none", "daily", "weekly", "monthly", "quarterly"],
-    )
-    parser.add_argument(
-        "--position-sizing",
-        choices=["fixed_percent", "equal_weight", "target_weight", "cash_per_order"],
-    )
-    parser.add_argument("--max-position-count", type=int)
-    parser.add_argument("--allow-short", action="store_true")
-    parser.add_argument("--risk-control-enabled", action="store_true")
-    parser.add_argument("--stop-loss-pct", type=float)
-    parser.add_argument("--take-profit-pct", type=float)
-    parser.add_argument("--max-drawdown-stop-pct", type=float)
     parser.add_argument("--note", action="append", dest="notes")
     parser.add_argument(
         "--param",
@@ -480,7 +463,6 @@ def build_backtest_config(args: argparse.Namespace) -> dict[str, object]:
         "asset_class": args.asset_class,
         "market": args.market,
         "symbols": args.symbols,
-        "symbol_source": args.symbol_source,
         "universe": args.universe,
         "benchmark_symbol": args.benchmark_symbol,
         "start_date": args.start_date,
@@ -489,23 +471,10 @@ def build_backtest_config(args: argparse.Namespace) -> dict[str, object]:
         "initial_cash": args.initial_cash,
         "commission": args.commission,
         "slippage": args.slippage,
-        "data_adjust": args.data_adjust,
-        "currency": args.currency,
-        "rebalance_frequency": args.rebalance_frequency,
-        "position_sizing": args.position_sizing,
-        "max_position_count": args.max_position_count,
-        "stop_loss_pct": args.stop_loss_pct,
-        "take_profit_pct": args.take_profit_pct,
-        "max_drawdown_stop_pct": args.max_drawdown_stop_pct,
         "notes": args.notes,
         "params": parse_params(args.params),
     }
-    config = compact(raw_config)
-    if args.allow_short:
-        config["allow_short"] = True
-    if args.risk_control_enabled:
-        config["risk_control_enabled"] = True
-    return config
+    return compact(raw_config)
 
 
 def parse_params(values: list[str]) -> dict[str, object]:

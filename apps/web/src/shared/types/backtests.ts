@@ -9,7 +9,6 @@ export type BacktestConfig = {
   end_date: string;
   timeframe: string;
   data_source: string;
-  data_adjust: string;
   data_as_of: string | null;
   initial_cash: string;
   commission: string;
@@ -19,7 +18,6 @@ export type BacktestConfig = {
   params: Record<string, string | number | boolean | null>;
   risk_free_rate: string;
   calendar: string;
-  currency: string;
   assumptions: string[];
   symbol_order_mode: "preserve" | "sorted";
 };

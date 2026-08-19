@@ -93,17 +93,12 @@ def create_backtest_payload() -> dict[str, object]:
             "asset_class": "stock",
             "symbols": ["600519.SH"],
             "market": "CN",
-            "symbol_source": "manual",
             "benchmark_symbol": "000300.SH",
             "start_date": "2024-01-01",
             "end_date": "2024-04-30",
             "initial_cash": "100000",
             "commission": "0.001",
             "slippage": "0.0002",
-            "rebalance_frequency": "none",
-            "position_sizing": "fixed_percent",
-            "allow_short": False,
-            "risk_control_enabled": False,
             "params": {"fast_period": 20, "slow_period": 60, "volatility_filter": "medium"},
         },
     }
@@ -114,6 +109,7 @@ def test_backtest_config_defaults_to_sse50_and_past_year() -> None:
     config = StrategyBacktestConfig()
 
     assert config.benchmark_symbol == "000016.SH"
+    assert config.commission == Decimal("0.0005")
     assert today <= config.end_date <= date.today()
     assert config.start_date == _one_year_before(config.end_date)
 
