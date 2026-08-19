@@ -3,14 +3,25 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.schema.backtest import StrategyBacktestDetail, StrategyBacktestRecord
+from app.schema.backtest import (
+    StrategyBacktestConfig,
+    StrategyBacktestDetail,
+    StrategyBacktestRecord,
+)
 from app.service import backtest as backtest_service
 from app.service.backtest import BacktestError
 
 router = APIRouter()
+
+
+class RerunBacktestRequest(BaseModel):
+    config: StrategyBacktestConfig
+
+    model_config = ConfigDict(extra="forbid")
 
 
 @router.get("", response_model=list[StrategyBacktestRecord])
@@ -36,6 +47,22 @@ async def get_backtest(
 ) -> StrategyBacktestDetail:
     try:
         return await backtest_service.get_detail(db, backtest_id)
+    except BacktestError as error:
+        raise _http_error(error) from error
+
+
+@router.patch("/{backtest_id}/rerun", response_model=StrategyBacktestDetail)
+async def rerun_backtest(
+    backtest_id: str,
+    request: RerunBacktestRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> StrategyBacktestDetail:
+    try:
+        return await backtest_service.rerun_backtest(
+            db,
+            backtest_id,
+            config=request.config,
+        )
     except BacktestError as error:
         raise _http_error(error) from error
 

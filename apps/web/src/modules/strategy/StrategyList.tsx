@@ -67,9 +67,11 @@ import {
   createStrategyVersion,
   deleteStrategy,
   getStrategyBacktest,
+  getStrategyVersion,
   getStrategy,
   listStrategyBacktests,
   listStrategyVersions,
+  rerunStrategyBacktest,
   listStrategies,
   switchStrategyCurrentVersion,
   updateStrategyMetadata,
@@ -823,7 +825,11 @@ export function StrategyList({ project }: StrategyListProps) {
       ) : null}
 
       {resultDetail ? (
-        <BacktestResultDialog detail={resultDetail} onClose={() => setResultDetail(null)} />
+        <BacktestResultDialog
+          detail={resultDetail}
+          onClose={() => setResultDetail(null)}
+          onDetailChange={setResultDetail}
+        />
       ) : null}
 
       {dialog ? (
@@ -1407,11 +1413,19 @@ function BacktestRunDialog({
 function BacktestResultDialog({
   detail,
   onClose,
+  onDetailChange,
 }: {
   detail: StrategyBacktestDetail;
   onClose: () => void;
+  onDetailChange: (detail: StrategyBacktestDetail) => void;
 }) {
   const [activeResultTab, setActiveResultTab] = useState<ResultTab>("profile");
+  const [form, setForm] = useState<BacktestForm>(() => backtestFormFromConfig(detail.backtest.config));
+  const [isRerunning, setIsRerunning] = useState(false);
+  const [rerunError, setRerunError] = useState<string | null>(null);
+  const [customParams, setCustomParams] = useState<StrategyCustomParameter[]>(() =>
+    customParamsFromBacktestConfig(detail.backtest.config),
+  );
   const metrics = detail.result?.metrics;
   const result = detail.result;
   const drawdownCurve = detail.result?.curves?.find((curve) => curve.curve_type === "drawdown");
@@ -1432,127 +1446,324 @@ function BacktestResultDialog({
       }, null)
     : null;
 
+  useEffect(() => {
+    const fallbackParams = customParamsFromBacktestConfig(detail.backtest.config);
+    let ignore = false;
+    setCustomParams(fallbackParams);
+    setForm(backtestFormFromConfig(detail.backtest.config, fallbackParams));
+    setRerunError(null);
+
+    void getStrategyVersion(detail.backtest.strategy_version_id)
+      .then((version) => {
+        if (ignore) {
+          return;
+        }
+        const nextParams = customParamsFromVersionAndConfig(
+          version.custom_params,
+          detail.backtest.config,
+        );
+        setCustomParams(nextParams);
+        setForm(backtestFormFromConfig(detail.backtest.config, nextParams));
+      })
+      .catch(() => {
+        // The executed config is enough to rerun; version metadata only improves labels/types.
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [detail.backtest.id, detail.backtest.updated_at, detail.backtest.config]);
+
+  const handleResetRerunForm = () => {
+    setForm(backtestFormFromConfig(detail.backtest.config, customParams));
+    setRerunError(null);
+  };
+
+  const handleRerunBacktest = async () => {
+    const config = buildBacktestConfig(form, customParams);
+    if (!config.ok) {
+      setRerunError(config.message);
+      return;
+    }
+
+    setIsRerunning(true);
+    setRerunError(null);
+    try {
+      const nextDetail = await rerunStrategyBacktest(detail.backtest.id, {
+        config: config.value,
+      });
+      onDetailChange(nextDetail);
+      setActiveResultTab("profile");
+      notify("回测已更新", "success");
+    } catch (caught) {
+      setRerunError(caught instanceof Error ? caught.message : "重新回测失败");
+    } finally {
+      setIsRerunning(false);
+    }
+  };
+
   return (
     <UiDialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[88vh] max-w-6xl flex-col overflow-hidden p-0">
+      <DialogContent className="flex h-[92vh] max-h-[92vh] max-w-[min(1440px,96vw)] flex-col overflow-hidden p-0">
         <DialogHeader className="border-b px-4 py-3">
           <DialogTitle className="truncate text-sm">回测结果</DialogTitle>
           <DialogDescription className="truncate font-mono text-[11px]">
             {detail.backtest.id} · {detail.backtest.status}
           </DialogDescription>
         </DialogHeader>
-        <ResultTabBar value={activeResultTab} onChange={setActiveResultTab} />
-        <div className="min-h-0 overflow-y-auto p-4">
-          {!result || !metrics ? (
-            <Notice text={detail.backtest.failure_message ?? "暂无回测结果"} />
-          ) : (
-            <div className="grid gap-4">
-              {activeResultTab === "profile" ? (
-                <>
-                  <div className="grid gap-3 sm:grid-cols-4 lg:grid-cols-6">
-                    <MetricBox label="策略收益" value={`${metrics.total_return_pct}%`} />
-                    <MetricBox label="策略年化收益" value={metrics.annual_return_pct ? `${metrics.annual_return_pct}%` : "-"} />
-                    <MetricBox label="超额收益" value={excessReturn ? `${excessReturn}%` : "-"} />
-                    <MetricBox label="基准收益" value={benchmarkReturn !== null && benchmarkReturn !== undefined ? `${benchmarkReturn}%` : "-"} />
-                    <MetricBox label="阿尔法" value="-" />
-                    <MetricBox label="贝塔" value="-" />
-                    <MetricBox label="夏普比率" value={metrics.sharpe_ratio ?? "-"} />
-                    <MetricBox label="胜率" value={metrics.win_rate_pct ? `${metrics.win_rate_pct}%` : "-"} />
-                    <MetricBox label="盈亏比" value="-" />
-                    <MetricBox label="最大回撤" value={`${metrics.max_drawdown_pct}%`} />
-                    <MetricBox label="索提诺比率" value="-" />
-                    <MetricBox label="日均超额收益" value="-" />
-                    <MetricBox label="盈利次数" value="-" />
-                    <MetricBox label="亏损次数" value="-" />
-                    <MetricBox label="信息比率" value="-" />
-                    <MetricBox label="策略波动率" value="-" />
-                    <MetricBox label="基准波动率" value="-" />
-                    <MetricBox label="最大回撤区间" value={metrics.max_drawdown_start && metrics.max_drawdown_end ? `${metrics.max_drawdown_start},${metrics.max_drawdown_end}` : "-"} />
-                  </div>
-                  {equityCurve && result.benchmark ? (
-                    <BenchmarkComparisonChart
-                      equityPoints={equityCurve.points}
-                      benchmark={result.benchmark}
-                      initialCash={metrics.initial_value}
-                      dailyPositions={result.daily_positions ?? []}
-                      trades={trades}
-                    />
-                  ) : (
-                    <Notice text="暂无基准对比数据" />
-                  )}
-                  <section className="rounded-md border border-zinc-200 p-3 text-xs">
-                    <div className="mb-3 font-semibold text-zinc-800">回撤结果</div>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <InfoLine label="回撤开始" value={metrics.max_drawdown_start ?? "-"} />
-                      <InfoLine label="回撤结束" value={metrics.max_drawdown_end ?? "-"} />
-                      <InfoLine
-                        label="持续天数"
-                        value={
-                          metrics.max_drawdown_duration_days === null ||
-                          metrics.max_drawdown_duration_days === undefined
-                            ? "-"
-                            : `${metrics.max_drawdown_duration_days} 天`
-                        }
-                      />
-                      <InfoLine
-                        label="曲线低点"
-                        value={
-                          deepestDrawdown
-                            ? `${deepestDrawdown.date} / ${deepestDrawdown.value}%`
-                            : "-"
-                        }
-                      />
-                    </div>
-                  </section>
-                  {result.warnings.length > 0 ? (
-                    <Feedback tone="error" text={result.warnings.join("；")} />
+        <div className="grid min-h-0 flex-1 lg:grid-cols-[400px_minmax(0,1fr)]">
+          <aside className="min-h-0 border-b border-zinc-200 bg-zinc-50/70 lg:border-b-0 lg:border-r">
+            <BacktestParameterEditor
+              form={form}
+              customParams={customParams}
+              error={rerunError}
+              disabled={isRerunning}
+              submitLabel={isRerunning ? "回测中" : "重新回测"}
+              onChange={setForm}
+              onReset={handleResetRerunForm}
+              onSubmit={() => void handleRerunBacktest()}
+            />
+          </aside>
+          <section className="flex min-w-0 min-h-0 flex-col">
+            <ResultTabBar value={activeResultTab} onChange={setActiveResultTab} />
+            <div className="min-h-0 overflow-y-auto p-4">
+              {isRerunning ? <Notice text="重新回测中" /> : null}
+              {!result || !metrics ? (
+                <Notice text={detail.backtest.failure_message ?? "暂无回测结果"} />
+              ) : (
+                <div className="grid gap-4">
+                  {activeResultTab === "profile" ? (
+                    <>
+                      <div className="grid gap-3 sm:grid-cols-4 xl:grid-cols-6">
+                        <MetricBox label="策略收益" value={`${metrics.total_return_pct}%`} />
+                        <MetricBox label="策略年化收益" value={metrics.annual_return_pct ? `${metrics.annual_return_pct}%` : "-"} />
+                        <MetricBox label="超额收益" value={excessReturn ? `${excessReturn}%` : "-"} />
+                        <MetricBox label="基准收益" value={benchmarkReturn !== null && benchmarkReturn !== undefined ? `${benchmarkReturn}%` : "-"} />
+                        <MetricBox label="阿尔法" value="-" />
+                        <MetricBox label="贝塔" value="-" />
+                        <MetricBox label="夏普比率" value={metrics.sharpe_ratio ?? "-"} />
+                        <MetricBox label="胜率" value={metrics.win_rate_pct ? `${metrics.win_rate_pct}%` : "-"} />
+                        <MetricBox label="盈亏比" value="-" />
+                        <MetricBox label="最大回撤" value={`${metrics.max_drawdown_pct}%`} />
+                        <MetricBox label="索提诺比率" value="-" />
+                        <MetricBox label="日均超额收益" value="-" />
+                        <MetricBox label="盈利次数" value="-" />
+                        <MetricBox label="亏损次数" value="-" />
+                        <MetricBox label="信息比率" value="-" />
+                        <MetricBox label="策略波动率" value="-" />
+                        <MetricBox label="基准波动率" value="-" />
+                        <MetricBox label="最大回撤区间" value={metrics.max_drawdown_start && metrics.max_drawdown_end ? `${metrics.max_drawdown_start},${metrics.max_drawdown_end}` : "-"} />
+                      </div>
+                      {equityCurve && result.benchmark ? (
+                        <BenchmarkComparisonChart
+                          equityPoints={equityCurve.points}
+                          benchmark={result.benchmark}
+                          initialCash={metrics.initial_value}
+                          dailyPositions={result.daily_positions ?? []}
+                          trades={trades}
+                        />
+                      ) : (
+                        <Notice text="暂无基准对比数据" />
+                      )}
+                      <section className="rounded-md border border-zinc-200 p-3 text-xs">
+                        <div className="mb-3 font-semibold text-zinc-800">回撤结果</div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <InfoLine label="回撤开始" value={metrics.max_drawdown_start ?? "-"} />
+                          <InfoLine label="回撤结束" value={metrics.max_drawdown_end ?? "-"} />
+                          <InfoLine
+                            label="持续天数"
+                            value={
+                              metrics.max_drawdown_duration_days === null ||
+                              metrics.max_drawdown_duration_days === undefined
+                                ? "-"
+                                : `${metrics.max_drawdown_duration_days} 天`
+                            }
+                          />
+                          <InfoLine
+                            label="曲线低点"
+                            value={
+                              deepestDrawdown
+                                ? `${deepestDrawdown.date} / ${deepestDrawdown.value}%`
+                                : "-"
+                            }
+                          />
+                        </div>
+                      </section>
+                      {result.warnings.length > 0 ? (
+                        <Feedback tone="error" text={result.warnings.join("；")} />
+                      ) : null}
+                      <section className="rounded-md border border-zinc-200 p-3 text-xs text-zinc-600">
+                        {result.summary}
+                      </section>
+                    </>
                   ) : null}
-                  <section className="rounded-md border border-zinc-200 p-3 text-xs text-zinc-600">
-                    {result.summary}
-                  </section>
-                </>
-              ) : null}
-              {activeResultTab === "trades" ? (
-                <section className="rounded-md border border-zinc-200 p-3 text-xs">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                    <div className="font-semibold text-zinc-800">交易详情</div>
-                    <span className="rounded border border-zinc-200 px-2 py-1 font-semibold text-zinc-600">Group by day</span>
-                  </div>
-                  {trades.length === 0 ? <Notice text="暂无交易详情" /> : <TradeExecutionTable trades={trades} />}
-                </section>
-              ) : null}
-              {activeResultTab === "positions" ? (
-                <section className="rounded-md border border-zinc-200 p-3 text-xs">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                    <div className="font-semibold text-zinc-800">每日持仓&收益</div>
-                    <span className="rounded border border-zinc-200 px-2 py-1 font-semibold text-zinc-600">Group by day</span>
-                  </div>
-                  {(result.daily_positions ?? []).length === 0 ? (
-                    <Notice text="暂无每日持仓数据" />
-                  ) : (
-                    <DailyPositionsTable snapshots={result.daily_positions ?? []} />
-                  )}
-                </section>
-              ) : null}
-              {activeResultTab === "signals" ? (
-                marketSeries ? (
-                  <CandlestickChart
-                    title={`${marketSeries.symbol} K线与买卖点`}
-                    candles={marketSeries.candles}
-                    trades={tradesForSeries(trades, marketSeries.symbol)}
-                    equityPoints={equityCurve?.points ?? []}
-                    initialCash={metrics.initial_value}
-                    dailyPositions={result.daily_positions ?? []}
-                  />
-                ) : (
-                  <Notice text="暂无K线数据" />
-                )
-              ) : null}
+                  {activeResultTab === "trades" ? (
+                    <section className="rounded-md border border-zinc-200 p-3 text-xs">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <div className="font-semibold text-zinc-800">交易详情</div>
+                        <span className="rounded border border-zinc-200 px-2 py-1 font-semibold text-zinc-600">Group by day</span>
+                      </div>
+                      {trades.length === 0 ? <Notice text="暂无交易详情" /> : <TradeExecutionTable trades={trades} />}
+                    </section>
+                  ) : null}
+                  {activeResultTab === "positions" ? (
+                    <section className="rounded-md border border-zinc-200 p-3 text-xs">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <div className="font-semibold text-zinc-800">每日持仓&收益</div>
+                        <span className="rounded border border-zinc-200 px-2 py-1 font-semibold text-zinc-600">Group by day</span>
+                      </div>
+                      {(result.daily_positions ?? []).length === 0 ? (
+                        <Notice text="暂无每日持仓数据" />
+                      ) : (
+                        <DailyPositionsTable snapshots={result.daily_positions ?? []} />
+                      )}
+                    </section>
+                  ) : null}
+                  {activeResultTab === "signals" ? (
+                    marketSeries ? (
+                      <CandlestickChart
+                        title={`${marketSeries.symbol} K线与买卖点`}
+                        candles={marketSeries.candles}
+                        trades={tradesForSeries(trades, marketSeries.symbol)}
+                        equityPoints={equityCurve?.points ?? []}
+                        initialCash={metrics.initial_value}
+                        dailyPositions={result.daily_positions ?? []}
+                      />
+                    ) : (
+                      <Notice text="暂无K线数据" />
+                    )
+                  ) : null}
+                </div>
+              )}
             </div>
-          )}
+          </section>
         </div>
       </DialogContent>
     </UiDialog>
+  );
+}
+
+function BacktestParameterEditor({
+  form,
+  customParams,
+  error,
+  disabled,
+  submitLabel,
+  onChange,
+  onReset,
+  onSubmit,
+}: {
+  form: BacktestForm;
+  customParams: StrategyCustomParameter[];
+  error: string | null;
+  disabled?: boolean;
+  submitLabel: string;
+  onChange: (form: BacktestForm) => void;
+  onReset: () => void;
+  onSubmit: () => void;
+}) {
+  const [showMore, setShowMore] = useState(false);
+  const setField = <Key extends keyof BacktestForm>(field: Key, value: BacktestForm[Key]) => {
+    onChange(applyBacktestFieldUpdate(form, field, value));
+  };
+  const setDateRangePreset = (years: number) => {
+    onChange({
+      ...form,
+      ...backtestDateRangeForYears(years),
+    });
+  };
+  const setParamValue = (name: string, value: string) => {
+    onChange({
+      ...form,
+      customParamValues: { ...form.customParamValues, [name]: value },
+    });
+  };
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+        <div className="grid gap-3">
+          {error ? <Feedback tone="error" text={error} /> : null}
+          <section className="grid gap-3 rounded-md border border-zinc-200 bg-white p-3">
+            <div className="text-xs font-semibold text-zinc-700">回测参数</div>
+            <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+              <ReadOnlyField label="策略模式" value={strategyModeLabel(form.strategyMode)} />
+              <Select label="市场" required value={form.market} disabled={disabled} options={marketOptions} onChange={(value) => setField("market", value as BacktestForm["market"])} />
+              <Select label="资产类别" required value={form.assetClass} disabled={disabled} options={assetClassOptionsForMarket(form.market)} onChange={(value) => setField("assetClass", value as BacktestForm["assetClass"])} />
+              <Input label={symbolInputLabel(form.strategyMode)} required value={form.symbols} disabled={disabled} onChange={(value) => setField("symbols", value)} />
+              {form.strategyMode === "universe_selection" ? (
+                <Input label="股票池" required value={form.universe} disabled={disabled} onChange={(value) => setField("universe", value)} />
+              ) : null}
+              <Select label="基准" value={form.benchmarkPreset} disabled={disabled} options={benchmarkOptionsForMarket(form.market)} onChange={(value) => setField("benchmarkPreset", value)} />
+              {form.benchmarkPreset === customBenchmarkValue ? (
+                <Input label="其他基准代码" required value={form.benchmarkSymbol} disabled={disabled} onChange={(value) => setField("benchmarkSymbol", value)} />
+              ) : null}
+              <DateRangeField
+                startDate={form.startDate}
+                endDate={form.endDate}
+                disabled={disabled}
+                onStartChange={(value) => setField("startDate", value)}
+                onEndChange={(value) => setField("endDate", value)}
+                onPreset={setDateRangePreset}
+              />
+              <Input label="初始资金" required value={form.initialCash} disabled={disabled} onChange={(value) => setField("initialCash", value)} />
+              <Input label="手续费" required value={form.commission} disabled={disabled} onChange={(value) => setField("commission", value)} />
+            </div>
+            <div>
+              <SmallButton
+                icon={<Settings2 className="h-3.5 w-3.5" />}
+                label={showMore ? "收起设置" : "更多设置"}
+                disabled={disabled}
+                onClick={() => setShowMore(!showMore)}
+              />
+            </div>
+            {showMore ? (
+              <div className="grid gap-3 border-t border-zinc-100 pt-3">
+                <Input label="滑点" value={form.slippage} disabled={disabled} onChange={(value) => setField("slippage", value)} />
+                <Textarea label="备注" value={form.notes} rows={2} disabled={disabled} onChange={(value) => setField("notes", value)} />
+              </div>
+            ) : null}
+          </section>
+
+          <section className="grid gap-3 rounded-md border border-zinc-200 bg-white p-3">
+            <div className="text-xs font-semibold text-zinc-700">本次策略参数</div>
+            {customParams.length === 0 ? <Notice text="当前回测没有策略参数" /> : null}
+            <div className="grid gap-3">
+              {customParams.map((param) => (
+                <Input
+                  key={param.name_en}
+                  label={param.name_cn}
+                  required={param.required}
+                  value={form.customParamValues[param.name_en] ?? String(param.default)}
+                  disabled={disabled}
+                  onChange={(value) => setParamValue(param.name_en, value)}
+                />
+              ))}
+            </div>
+          </section>
+        </div>
+      </div>
+      <div className="flex flex-wrap justify-end gap-2 border-t border-zinc-200 bg-muted p-3">
+        <Button
+          size="sm"
+          variant="outline"
+          type="button"
+          disabled={disabled}
+          onClick={onReset}
+        >
+          重置修改
+        </Button>
+        <Button
+          size="sm"
+          type="button"
+          disabled={disabled}
+          onClick={onSubmit}
+        >
+          {disabled ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+          {submitLabel}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -2341,7 +2552,7 @@ function DateRangeField({
   onPreset: (years: number) => void;
 }) {
   return (
-    <fieldset className="col-span-3 grid gap-2 text-xs max-md:col-span-2 max-sm:col-span-1">
+    <fieldset className="col-span-full grid gap-2 text-xs">
       <FieldLabel label="回测区间" required />
       <div className="grid gap-2 rounded-md border border-line bg-panel p-2">
         <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2 max-sm:grid-cols-1">
@@ -2637,6 +2848,91 @@ function newBacktestForm(
     form.universe = "沪深300";
   }
   return form;
+}
+
+function backtestFormFromConfig(
+  config: StrategyBacktestConfig,
+  customParams = customParamsFromBacktestConfig(config),
+): BacktestForm {
+  const benchmarkSymbol = config.benchmark_symbol ?? "";
+  const isKnownBenchmark = benchmarkSymbol && isDefaultBenchmarkSymbol(benchmarkSymbol);
+  return {
+    strategyMode: config.strategy_mode,
+    assetClass: config.asset_class,
+    market: config.market,
+    symbols: config.symbols.join(", "),
+    universe: config.universe ?? "",
+    benchmarkPreset: isKnownBenchmark ? benchmarkSymbol : customBenchmarkValue,
+    benchmarkSymbol,
+    startDate: config.start_date,
+    endDate: config.end_date,
+    initialCash: config.initial_cash,
+    commission: config.commission,
+    slippage: config.slippage ?? "0",
+    notes: (config.notes ?? []).join("\n"),
+    customParamValues: Object.fromEntries(
+      customParams.map((param) => [
+        param.name_en,
+        String((config.params ?? {})[param.name_en] ?? param.default),
+      ]),
+    ),
+  };
+}
+
+function customParamsFromVersionAndConfig(
+  versionParams: StrategyCustomParameter[],
+  config: StrategyBacktestConfig,
+): StrategyCustomParameter[] {
+  const values = config.params ?? {};
+  const known = new Set(versionParams.map((param) => param.name_en));
+  const inferred = Object.entries(values)
+    .filter(([key]) => !known.has(key))
+    .map(([key, value]) => customParamFromValue(key, value));
+  return [
+    ...versionParams.map((param) => ({
+      ...param,
+      default: paramValueOrDefault(values[param.name_en], param.default),
+    })),
+    ...inferred,
+  ];
+}
+
+function customParamsFromBacktestConfig(config: StrategyBacktestConfig): StrategyCustomParameter[] {
+  return Object.entries(config.params ?? {}).map(([key, value]) => customParamFromValue(key, value));
+}
+
+function customParamFromValue(name: string, value: unknown): StrategyCustomParameter {
+  return {
+    name_cn: name,
+    name_en: name,
+    type: customParamTypeFromValue(value),
+    default: paramValueOrDefault(value, ""),
+    required: true,
+  };
+}
+
+function customParamTypeFromValue(value: unknown): StrategyCustomParameter["type"] {
+  if (typeof value === "boolean") {
+    return "boolean";
+  }
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? "integer" : "number";
+  }
+  return "string";
+}
+
+function paramValueOrDefault(
+  value: unknown,
+  fallback: StrategyCustomParameter["default"],
+): StrategyCustomParameter["default"] {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+  return fallback;
 }
 
 function defaultBacktestDateRange(): { startDate: string; endDate: string } {

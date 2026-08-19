@@ -209,6 +209,32 @@ def test_backtest_can_target_specific_strategy_version(client: TestClient) -> No
     assert data["backtest"]["strategy_version_id"] == versions[0]["id"]
 
 
+def test_rerun_backtest_updates_existing_record(client: TestClient) -> None:
+    created = create_strategy(client)
+    original = client.post(
+        f"/api/strategies/{created['strategy_id']}/backtest",
+        json=create_backtest_payload(),
+    ).json()
+    backtest_id = original["backtest"]["id"]
+    original_result_id = original["result"]["id"]
+
+    payload = create_backtest_payload()
+    payload["config"]["initial_cash"] = "200000"
+    response = client.patch(
+        f"/api/backtests/{backtest_id}/rerun",
+        json={"config": payload["config"]},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["backtest"]["id"] == backtest_id
+    assert data["backtest"]["config"]["initial_cash"] == "200000"
+    assert data["backtest"]["result_id"] != original_result_id
+    assert data["result"]["id"] == data["backtest"]["result_id"]
+    records = client.get("/api/backtests").json()
+    assert [record["id"] for record in records] == [backtest_id]
+
+
 def test_backtest_rejects_strategy_mode_mismatch(client: TestClient) -> None:
     response = client.post(
         "/api/strategies",

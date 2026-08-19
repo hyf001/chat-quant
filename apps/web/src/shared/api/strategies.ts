@@ -233,6 +233,10 @@ export type StrategyBacktestPayload = {
   strategy_version_id?: string;
 };
 
+export type StrategyBacktestRerunPayload = {
+  config: StrategyBacktestConfig;
+};
+
 export type StrategyCopySummary = {
   mode: "summary" | "new_strategy";
   source_strategy_version_id: string;
@@ -335,6 +339,16 @@ export async function listStrategyBacktests(
 
 export async function getStrategyBacktest(backtestId: string): Promise<StrategyBacktestDetail> {
   return apiFetch<StrategyBacktestDetail>(`/api/backtests/${backtestId}`);
+}
+
+export async function rerunStrategyBacktest(
+  backtestId: string,
+  payload: StrategyBacktestRerunPayload,
+): Promise<StrategyBacktestDetail> {
+  return apiFetch<StrategyBacktestDetail>(`/api/backtests/${backtestId}/rerun`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function validateStrategyVersion(versionId: string): Promise<unknown> {

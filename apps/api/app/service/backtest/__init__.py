@@ -5,6 +5,7 @@ from app.service.backtest.service import (
     backtest_strategy,
     get_detail,
     list_records,
+    rerun_backtest,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "backtest_strategy",
     "get_detail",
     "list_records",
+    "rerun_backtest",
 ]

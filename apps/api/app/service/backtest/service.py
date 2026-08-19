@@ -90,6 +90,95 @@ class BacktestService:
             result=await self._get_backtest_result(backtest_id),
         )
 
+    async def rerun_backtest(
+        self,
+        backtest_id: str,
+        *,
+        config: StrategyBacktestConfig,
+        engine: StrategyBacktestEngine | None = None,
+    ) -> StrategyBacktestDetail:
+        current = await self._require_backtest(backtest_id)
+        version = await self._require_strategy_version(current.strategy_version_id)
+        if config.strategy_mode != version.strategy_mode:
+            raise BacktestError(
+                "STRATEGY_MODE_MISMATCH",
+                "Backtest strategy_mode must match the strategy version",
+                422,
+            )
+
+        merged_params = _custom_param_defaults(version.custom_params)
+        merged_params.update(config.params)
+        _validate_backtest_params(version, merged_params)
+        config = config.model_copy(update={"params": merged_params})
+
+        selected_engine = engine or BacktraderStrategyBacktestEngine()
+        started_at = local_now()
+        running = current.model_copy(
+            update={
+                "status": StrategyBacktestStatus.RUNNING,
+                "config": config,
+                "execution_engine": selected_engine.name,
+                "started_at": started_at,
+                "completed_at": None,
+                "failure_code": None,
+                "failure_message": None,
+                "failure_detail": None,
+                "updated_at": started_at,
+            }
+        )
+        logger.info(
+            "strategy backtest rerun started",
+            extra={
+                "backtest_id": running.id,
+                "strategy_id": running.strategy_id,
+                "strategy_version_id": running.strategy_version_id,
+                "project_id": running.project_id,
+                "execution_engine": selected_engine.name,
+            },
+        )
+
+        try:
+            result = selected_engine.execute(backtest=running, version=version)
+        except StrategyBacktestError as exc:
+            logger.warning(
+                "strategy backtest rerun failed",
+                extra={
+                    "backtest_id": running.id,
+                    "strategy_id": running.strategy_id,
+                    "strategy_version_id": running.strategy_version_id,
+                    "project_id": running.project_id,
+                    "execution_engine": selected_engine.name,
+                    "error": exc.message,
+                    "failure_code": exc.error_code,
+                },
+                exc_info=True,
+            )
+            raise BacktestError(exc.error_code, exc.message, 400) from exc
+
+        completed_at = local_now()
+        succeeded = running.model_copy(
+            update={
+                "status": StrategyBacktestStatus.SUCCEEDED,
+                "result_id": result.id,
+                "completed_at": completed_at,
+                "updated_at": completed_at,
+            }
+        )
+        await self._save_backtest_result(result)
+        await self._save_backtest(succeeded)
+        logger.info(
+            "strategy backtest rerun succeeded",
+            extra={
+                "backtest_id": succeeded.id,
+                "strategy_id": succeeded.strategy_id,
+                "strategy_version_id": succeeded.strategy_version_id,
+                "project_id": succeeded.project_id,
+                "execution_engine": selected_engine.name,
+                "result_id": result.id,
+            },
+        )
+        return StrategyBacktestDetail(backtest=succeeded, result=result)
+
     async def _create_backtest(
         self,
         *,
@@ -322,6 +411,20 @@ async def list_records(
 
 async def get_detail(db: AsyncSession, backtest_id: str) -> StrategyBacktestDetail:
     return await _service(db).get_detail(backtest_id)
+
+
+async def rerun_backtest(
+    db: AsyncSession,
+    backtest_id: str,
+    *,
+    config: StrategyBacktestConfig,
+    engine: StrategyBacktestEngine | None = None,
+) -> StrategyBacktestDetail:
+    return await _service(db).rerun_backtest(
+        backtest_id,
+        config=config,
+        engine=engine,
+    )
 
 
 def _new_id(prefix: str) -> str:
