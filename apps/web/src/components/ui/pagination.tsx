@@ -1,0 +1,116 @@
+import {
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
+} from "lucide-react";
+import * as React from "react";
+
+import { Button, type ButtonProps } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const Pagination = ({ className, ...props }: React.ComponentProps<"nav">) => (
+  <nav
+    role="navigation"
+    aria-label="pagination"
+    className={cn("mx-auto flex w-full justify-center", className)}
+    {...props}
+  />
+);
+Pagination.displayName = "Pagination";
+
+const PaginationContent = React.forwardRef<
+  HTMLUListElement,
+  React.ComponentProps<"ul">
+>(({ className, ...props }, ref) => (
+  <ul
+    ref={ref}
+    className={cn("flex flex-row items-center gap-1", className)}
+    {...props}
+  />
+));
+PaginationContent.displayName = "PaginationContent";
+
+const PaginationItem = React.forwardRef<
+  HTMLLIElement,
+  React.ComponentProps<"li">
+>(({ className, ...props }, ref) => (
+  <li ref={ref} className={cn("", className)} {...props} />
+));
+PaginationItem.displayName = "PaginationItem";
+
+type PaginationButtonProps = ButtonProps & {
+  isActive?: boolean;
+};
+
+const PaginationButton = React.forwardRef<HTMLButtonElement, PaginationButtonProps>(
+  ({ className, isActive, size = "iconSm", variant = isActive ? "outline" : "ghost", ...props }, ref) => (
+    <Button
+      ref={ref}
+      aria-current={isActive ? "page" : undefined}
+      className={cn(className)}
+      size={size}
+      variant={variant}
+      {...props}
+    />
+  ),
+);
+PaginationButton.displayName = "PaginationButton";
+
+const PaginationPrevious = React.forwardRef<
+  HTMLButtonElement,
+  Omit<PaginationButtonProps, "children">
+>(({ className, ...props }, ref) => (
+  <PaginationButton
+    ref={ref}
+    aria-label="上一页"
+    className={cn("gap-1 px-2.5", className)}
+    size="sm"
+    {...props}
+  >
+    <ChevronLeft className="h-4 w-4" />
+    <span>上一页</span>
+  </PaginationButton>
+));
+PaginationPrevious.displayName = "PaginationPrevious";
+
+const PaginationNext = React.forwardRef<
+  HTMLButtonElement,
+  Omit<PaginationButtonProps, "children">
+>(({ className, ...props }, ref) => (
+  <PaginationButton
+    ref={ref}
+    aria-label="下一页"
+    className={cn("gap-1 px-2.5", className)}
+    size="sm"
+    {...props}
+  >
+    <span>下一页</span>
+    <ChevronRight className="h-4 w-4" />
+  </PaginationButton>
+));
+PaginationNext.displayName = "PaginationNext";
+
+const PaginationEllipsis = ({
+  className,
+  ...props
+}: React.ComponentProps<"span">) => (
+  <span
+    aria-hidden
+    className={cn("flex h-8 w-8 items-center justify-center", className)}
+    {...props}
+  >
+    <MoreHorizontal className="h-4 w-4" />
+    <span className="sr-only">更多页</span>
+  </span>
+);
+PaginationEllipsis.displayName = "PaginationEllipsis";
+
+export {
+  Pagination,
+  PaginationButton,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+};

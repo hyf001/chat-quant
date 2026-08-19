@@ -41,6 +41,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
@@ -59,6 +66,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { EmptyState } from "@/shared/components";
 
 import {
   deleteJobRuntimeInstance,
@@ -1236,28 +1244,22 @@ function QueryResultTable({
           <span>
             {result.total} 行 · 第 {result.page}/{Math.max(result.total_pages, 1)} 页
           </span>
-          <Button
-            size="iconSm"
-            variant="outline"
-            type="button"
-            title="上一页"
-            aria-label="上一页"
-            disabled={disabled || result.page <= 1}
-            onClick={() => onPageChange(result.page - 1)}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            size="iconSm"
-            variant="outline"
-            type="button"
-            title="下一页"
-            aria-label="下一页"
-            disabled={disabled || result.total_pages === 0 || result.page >= result.total_pages}
-            onClick={() => onPageChange(result.page + 1)}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          <Pagination className="mx-0 w-auto">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  disabled={disabled || result.page <= 1}
+                  onClick={() => onPageChange(result.page - 1)}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  disabled={disabled || result.total_pages === 0 || result.page >= result.total_pages}
+                  onClick={() => onPageChange(result.page + 1)}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </div>
       <div className="max-w-full overflow-auto rounded-md border border-line">
@@ -2059,35 +2061,29 @@ function SyncRuntimePanel({
             </TableBody>
           </Table>
           {instanceRows.length === 0 ? (
-            <div className="rounded-md bg-soft px-3 py-6 text-center text-xs text-mutedText">暂无实例</div>
+            <EmptyState className="mt-2 bg-soft" title="暂无实例" />
           ) : null}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <span className="font-mono text-[11px] text-mutedText">
             {totalPages > 0 ? `${instancePage} / ${totalPages}` : "0 / 0"}
           </span>
-          <Button
-            size="iconSm"
-            variant="outline"
-            type="button"
-            title="上一页"
-            aria-label="上一页"
-            disabled={disabled || !canGoPrev}
-            onClick={() => onInstancePageChange(instancePage - 1)}
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            size="iconSm"
-            variant="outline"
-            type="button"
-            title="下一页"
-            aria-label="下一页"
-            disabled={disabled || !canGoNext}
-            onClick={() => onInstancePageChange(instancePage + 1)}
-          >
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
+          <Pagination className="mx-0 w-auto">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  disabled={disabled || !canGoPrev}
+                  onClick={() => onInstancePageChange(instancePage - 1)}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  disabled={disabled || !canGoNext}
+                  onClick={() => onInstancePageChange(instancePage + 1)}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </div>
       {detailInstance ? (

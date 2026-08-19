@@ -19,6 +19,7 @@ import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableCell, TableHead } from "@/components/ui/table";
+import { EmptyState, InlineAlert, LoadingState } from "@/shared/components";
 
 import type { AssetLink, ChatSession, SDKStreamEnvelope, SdkMessage } from "../../shared/api";
 import type { Components } from "react-markdown";
@@ -301,16 +302,11 @@ export function ConversationShell({
     <section aria-label="对话线程">
       <div className="mx-auto w-full max-w-5xl space-y-6">
         {error ? (
-          <div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-xs font-medium text-destructive shadow-sm">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span className="min-w-0 break-words">{error}</span>
-          </div>
+          <InlineAlert title="对话加载失败" description={error} />
         ) : null}
 
         {isLoading ? (
-          <Card className="p-4 text-xs text-muted-foreground">
-            加载中
-          </Card>
+          <LoadingState title="对话加载中" />
         ) : null}
 
         {!isLoading && !session ? (
@@ -318,9 +314,7 @@ export function ConversationShell({
         ) : null}
 
         {session && timelineItems.length === 0 && !isStreaming ? (
-          <Card className="border-dashed p-5 text-xs leading-6 text-muted-foreground">
-            当前会话还没有消息。
-          </Card>
+          <EmptyState title="当前会话还没有消息" />
         ) : null}
 
         {timelineGroups.length > 0 || (isStreaming && session) || activityLabel ? (

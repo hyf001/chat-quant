@@ -1,5 +1,4 @@
 import {
-  AlertCircle,
   Check,
   Code2,
   FileCode2,
@@ -59,6 +58,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea as UiTextarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { EmptyState, InlineAlert, LoadingState } from "@/shared/components";
 import { notify } from "@/shared/notify";
 
 import {
@@ -2499,17 +2499,16 @@ function StatusBadge({ status }: { status: StrategySummary["status"] }) {
 }
 
 function Feedback({ tone, text }: { tone: "error" | "success"; text: string }) {
-  const isError = tone === "error";
-  return (
-    <div className={`flex items-start gap-3 rounded-md border px-3 py-2 text-xs ${isError ? "border-risk/30 bg-riskSoft text-risk" : "border-brand/30 bg-gainSoft text-brand"}`}>
-      {isError ? <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-risk" /> : <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand" />}
-      <span className="min-w-0 break-words">{text}</span>
-    </div>
-  );
+  return <InlineAlert title={text} tone={tone} />;
 }
 
 function Notice({ text }: { text: string }) {
-  return <div className="rounded-md border border-dashed border-line bg-panel px-3 py-3 text-xs text-mutedText">{text}</div>;
+  const isLoading = text.includes("加载") || text.includes("回测中");
+  return isLoading ? (
+    <LoadingState rows={2} title={text} />
+  ) : (
+    <EmptyState title={text} />
+  );
 }
 
 function StatusText({ status }: { status: StrategyBacktestRecord["status"] }) {

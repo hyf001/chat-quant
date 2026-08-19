@@ -1,6 +1,7 @@
-import { CheckCircle2, FileJson, Terminal, XCircle } from "lucide-react";
+import { CheckCircle2, FileJson, XCircle } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState, InlineAlert } from "@/shared/components";
 
 import type { ExecutionResult, RuntimeHealth } from "../../shared/api/client";
 
@@ -35,9 +36,7 @@ export function RuntimeResultPanel({
       </div>
 
       {error ? (
-        <div className="mx-4 mb-4 rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive">
-          {error}
-        </div>
+        <InlineAlert className="mx-4 mb-4" title="运行失败" description={error} />
       ) : null}
 
       {result ? (
@@ -64,17 +63,14 @@ export function RuntimeResultPanel({
                 </Card>
               ))}
               {result.artifacts.length === 0 ? (
-                <div className="text-xs text-mutedText">暂无产物</div>
+                <EmptyState title="暂无产物" />
               ) : null}
             </div>
           </div>
         </CardContent>
       ) : (
         <CardContent className="border-t p-4">
-          <div className="flex items-center gap-2 rounded-lg border border-dashed bg-muted p-3 text-sm text-muted-foreground">
-            <Terminal size={16} />
-            等待运行
-          </div>
+          <EmptyState title="等待运行" />
         </CardContent>
       )}
     </Card>

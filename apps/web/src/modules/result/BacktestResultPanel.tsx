@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { EmptyState, InlineAlert } from "@/shared/components";
 
 import type { BacktestDetail, CurvePoint } from "../../shared/types/backtests";
 
@@ -50,9 +51,7 @@ export function BacktestResultPanel({
       </div>
 
       {error ? (
-        <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-          {error}
-        </div>
+        <InlineAlert title="回测加载失败" description={error} />
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-4">
@@ -132,9 +131,7 @@ export function BacktestResultPanel({
                 </Table>
               </div>
               {detail.trades.length === 0 ? (
-                <div className="mt-3 rounded-lg border border-dashed border-line bg-soft p-3 text-xs text-mutedText">
-                  暂无交易明细
-                </div>
+                <EmptyState className="mt-3" title="暂无交易明细" />
               ) : null}
             </CardContent>
           </Card>

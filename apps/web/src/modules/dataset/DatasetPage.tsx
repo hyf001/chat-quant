@@ -37,6 +37,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -55,6 +62,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea as UiTextarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { EmptyState, LoadingState } from "@/shared/components";
 import { notify, type ToastTone } from "@/shared/notify";
 
 import {
@@ -896,24 +904,22 @@ function QueryResultTable({
         <div className="truncate font-mono text-[10px] font-bold text-mutedText">
           {result.total} rows · page {result.page}/{Math.max(1, result.total_pages)}
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            className="h-7 rounded-md border border-line px-2 text-xs font-semibold text-graphite transition-colors hover:border-strong hover:text-ink disabled:cursor-not-allowed disabled:text-mutedText"
-            type="button"
-            disabled={result.page <= 1 || isLoading}
-            onClick={onPrev}
-          >
-            上一页
-          </button>
-          <button
-            className="h-7 rounded-md border border-line px-2 text-xs font-semibold text-graphite transition-colors hover:border-strong hover:text-ink disabled:cursor-not-allowed disabled:text-mutedText"
-            type="button"
-            disabled={result.page >= result.total_pages || result.total_pages === 0 || isLoading}
-            onClick={onNext}
-          >
-            下一页
-          </button>
-        </div>
+        <Pagination className="mx-0 w-auto">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                disabled={result.page <= 1 || isLoading}
+                onClick={onPrev}
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                disabled={result.page >= result.total_pages || result.total_pages === 0 || isLoading}
+                onClick={onNext}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         <Table className="min-w-full border-separate border-spacing-0 text-xs">
@@ -1162,10 +1168,11 @@ function IconAction({
 }
 
 function Notice({ text }: { text: string }) {
-  return (
-    <div className="m-3 rounded-md border border-dashed border-line bg-soft px-3 py-5 text-center text-xs text-mutedText">
-      {text}
-    </div>
+  const isLoading = text.includes("加载") || text.includes("查询中");
+  return isLoading ? (
+    <LoadingState className="m-3" rows={2} title={text} />
+  ) : (
+    <EmptyState className="m-3" title={text} />
   );
 }
 

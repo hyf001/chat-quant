@@ -3,7 +3,6 @@ import {
   BarChart3,
   Bot,
   Database,
-  Loader2,
   PanelLeftClose,
   PanelLeftOpen,
   ScrollText,
@@ -13,8 +12,8 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LoadingState } from "@/shared/components";
 
 import { DatasetPage } from "../modules/dataset";
 import { AgentSettingsForm } from "../modules/settings/AgentSettingsForm";
@@ -452,10 +451,7 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
 
         <div className="grid min-w-0 gap-4 pb-8">
           {isLoading ? (
-            <Card className="flex min-h-28 items-center gap-2 px-4 text-xs text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              加载中
-            </Card>
+            <LoadingState className="min-h-28" title="设置加载中" />
           ) : null}
 
           {draft ? (

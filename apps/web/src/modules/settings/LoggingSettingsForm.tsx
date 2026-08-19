@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { EmptyState, InlineAlert } from "@/shared/components";
 
 import { listSystemLogs, type AppSettings, type LogCategory, type LogEntry } from "../../shared/api";
 import { FormSection, SelectField } from "./SettingsFields";
@@ -112,14 +113,15 @@ function LogPanel({
   return (
     <div className="grid min-w-0 gap-3">
       {error ? (
-        <div className="rounded-md border border-risk/30 bg-riskSoft px-3 py-2 text-xs text-risk">
-          {error}
-        </div>
+        <InlineAlert title="日志加载失败" description={error} />
       ) : null}
 
       <ScrollArea className="max-h-[520px] min-h-60 rounded-md border border-line bg-[#171a16]">
         {logs.length === 0 && !isLoading ? (
-          <div className="px-3 py-6 text-center text-xs text-panel/55">暂无日志</div>
+          <EmptyState
+            className="m-3 border-white/10 bg-white/5 text-panel/65"
+            title="暂无日志"
+          />
         ) : null}
         {logs.map((entry, index) => (
           <LogRow entry={entry} key={`${entry.timestamp}-${entry.logger}-${index}`} />
