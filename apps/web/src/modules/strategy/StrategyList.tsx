@@ -49,6 +49,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea as UiTextarea } from "@/components/ui/textarea";
 import { notify } from "@/shared/notify";
 
@@ -740,8 +748,8 @@ export function StrategyList({ project }: StrategyListProps) {
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative min-w-64 flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-mutedText" />
-          <input
-            className="h-9 w-full rounded-md border border-line bg-panel pl-8 pr-3 text-xs text-ink outline-none placeholder:text-mutedText/70 focus:border-signal disabled:cursor-not-allowed disabled:bg-soft disabled:text-mutedText"
+          <UiInput
+            className="h-9 pl-8 text-xs"
             disabled={!project}
             placeholder="搜索策略或标签"
             value={query}
@@ -848,8 +856,9 @@ export function StrategyList({ project }: StrategyListProps) {
 
 function NewStrategyCard({ onClick }: { onClick: () => void }) {
   return (
-    <button
+    <Button
       className="flex min-h-[230px] flex-col items-center justify-center rounded-lg border border-dashed border-strong bg-soft p-4 text-center text-mutedText transition-all hover:-translate-y-0.5 hover:border-signal hover:bg-panel hover:text-ink hover:shadow-lift focus:outline-none focus:ring-2 focus:ring-signal/20"
+      variant="ghost"
       type="button"
       onClick={onClick}
     >
@@ -858,7 +867,7 @@ function NewStrategyCard({ onClick }: { onClick: () => void }) {
       </span>
       <span className="mt-3 text-sm font-semibold">新建策略</span>
       <span className="mt-1 text-xs text-mutedText">创建一个可回测的策略卡片</span>
-    </button>
+    </Button>
   );
 }
 
@@ -1050,23 +1059,28 @@ function VersionPanel({
                     }`}
                     key={version.id}
                   >
-                    <button
-                      className="min-w-0 flex-1 text-left focus:outline-none"
+                    <Button
+                      className="h-auto min-w-0 flex-1 justify-start p-0 text-left hover:bg-transparent"
+                      variant="ghost"
                       type="button"
                       onClick={() => onSelectVersion(version.id)}
                     >
-                      <span className="block font-mono text-xs font-semibold">V{version.version}</span>
-                      <span className="mt-1 block truncate text-[11px] text-zinc-400">
-                        {strategyModeLabel(version.strategy_mode)} · {formatDate(version.created_at)}
+                      <span className="block min-w-0">
+                        <span className="block font-mono text-xs font-semibold">V{version.version}</span>
+                        <span className="mt-1 block truncate text-[11px] text-zinc-400">
+                          {strategyModeLabel(version.strategy_mode)} · {formatDate(version.created_at)}
+                        </span>
                       </span>
-                    </button>
+                    </Button>
                     {isCurrent ? (
                       <span className="shrink-0 rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
                         当前
                       </span>
                     ) : (
-                      <button
-                        className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-zinc-300 bg-white px-2 text-[11px] font-semibold text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:text-zinc-300"
+                      <Button
+                        className="h-7 shrink-0 px-2 text-[11px]"
+                        size="sm"
+                        variant="outline"
                         type="button"
                         disabled={
                           switchingVersionId !== null ||
@@ -1081,7 +1095,7 @@ function VersionPanel({
                           <Check className="h-3 w-3" />
                         )}
                         {isSwitching ? "切换中" : "切换"}
-                      </button>
+                      </Button>
                     )}
                   </div>
                 );
@@ -1199,49 +1213,51 @@ function BacktestRecordList({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[820px] table-fixed border-collapse text-left text-xs">
-        <thead className="border-b border-zinc-200 bg-zinc-50 text-zinc-500">
-          <tr>
-            <th className="w-20 px-3 py-2 font-semibold">版本</th>
-            <th className="w-28 px-3 py-2 font-semibold">模式</th>
-            <th className="w-28 px-3 py-2 font-semibold">状态</th>
-            <th className="px-3 py-2 font-semibold">开始时间</th>
-            <th className="px-3 py-2 font-semibold">结束时间</th>
-            <th className="w-32 px-3 py-2 font-semibold">标的</th>
-            <th className="w-24 px-3 py-2 font-semibold">结果</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table className="w-full min-w-[820px] table-fixed border-collapse text-xs">
+        <TableHeader className="border-b border-zinc-200 bg-zinc-50 text-zinc-500">
+          <TableRow>
+            <TableHead className="w-20 px-3 py-2 font-semibold">版本</TableHead>
+            <TableHead className="w-28 px-3 py-2 font-semibold">模式</TableHead>
+            <TableHead className="w-28 px-3 py-2 font-semibold">状态</TableHead>
+            <TableHead className="px-3 py-2 font-semibold">开始时间</TableHead>
+            <TableHead className="px-3 py-2 font-semibold">结束时间</TableHead>
+            <TableHead className="w-32 px-3 py-2 font-semibold">标的</TableHead>
+            <TableHead className="w-24 px-3 py-2 font-semibold">结果</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {records.map(({ backtest, version }) => (
-            <tr className="border-b border-zinc-100 last:border-b-0" key={backtest.id}>
-              <td className="px-3 py-2 font-mono font-semibold text-zinc-800">V{version.version}</td>
-              <td className="px-3 py-2 text-zinc-600">{strategyModeLabel(version.strategy_mode)}</td>
-              <td className="px-3 py-2">
+            <TableRow className="border-b border-zinc-100 last:border-b-0" key={backtest.id}>
+              <TableCell className="px-3 py-2 font-mono font-semibold text-zinc-800">V{version.version}</TableCell>
+              <TableCell className="px-3 py-2 text-zinc-600">{strategyModeLabel(version.strategy_mode)}</TableCell>
+              <TableCell className="px-3 py-2">
                 <StatusText status={backtest.status} />
-              </td>
-              <td className="px-3 py-2 font-mono text-zinc-600">
+              </TableCell>
+              <TableCell className="px-3 py-2 font-mono text-zinc-600">
                 {backtest.started_at ? formatDate(backtest.started_at) : "-"}
-              </td>
-              <td className="px-3 py-2 font-mono text-zinc-600">
+              </TableCell>
+              <TableCell className="px-3 py-2 font-mono text-zinc-600">
                 {backtest.completed_at ? formatDate(backtest.completed_at) : "-"}
-              </td>
-              <td className="truncate px-3 py-2 text-zinc-600">
+              </TableCell>
+              <TableCell className="truncate px-3 py-2 text-zinc-600">
                 {backtest.config.symbols.join(", ")}
-              </td>
-              <td className="px-3 py-2">
-                <button
-                  className="rounded border border-zinc-300 px-2 py-1 font-semibold text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:text-zinc-300"
+              </TableCell>
+              <TableCell className="px-3 py-2">
+                <Button
+                  className="h-7 px-2 text-[11px]"
+                  size="sm"
+                  variant="outline"
                   type="button"
                   disabled={!backtest.result_id}
                   onClick={() => onViewResult(backtest.id)}
                 >
                   查看
-                </button>
-              </td>
-            </tr>
+                </Button>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -2061,38 +2077,38 @@ function groupTradesByDate(trades: StrategyTradeRecord[]): Map<string, StrategyT
 function TradeExecutionTable({ trades }: { trades: StrategyTradeRecord[] }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[920px] table-fixed border-collapse text-left">
-        <thead className="border-b border-zinc-200 bg-zinc-50 text-zinc-500">
-          <tr>
-            <th className="w-28 px-3 py-2 font-semibold">日期</th>
-            <th className="w-24 px-3 py-2 font-semibold">委托时间</th>
-            <th className="w-36 px-3 py-2 font-semibold">标的</th>
-            <th className="w-20 px-3 py-2 font-semibold">方向</th>
-            <th className="w-24 px-3 py-2 font-semibold">下单类型</th>
-            <th className="px-3 py-2 font-semibold">成交数量</th>
-            <th className="px-3 py-2 font-semibold">成交价</th>
-            <th className="px-3 py-2 font-semibold">成交额</th>
-            <th className="px-3 py-2 font-semibold">手续费</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table className="w-full min-w-[920px] table-fixed border-collapse">
+        <TableHeader className="border-b border-zinc-200 bg-zinc-50 text-zinc-500">
+          <TableRow>
+            <TableHead className="w-28 px-3 py-2 font-semibold">日期</TableHead>
+            <TableHead className="w-24 px-3 py-2 font-semibold">委托时间</TableHead>
+            <TableHead className="w-36 px-3 py-2 font-semibold">标的</TableHead>
+            <TableHead className="w-20 px-3 py-2 font-semibold">方向</TableHead>
+            <TableHead className="w-24 px-3 py-2 font-semibold">下单类型</TableHead>
+            <TableHead className="px-3 py-2 font-semibold">成交数量</TableHead>
+            <TableHead className="px-3 py-2 font-semibold">成交价</TableHead>
+            <TableHead className="px-3 py-2 font-semibold">成交额</TableHead>
+            <TableHead className="px-3 py-2 font-semibold">手续费</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {trades.map((trade) => (
-            <tr className="border-b border-zinc-100 last:border-b-0" key={trade.id}>
-              <td className="px-3 py-2 font-mono text-zinc-600">{trade.trade_datetime.slice(0, 10)}</td>
-              <td className="px-3 py-2 font-mono text-zinc-600">{formatTradeTime(trade.trade_datetime)}</td>
-              <td className="truncate px-3 py-2 font-mono text-zinc-700">{trade.symbol}</td>
-              <td className={trade.side === "buy" ? "px-3 py-2 font-semibold text-emerald-700" : "px-3 py-2 font-semibold text-red-700"}>
+            <TableRow className="border-b border-zinc-100 last:border-b-0" key={trade.id}>
+              <TableCell className="px-3 py-2 font-mono text-zinc-600">{trade.trade_datetime.slice(0, 10)}</TableCell>
+              <TableCell className="px-3 py-2 font-mono text-zinc-600">{formatTradeTime(trade.trade_datetime)}</TableCell>
+              <TableCell className="truncate px-3 py-2 font-mono text-zinc-700">{trade.symbol}</TableCell>
+              <TableCell className={trade.side === "buy" ? "px-3 py-2 font-semibold text-emerald-700" : "px-3 py-2 font-semibold text-red-700"}>
                 {trade.side === "buy" ? "买入" : "卖出"}
-              </td>
-              <td className="px-3 py-2 text-zinc-600">市价单</td>
-              <td className="px-3 py-2 font-mono text-zinc-700">{trade.size}</td>
-              <td className="px-3 py-2 font-mono text-zinc-700">{trade.price}</td>
-              <td className="px-3 py-2 font-mono text-zinc-700">{trade.value}</td>
-              <td className="px-3 py-2 font-mono text-zinc-700">{trade.commission}</td>
-            </tr>
+              </TableCell>
+              <TableCell className="px-3 py-2 text-zinc-600">市价单</TableCell>
+              <TableCell className="px-3 py-2 font-mono text-zinc-700">{trade.size}</TableCell>
+              <TableCell className="px-3 py-2 font-mono text-zinc-700">{trade.price}</TableCell>
+              <TableCell className="px-3 py-2 font-mono text-zinc-700">{trade.value}</TableCell>
+              <TableCell className="px-3 py-2 font-mono text-zinc-700">{trade.commission}</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -2100,22 +2116,22 @@ function TradeExecutionTable({ trades }: { trades: StrategyTradeRecord[] }) {
 function DailyPositionsTable({ snapshots }: { snapshots: StrategyDailyPortfolioSnapshot[] }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[860px] table-fixed border-collapse text-left">
-        <thead className="border-b border-zinc-200 bg-zinc-50 text-zinc-500">
-          <tr>
-            <th className="w-44 px-3 py-2 font-semibold">标的</th>
-            <th className="px-3 py-2 font-semibold">数量</th>
-            <th className="px-3 py-2 font-semibold">收盘价/结算价</th>
-            <th className="px-3 py-2 font-semibold">市值/价值</th>
-            <th className="px-3 py-2 font-semibold">盈亏/逐笔浮盈</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table className="w-full min-w-[860px] table-fixed border-collapse">
+        <TableHeader className="border-b border-zinc-200 bg-zinc-50 text-zinc-500">
+          <TableRow>
+            <TableHead className="w-44 px-3 py-2 font-semibold">标的</TableHead>
+            <TableHead className="px-3 py-2 font-semibold">数量</TableHead>
+            <TableHead className="px-3 py-2 font-semibold">收盘价/结算价</TableHead>
+            <TableHead className="px-3 py-2 font-semibold">市值/价值</TableHead>
+            <TableHead className="px-3 py-2 font-semibold">盈亏/逐笔浮盈</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {snapshots.map((snapshot) => (
             <DailyPositionRows key={snapshot.date} snapshot={snapshot} />
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -2123,42 +2139,42 @@ function DailyPositionsTable({ snapshots }: { snapshots: StrategyDailyPortfolioS
 function DailyPositionRows({ snapshot }: { snapshot: StrategyDailyPortfolioSnapshot }) {
   return (
     <>
-      <tr className="border-t border-zinc-200 bg-zinc-50">
-        <td className="px-3 py-2 font-mono text-sm font-semibold text-zinc-800" colSpan={5}>
+      <TableRow className="border-t border-zinc-200 bg-zinc-50">
+        <TableCell className="px-3 py-2 font-mono text-sm font-semibold text-zinc-800" colSpan={5}>
           {snapshot.date}
-        </td>
-      </tr>
+        </TableCell>
+      </TableRow>
       {snapshot.positions.map((position) => (
-        <tr className="border-b border-zinc-100" key={`${snapshot.date}-${position.symbol}`}>
-          <td className="px-3 py-2 font-mono text-zinc-700">{position.symbol}</td>
-          <td className="px-3 py-2 font-mono text-zinc-700">{position.size}</td>
-          <td className="px-3 py-2 font-mono text-zinc-700">{position.close_price}</td>
-          <td className="px-3 py-2 font-mono text-zinc-700">{formatMoney(position.market_value)}</td>
-          <td className={toNumber(position.unrealized_pnl) >= 0 ? "px-3 py-2 font-mono text-emerald-700" : "px-3 py-2 font-mono text-red-700"}>
+        <TableRow className="border-b border-zinc-100" key={`${snapshot.date}-${position.symbol}`}>
+          <TableCell className="px-3 py-2 font-mono text-zinc-700">{position.symbol}</TableCell>
+          <TableCell className="px-3 py-2 font-mono text-zinc-700">{position.size}</TableCell>
+          <TableCell className="px-3 py-2 font-mono text-zinc-700">{position.close_price}</TableCell>
+          <TableCell className="px-3 py-2 font-mono text-zinc-700">{formatMoney(position.market_value)}</TableCell>
+          <TableCell className={toNumber(position.unrealized_pnl) >= 0 ? "px-3 py-2 font-mono text-emerald-700" : "px-3 py-2 font-mono text-red-700"}>
             {formatMoney(position.unrealized_pnl)}
-          </td>
-        </tr>
+          </TableCell>
+        </TableRow>
       ))}
-      <tr className="border-b border-zinc-100">
-        <td className="px-3 py-2">
+      <TableRow className="border-b border-zinc-100">
+        <TableCell className="px-3 py-2">
           <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[11px] font-semibold text-white">Cash</span>
-        </td>
-        <td className="px-3 py-2 font-mono text-zinc-500">-</td>
-        <td className="px-3 py-2 font-mono text-zinc-500">-</td>
-        <td className="px-3 py-2 font-mono text-zinc-700">{formatMoney(snapshot.cash)}</td>
-        <td className="px-3 py-2 font-mono text-zinc-500">0.00</td>
-      </tr>
-      <tr className="border-b border-zinc-200 bg-zinc-50">
-        <td className="px-3 py-2 font-semibold text-zinc-800" colSpan={3}>
+        </TableCell>
+        <TableCell className="px-3 py-2 font-mono text-zinc-500">-</TableCell>
+        <TableCell className="px-3 py-2 font-mono text-zinc-500">-</TableCell>
+        <TableCell className="px-3 py-2 font-mono text-zinc-700">{formatMoney(snapshot.cash)}</TableCell>
+        <TableCell className="px-3 py-2 font-mono text-zinc-500">0.00</TableCell>
+      </TableRow>
+      <TableRow className="border-b border-zinc-200 bg-zinc-50">
+        <TableCell className="px-3 py-2 font-semibold text-zinc-800" colSpan={3}>
           总共
-        </td>
-        <td className="px-3 py-2 font-mono font-semibold text-zinc-900">
+        </TableCell>
+        <TableCell className="px-3 py-2 font-mono font-semibold text-zinc-900">
           {formatMoney(snapshot.total_value)}
-        </td>
-        <td className={toNumber(snapshot.daily_pnl) >= 0 ? "px-3 py-2 font-mono font-semibold text-emerald-700" : "px-3 py-2 font-mono font-semibold text-red-700"}>
+        </TableCell>
+        <TableCell className={toNumber(snapshot.daily_pnl) >= 0 ? "px-3 py-2 font-mono font-semibold text-emerald-700" : "px-3 py-2 font-mono font-semibold text-red-700"}>
           {formatMoney(snapshot.daily_pnl)}
-        </td>
-      </tr>
+        </TableCell>
+      </TableRow>
     </>
   );
 }
@@ -2260,18 +2276,19 @@ function Dialog({
 
 function StatusFilterControl({ value, onChange }: { value: StatusFilter; onChange: (value: StatusFilter) => void }) {
   return (
-    <div className="grid h-9 grid-cols-2 overflow-hidden rounded-md border border-line bg-panel text-[11px] font-semibold">
-      {statusFilters.map((filter) => (
-        <button
-          className={`min-w-12 px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-signal/20 ${value === filter.value ? "bg-ink text-panel" : "text-mutedText hover:bg-soft hover:text-ink"}`}
-          key={filter.value}
-          type="button"
-          onClick={() => onChange(filter.value)}
-        >
-          {filter.label}
-        </button>
-      ))}
-    </div>
+    <Tabs value={value} onValueChange={(nextValue) => onChange(nextValue as StatusFilter)}>
+      <TabsList className="grid h-9 grid-cols-2 border border-line bg-panel p-0 text-[11px] font-semibold">
+        {statusFilters.map((filter) => (
+          <TabsTrigger
+            className="h-full min-w-12 rounded-none px-2 text-mutedText data-[state=active]:bg-ink data-[state=active]:text-panel data-[state=active]:shadow-none"
+            key={filter.value}
+            value={filter.value}
+          >
+            {filter.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }
 
@@ -2325,15 +2342,17 @@ function DateRangeField({
         </div>
         <div className="flex flex-wrap gap-1.5">
           {backtestDateRangePresets.map((preset) => (
-            <button
-              className="h-7 rounded border border-line bg-soft px-2 text-[11px] font-semibold text-graphite transition-colors hover:border-strong hover:bg-panel hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:text-mutedText/50"
+            <Button
+              className="h-7 px-2 text-[11px]"
               key={preset.years}
+              size="sm"
+              variant="outline"
               type="button"
               disabled={disabled}
               onClick={() => onPreset(preset.years)}
             >
               {preset.label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

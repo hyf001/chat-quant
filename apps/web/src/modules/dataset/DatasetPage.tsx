@@ -44,6 +44,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea as UiTextarea } from "@/components/ui/textarea";
 import { notify, type ToastTone } from "@/shared/notify";
 
@@ -902,38 +910,38 @@ function QueryResultTable({
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
-        <table className="min-w-full border-separate border-spacing-0 text-left text-xs">
-          <thead className="sticky top-0 z-10 bg-soft text-[10px] uppercase text-mutedText">
-            <tr>
+        <Table className="min-w-full border-separate border-spacing-0 text-xs">
+          <TableHeader className="sticky top-0 z-10 bg-soft text-[10px] uppercase text-mutedText">
+            <TableRow>
               {result.columns.map((column) => (
-                <th className="border-b border-line px-3 py-2 font-mono font-bold" key={column.name}>
+                <TableHead className="border-b border-line px-3 py-2 font-mono font-bold" key={column.name}>
                   <span className="block max-w-48 truncate">{column.name}</span>
-                </th>
+                </TableHead>
               ))}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {result.rows.length === 0 ? (
-              <tr>
-                <td className="px-3 py-6 text-center text-mutedText" colSpan={Math.max(1, result.columns.length)}>
+              <TableRow>
+                <TableCell className="px-3 py-6 text-center text-mutedText" colSpan={Math.max(1, result.columns.length)}>
                   无数据
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               result.rows.map((row, rowIndex) => (
-                <tr className="odd:bg-panel even:bg-soft/45" key={rowIndex}>
+                <TableRow className="odd:bg-panel even:bg-soft/45" key={rowIndex}>
                   {result.columns.map((column) => (
-                    <td className="max-w-64 border-b border-line/70 px-3 py-2 font-mono text-[11px] text-ink" key={column.name}>
+                    <TableCell className="max-w-64 border-b border-line/70 px-3 py-2 font-mono text-[11px] text-ink" key={column.name}>
                       <span className="block truncate" title={formatValue(row[column.name])}>
                         {formatValue(row[column.name])}
                       </span>
-                    </td>
+                    </TableCell>
                   ))}
-                </tr>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

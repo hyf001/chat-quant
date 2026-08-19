@@ -16,6 +16,7 @@ import remarkGfm from "remark-gfm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Table, TableCell, TableHead } from "@/components/ui/table";
 
 import type { AssetLink, ChatSession, SDKStreamEnvelope, SdkMessage } from "../../shared/api";
 import type { Components } from "react-markdown";
@@ -29,7 +30,7 @@ type ConversationShellProps = {
   assets: AssetLink[];
   isLoading: boolean;
   isStreaming: boolean;
-  error: string | null;
+  error?: string | null;
   onOpenInspectorObject?: (object: InspectorObject) => void;
   onPromptSelect?: (content: string) => void | Promise<void>;
 };
@@ -109,7 +110,7 @@ const markdownComponents: Components = {
   table({ children }) {
     return (
       <div className="markdown-table-scroll">
-        <table>{children}</table>
+        <Table>{children}</Table>
       </div>
     );
   },
@@ -130,10 +131,10 @@ function markdownComponentsFor(
       return <li>{linkifyInspectorIds(children, onOpenInspectorObject)}</li>;
     },
     td({ children }) {
-      return <td>{linkifyInspectorIds(children, onOpenInspectorObject)}</td>;
+      return <TableCell>{linkifyInspectorIds(children, onOpenInspectorObject)}</TableCell>;
     },
     th({ children }) {
-      return <th>{linkifyInspectorIds(children, onOpenInspectorObject)}</th>;
+      return <TableHead>{linkifyInspectorIds(children, onOpenInspectorObject)}</TableHead>;
     },
     h1({ children }) {
       return <h1>{linkifyInspectorIds(children, onOpenInspectorObject)}</h1>;
@@ -243,7 +244,7 @@ export function ConversationShell({
   assets,
   isLoading,
   isStreaming,
-  error,
+  error = null,
   onOpenInspectorObject,
   onPromptSelect,
 }: ConversationShellProps) {

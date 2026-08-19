@@ -36,6 +36,7 @@ import {
   type SDKStreamEnvelope,
   type SdkMessage,
 } from "../shared/api";
+import { notify } from "../shared/notify";
 import type { PrimaryRoute } from "../shared/routes";
 
 const routePaths: Record<PrimaryRoute, string> = {
@@ -66,7 +67,6 @@ export function WorkbenchPage() {
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [composerModelState, setComposerModelState] = useState<ComposerModelState>({
     currentModel: null,
     models: [],
@@ -100,10 +100,12 @@ export function WorkbenchPage() {
   }, [activeSession, detail?.messages, envelopeMessages]);
   const conversationRuntimeEnvelopes = conversationEnvelopes;
   const hasNoProjects = !isProjectLoading && projects.length === 0;
+  const showError = useCallback((message: string) => {
+    notify(message, "error");
+  }, []);
 
   const refreshProjects = useCallback(async (preferredProjectId?: string | null) => {
     setIsProjectLoading(true);
-    setError(null);
     try {
       const data = await listProjects();
       setProjects(data.items);
@@ -116,11 +118,11 @@ export function WorkbenchPage() {
         );
       });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "项目列表加载失败");
+      showError(caught instanceof Error ? caught.message : "项目列表加载失败");
     } finally {
       setIsProjectLoading(false);
     }
-  }, []);
+  }, [showError]);
 
   const refreshSessions = useCallback(
     async (query: string, projectId: string | null) => {
@@ -131,7 +133,6 @@ export function WorkbenchPage() {
         return;
       }
       setIsHistoryLoading(true);
-      setError(null);
       try {
         const data = await listChatSessions(query.trim() || undefined, projectId);
         setSessions(data.items);
@@ -139,12 +140,12 @@ export function WorkbenchPage() {
           data.items.some((session) => session.id === currentSessionId) ? currentSessionId : null,
         );
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : "会话列表加载失败");
+        showError(caught instanceof Error ? caught.message : "会话列表加载失败");
       } finally {
         setIsHistoryLoading(false);
       }
     },
-    [],
+    [showError],
   );
 
   const loadComposerModelState = useCallback(async () => {
@@ -184,7 +185,6 @@ export function WorkbenchPage() {
     const requestId = loadDetailRequestIdRef.current + 1;
     loadDetailRequestIdRef.current = requestId;
     setIsDetailLoading(true);
-    setError(null);
     try {
       const sessionDetail = await getChatSessionDetail(chatSessionId);
       if (requestId !== loadDetailRequestIdRef.current) {
@@ -204,14 +204,14 @@ export function WorkbenchPage() {
       );
     } catch (caught) {
       if (requestId === loadDetailRequestIdRef.current) {
-        setError(caught instanceof Error ? caught.message : "会话详情加载失败");
+        showError(caught instanceof Error ? caught.message : "会话详情加载失败");
       }
     } finally {
       if (requestId === loadDetailRequestIdRef.current) {
         setIsDetailLoading(false);
       }
     }
-  }, []);
+  }, [showError]);
 
   useEffect(() => {
     void refreshProjects();
@@ -289,7 +289,6 @@ export function WorkbenchPage() {
   };
 
   const handleCreateProject = async (name: string) => {
-    setError(null);
     try {
       const localPath = await selectCreateProjectPath();
       if (!localPath) {
@@ -301,12 +300,11 @@ export function WorkbenchPage() {
       });
       await refreshProjects(project.id);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "新建项目失败");
+      showError(caught instanceof Error ? caught.message : "新建项目失败");
     }
   };
 
   const handleOpenProject = async () => {
-    setError(null);
     try {
       const localPath = await selectOpenProjectPath();
       if (!localPath) {
@@ -315,27 +313,25 @@ export function WorkbenchPage() {
       const project = await openProject({ local_path: localPath });
       await refreshProjects(project.id);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "打开项目失败");
+      showError(caught instanceof Error ? caught.message : "打开项目失败");
     }
   };
 
   const handleRenameProject = async (projectId: string, name: string) => {
-    setError(null);
     try {
       await updateProject(projectId, { name });
       await refreshProjects(activeProjectId);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "编辑项目失败");
+      showError(caught instanceof Error ? caught.message : "编辑项目失败");
     }
   };
 
   const handleDeleteProject = async (projectId: string) => {
-    setError(null);
     try {
       await deleteProject(projectId);
       await refreshProjects(projectId === activeProjectId ? null : activeProjectId);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "删除项目失败");
+      showError(caught instanceof Error ? caught.message : "删除项目失败");
     }
   };
 
@@ -344,11 +340,10 @@ export function WorkbenchPage() {
       return;
     }
     if (!activeProjectId) {
-      setError("请先创建或选择项目");
+      showError("请先创建或选择项目");
       return;
     }
     setIsSending(true);
-    setError(null);
     try {
       const currentSessionId = activeSessionId;
 
@@ -378,11 +373,11 @@ export function WorkbenchPage() {
         setConversationEnvelopes((current) => appendStreamEnvelope(current, envelope));
       });
       if (!receivedStreamEnvelope) {
-        setError("本轮没有收到任何模型返回事件。可能是流连接提前结束、模型调用超时或被中断，请稍后重试，或切换模型/Provider。");
+        showError("本轮没有收到任何模型返回事件。可能是流连接提前结束、模型调用超时或被中断，请稍后重试，或切换模型/Provider。");
       }
       await loadDetail(sessionId);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "消息发送失败");
+      showError(caught instanceof Error ? caught.message : "消息发送失败");
     } finally {
       streamingSessionIdRef.current = null;
       setIsSending(false);
@@ -397,12 +392,11 @@ export function WorkbenchPage() {
       return;
     }
     setIsStopping(true);
-    setError(null);
     try {
       await stopAgentChatSession(chatSessionId);
     } catch (caught) {
       setIsStopping(false);
-      setError(caught instanceof Error ? caught.message : "停止会话失败");
+      showError(caught instanceof Error ? caught.message : "停止会话失败");
     }
   };
 
@@ -411,7 +405,6 @@ export function WorkbenchPage() {
       return;
     }
     setIsModelSaving(true);
-    setError(null);
     try {
       const settings = await loadComposerModelState();
       if (!settings || model === settings.agent.model) {
@@ -427,7 +420,7 @@ export function WorkbenchPage() {
       await updateAppConfig(nextSettings);
       await loadComposerModelState();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "模型切换失败");
+      showError(caught instanceof Error ? caught.message : "模型切换失败");
     } finally {
       setIsModelSaving(false);
     }
@@ -474,7 +467,6 @@ export function WorkbenchPage() {
       conversation={
         hasNoProjects ? (
           <ProjectOnboarding
-            error={error}
             onCreateProject={() => void handleCreateProject("")}
             onOpenProject={() => void handleOpenProject()}
           />
@@ -486,7 +478,6 @@ export function WorkbenchPage() {
             assets={detail?.assets ?? []}
             isLoading={isDetailLoading}
             isStreaming={isSending}
-            error={error}
             onOpenInspectorObject={setActiveInspectorObject}
             onPromptSelect={handleSendMessage}
           />
@@ -525,13 +516,11 @@ export function WorkbenchPage() {
 }
 
 type ProjectOnboardingProps = {
-  error: string | null;
   onCreateProject: () => void;
   onOpenProject: () => void;
 };
 
 function ProjectOnboarding({
-  error,
   onCreateProject,
   onOpenProject,
 }: ProjectOnboardingProps) {
@@ -548,11 +537,6 @@ function ProjectOnboarding({
           </CardDescription>
         </CardHeader>
         <CardContent>
-        {error ? (
-          <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-left text-xs text-destructive">
-            {error}
-          </div>
-        ) : null}
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Button
             type="button"
