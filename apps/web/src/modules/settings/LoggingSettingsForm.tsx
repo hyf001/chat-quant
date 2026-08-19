@@ -2,6 +2,7 @@ import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { listSystemLogs, type AppSettings, type LogCategory, type LogEntry } from "../../shared/api";
 import { FormSection, SelectField } from "./SettingsFields";
@@ -116,14 +117,14 @@ function LogPanel({
         </div>
       ) : null}
 
-      <div className="max-h-[520px] min-h-60 overflow-auto rounded-md border border-line bg-[#171a16]">
+      <ScrollArea className="max-h-[520px] min-h-60 rounded-md border border-line bg-[#171a16]">
         {logs.length === 0 && !isLoading ? (
           <div className="px-3 py-6 text-center text-xs text-panel/55">暂无日志</div>
         ) : null}
         {logs.map((entry, index) => (
           <LogRow entry={entry} key={`${entry.timestamp}-${entry.logger}-${index}`} />
         ))}
-      </div>
+      </ScrollArea>
     </div>
   );
 }

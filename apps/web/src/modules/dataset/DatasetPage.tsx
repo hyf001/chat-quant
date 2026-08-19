@@ -43,6 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import {
   Table,
@@ -53,6 +54,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea as UiTextarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { notify, type ToastTone } from "@/shared/notify";
 
 import {
@@ -415,19 +417,20 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
             )}
           </div>
           {isDatasetListCollapsed ? null : (
-            <div className="min-h-0 flex-1 overflow-y-auto p-2">
-              {isLoading ? <Notice text="加载中" /> : null}
-              {!isLoading && filteredDatasets.length === 0 ? <Notice text="暂无数据集" /> : null}
-              <div className="grid gap-2">
-                {filteredDatasets.map((dataset) => (
-                  <article
-                    className={`overflow-hidden rounded-md border p-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-signal/20 ${
-                      selectedDataset?.id === dataset.id
-                        ? "border-ink bg-panel text-ink"
-                        : "border-line bg-panel/60 text-graphite hover:border-signal"
-                    }`}
-                    key={dataset.id}
-                  >
+            <ScrollArea className="min-h-0 flex-1">
+              <div className="p-2">
+                {isLoading ? <Notice text="加载中" /> : null}
+                {!isLoading && filteredDatasets.length === 0 ? <Notice text="暂无数据集" /> : null}
+                <div className="grid gap-2">
+                  {filteredDatasets.map((dataset) => (
+                    <article
+                      className={`overflow-hidden rounded-md border p-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-signal/20 ${
+                        selectedDataset?.id === dataset.id
+                          ? "border-ink bg-panel text-ink"
+                          : "border-line bg-panel/60 text-graphite hover:border-signal"
+                      }`}
+                      key={dataset.id}
+                    >
                     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                       <button
                         className="flex min-w-0 items-start gap-2 text-left focus:outline-none"
@@ -474,10 +477,11 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
                         </span>
                       ) : null}
                     </button>
-                  </article>
-                ))}
+                    </article>
+                  ))}
+                </div>
               </div>
-            </div>
+            </ScrollArea>
           )}
         </aside>
 
@@ -634,17 +638,18 @@ function DatasetDialog({
               </div>
               <RefreshCw className={`h-3.5 w-3.5 text-mutedText ${isSourcesLoading ? "animate-spin" : ""}`} />
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-2">
-              {isSourcesLoading ? <Notice text="数据源加载中" /> : null}
-              {!isSourcesLoading && sources.length === 0 ? <Notice text="暂无数据源" /> : null}
-              <div className="grid gap-2">
-                {sources.map((source) => (
-                  <button
-                    className="rounded-md border border-line bg-panel p-2 text-left transition-colors hover:border-strong hover:bg-soft focus:outline-none focus:ring-2 focus:ring-signal/20"
-                    key={source.id}
-                    type="button"
-                    onClick={() => applySourceExample(source)}
-                  >
+            <ScrollArea className="min-h-0 flex-1">
+              <div className="p-2">
+                {isSourcesLoading ? <Notice text="数据源加载中" /> : null}
+                {!isSourcesLoading && sources.length === 0 ? <Notice text="暂无数据源" /> : null}
+                <div className="grid gap-2">
+                  {sources.map((source) => (
+                    <button
+                      className="rounded-md border border-line bg-panel p-2 text-left transition-colors hover:border-strong hover:bg-soft focus:outline-none focus:ring-2 focus:ring-signal/20"
+                      key={source.id}
+                      type="button"
+                      onClick={() => applySourceExample(source)}
+                    >
                     <div className="flex items-start gap-2">
                       <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded border border-line bg-soft text-brandBlue">
                         <Code2 className="h-3.5 w-3.5" />
@@ -664,10 +669,11 @@ function DatasetDialog({
                     <pre className="mt-2 max-h-20 overflow-hidden rounded bg-soft p-2 font-mono text-[10px] leading-4 text-graphite">
                       {sourceSelectSql(source)}
                     </pre>
-                  </button>
-                ))}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            </ScrollArea>
           </section>
           <div className="grid content-start gap-3">
             <NamingFields
@@ -1136,18 +1142,22 @@ function IconAction({
   onClick: () => void;
 }) {
   return (
-    <Button
-      className={danger ? "text-destructive hover:text-destructive" : undefined}
-      size="icon"
-      variant="outline"
-      type="button"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {icon}
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          className={danger ? "text-destructive hover:text-destructive" : undefined}
+          size="icon"
+          variant="outline"
+          type="button"
+          aria-label={label}
+          disabled={disabled}
+          onClick={onClick}
+        >
+          {icon}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
 

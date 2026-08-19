@@ -58,6 +58,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea as UiTextarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { notify } from "@/shared/notify";
 
 import {
@@ -957,15 +958,23 @@ function StrategyCard({
           />
           <SmallButton icon={<History className="h-3.5 w-3.5" />} label="记录" disabled={isPending} onClick={onRecords} />
           <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <IconButton
-                icon={<Trash2 className="h-3.5 w-3.5" />}
-                label="删除"
-                danger
-                disabled={isPending}
-                onClick={() => undefined}
-              />
-            </AlertDialogTrigger>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    className="text-destructive hover:text-destructive"
+                    size="icon"
+                    variant="outline"
+                    type="button"
+                    aria-label="删除"
+                    disabled={isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </AlertDialogTrigger>
+              </TooltipTrigger>
+              <TooltipContent>删除</TooltipContent>
+            </Tooltip>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>删除策略“{strategy.name}”？</AlertDialogTitle>
@@ -2460,18 +2469,22 @@ function SmallButton({ icon, label, disabled, onClick }: { icon: ReactNode; labe
 
 function IconButton({ icon, label, danger, disabled, onClick }: { icon: ReactNode; label: string; danger?: boolean; disabled?: boolean; onClick: () => void }) {
   return (
-    <Button
-      className={danger ? "text-destructive hover:text-destructive" : undefined}
-      size="icon"
-      variant="outline"
-      type="button"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {icon}
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          className={danger ? "text-destructive hover:text-destructive" : undefined}
+          size="icon"
+          variant="outline"
+          type="button"
+          aria-label={label}
+          disabled={disabled}
+          onClick={onClick}
+        >
+          {icon}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
 

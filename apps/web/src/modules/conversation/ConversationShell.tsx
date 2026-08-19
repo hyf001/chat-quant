@@ -16,6 +16,8 @@ import remarkGfm from "remark-gfm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableCell, TableHead } from "@/components/ui/table";
 
 import type { AssetLink, ChatSession, SDKStreamEnvelope, SdkMessage } from "../../shared/api";
@@ -649,10 +651,22 @@ function ThinkingEntry({
   thinking: ThinkingProcessView | null;
   isActive: boolean;
 }) {
+  const [isOpen, setIsOpen] = useState(isActive);
+
+  useEffect(() => {
+    if (isActive) {
+      setIsOpen(true);
+    }
+  }, [isActive]);
+
   return (
     <div>
-      <details className="group overflow-hidden rounded-md border border-line bg-panel" open={isActive}>
-        <summary className="flex cursor-pointer list-none items-center justify-between px-3.5 py-2 text-xs font-semibold text-graphite transition-colors hover:bg-soft">
+      <Collapsible
+        className="overflow-hidden rounded-md border border-line bg-panel"
+        open={isOpen}
+        onOpenChange={setIsOpen}
+      >
+        <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between px-3.5 py-2 text-left text-xs font-semibold text-graphite transition-colors hover:bg-soft focus:outline-none focus:ring-2 focus:ring-ring/30">
           <span className="inline-flex min-w-0 items-center gap-2">
             {isActive ? (
               <span className="thinking-rings text-signal" aria-hidden="true">
@@ -667,14 +681,16 @@ function ThinkingEntry({
           </span>
           <span className="flex shrink-0 items-center gap-2 text-xs text-mutedText">
             {thinking ? formatElapsed(thinking.startedAt, thinking.completedAt) : "进行中"}
-            <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+            <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
           </span>
-        </summary>
-        <p className="whitespace-pre-wrap break-words border-t border-line bg-soft p-3.5 font-mono text-xs leading-relaxed text-graphite">
-          {thinking?.text || "正在组织思路"}
-          {isActive ? <span className="streaming-caret" /> : null}
-        </p>
-      </details>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <p className="whitespace-pre-wrap break-words border-t border-line bg-soft p-3.5 font-mono text-xs leading-relaxed text-graphite">
+            {thinking?.text || "正在组织思路"}
+            {isActive ? <span className="streaming-caret" /> : null}
+          </p>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
@@ -692,15 +708,15 @@ function ToolGroupEntry({
 
   return (
     <div aria-label="工具调用">
-      <details
+      <Collapsible
         className={`group/tool-group overflow-hidden rounded-md bg-panel ${
           toolGroup.status === "failed"
             ? "border-2 border-risk bg-riskSoft"
             : "border border-line"
         }`}
       >
-        <summary
-          className={`flex cursor-pointer list-none items-center gap-2.5 px-3.5 py-2 font-mono text-xs transition-colors ${
+        <CollapsibleTrigger
+          className={`flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2 text-left font-mono text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-ring/30 ${
             toolGroup.status === "failed"
               ? "bg-riskSoft hover:bg-riskSoft/70"
               : "bg-soft hover:bg-compareSoft"
@@ -740,30 +756,32 @@ function ToolGroupEntry({
               {toolStatusLabel(toolGroup.status)}
             </span>
             <ChevronDown
-              className={`h-4 w-4 transition-transform group-open/tool-group:rotate-180 ${
+              className={`h-4 w-4 transition-transform group-data-[state=open]/tool-group:rotate-180 ${
                 toolGroup.status === "failed" ? "text-risk" : "text-mutedText"
               }`}
             />
           </span>
-        </summary>
-        {toolGroup.calls.length > 1 ? (
-          <div className="grid gap-2 border-t border-line bg-soft p-2">
-            {toolGroup.calls.map((toolCall) => (
-              <ToolCallDisclosure key={toolCall.id} toolCall={toolCall} />
-            ))}
-          </div>
-        ) : (
-          <ToolCallDetail toolCall={firstToolCall} />
-        )}
-      </details>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          {toolGroup.calls.length > 1 ? (
+            <div className="grid gap-2 border-t border-line bg-soft p-2">
+              {toolGroup.calls.map((toolCall) => (
+                <ToolCallDisclosure key={toolCall.id} toolCall={toolCall} />
+              ))}
+            </div>
+          ) : (
+            <ToolCallDetail toolCall={firstToolCall} />
+          )}
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
 
 function ToolCallDisclosure({ toolCall }: { toolCall: ToolCallView }) {
   return (
-    <details className="group/tool-call overflow-hidden rounded border border-line bg-panel">
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 font-mono text-xs transition-colors hover:bg-soft">
+    <Collapsible className="group/tool-call overflow-hidden rounded border border-line bg-panel">
+      <CollapsibleTrigger className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left font-mono text-xs transition-colors hover:bg-soft focus:outline-none focus:ring-2 focus:ring-ring/30">
         <span className="shrink-0 whitespace-nowrap font-bold text-ink" title={toolCall.name}>
           {toolCall.name}
         </span>
@@ -778,11 +796,13 @@ function ToolCallDisclosure({ toolCall }: { toolCall: ToolCallView }) {
           >
             {toolStatusLabel(toolCall.status)}
           </span>
-          <ChevronDown className="h-4 w-4 text-mutedText transition-transform group-open/tool-call:rotate-180" />
+          <ChevronDown className="h-4 w-4 text-mutedText transition-transform group-data-[state=open]/tool-call:rotate-180" />
         </span>
-      </summary>
-      <ToolCallDetail toolCall={toolCall} />
-    </details>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <ToolCallDetail toolCall={toolCall} />
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -804,13 +824,13 @@ function ToolCallDetail({ toolCall }: { toolCall: ToolCallView }) {
           {toolCall.status === "failed" ? "Stderr Output" : "Output"}
         </span>
         {toolCall.detail ? (
-          <pre
-            className={`mt-0.5 max-h-64 overflow-auto whitespace-pre-wrap break-words ${
+          <ScrollArea
+            className={`mt-0.5 max-h-64 ${
               toolCall.status === "failed" ? "text-risk" : "text-brand"
             }`}
           >
-            {toolCall.detail}
-          </pre>
+            <pre className="whitespace-pre-wrap break-words pr-3">{toolCall.detail}</pre>
+          </ScrollArea>
         ) : (
           <pre className="mt-0.5 text-mutedText">
             {toolCall.status === "running" ? "Running..." : "No output"}

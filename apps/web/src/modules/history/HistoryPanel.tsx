@@ -37,6 +37,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import type { ChatSession, Project } from "../../shared/api";
 import type { PrimaryRoute } from "../../shared/routes";
@@ -160,8 +162,8 @@ export function HistoryPanel({
           </Button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-2">
-          <div>
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="space-y-4 p-2">
             <div className="flex items-center justify-between px-2 py-1">
               <span className="font-mono text-[10px] font-bold uppercase text-mutedText">
                 Recent runs
@@ -238,7 +240,7 @@ export function HistoryPanel({
               })}
             </div>
           </div>
-        </div>
+        </ScrollArea>
 
         <div className="relative flex items-center gap-2 border-t border-line p-2 text-xs text-mutedText">
           <Popover open={isProjectSwitcherOpen} onOpenChange={setIsProjectSwitcherOpen}>
@@ -258,7 +260,7 @@ export function HistoryPanel({
               <div className="px-2 py-1.5 text-[11px] font-semibold text-foreground">
                 切换项目
               </div>
-              <div className="max-h-72 overflow-y-auto">
+              <ScrollArea className="max-h-72">
                 {projects.length === 0 ? <Notice text="暂无项目" /> : null}
                 {projects.map((project) => {
                   const isActive = project.id === activeProjectId;
@@ -282,7 +284,7 @@ export function HistoryPanel({
                     </Button>
                   );
                 })}
-              </div>
+              </ScrollArea>
               <div className="border-t border-line pt-1">
                 <Button
                   className="w-full justify-start text-xs"
@@ -540,27 +542,36 @@ function IconAction({
     onConfirm: () => void;
   };
 }) {
-  const action = (
+  const actionButton = (
     <Button
       className={tone === "danger" ? "text-destructive hover:text-destructive" : undefined}
       size="iconSm"
       variant="ghost"
       type="button"
       aria-label={label}
-      title={label}
-      onClick={onClick}
+      onClick={confirm ? undefined : onClick}
     >
       {children}
     </Button>
   );
 
   if (!confirm) {
-    return action;
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{actionButton}</TooltipTrigger>
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
+    );
   }
 
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild>{action}</AlertDialogTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <AlertDialogTrigger asChild>{actionButton}</AlertDialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{confirm.title}</AlertDialogTitle>
