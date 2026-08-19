@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { Badge } from "@/components/ui/badge";
+
 type StatusPillProps = {
   icon?: ReactNode;
   label: string;
@@ -7,9 +9,9 @@ type StatusPillProps = {
 
 export function StatusPill({ icon, label }: StatusPillProps) {
   return (
-    <div className="hidden items-center gap-2 rounded-full border border-line bg-panel px-3 py-1.5 text-xs font-medium text-muted sm:inline-flex">
+    <Badge className="hidden gap-2 px-3 py-1.5 font-medium sm:inline-flex" variant="outline">
       {icon}
       {label}
-    </div>
+    </Badge>
   );
 }

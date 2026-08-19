@@ -1,5 +1,7 @@
 import { CheckCircle2, FileJson, Terminal, XCircle } from "lucide-react";
 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import type { ExecutionResult, RuntimeHealth } from "../../shared/api/client";
 
 type RuntimeResultPanelProps = {
@@ -16,15 +18,15 @@ export function RuntimeResultPanel({
   const statusTone = result?.status === "succeeded" ? "text-emerald-700" : "text-risk";
 
   return (
-    <section className="rounded-lg border border-line bg-panel shadow-panel" aria-label="M4 运行结果">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
+    <Card aria-label="M4 运行结果">
+      <CardHeader className="border-b">
         <div className="min-w-0">
-          <div className="text-sm font-semibold">M4 Python 运行时</div>
-          <div className="mt-1 text-xs text-muted">
+          <CardTitle className="text-sm">M4 Python 运行时</CardTitle>
+          <div className="mt-1 text-xs text-mutedText">
             Python {health?.python_version ?? "-"}
           </div>
         </div>
-      </div>
+      </CardHeader>
 
       <div className="grid gap-3 p-4 sm:grid-cols-3">
         <Metric label="状态" value={result?.status ?? "idle"} />
@@ -33,13 +35,13 @@ export function RuntimeResultPanel({
       </div>
 
       {error ? (
-        <div className="mx-4 mb-4 rounded-lg border border-risk/25 bg-risk/5 p-3 text-sm text-risk">
+        <div className="mx-4 mb-4 rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive">
           {error}
         </div>
       ) : null}
 
       {result ? (
-        <div className="grid gap-3 border-t border-line p-4 lg:grid-cols-[minmax(0,1fr)_240px]">
+        <CardContent className="grid gap-3 border-t p-4 lg:grid-cols-[minmax(0,1fr)_240px]">
           <div className="min-w-0">
             <div className={`mb-2 flex items-center gap-2 text-sm font-semibold ${statusTone}`}>
               {result.status === "succeeded" ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
@@ -50,40 +52,40 @@ export function RuntimeResultPanel({
             </pre>
           </div>
           <div className="min-w-0 rounded-lg border border-line bg-soft p-3">
-            <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-muted">
+            <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-mutedText">
               <FileJson size={14} />
               产物
             </div>
             <div className="grid gap-2">
               {result.artifacts.map((artifact) => (
-                <div key={artifact.path} className="min-w-0 rounded border border-line bg-panel p-2">
+                <Card key={artifact.path} className="min-w-0 rounded-md p-2 shadow-none">
                   <div className="truncate text-xs font-semibold">{artifact.name ?? artifact.path}</div>
-                  <div className="mt-1 text-[11px] text-muted">{artifact.type}</div>
-                </div>
+                  <div className="mt-1 text-[11px] text-mutedText">{artifact.type}</div>
+                </Card>
               ))}
               {result.artifacts.length === 0 ? (
-                <div className="text-xs text-muted">暂无产物</div>
+                <div className="text-xs text-mutedText">暂无产物</div>
               ) : null}
             </div>
           </div>
-        </div>
+        </CardContent>
       ) : (
-        <div className="border-t border-line p-4">
-          <div className="flex items-center gap-2 rounded-lg border border-dashed border-line bg-soft p-3 text-sm text-muted">
+        <CardContent className="border-t p-4">
+          <div className="flex items-center gap-2 rounded-lg border border-dashed bg-muted p-3 text-sm text-muted-foreground">
             <Terminal size={16} />
             等待运行
           </div>
-        </div>
+        </CardContent>
       )}
-    </section>
+    </Card>
   );
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-line bg-soft p-3">
-      <div className="text-xs text-muted">{label}</div>
+    <Card className="bg-muted p-3 shadow-none">
+      <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 truncate text-sm font-semibold">{value}</div>
-    </div>
+    </Card>
   );
 }

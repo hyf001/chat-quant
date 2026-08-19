@@ -13,6 +13,10 @@ import { Children, useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
 import type { AssetLink, ChatSession, SDKStreamEnvelope, SdkMessage } from "../../shared/api";
 import type { Components } from "react-markdown";
 import type { ReactNode } from "react";
@@ -294,16 +298,16 @@ export function ConversationShell({
     <section aria-label="对话线程">
       <div className="mx-auto w-full max-w-5xl space-y-6">
         {error ? (
-          <div className="flex items-start gap-3 rounded-md border-2 border-risk bg-riskSoft p-4 text-xs font-medium text-risk shadow-md">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-risk" />
+          <div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-xs font-medium text-destructive shadow-sm">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <span className="min-w-0 break-words">{error}</span>
           </div>
         ) : null}
 
         {isLoading ? (
-          <div className="rounded-md border border-line bg-panel/80 p-4 text-xs text-muted">
+          <Card className="p-4 text-xs text-muted-foreground">
             加载中
-          </div>
+          </Card>
         ) : null}
 
         {!isLoading && !session ? (
@@ -311,9 +315,9 @@ export function ConversationShell({
         ) : null}
 
         {session && timelineItems.length === 0 && !isStreaming ? (
-          <div className="rounded-md border border-dashed border-line bg-panel/80 p-5 text-xs leading-6 text-muted">
+          <Card className="border-dashed p-5 text-xs leading-6 text-muted-foreground">
             当前会话还没有消息。
-          </div>
+          </Card>
         ) : null}
 
         {timelineGroups.length > 0 || (isStreaming && session) || activityLabel ? (
@@ -387,21 +391,21 @@ export function ConversationShell({
         ) : null}
 
         {assets.length > 0 ? (
-          <div className="rounded-md border border-line bg-panel p-4 shadow-sm">
-            <div className="font-mono text-[10px] font-bold uppercase text-muted">
+          <Card className="p-4">
+            <div className="font-mono text-[10px] font-bold uppercase text-mutedText">
               会话资产
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {assets.slice(0, 4).map((asset) => (
-                <div className="rounded border border-line bg-soft p-3" key={asset.id}>
+                <Card className="rounded-md bg-muted p-3 shadow-none" key={asset.id}>
                   <div className="truncate text-xs font-bold text-ink">{asset.asset_id}</div>
-                  <div className="mt-1 text-xs text-muted">
+                  <div className="mt-1 text-xs text-mutedText">
                     {asset.asset_type} · {asset.relation_type}
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
-          </div>
+          </Card>
         ) : null}
 
       </div>
@@ -462,26 +466,27 @@ function NewTaskHome({
           {starterPrompts.map((item) => {
             const Icon = item.icon;
             return (
-              <button
-                className="flex min-h-32 flex-col items-start justify-between rounded-lg border border-line bg-panel p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-strong hover:shadow-lift focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:opacity-60"
+              <Button
+                className="flex h-auto min-h-32 flex-col items-start justify-between p-4 text-left"
                 disabled={isDisabled || !onPromptSelect}
                 key={item.label}
                 type="button"
+                variant="outline"
                 onClick={() => void onPromptSelect?.(item.prompt)}
               >
                 <span className="flex w-full items-center justify-between">
-                  <span className="grid h-8 w-8 place-items-center rounded-md border border-line bg-soft">
+                  <span className="grid h-8 w-8 place-items-center rounded-md border bg-muted">
                     <Icon className={`h-4 w-4 ${item.iconClass}`} />
                   </span>
-                  <span className="font-mono text-[10px] font-bold uppercase text-muted">
+                  <Badge className="font-mono text-[10px] uppercase" variant="secondary">
                     Start
-                  </span>
+                  </Badge>
                 </span>
                 <span className="grid gap-1.5">
                   <span className="text-sm font-semibold leading-5 text-ink">{item.label}</span>
-                  <span className="text-xs leading-5 text-muted">{item.description}</span>
+                  <span className="text-xs leading-5 text-mutedText">{item.description}</span>
                 </span>
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -545,7 +550,7 @@ function timelineStageLabel(tone: TimelineStageTone): string {
 
 function ActivityHint({ label }: { label: string }) {
   return (
-    <div className="pl-6 text-xs text-muted">
+    <div className="pl-6 text-xs text-mutedText">
       <span className="inline-flex items-center gap-2">
         <span className="activity-dot" aria-hidden="true" />
         {label}
@@ -562,7 +567,7 @@ function TurnStatusEntry({
   isStreaming: boolean;
 }) {
   return (
-    <div className="flex justify-end text-xs text-muted">
+    <div className="flex justify-end text-xs text-mutedText">
       <span className="inline-flex items-center gap-1">
         {isStreaming ? "处理中" : "已处理"} {elapsedLabel}
         <ChevronDown className="h-3.5 w-3.5" />
@@ -659,7 +664,7 @@ function ThinkingEntry({
             )}
             {thinkingSummary(thinking)}
           </span>
-          <span className="flex shrink-0 items-center gap-2 text-xs text-muted">
+          <span className="flex shrink-0 items-center gap-2 text-xs text-mutedText">
             {thinking ? formatElapsed(thinking.startedAt, thinking.completedAt) : "进行中"}
             <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
           </span>
@@ -718,7 +723,7 @@ function ToolGroupEntry({
             {toolGroup.calls.length === 1 ? (
               <span
                 className={`truncate ${
-                  toolGroup.status === "failed" ? "text-risk" : "text-muted"
+                  toolGroup.status === "failed" ? "text-risk" : "text-mutedText"
                 }`}
               >
                 {firstToolCall.command}
@@ -735,7 +740,7 @@ function ToolGroupEntry({
             </span>
             <ChevronDown
               className={`h-4 w-4 transition-transform group-open/tool-group:rotate-180 ${
-                toolGroup.status === "failed" ? "text-risk" : "text-muted"
+                toolGroup.status === "failed" ? "text-risk" : "text-mutedText"
               }`}
             />
           </span>
@@ -761,7 +766,7 @@ function ToolCallDisclosure({ toolCall }: { toolCall: ToolCallView }) {
         <span className="shrink-0 whitespace-nowrap font-bold text-ink" title={toolCall.name}>
           {toolCall.name}
         </span>
-        <span className="min-w-0 flex-1 truncate text-muted" title={toolCall.command}>
+        <span className="min-w-0 flex-1 truncate text-mutedText" title={toolCall.command}>
           {toolCall.command}
         </span>
         <span className="ml-auto flex shrink-0 items-center gap-2">
@@ -772,7 +777,7 @@ function ToolCallDisclosure({ toolCall }: { toolCall: ToolCallView }) {
           >
             {toolStatusLabel(toolCall.status)}
           </span>
-          <ChevronDown className="h-4 w-4 text-muted transition-transform group-open/tool-call:rotate-180" />
+          <ChevronDown className="h-4 w-4 text-mutedText transition-transform group-open/tool-call:rotate-180" />
         </span>
       </summary>
       <ToolCallDetail toolCall={toolCall} />
@@ -784,7 +789,7 @@ function ToolCallDetail({ toolCall }: { toolCall: ToolCallView }) {
   return (
     <div className="grid gap-3 border-t border-line bg-ink p-3 font-mono text-xs text-panel">
       <div>
-        <span className="text-[10px] font-bold uppercase text-muted">Input</span>
+        <span className="text-[10px] font-bold uppercase text-mutedText">Input</span>
         <pre className="mt-0.5 whitespace-pre-wrap break-words text-panel/80">
           {toolCall.command}
         </pre>
@@ -792,7 +797,7 @@ function ToolCallDetail({ toolCall }: { toolCall: ToolCallView }) {
       <div>
         <span
           className={`text-[10px] font-bold uppercase ${
-            toolCall.status === "failed" ? "text-risk" : "text-muted"
+            toolCall.status === "failed" ? "text-risk" : "text-mutedText"
           }`}
         >
           {toolCall.status === "failed" ? "Stderr Output" : "Output"}
@@ -806,7 +811,7 @@ function ToolCallDetail({ toolCall }: { toolCall: ToolCallView }) {
             {toolCall.detail}
           </pre>
         ) : (
-          <pre className="mt-0.5 text-muted">
+          <pre className="mt-0.5 text-mutedText">
             {toolCall.status === "running" ? "Running..." : "No output"}
           </pre>
         )}

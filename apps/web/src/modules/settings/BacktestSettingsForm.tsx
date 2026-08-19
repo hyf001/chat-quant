@@ -1,6 +1,8 @@
 import { Loader2, RefreshCw, Save } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+
 import {
   listDatasets,
   queryDatasets,
@@ -149,9 +151,10 @@ export function BacktestSettingsForm({
   return (
     <div className="grid gap-5">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-line bg-soft px-3 py-2">
-        <div className="text-xs text-muted">Backtrader 回测只从平台数据集读取行情和基准。</div>
-        <button
-          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:opacity-60"
+        <div className="text-xs text-mutedText">Backtrader 回测只从平台数据集读取行情和基准。</div>
+        <Button
+          size="sm"
+          variant="outline"
           type="button"
           disabled={isLoading}
           onClick={() => void loadDatasets()}
@@ -162,7 +165,7 @@ export function BacktestSettingsForm({
             <RefreshCw className="h-3.5 w-3.5" />
           )}
           刷新
-        </button>
+        </Button>
       </div>
 
       <FormSection
@@ -312,14 +315,15 @@ function FieldSelect({
 
 function SaveButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button
-      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+    <Button
+      size="sm"
+      variant="outline"
       type="button"
       onClick={onClick}
     >
       <Save className="h-3.5 w-3.5" />
       {label}
-    </button>
+    </Button>
   );
 }
 

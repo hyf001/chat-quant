@@ -1,6 +1,8 @@
 import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+
 import { listSystemLogs, type AppSettings, type LogCategory, type LogEntry } from "../../shared/api";
 import { FormSection, SelectField } from "./SettingsFields";
 
@@ -75,15 +77,17 @@ export function LoggingSettingsForm({
             options={logCategoryOptions}
             onChange={(category) => setActiveLogCategory(category as LogCategory)}
           />
-          <button
-            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+          <Button
+            className="h-10"
+            size="sm"
+            variant="outline"
             type="button"
             disabled={isLoadingLogs}
             onClick={() => void loadLogs(activeLogCategory)}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isLoadingLogs ? "animate-spin" : ""}`} />
             刷新
-          </button>
+          </Button>
         </div>
         <LogPanel
           logs={logs}

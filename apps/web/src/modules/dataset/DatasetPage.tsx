@@ -15,6 +15,39 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea as UiTextarea } from "@/components/ui/textarea";
+import { notify, type ToastTone } from "@/shared/notify";
+
+import {
   createDataset,
   deleteDataset,
   getDataset,
@@ -47,11 +80,6 @@ type DatasetForm = {
   topicEn: string;
   exposedToAgent: boolean;
   createSql: string;
-};
-
-type ToastState = {
-  message: string;
-  tone: "success" | "error" | "info";
 };
 
 const emptyForm: DatasetForm = {
@@ -105,8 +133,6 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
     useState<DatasetNamingOptionsResponse>(defaultNamingOptions);
   const [isSourcesLoading, setIsSourcesLoading] = useState(false);
   const [isQuerying, setIsQuerying] = useState(false);
-  const [toast, setToast] = useState<ToastState | null>(null);
-
   const filteredDatasets = useMemo(() => {
     const keyword = query.trim().toLowerCase();
     if (!keyword) {
@@ -129,8 +155,8 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
   const selectedDataset =
     datasets.find((dataset) => dataset.id === selectedId) ?? filteredDatasets[0] ?? null;
 
-  const showToast = useCallback((message: string, tone: ToastState["tone"] = "info") => {
-    setToast({ message, tone });
+  const showToast = useCallback((message: string, tone: ToastTone = "info") => {
+    notify(message, tone);
   }, []);
 
   const loadDatasets = useCallback(async (preferredId?: string | null) => {
@@ -207,18 +233,9 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
     }
   }, [loadDetail, selectedDataset?.id]);
 
-  useEffect(() => {
-    if (!toast) {
-      return undefined;
-    }
-    const timeoutId = window.setTimeout(() => setToast(null), 2600);
-    return () => window.clearTimeout(timeoutId);
-  }, [toast]);
-
   const handleOpenCreate = () => {
     setForm(emptyForm);
     setIsCreateOpen(true);
-    setToast(null);
   };
 
   const handleOpenDetail = async (dataset: Dataset) => {
@@ -271,7 +288,7 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
   };
 
   const handleDelete = async () => {
-    if (!detail || !window.confirm(`删除数据集“${detail.name_zh || detail.name}”？`)) {
+    if (!detail) {
       return;
     }
     setIsSubmitting(true);
@@ -313,8 +330,6 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
       className={`flex w-full min-w-0 flex-col gap-3 ${embedded ? "" : "h-full"}`}
       aria-label="数据集"
     >
-      {toast ? <DatasetToast toast={toast} /> : null}
-
       <div
         className={`grid min-h-0 gap-3 transition-[grid-template-columns] duration-200 ${
           isDatasetListCollapsed
@@ -334,11 +349,12 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
               {isDatasetListCollapsed ? null : (
                 <div className="min-w-0">
                   <h2 className="truncate text-sm font-semibold text-ink">数据集</h2>
-                  <p className="mt-0.5 truncate text-xs text-muted">DuckDB views · {datasets.length}</p>
+                  <p className="mt-0.5 truncate text-xs text-mutedText">DuckDB views · {datasets.length}</p>
                 </div>
               )}
-              <button
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+              <Button
+                size="iconSm"
+                variant="outline"
                 type="button"
                 title={isDatasetListCollapsed ? "展开数据集列表" : "收起数据集列表"}
                 aria-label={isDatasetListCollapsed ? "展开数据集列表" : "收起数据集列表"}
@@ -349,7 +365,7 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
                 ) : (
                   <ChevronLeft className="h-3.5 w-3.5" />
                 )}
-              </button>
+              </Button>
             </div>
             {isDatasetListCollapsed ? (
               <div
@@ -368,19 +384,20 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
                     disabled={isLoading}
                     onClick={() => void loadDatasets(selectedId)}
                   />
-                  <button
-                    className="inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite focus:outline-none focus:ring-2 focus:ring-signal/25"
+                  <Button
+                    className="min-w-0 flex-1"
+                    size="sm"
                     type="button"
                     onClick={handleOpenCreate}
                   >
                     <FilePlus2 className="h-4 w-4 shrink-0" />
                     <span className="truncate">新建数据集</span>
-                  </button>
+                  </Button>
                 </div>
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
-                  <input
-                    className="h-9 w-full rounded-md border border-line bg-panel pl-8 pr-3 text-xs text-ink outline-none placeholder:text-muted/70 focus:border-signal"
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-mutedText" />
+                  <Input
+                    className="h-9 pl-8 text-xs"
                     placeholder="搜索数据集"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
@@ -416,13 +433,13 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
                           <span className="block truncate text-sm font-semibold text-ink">
                             {dataset.name_zh || dataset.name}
                           </span>
-                          <span className="mt-1 block truncate font-mono text-[10px] text-muted">
+                          <span className="mt-1 block truncate font-mono text-[10px] text-mutedText">
                             {dataset.name}
                           </span>
                         </span>
                       </button>
                       <button
-                        className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-line bg-soft px-2 text-[10px] font-semibold text-muted transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+                        className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-line bg-soft px-2 text-[10px] font-semibold text-mutedText transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
                         type="button"
                         onClick={() => void handleOpenDetail(dataset)}
                       >
@@ -459,39 +476,43 @@ export function DatasetPage({ embedded = false }: DatasetPageProps) {
         <section className="flex min-h-0 flex-col rounded-lg border border-line bg-panel shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-3">
             <div className="min-w-0">
-              <div className="font-mono text-[10px] font-bold uppercase text-muted">SQL</div>
+              <div className="font-mono text-[10px] font-bold uppercase text-mutedText">SQL</div>
               <h2 className="mt-1 truncate text-base font-semibold text-ink">查询数据</h2>
             </div>
             <div className="flex items-center gap-2">
-              <select
-                className="h-9 rounded-md border border-line bg-panel px-2 text-xs text-ink outline-none focus:border-signal"
-                value={pageSize}
-                onChange={(event) => {
-                  setPageSize(Number(event.target.value));
+              <Select
+                value={String(pageSize)}
+                onValueChange={(value) => {
+                  setPageSize(Number(value));
                   setPage(1);
                 }}
               >
-                {[20, 50, 100, 200].map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-              <button
-                className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite focus:outline-none focus:ring-2 focus:ring-signal/25 disabled:cursor-not-allowed disabled:bg-strong"
+                <SelectTrigger className="h-9 w-20 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[20, 50, 100, 200].map((size) => (
+                    <SelectItem key={size} value={String(size)}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
                 type="button"
                 disabled={isQuerying}
                 onClick={() => void handleRunQuery(1)}
               >
                 {isQuerying ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                 执行
-              </button>
+              </Button>
             </div>
           </div>
           <div className="grid min-h-0 flex-1 grid-rows-[220px_minmax(0,1fr)]">
             <div className="border-b border-line p-3">
-              <textarea
-                className="h-full w-full resize-none rounded-md border border-line bg-soft p-3 font-mono text-xs leading-5 text-ink outline-none focus:border-signal"
+              <UiTextarea
+                className="h-full resize-none bg-muted font-mono text-xs leading-5"
                 spellCheck={false}
                 value={sql}
                 onChange={(event) => setSql(event.target.value)}
@@ -589,35 +610,21 @@ function DatasetDialog({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/45 px-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="新建数据集"
-    >
-      <div className="flex max-h-[calc(100vh-48px)] w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-line p-4">
-          <div className="min-w-0">
-            <div className="font-mono text-[10px] font-bold uppercase text-signal">Dataset</div>
-            <h2 className="mt-1 truncate text-base font-semibold text-ink">新建数据集</h2>
-          </div>
-          <button
-            className="grid h-8 w-8 place-items-center rounded-md text-muted transition-colors hover:bg-soft hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
-            type="button"
-            aria-label="关闭"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex max-h-[calc(100vh-48px)] max-w-6xl flex-col overflow-hidden p-0">
+        <DialogHeader className="border-b p-4">
+          <div className="font-mono text-[10px] font-bold uppercase text-accent">Dataset</div>
+          <DialogTitle className="truncate text-base">新建数据集</DialogTitle>
+          <DialogDescription className="sr-only">创建 DuckDB view 数据集</DialogDescription>
+        </DialogHeader>
         <div className="grid min-h-0 gap-4 overflow-y-auto p-4 lg:grid-cols-[280px_minmax(0,0.85fr)_minmax(0,1.15fr)]">
           <section className="flex min-h-0 flex-col rounded-lg border border-line bg-soft">
             <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
               <div className="min-w-0">
-                <div className="font-mono text-[10px] font-bold uppercase text-muted">Sources</div>
+                <div className="font-mono text-[10px] font-bold uppercase text-mutedText">Sources</div>
                 <div className="truncate text-xs font-semibold text-ink">数据源样例</div>
               </div>
-              <RefreshCw className={`h-3.5 w-3.5 text-muted ${isSourcesLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-3.5 w-3.5 text-mutedText ${isSourcesLoading ? "animate-spin" : ""}`} />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-2">
               {isSourcesLoading ? <Notice text="数据源加载中" /> : null}
@@ -638,12 +645,12 @@ function DatasetDialog({
                         <span className="block truncate text-xs font-semibold text-ink">
                           {source.name}
                         </span>
-                        <span className="mt-0.5 block truncate font-mono text-[10px] text-muted">
+                        <span className="mt-0.5 block truncate font-mono text-[10px] text-mutedText">
                           {source.id}
                         </span>
                       </span>
                     </div>
-                    <div className="mt-2 truncate font-mono text-[10px] text-muted">
+                    <div className="mt-2 truncate font-mono text-[10px] text-mutedText">
                       {source.storage.path}
                     </div>
                     <pre className="mt-2 max-h-20 overflow-hidden rounded bg-soft p-2 font-mono text-[10px] leading-4 text-graphite">
@@ -669,15 +676,13 @@ function DatasetDialog({
               onChange={(description) => onChange({ ...form, description })}
             />
             <ReadOnlyField label="分类路径" value={generated.categoryPathText} />
-            <label className="flex items-center justify-between rounded-md border border-line bg-soft px-3 py-2 text-xs">
-              <span className="font-semibold text-ink">暴露给智能体</span>
-              <input
-                className="h-4 w-4 accent-ink"
-                type="checkbox"
+            <Label className="flex items-center justify-between rounded-md border bg-muted px-3 py-2">
+              <span>暴露给智能体</span>
+              <Switch
                 checked={form.exposedToAgent}
-                onChange={(event) => onChange({ ...form, exposedToAgent: event.target.checked })}
+                onCheckedChange={(exposedToAgent) => onChange({ ...form, exposedToAgent })}
               />
-            </label>
+            </Label>
           </div>
           <Textarea
             label="CREATE VIEW"
@@ -686,27 +691,28 @@ function DatasetDialog({
             onChange={(createSql) => onChange({ ...form, createSql })}
           />
         </div>
-        <div className="flex justify-end gap-2 border-t border-line p-4">
-          <button
-            className="inline-flex h-9 items-center gap-2 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-strong hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+        <DialogFooter className="border-t p-4">
+          <Button
+            size="sm"
+            variant="outline"
             type="button"
             onClick={onClose}
           >
             <X className="h-4 w-4" />
             取消
-          </button>
-          <button
-            className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite focus:outline-none focus:ring-2 focus:ring-signal/25 disabled:cursor-not-allowed disabled:bg-strong"
+          </Button>
+          <Button
+            size="sm"
             type="button"
             disabled={isSubmitting}
             onClick={onSubmit}
           >
             {isSubmitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             创建
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -734,29 +740,15 @@ function DatasetMetadataDialog({
   const generated = generatedNaming(draft);
 
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/45 px-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="数据集详情"
-    >
-      <div className="flex max-h-[calc(100vh-48px)] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-line p-4">
-          <div className="min-w-0">
-            <div className="font-mono text-[10px] font-bold uppercase text-muted">Metadata</div>
-            <h2 className="mt-1 truncate text-base font-semibold text-ink">
-              {detail?.name_zh || detail?.name || "数据集详情"}
-            </h2>
-          </div>
-          <button
-            className="grid h-8 w-8 place-items-center rounded-md text-muted transition-colors hover:bg-soft hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
-            type="button"
-            aria-label="关闭"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex max-h-[calc(100vh-48px)] max-w-3xl flex-col overflow-hidden p-0">
+        <DialogHeader className="border-b p-4">
+          <div className="font-mono text-[10px] font-bold uppercase text-muted-foreground">Metadata</div>
+          <DialogTitle className="truncate text-base">
+            {detail?.name_zh || detail?.name || "数据集详情"}
+          </DialogTitle>
+          <DialogDescription className="sr-only">数据集元数据详情</DialogDescription>
+        </DialogHeader>
 
         <div className="min-h-0 overflow-y-auto p-4">
           {isLoading ? <Notice text="详情加载中" /> : null}
@@ -789,20 +781,18 @@ function DatasetMetadataDialog({
                 }
               />
               <ReadOnlyField label="分类路径" value={generated.categoryPathText} />
-              <label className="flex items-center justify-between rounded-md border border-line bg-soft px-3 py-2 text-xs">
-                <span className="font-semibold text-ink">暴露给智能体</span>
-                <input
-                  className="h-4 w-4 accent-ink"
-                  type="checkbox"
+              <Label className="flex items-center justify-between rounded-md border bg-muted px-3 py-2">
+                <span>暴露给智能体</span>
+                <Switch
                   checked={draft.exposedToAgent}
-                  onChange={(event) =>
+                  onCheckedChange={(exposedToAgent) =>
                     onChange({
                       ...draft,
-                      exposedToAgent: event.target.checked,
+                      exposedToAgent,
                     })
                   }
                 />
-              </label>
+              </Label>
               <Textarea label="CREATE VIEW" value={detail.create_sql} rows={10} readOnly />
             </div>
           ) : (
@@ -810,38 +800,62 @@ function DatasetMetadataDialog({
           )}
         </div>
 
-        <div className="flex flex-wrap justify-between gap-2 border-t border-line p-4">
-          <button
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-risk/25 bg-riskSoft px-3 text-xs font-semibold text-risk transition-colors hover:border-risk/50 disabled:cursor-not-allowed disabled:opacity-60"
-            type="button"
-            disabled={!detail || isSubmitting}
-            onClick={onDelete}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            删除
-          </button>
+        <DialogFooter className="justify-between border-t p-4 sm:justify-between">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="destructive"
+                type="button"
+                disabled={!detail || isSubmitting}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                删除
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  删除数据集“{detail?.name_zh || detail?.name}”？
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  删除后该数据集会从平台中移除，相关查询和智能体引用将无法继续使用。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>取消</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={onDelete}
+                >
+                  删除
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <div className="flex items-center gap-2">
-            <button
-              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+            <Button
+              size="sm"
+              variant="outline"
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
             >
               关闭
-            </button>
-            <button
-              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-60"
+            </Button>
+            <Button
+              size="sm"
               type="button"
               disabled={!detail || isSubmitting}
               onClick={onSave}
             >
               {isSubmitting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
               保存
-            </button>
+            </Button>
           </div>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -865,12 +879,12 @@ function QueryResultTable({
   return (
     <div className="flex min-h-0 flex-col">
       <div className="flex items-center justify-between gap-3 border-b border-line px-3 py-2">
-        <div className="truncate font-mono text-[10px] font-bold text-muted">
+        <div className="truncate font-mono text-[10px] font-bold text-mutedText">
           {result.total} rows · page {result.page}/{Math.max(1, result.total_pages)}
         </div>
         <div className="flex items-center gap-2">
           <button
-            className="h-7 rounded-md border border-line px-2 text-xs font-semibold text-graphite transition-colors hover:border-strong hover:text-ink disabled:cursor-not-allowed disabled:text-muted"
+            className="h-7 rounded-md border border-line px-2 text-xs font-semibold text-graphite transition-colors hover:border-strong hover:text-ink disabled:cursor-not-allowed disabled:text-mutedText"
             type="button"
             disabled={result.page <= 1 || isLoading}
             onClick={onPrev}
@@ -878,7 +892,7 @@ function QueryResultTable({
             上一页
           </button>
           <button
-            className="h-7 rounded-md border border-line px-2 text-xs font-semibold text-graphite transition-colors hover:border-strong hover:text-ink disabled:cursor-not-allowed disabled:text-muted"
+            className="h-7 rounded-md border border-line px-2 text-xs font-semibold text-graphite transition-colors hover:border-strong hover:text-ink disabled:cursor-not-allowed disabled:text-mutedText"
             type="button"
             disabled={result.page >= result.total_pages || result.total_pages === 0 || isLoading}
             onClick={onNext}
@@ -889,7 +903,7 @@ function QueryResultTable({
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         <table className="min-w-full border-separate border-spacing-0 text-left text-xs">
-          <thead className="sticky top-0 z-10 bg-soft text-[10px] uppercase text-muted">
+          <thead className="sticky top-0 z-10 bg-soft text-[10px] uppercase text-mutedText">
             <tr>
               {result.columns.map((column) => (
                 <th className="border-b border-line px-3 py-2 font-mono font-bold" key={column.name}>
@@ -901,7 +915,7 @@ function QueryResultTable({
           <tbody>
             {result.rows.length === 0 ? (
               <tr>
-                <td className="px-3 py-6 text-center text-muted" colSpan={Math.max(1, result.columns.length)}>
+                <td className="px-3 py-6 text-center text-mutedText" colSpan={Math.max(1, result.columns.length)}>
                   无数据
                 </td>
               </tr>
@@ -990,26 +1004,29 @@ function SelectField({
   onChange: (option: DatasetNamingOption) => void;
 }) {
   return (
-    <label className="grid gap-1.5">
-      <span className="font-mono text-[10px] font-bold uppercase text-muted">{label}</span>
-      <select
-        className="h-9 rounded-md border border-line bg-panel px-3 text-xs text-ink outline-none focus:border-signal"
+    <Label className="grid gap-1.5">
+      <span className="font-mono text-[10px] font-bold uppercase text-mutedText">{label}</span>
+      <Select
         value={value}
-        onChange={(event) => {
-          const option =
-            options.find((item) => item.value === event.target.value) ?? options[0];
+        onValueChange={(nextValue) => {
+          const option = options.find((item) => item.value === nextValue) ?? options[0];
           if (option) {
             onChange(option);
           }
         }}
       >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
+        <SelectTrigger className="h-9 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </Label>
   );
 }
 
@@ -1023,14 +1040,14 @@ function TextField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="grid gap-1.5">
-      <span className="font-mono text-[10px] font-bold uppercase text-muted">{label}</span>
-      <input
-        className="h-9 rounded-md border border-line bg-panel px-3 text-xs text-ink outline-none placeholder:text-muted/70 focus:border-signal"
+    <Label className="grid gap-1.5">
+      <span className="font-mono text-[10px] font-bold uppercase text-mutedText">{label}</span>
+      <Input
+        className="h-9 text-xs"
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
-    </label>
+    </Label>
   );
 }
 
@@ -1046,15 +1063,15 @@ function DescriptionField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="grid gap-1.5">
-      <span className="font-mono text-[10px] font-bold uppercase text-muted">{label}</span>
-      <textarea
-        className="w-full resize-none rounded-md border border-line bg-panel p-3 text-xs leading-5 text-ink outline-none placeholder:text-muted/70 focus:border-signal"
+    <Label className="grid gap-1.5">
+      <span className="font-mono text-[10px] font-bold uppercase text-mutedText">{label}</span>
+      <UiTextarea
+        className="resize-none text-xs leading-5"
         rows={rows}
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
-    </label>
+    </Label>
   );
 }
 
@@ -1072,24 +1089,24 @@ function Textarea({
   onChange?: (value: string) => void;
 }) {
   return (
-    <label className="grid gap-1.5">
-      <span className="font-mono text-[10px] font-bold uppercase text-muted">{label}</span>
-      <textarea
-        className="w-full resize-none rounded-md border border-line bg-soft p-3 font-mono text-xs leading-5 text-ink outline-none focus:border-signal disabled:text-muted"
+    <Label className="grid gap-1.5">
+      <span className="font-mono text-[10px] font-bold uppercase text-mutedText">{label}</span>
+      <UiTextarea
+        className="resize-none bg-muted font-mono text-xs leading-5"
         readOnly={readOnly}
         rows={rows}
         spellCheck={false}
         value={value}
         onChange={(event) => onChange?.(event.target.value)}
       />
-    </label>
+    </Label>
   );
 }
 
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-1.5">
-      <div className="font-mono text-[10px] font-bold uppercase text-muted">{label}</div>
+      <div className="font-mono text-[10px] font-bold uppercase text-mutedText">{label}</div>
       <div className="truncate rounded-md border border-line bg-soft px-3 py-2 font-mono text-xs text-ink">
         {value}
       </div>
@@ -1111,12 +1128,10 @@ function IconAction({
   onClick: () => void;
 }) {
   return (
-    <button
-      className={`grid h-9 w-9 place-items-center rounded-md border transition-colors focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:opacity-50 ${
-        danger
-          ? "border-risk/25 bg-riskSoft text-risk hover:border-risk/50"
-          : "border-line bg-soft text-ink hover:border-strong hover:bg-panel"
-      }`}
+    <Button
+      className={danger ? "text-destructive hover:text-destructive" : undefined}
+      size="icon"
+      variant="outline"
       type="button"
       aria-label={label}
       title={label}
@@ -1124,32 +1139,13 @@ function IconAction({
       onClick={onClick}
     >
       {icon}
-    </button>
-  );
-}
-
-function DatasetToast({ toast }: { toast: ToastState }) {
-  const toneClass =
-    toast.tone === "success"
-      ? "border-brand/25 bg-gainSoft text-brand"
-      : toast.tone === "error"
-        ? "border-risk/25 bg-riskSoft text-risk"
-        : "border-line bg-panel text-muted";
-
-  return (
-    <div
-      className={`fixed right-4 top-4 z-50 max-w-sm rounded-md border px-3 py-2 text-xs font-medium shadow-xl ${toneClass}`}
-      role="status"
-      aria-live="polite"
-    >
-      {toast.message}
-    </div>
+    </Button>
   );
 }
 
 function Notice({ text }: { text: string }) {
   return (
-    <div className="m-3 rounded-md border border-dashed border-line bg-soft px-3 py-5 text-center text-xs text-muted">
+    <div className="m-3 rounded-md border border-dashed border-line bg-soft px-3 py-5 text-center text-xs text-mutedText">
       {text}
     </div>
   );

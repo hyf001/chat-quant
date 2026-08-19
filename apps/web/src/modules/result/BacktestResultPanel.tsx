@@ -8,6 +8,16 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
 import type { BacktestDetail, CurvePoint } from "../../shared/types/backtests";
 
 type BacktestResultPanelProps = {
@@ -34,13 +44,13 @@ export function BacktestResultPanel({
     <section className="grid gap-4" aria-label="回测结果">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-xs font-semibold uppercase text-muted">M6 Backtest</div>
+          <div className="text-xs font-semibold uppercase text-mutedText">M6 Backtest</div>
           <h2 className="mt-1 truncate text-base font-semibold text-ink">{backtestTitle(detail)}</h2>
         </div>
       </div>
 
       {error ? (
-        <div className="rounded-lg border border-risk/40 bg-risk/5 px-3 py-2 text-sm text-risk">
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
           {error}
         </div>
       ) : null}
@@ -71,62 +81,64 @@ export function BacktestResultPanel({
       </div>
 
       {detail ? (
-      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="grid gap-4 md:grid-cols-2">
-          {equityCurve ? (
-            <ChartBlock
-              title="收益曲线"
-              icon={<LineChart size={16} />}
-              points={equityCurve.points}
-              valueKey="normalized_value"
-              tone="gain"
-            />
-          ) : null}
-          {drawdownCurve ? (
-            <ChartBlock
-              title="回撤曲线"
-              icon={<BarChart3 size={16} />}
-              points={drawdownCurve.points}
-              valueKey="value"
-              tone="risk"
-            />
-          ) : null}
-        </div>
+        <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="grid gap-4 md:grid-cols-2">
+            {equityCurve ? (
+              <ChartBlock
+                title="收益曲线"
+                icon={<LineChart size={16} />}
+                points={equityCurve.points}
+                valueKey="normalized_value"
+                tone="gain"
+              />
+            ) : null}
+            {drawdownCurve ? (
+              <ChartBlock
+                title="回撤曲线"
+                icon={<BarChart3 size={16} />}
+                points={drawdownCurve.points}
+                valueKey="value"
+                tone="risk"
+              />
+            ) : null}
+          </div>
 
-        <div className="rounded-lg border border-line bg-panel p-3">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="text-sm font-semibold">交易明细</div>
-            <div className="text-xs text-muted">{metrics?.total_trades ?? 0} 笔</div>
-          </div>
-          <div className="overflow-hidden rounded-lg border border-line">
-            <table className="w-full table-fixed border-collapse text-left text-xs">
-              <thead className="bg-soft text-muted">
-                <tr>
-                  <th className="px-2 py-2 font-medium">标的</th>
-                  <th className="px-2 py-2 font-medium">方向</th>
-                  <th className="px-2 py-2 font-medium">盈亏</th>
-                </tr>
-              </thead>
-              <tbody>
-                {detail.trades.slice(0, 4).map((trade) => (
-                  <tr className="border-t border-line" key={trade.id}>
-                    <td className="truncate px-2 py-2">{trade.symbol}</td>
-                    <td className="px-2 py-2">{trade.side === "buy" ? "买入" : "卖出"}</td>
-                    <td className={Number(trade.pnl) >= 0 ? "px-2 py-2 text-brand" : "px-2 py-2 text-risk"}>
-                      {formatCurrency(trade.pnl)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {detail.trades.length === 0 ? (
-            <div className="mt-3 rounded-lg border border-dashed border-line bg-soft p-3 text-xs text-muted">
-              暂无交易明细
-            </div>
-          ) : null}
+          <Card>
+            <CardHeader className="flex-row items-center justify-between gap-3 p-3">
+              <CardTitle className="text-sm">交易明细</CardTitle>
+              <div className="text-xs text-mutedText">{metrics?.total_trades ?? 0} 笔</div>
+            </CardHeader>
+            <CardContent className="p-3 pt-0">
+              <div className="overflow-hidden rounded-lg border border-line">
+                <Table className="table-fixed text-xs">
+                  <TableHeader className="bg-soft text-mutedText">
+                    <TableRow>
+                      <TableHead>标的</TableHead>
+                      <TableHead>方向</TableHead>
+                      <TableHead>盈亏</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {detail.trades.slice(0, 4).map((trade) => (
+                      <TableRow key={trade.id}>
+                        <TableCell className="truncate">{trade.symbol}</TableCell>
+                        <TableCell>{trade.side === "buy" ? "买入" : "卖出"}</TableCell>
+                        <TableCell className={Number(trade.pnl) >= 0 ? "text-brand" : "text-risk"}>
+                          {formatCurrency(trade.pnl)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {detail.trades.length === 0 ? (
+                <div className="mt-3 rounded-lg border border-dashed border-line bg-soft p-3 text-xs text-mutedText">
+                  暂无交易明细
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
         </div>
-      </div>
       ) : null}
     </section>
   );
@@ -146,11 +158,11 @@ function MetricCard({ label, value, tone = "neutral", icon }: MetricCardProps) {
     tone === "gain" ? "text-brand" : tone === "risk" ? "text-risk" : "text-brandBlue";
 
   return (
-    <div className="rounded-lg border border-line bg-panel p-3">
+    <Card className="p-3">
       <div className={`mb-2 inline-flex items-center ${toneClass}`}>{icon}</div>
-      <div className="text-xs text-muted">{label}</div>
+      <div className="text-xs text-mutedText">{label}</div>
       <div className="mt-1 truncate text-xl font-semibold text-ink">{value}</div>
-    </div>
+    </Card>
   );
 }
 
@@ -168,7 +180,7 @@ function ChartBlock({
   tone: "gain" | "risk";
 }) {
   return (
-    <div className="rounded-lg border border-line bg-panel p-3">
+    <Card className="p-3">
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
         <span className={tone === "gain" ? "text-brand" : "text-risk"}>{icon}</span>
         {title}
@@ -186,7 +198,7 @@ function ChartBlock({
           strokeWidth="3"
         />
       </svg>
-    </div>
+    </Card>
   );
 }
 

@@ -14,11 +14,43 @@ import {
   Tag,
   Trash2,
   UploadCloud,
-  X,
 } from "lucide-react";
 import * as echarts from "echarts";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { EChartsOption } from "echarts";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog as UiDialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input as UiInput } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select as UiSelect,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea as UiTextarea } from "@/components/ui/textarea";
+import { notify } from "@/shared/notify";
 
 import {
   backtestStrategy,
@@ -230,7 +262,11 @@ export function StrategyList({ project }: StrategyListProps) {
   const [runningBacktestKey, setRunningBacktestKey] = useState<string | null>(null);
   const [switchingVersionId, setSwitchingVersionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+
+  const showError = useCallback((message: string) => {
+    setError(message);
+    notify(message, "error");
+  }, []);
 
   const filteredStrategies = useMemo(() => {
     const text = query.trim().toLowerCase();
@@ -258,12 +294,12 @@ export function StrategyList({ project }: StrategyListProps) {
       setStrategies(nextStrategies);
       return nextStrategies;
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "策略列表加载失败");
+      showError(caught instanceof Error ? caught.message : "策略列表加载失败");
       return [];
     } finally {
       setIsLoading(false);
     }
-  }, [project]);
+  }, [project, showError]);
 
   useEffect(() => {
     void loadStrategies();
@@ -273,12 +309,10 @@ export function StrategyList({ project }: StrategyListProps) {
     setForm(newStrategyForm());
     setDialog({ kind: "create" });
     setError(null);
-    setNotice(null);
   };
 
   const openEditDialog = async (strategy: StrategySummary) => {
     setError(null);
-    setNotice(null);
     setPendingStrategyId(strategy.strategy_id);
     try {
       const latestStrategies = await loadStrategies();
@@ -301,7 +335,7 @@ export function StrategyList({ project }: StrategyListProps) {
       });
       setDialog({ kind: "edit", strategy: latestStrategy, currentVersion, record: detail.strategy });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "策略详情加载失败");
+      showError(caught instanceof Error ? caught.message : "策略详情加载失败");
     } finally {
       setPendingStrategyId(null);
     }
@@ -309,7 +343,6 @@ export function StrategyList({ project }: StrategyListProps) {
 
   const openVersionDialog = async (strategy: StrategySummary) => {
     setError(null);
-    setNotice(null);
     const latestStrategies = await loadStrategies();
     const latestStrategy =
       latestStrategies.find((item) => item.strategy_id === strategy.strategy_id) ??
@@ -335,7 +368,6 @@ export function StrategyList({ project }: StrategyListProps) {
       error: null,
     });
     setError(null);
-    setNotice(null);
     try {
       const latestStrategies = await loadStrategies();
       const latestStrategy =
@@ -381,7 +413,6 @@ export function StrategyList({ project }: StrategyListProps) {
       error: null,
     });
     setError(null);
-    setNotice(null);
     try {
       const latestStrategies = await loadStrategies();
       const latestStrategy =
@@ -410,12 +441,12 @@ export function StrategyList({ project }: StrategyListProps) {
 
   const handleCreate = async () => {
     if (!project) {
-      setError("请先创建或选择项目");
+      showError("请先创建或选择项目");
       return;
     }
     const payload = buildCreatePayload(form);
     if (!payload.ok) {
-      setError(payload.message);
+      showError(payload.message);
       return;
     }
 
@@ -424,10 +455,10 @@ export function StrategyList({ project }: StrategyListProps) {
     try {
       await createStrategy(payload.value, project.id);
       setDialog(null);
-      setNotice("策略已创建");
+      notify("策略已创建", "success");
       await loadStrategies();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "创建策略失败");
+      showError(caught instanceof Error ? caught.message : "创建策略失败");
     } finally {
       setIsSubmitting(false);
     }
@@ -439,12 +470,12 @@ export function StrategyList({ project }: StrategyListProps) {
     }
     const name = form.name.trim();
     if (!name) {
-      setError("策略名称不能为空");
+      showError("策略名称不能为空");
       return;
     }
     const versionPayload = buildVersionPayload(form);
     if (!versionPayload.ok) {
-      setError(versionPayload.message);
+      showError(versionPayload.message);
       return;
     }
 
@@ -470,14 +501,17 @@ export function StrategyList({ project }: StrategyListProps) {
           dialog.strategy.strategy_id,
           versionPayload.value,
         );
-        setNotice(metadataChanged ? `策略已保存，并发布 V${version.version}` : `已发布 V${version.version}`);
+        notify(
+          metadataChanged ? `策略已保存，并发布 V${version.version}` : `已发布 V${version.version}`,
+          "success",
+        );
       } else {
-        setNotice("策略已保存");
+        notify("策略已保存", "success");
       }
       setDialog(null);
       await loadStrategies();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "保存策略失败");
+      showError(caught instanceof Error ? caught.message : "保存策略失败");
     } finally {
       setIsSubmitting(false);
     }
@@ -489,7 +523,7 @@ export function StrategyList({ project }: StrategyListProps) {
     }
     const payload = buildVersionPayload(form);
     if (!payload.ok) {
-      setError(payload.message);
+      showError(payload.message);
       return;
     }
 
@@ -498,29 +532,28 @@ export function StrategyList({ project }: StrategyListProps) {
     try {
       const version = await createStrategyVersion(dialog.strategy.strategy_id, payload.value);
       setDialog(null);
-      setNotice(`已发布 V${version.version}`);
+      notify(`已发布 V${version.version}`, "success");
       await loadStrategies();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "发布新版本失败");
+      showError(caught instanceof Error ? caught.message : "发布新版本失败");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (strategy: StrategySummary) => {
-    if (!project || !window.confirm(`删除策略“${strategy.name}”？`)) {
+    if (!project) {
       return;
     }
 
     setPendingStrategyId(strategy.strategy_id);
     setError(null);
-    setNotice(null);
     try {
       await deleteStrategy(strategy.strategy_id);
-      setNotice("策略已删除");
+      notify("策略已删除", "success");
       await loadStrategies();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "删除策略失败");
+      showError(caught instanceof Error ? caught.message : "删除策略失败");
     } finally {
       setPendingStrategyId(null);
     }
@@ -528,7 +561,6 @@ export function StrategyList({ project }: StrategyListProps) {
 
   const openBacktestDialog = async (strategy: StrategySummary, version?: StrategyVersion) => {
     setError(null);
-    setNotice(null);
     try {
       const latestStrategies = await loadStrategies();
       const latestStrategy =
@@ -543,7 +575,7 @@ export function StrategyList({ project }: StrategyListProps) {
       setBacktestForm(newBacktestForm(params, strategyMode));
       setBacktestDialog({ strategy: latestStrategy, version: latestVersion });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "回测配置加载失败");
+      showError(caught instanceof Error ? caught.message : "回测配置加载失败");
     }
   };
 
@@ -556,7 +588,6 @@ export function StrategyList({ project }: StrategyListProps) {
     }
 
     setError(null);
-    setNotice(null);
     try {
       const { strategy, version } = backtestDialog;
       const latestStrategies = await loadStrategies();
@@ -572,7 +603,7 @@ export function StrategyList({ project }: StrategyListProps) {
         latestVersion?.custom_params ?? latestStrategy.custom_params,
       );
       if (!config.ok) {
-        setError(config.message);
+        showError(config.message);
         return;
       }
 
@@ -602,13 +633,13 @@ export function StrategyList({ project }: StrategyListProps) {
       if (recordsPanel) {
         await openRecordsPanel(recordsPanel.strategy);
       }
-      setNotice(`回测已完成：${freshDetail.backtest.status}`);
+      notify(`回测已完成：${freshDetail.backtest.status}`, "success");
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "回测失败";
       if (versionPanel) {
         setVersionPanel({ ...versionPanel, isBacktesting: false, error: message });
       } else {
-        setError(message);
+        showError(message);
       }
     } finally {
       setRunningBacktestKey(null);
@@ -657,7 +688,6 @@ export function StrategyList({ project }: StrategyListProps) {
     setSwitchingVersionId(version.id);
     setVersionPanel({ ...versionPanel, error: null });
     setError(null);
-    setNotice(null);
     try {
       const summary = await switchStrategyCurrentVersion(versionPanel.strategy.strategy_id, version.id);
       const nextStrategies = await loadStrategies();
@@ -665,7 +695,7 @@ export function StrategyList({ project }: StrategyListProps) {
         nextStrategies.find((strategy) => strategy.strategy_id === summary.strategy_id) ??
         summary;
       await openVersionPanel(nextSummary, version.id);
-      setNotice(`已切换到 V${summary.version}`);
+      notify(`已切换到 V${summary.version}`, "success");
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "版本切换失败";
       setVersionPanel((current) =>
@@ -684,7 +714,7 @@ export function StrategyList({ project }: StrategyListProps) {
     try {
       setResultDetail(await getStrategyBacktest(backtestId));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "回测结果加载失败");
+      showError(caught instanceof Error ? caught.message : "回测结果加载失败");
     }
   };
 
@@ -694,7 +724,7 @@ export function StrategyList({ project }: StrategyListProps) {
         <div className="min-w-0">
           <div className="font-mono text-[10px] font-bold uppercase text-signal">Strategies</div>
           <h1 className="mt-1 truncate text-xl font-black text-ink">策略档案</h1>
-          <p className="mt-1 truncate text-xs text-muted">
+          <p className="mt-1 truncate text-xs text-mutedText">
             当前项目：{project?.name ?? "未选择项目"}
           </p>
         </div>
@@ -707,14 +737,11 @@ export function StrategyList({ project }: StrategyListProps) {
       </div>
 
       {!project ? <Notice text="请先创建或选择项目" /> : null}
-      {project && error ? <Feedback tone="error" text={error} /> : null}
-      {project && notice ? <Feedback tone="success" text={notice} /> : null}
-
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative min-w-64 flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-mutedText" />
           <input
-            className="h-9 w-full rounded-md border border-line bg-panel pl-8 pr-3 text-xs text-ink outline-none placeholder:text-muted/70 focus:border-signal disabled:cursor-not-allowed disabled:bg-soft disabled:text-muted"
+            className="h-9 w-full rounded-md border border-line bg-panel pl-8 pr-3 text-xs text-ink outline-none placeholder:text-mutedText/70 focus:border-signal disabled:cursor-not-allowed disabled:bg-soft disabled:text-mutedText"
             disabled={!project}
             placeholder="搜索策略或标签"
             value={query}
@@ -822,7 +849,7 @@ export function StrategyList({ project }: StrategyListProps) {
 function NewStrategyCard({ onClick }: { onClick: () => void }) {
   return (
     <button
-      className="flex min-h-[230px] flex-col items-center justify-center rounded-lg border border-dashed border-strong bg-soft p-4 text-center text-muted transition-all hover:-translate-y-0.5 hover:border-signal hover:bg-panel hover:text-ink hover:shadow-lift focus:outline-none focus:ring-2 focus:ring-signal/20"
+      className="flex min-h-[230px] flex-col items-center justify-center rounded-lg border border-dashed border-strong bg-soft p-4 text-center text-mutedText transition-all hover:-translate-y-0.5 hover:border-signal hover:bg-panel hover:text-ink hover:shadow-lift focus:outline-none focus:ring-2 focus:ring-signal/20"
       type="button"
       onClick={onClick}
     >
@@ -830,7 +857,7 @@ function NewStrategyCard({ onClick }: { onClick: () => void }) {
         <Plus className="h-5 w-5" />
       </span>
       <span className="mt-3 text-sm font-semibold">新建策略</span>
-      <span className="mt-1 text-xs text-muted">创建一个可回测的策略卡片</span>
+      <span className="mt-1 text-xs text-mutedText">创建一个可回测的策略卡片</span>
     </button>
   );
 }
@@ -863,7 +890,7 @@ function StrategyCard({
           </span>
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-ink">{strategy.name}</h2>
-            <div className="mt-0.5 text-[11px] text-muted">
+            <div className="mt-0.5 text-[11px] text-mutedText">
               V{strategy.version} · {strategyModeLabel(strategy.strategy_mode)}
             </div>
           </div>
@@ -883,7 +910,7 @@ function StrategyCard({
             </span>
           ))
         ) : (
-          <span className="font-mono text-[11px] text-muted">无标签</span>
+          <span className="font-mono text-[11px] text-mutedText">无标签</span>
         )}
       </div>
 
@@ -892,7 +919,7 @@ function StrategyCard({
           .slice(0, 3)
           .map((param) => (
             <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 text-[11px]" key={param.name_en}>
-              <span className="truncate font-mono text-muted">{param.name_en}</span>
+              <span className="truncate font-mono text-mutedText">{param.name_en}</span>
               <span className="max-w-28 truncate font-mono font-semibold text-ink">
                 {String(param.default)}
               </span>
@@ -901,7 +928,7 @@ function StrategyCard({
       </div>
 
       <div className="mt-auto pt-4">
-        <div className="mb-3 font-mono text-[10px] text-muted">
+        <div className="mb-3 font-mono text-[10px] text-mutedText">
           {formatDate(strategy.updated_at)}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -920,7 +947,34 @@ function StrategyCard({
             onClick={onBacktest}
           />
           <SmallButton icon={<History className="h-3.5 w-3.5" />} label="记录" disabled={isPending} onClick={onRecords} />
-          <IconButton icon={<Trash2 className="h-3.5 w-3.5" />} label="删除" danger disabled={isPending} onClick={onDelete} />
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <IconButton
+                icon={<Trash2 className="h-3.5 w-3.5" />}
+                label="删除"
+                danger
+                disabled={isPending}
+                onClick={() => undefined}
+              />
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>删除策略“{strategy.name}”？</AlertDialogTitle>
+                <AlertDialogDescription>
+                  删除后该策略及其版本、回测记录将从当前项目中移除。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>取消</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={onDelete}
+                >
+                  删除
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </article>
@@ -961,27 +1015,24 @@ function VersionPanel({
   const diffItems = selectedVersion ? summarizeVersionDiff(previousVersion, selectedVersion) : [];
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/35 p-4">
-      <section className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-          <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-zinc-900">
-              {panel.strategy.name} 版本
-            </h2>
-            <p className="mt-0.5 font-mono text-[11px] text-zinc-500">
-              当前版本 V{panel.strategy.version}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
+    <UiDialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex max-h-[88vh] max-w-5xl flex-col overflow-hidden p-0">
+        <DialogHeader className="border-b px-4 py-3">
+          <div className="flex items-center justify-between gap-3 pr-8">
+            <div className="min-w-0">
+              <DialogTitle className="truncate text-sm">{panel.strategy.name} 版本</DialogTitle>
+              <DialogDescription className="mt-0.5 font-mono text-[11px]">
+                当前版本 V{panel.strategy.version}
+              </DialogDescription>
+            </div>
             <SmallButton
               icon={<Code2 className="h-3.5 w-3.5" />}
               label="新增版本"
               disabled={panel.strategy.status !== "active"}
               onClick={onCreateVersion}
             />
-            <IconButton label="关闭" icon={<X className="h-4 w-4" />} onClick={onClose} />
           </div>
-        </div>
+        </DialogHeader>
 
         <div className="grid min-h-0 flex-1 grid-cols-[260px_minmax(0,1fr)] max-md:grid-cols-1">
           <aside className="min-h-0 overflow-y-auto border-r border-line bg-soft p-3 max-md:border-b max-md:border-r-0">
@@ -1099,8 +1150,8 @@ function VersionPanel({
             )}
           </div>
         </div>
-      </section>
-    </div>
+      </DialogContent>
+    </UiDialog>
   );
 }
 
@@ -1114,27 +1165,24 @@ function BacktestRecordsPanel({
   onViewResult: (backtestId: string) => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/35 p-4">
-      <section className="flex max-h-[86vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-          <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-zinc-900">
-              {panel.strategy.name} 回测记录
-            </h2>
-            <p className="mt-0.5 font-mono text-[11px] text-zinc-500">
-              当前版本 V{panel.strategy.version}
-            </p>
-          </div>
-          <IconButton label="关闭" icon={<X className="h-4 w-4" />} onClick={onClose} />
-        </div>
+    <UiDialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex max-h-[86vh] max-w-4xl flex-col overflow-hidden p-0">
+        <DialogHeader className="border-b px-4 py-3">
+          <DialogTitle className="truncate text-sm">
+            {panel.strategy.name} 回测记录
+          </DialogTitle>
+          <DialogDescription className="font-mono text-[11px]">
+            当前版本 V{panel.strategy.version}
+          </DialogDescription>
+        </DialogHeader>
         <div className="min-h-0 overflow-y-auto p-4">
           {panel.error ? <Feedback tone="error" text={panel.error} /> : null}
           {panel.isLoading ? <Notice text="记录加载中" /> : null}
           {!panel.isLoading && panel.records.length === 0 ? <Notice text="暂无回测记录" /> : null}
           <BacktestRecordList records={panel.records} onViewResult={onViewResult} />
         </div>
-      </section>
-    </div>
+      </DialogContent>
+    </UiDialog>
   );
 }
 
@@ -1234,17 +1282,14 @@ function BacktestRunDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-center bg-ink/35 p-4">
-      <section className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-          <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-zinc-900">回测参数</h2>
-            <p className="mt-0.5 truncate font-mono text-[11px] text-zinc-500">
-              {dialog.strategy.name} · V{dialog.version?.version ?? dialog.strategy.version}
-            </p>
-          </div>
-          <IconButton label="关闭" icon={<X className="h-4 w-4" />} disabled={disabled} onClick={onClose} />
-        </div>
+    <UiDialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex max-h-[88vh] max-w-3xl flex-col overflow-hidden p-0">
+        <DialogHeader className="border-b px-4 py-3">
+          <DialogTitle className="truncate text-sm">回测参数</DialogTitle>
+          <DialogDescription className="truncate font-mono text-[11px]">
+            {dialog.strategy.name} · V{dialog.version?.version ?? dialog.strategy.version}
+          </DialogDescription>
+        </DialogHeader>
         <div className="min-h-0 overflow-y-auto p-4">
           <div className="grid gap-4">
             {error ? <Feedback tone="error" text={error} /> : null}
@@ -1309,27 +1354,28 @@ function BacktestRunDialog({
             </section>
           </div>
         </div>
-        <div className="flex justify-end gap-2 border-t border-line bg-soft px-4 py-3">
-          <button
-            className="h-9 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:bg-soft focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:text-muted/50"
+        <DialogFooter className="border-t bg-muted px-4 py-3">
+          <Button
+            size="sm"
+            variant="outline"
             type="button"
             disabled={disabled}
             onClick={onClose}
           >
             取消
-          </button>
-          <button
-            className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:bg-strong"
+          </Button>
+          <Button
+            size="sm"
             type="button"
             disabled={disabled}
             onClick={onSubmit}
           >
             {disabled ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
             {disabled ? "回测中" : "开始回测"}
-          </button>
-        </div>
-      </section>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </UiDialog>
   );
 }
 
@@ -1362,17 +1408,14 @@ function BacktestResultDialog({
     : null;
 
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-center bg-ink/35 p-4">
-      <section className="flex max-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-          <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-zinc-900">回测结果</h2>
-            <p className="mt-0.5 truncate font-mono text-[11px] text-zinc-500">
-              {detail.backtest.id} · {detail.backtest.status}
-            </p>
-          </div>
-          <IconButton label="关闭" icon={<X className="h-4 w-4" />} onClick={onClose} />
-        </div>
+    <UiDialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex max-h-[88vh] max-w-6xl flex-col overflow-hidden p-0">
+        <DialogHeader className="border-b px-4 py-3">
+          <DialogTitle className="truncate text-sm">回测结果</DialogTitle>
+          <DialogDescription className="truncate font-mono text-[11px]">
+            {detail.backtest.id} · {detail.backtest.status}
+          </DialogDescription>
+        </DialogHeader>
         <ResultTabBar value={activeResultTab} onChange={setActiveResultTab} />
         <div className="min-h-0 overflow-y-auto p-4">
           {!result || !metrics ? (
@@ -1483,8 +1526,8 @@ function BacktestResultDialog({
             </div>
           )}
         </div>
-      </section>
-    </div>
+      </DialogContent>
+    </UiDialog>
   );
 }
 
@@ -1496,22 +1539,23 @@ function ResultTabBar({
   onChange: (value: ResultTab) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2 border-b border-zinc-200 bg-zinc-50 px-4 py-2">
-      {resultTabs.map((tab) => (
-        <button
-          className={`h-8 rounded-md px-3 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900/20 ${
-            value === tab.value
-              ? "bg-zinc-900 text-white"
-              : "border border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
-          }`}
-          key={tab.value}
-          type="button"
-          onClick={() => onChange(tab.value)}
-        >
-          {tab.label}
-        </button>
-      ))}
-    </div>
+    <Tabs
+      className="border-b border-zinc-200 bg-zinc-50 px-4 py-2"
+      value={value}
+      onValueChange={(nextValue) => onChange(nextValue as ResultTab)}
+    >
+      <TabsList className="flex h-auto flex-wrap justify-start gap-2 bg-transparent p-0">
+        {resultTabs.map((tab) => (
+          <TabsTrigger
+            className="h-8 border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-600 data-[state=active]:border-zinc-900 data-[state=active]:bg-zinc-900 data-[state=active]:text-white"
+            key={tab.value}
+            value={tab.value}
+          >
+            {tab.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }
 
@@ -2182,34 +2226,35 @@ function Dialog({
   onSubmit: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/35 p-4">
-      <section className="flex max-h-[86vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-          <h2 className="truncate text-sm font-semibold text-zinc-900">{title}</h2>
-          <IconButton label="关闭" icon={<X className="h-4 w-4" />} disabled={isSubmitting} onClick={onClose} />
-        </div>
+    <UiDialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex max-h-[86vh] max-w-2xl flex-col overflow-hidden p-0">
+        <DialogHeader className="border-b px-4 py-3">
+          <DialogTitle className="truncate text-sm">{title}</DialogTitle>
+          <DialogDescription className="sr-only">策略表单</DialogDescription>
+        </DialogHeader>
         <div className="min-h-0 overflow-y-auto p-4">{children}</div>
-        <div className="flex justify-end gap-2 border-t border-line bg-soft px-4 py-3">
-          <button
-            className="h-9 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:bg-soft focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:text-muted/50"
+        <DialogFooter className="border-t bg-muted px-4 py-3">
+          <Button
+            size="sm"
+            variant="outline"
             type="button"
             disabled={isSubmitting}
             onClick={onClose}
           >
             取消
-          </button>
-          <button
-            className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:bg-strong"
+          </Button>
+          <Button
+            size="sm"
             type="button"
             disabled={isSubmitting}
             onClick={onSubmit}
           >
             {submitIcon}
             {submitLabel}
-          </button>
-        </div>
-      </section>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </UiDialog>
   );
 }
 
@@ -2218,7 +2263,7 @@ function StatusFilterControl({ value, onChange }: { value: StatusFilter; onChang
     <div className="grid h-9 grid-cols-2 overflow-hidden rounded-md border border-line bg-panel text-[11px] font-semibold">
       {statusFilters.map((filter) => (
         <button
-          className={`min-w-12 px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-signal/20 ${value === filter.value ? "bg-ink text-panel" : "text-muted hover:bg-soft hover:text-ink"}`}
+          className={`min-w-12 px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-signal/20 ${value === filter.value ? "bg-ink text-panel" : "text-mutedText hover:bg-soft hover:text-ink"}`}
           key={filter.value}
           type="button"
           onClick={() => onChange(filter.value)}
@@ -2232,7 +2277,7 @@ function StatusFilterControl({ value, onChange }: { value: StatusFilter; onChang
 
 function FieldLabel({ label, required }: { label: string; required?: boolean }) {
   return (
-    <span className="font-semibold text-muted">
+    <span className="font-semibold text-mutedText">
       {label}
       {required ? <span className="ml-0.5 text-risk">*</span> : null}
     </span>
@@ -2241,16 +2286,16 @@ function FieldLabel({ label, required }: { label: string; required?: boolean }) 
 
 function Input({ label, value, type = "text", required, disabled, onChange }: { label: string; value: string; type?: "text" | "date"; required?: boolean; disabled?: boolean; onChange: (value: string) => void }) {
   return (
-    <label className="grid gap-1 text-xs">
+    <Label className="grid gap-1 text-xs">
       <FieldLabel label={label} required={required} />
-      <input
-        className="h-9 rounded-md border border-line bg-panel px-3 text-xs text-ink outline-none focus:border-signal disabled:cursor-not-allowed disabled:bg-soft disabled:text-muted"
+      <UiInput
+        className="h-9 text-xs"
         disabled={disabled}
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
-    </label>
+    </Label>
   );
 }
 
@@ -2275,13 +2320,13 @@ function DateRangeField({
       <div className="grid gap-2 rounded-md border border-line bg-panel p-2">
         <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2 max-sm:grid-cols-1">
           <DateInput label="开始" value={startDate} disabled={disabled} onChange={onStartChange} />
-          <span className="pb-2 text-center font-semibold text-muted max-sm:hidden">至</span>
+          <span className="pb-2 text-center font-semibold text-mutedText max-sm:hidden">至</span>
           <DateInput label="结束" value={endDate} disabled={disabled} onChange={onEndChange} />
         </div>
         <div className="flex flex-wrap gap-1.5">
           {backtestDateRangePresets.map((preset) => (
             <button
-              className="h-7 rounded border border-line bg-soft px-2 text-[11px] font-semibold text-graphite transition-colors hover:border-strong hover:bg-panel hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:text-muted/50"
+              className="h-7 rounded border border-line bg-soft px-2 text-[11px] font-semibold text-graphite transition-colors hover:border-strong hover:bg-panel hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:text-mutedText/50"
               key={preset.years}
               type="button"
               disabled={disabled}
@@ -2298,16 +2343,16 @@ function DateRangeField({
 
 function DateInput({ label, value, disabled, onChange }: { label: string; value: string; disabled?: boolean; onChange: (value: string) => void }) {
   return (
-    <label className="grid gap-1">
-      <span className="font-semibold text-muted">{label}</span>
-      <input
-        className="h-9 rounded-md border border-line bg-panel px-3 text-xs text-ink outline-none focus:border-signal disabled:cursor-not-allowed disabled:bg-soft disabled:text-muted"
+    <Label className="grid gap-1">
+      <span className="font-semibold text-mutedText">{label}</span>
+      <UiInput
+        className="h-9 text-xs"
         disabled={disabled}
         type="date"
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
-    </label>
+    </Label>
   );
 }
 
@@ -2338,61 +2383,68 @@ function Select({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="grid gap-1 text-xs">
+    <Label className="grid gap-1 text-xs">
       <FieldLabel label={label} required={required} />
-      <select
-        className="h-9 rounded-md border border-line bg-panel px-3 text-xs text-ink outline-none focus:border-signal disabled:cursor-not-allowed disabled:bg-soft disabled:text-muted"
+      <UiSelect
         disabled={disabled}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onValueChange={onChange}
       >
-        {options.map((option) => {
-          const normalized = normalizeSelectOption(option);
-          return (
-          <option key={normalized.value} value={normalized.value}>
-            {normalized.label}
-          </option>
-          );
-        })}
-      </select>
-    </label>
+        <SelectTrigger className="h-9 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => {
+            const normalized = normalizeSelectOption(option);
+            return (
+              <SelectItem key={normalized.value} value={normalized.value}>
+                {normalized.label}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </UiSelect>
+    </Label>
   );
 }
 
 function Textarea({ label, value, rows, monospace, required, disabled, onChange }: { label: string; value: string; rows: number; monospace?: boolean; required?: boolean; disabled?: boolean; onChange: (value: string) => void }) {
   return (
-    <label className="grid gap-1 text-xs">
+    <Label className="grid gap-1 text-xs">
       <FieldLabel label={label} required={required} />
-      <textarea
-        className={`w-full resize-y rounded-md border border-line bg-panel p-3 text-xs leading-5 text-ink outline-none focus:border-signal disabled:cursor-not-allowed disabled:bg-soft disabled:text-muted ${monospace ? "font-mono text-[11px]" : ""}`}
+      <UiTextarea
+        className={`resize-y text-xs leading-5 ${monospace ? "font-mono text-[11px]" : ""}`}
         disabled={disabled}
         rows={rows}
         spellCheck={!monospace}
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
-    </label>
+    </Label>
   );
 }
 
 function SmallButton({ icon, label, disabled, onClick }: { icon: ReactNode; label: string; disabled?: boolean; onClick: () => void }) {
   return (
-    <button
-      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-graphite transition-colors hover:border-strong hover:bg-soft hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20 disabled:cursor-not-allowed disabled:border-line disabled:text-muted/50"
+    <Button
+      size="sm"
+      variant="outline"
       type="button"
       disabled={disabled}
       onClick={onClick}
     >
       {icon}
       {label}
-    </button>
+    </Button>
   );
 }
 
 function IconButton({ icon, label, danger, disabled, onClick }: { icon: ReactNode; label: string; danger?: boolean; disabled?: boolean; onClick: () => void }) {
   return (
-    <button
-      className={`grid h-9 w-9 place-items-center rounded-md border bg-panel transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed ${danger ? "border-risk/25 text-risk hover:border-risk/40 hover:bg-riskSoft focus:ring-risk/10 disabled:border-risk/10 disabled:text-risk/30" : "border-line text-graphite hover:border-strong hover:bg-soft hover:text-ink focus:ring-signal/20 disabled:border-line disabled:text-muted/50"}`}
+    <Button
+      className={danger ? "text-destructive hover:text-destructive" : undefined}
+      size="icon"
+      variant="outline"
       type="button"
       aria-label={label}
       title={label}
@@ -2400,7 +2452,7 @@ function IconButton({ icon, label, danger, disabled, onClick }: { icon: ReactNod
       onClick={onClick}
     >
       {icon}
-    </button>
+    </Button>
   );
 }
 
@@ -2410,7 +2462,7 @@ function StatusBadge({ status }: { status: StrategySummary["status"] }) {
       ? "border-brand/30 bg-gainSoft text-brand"
       : status === "deleted"
         ? "border-risk/30 bg-riskSoft text-risk"
-        : "border-line bg-soft text-muted";
+        : "border-line bg-soft text-mutedText";
   return <span className={`inline-flex rounded border px-2 py-0.5 font-mono text-[10px] ${className}`}>{status}</span>;
 }
 
@@ -2425,7 +2477,7 @@ function Feedback({ tone, text }: { tone: "error" | "success"; text: string }) {
 }
 
 function Notice({ text }: { text: string }) {
-  return <div className="rounded-md border border-dashed border-line bg-panel px-3 py-3 text-xs text-muted">{text}</div>;
+  return <div className="rounded-md border border-dashed border-line bg-panel px-3 py-3 text-xs text-mutedText">{text}</div>;
 }
 
 function StatusText({ status }: { status: StrategyBacktestRecord["status"] }) {
@@ -2436,14 +2488,14 @@ function StatusText({ status }: { status: StrategyBacktestRecord["status"] }) {
         ? "text-risk"
         : status === "running"
           ? "text-brandBlue"
-          : "text-muted";
+          : "text-mutedText";
   return <span className={`font-mono text-[11px] font-semibold ${className}`}>{status}</span>;
 }
 
 function MetricBox({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md border border-line bg-soft p-3">
-      <div className="text-[11px] font-semibold text-muted">{label}</div>
+      <div className="text-[11px] font-semibold text-mutedText">{label}</div>
       <div className="mt-1 truncate font-mono text-sm font-semibold text-ink">{value}</div>
     </div>
   );
@@ -2452,7 +2504,7 @@ function MetricBox({ label, value }: { label: string; value: string }) {
 function InfoLine({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid grid-cols-[80px_minmax(0,1fr)] gap-2">
-      <span className="text-muted">{label}</span>
+      <span className="text-mutedText">{label}</span>
       <span className="min-w-0 break-words font-mono text-graphite">{value}</span>
     </div>
   );

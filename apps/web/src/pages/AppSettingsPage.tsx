@@ -12,6 +12,10 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { DatasetPage } from "../modules/dataset";
 import { AgentSettingsForm } from "../modules/settings/AgentSettingsForm";
 import { BacktestSettingsForm } from "../modules/settings/BacktestSettingsForm";
@@ -41,14 +45,10 @@ import {
   type ModelProviderPayload,
   type ProviderModel,
 } from "../shared/api";
+import { notify, type ToastTone } from "../shared/notify";
 
 type AppSettingsPageProps = {
   onBack: () => void;
-};
-
-type ToastState = {
-  message: string;
-  tone: "success" | "error" | "info";
 };
 
 const tabs: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
@@ -73,13 +73,12 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoggingSaving, setIsLoggingSaving] = useState(false);
   const [isProviderSaving, setIsProviderSaving] = useState(false);
-  const [toast, setToast] = useState<ToastState | null>(null);
   const [testedProviderSignature, setTestedProviderSignature] = useState<string | null>(null);
   const [providerTestResult, setProviderTestResult] = useState<ProviderTestResult | null>(null);
   const modelRequestSeqRef = useRef(0);
 
-  const showToast = useCallback((message: string, tone: ToastState["tone"] = "info") => {
-    setToast({ message, tone });
+  const showToast = useCallback((message: string, tone: ToastTone = "info") => {
+    notify(message, tone);
   }, []);
 
   const loadProviderModels = useCallback(async (providerId: string) => {
@@ -107,7 +106,6 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
 
   const loadSettings = useCallback(async (selectedProviderId?: string | null) => {
     setIsLoading(true);
-    setToast(null);
     try {
       const [nextConfig, providerResponse] = await Promise.all([
         getAppConfig(),
@@ -166,14 +164,6 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
-
-  useEffect(() => {
-    if (!toast) {
-      return;
-    }
-    const timeoutId = window.setTimeout(() => setToast(null), 2500);
-    return () => window.clearTimeout(timeoutId);
-  }, [toast]);
 
   useEffect(() => {
     const providerId = draft?.agent.provider_id;
@@ -258,7 +248,6 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
 
   const updateProviderDraft = (nextDraft: ProviderDraft) => {
     setProviderDraft(nextDraft);
-    setToast(null);
     setProviderTestResult(null);
     setTestedProviderSignature(null);
   };
@@ -366,9 +355,6 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
   };
 
   const handleDeleteProvider = async (provider: ModelProvider) => {
-    if (!window.confirm(`删除 Provider ${provider.name}？`)) {
-      return;
-    }
     try {
       await deleteModelProvider(provider.id);
       await loadSettings();
@@ -385,17 +371,18 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
     <section className="grid w-full gap-5">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
         <div className="flex min-w-0 items-center gap-3">
-          <button
-            className="inline-flex h-9 items-center gap-2 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+          <Button
+            size="sm"
+            variant="outline"
             type="button"
             onClick={onBack}
           >
             <ArrowLeft className="h-4 w-4" />
             返回
-          </button>
+          </Button>
           <div className="min-w-0">
             <h1 className="text-xl font-semibold leading-tight text-ink">设置</h1>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-xs text-mutedText">
               管理模型供应商、Agent 参数、运行日志和数据源。
             </p>
           </div>
@@ -409,13 +396,14 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
             : "xl:grid-cols-[220px_minmax(0,1fr)]"
         }`}
       >
-        <nav className="grid gap-3 rounded-lg border border-line bg-soft p-2 xl:sticky xl:top-0 xl:self-start">
+        <nav className="grid gap-3 rounded-lg border bg-muted p-2 xl:sticky xl:top-0 xl:self-start">
           <div className="hidden items-center justify-between gap-2 xl:flex">
             {isSettingsNavCollapsed ? null : (
-              <span className="px-1 text-[11px] font-semibold text-muted">设置导航</span>
+              <span className="px-1 text-[11px] font-semibold text-mutedText">设置导航</span>
             )}
-            <button
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+            <Button
+              size="iconSm"
+              variant="outline"
               type="button"
               title={isSettingsNavCollapsed ? "展开导航" : "收起导航"}
               aria-label={isSettingsNavCollapsed ? "展开导航" : "收起导航"}
@@ -426,43 +414,48 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
               ) : (
                 <PanelLeftClose className="h-3.5 w-3.5" />
               )}
-            </button>
+            </Button>
           </div>
-          <div className="grid grid-cols-2 gap-1 sm:grid-cols-4 xl:grid-cols-1">
-            {tabs.map((tab) => {
-              const TabIcon = tab.icon;
-              return (
-                <button
-                  className={`inline-flex h-10 items-center justify-center gap-2 rounded-md px-2.5 text-center text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-signal/20 xl:justify-start ${
-                    activeTab === tab.id ? "bg-ink text-panel" : "text-muted hover:bg-panel hover:text-ink"
-                  } ${isSettingsNavCollapsed ? "xl:px-0" : ""}`}
-                  key={tab.id}
-                  type="button"
-                  title={tab.label}
-                  aria-label={tab.label}
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    const path = settingsPathForTab(tab.id);
-                    if (window.location.pathname !== path) {
-                      window.history.pushState({}, "", path);
-                    }
-                  }}
-                >
-                  <TabIcon className="h-3.5 w-3.5 shrink-0" />
-                  <span className={isSettingsNavCollapsed ? "xl:hidden" : ""}>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => {
+              const tabId = value as SettingsTab;
+              setActiveTab(tabId);
+              const path = settingsPathForTab(tabId);
+              if (window.location.pathname !== path) {
+                window.history.pushState({}, "", path);
+              }
+            }}
+          >
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 bg-transparent p-0 sm:grid-cols-4 xl:grid-cols-1">
+              {tabs.map((tab) => {
+                const TabIcon = tab.icon;
+                return (
+                  <TabsTrigger
+                    className={`h-10 justify-center gap-2 px-3 text-xs xl:justify-start ${
+                      isSettingsNavCollapsed ? "xl:px-0" : ""
+                    }`}
+                    key={tab.id}
+                    value={tab.id}
+                    title={tab.label}
+                    aria-label={tab.label}
+                  >
+                    <TabIcon className="h-3.5 w-3.5 shrink-0" />
+                    <span className={isSettingsNavCollapsed ? "xl:hidden" : ""}>{tab.label}</span>
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </Tabs>
 
         </nav>
 
         <div className="grid min-w-0 gap-4 pb-8">
           {isLoading ? (
-            <div className="flex min-h-28 items-center gap-2 rounded-lg border border-line bg-panel px-4 text-xs text-muted">
+            <Card className="flex min-h-28 items-center gap-2 px-4 text-xs text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               加载中
-            </div>
+            </Card>
           ) : null}
 
           {draft ? (
@@ -534,7 +527,6 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
         </div>
       </div>
 
-      {toast ? <SettingsToast toast={toast} /> : null}
     </section>
   );
 }
@@ -550,23 +542,4 @@ function settingsTabFromPath(pathname: string): SettingsTab {
     return suffix;
   }
   return suffix === "backtest" ? "backtest" : "agent";
-}
-
-function SettingsToast({ toast }: { toast: ToastState }) {
-  const toneClass =
-    toast.tone === "success"
-      ? "border-brand/25 bg-gainSoft text-brand"
-      : toast.tone === "error"
-        ? "border-risk/25 bg-riskSoft text-risk"
-        : "border-line bg-panel text-muted";
-
-  return (
-    <div
-      className={`fixed right-4 top-4 z-50 max-w-sm rounded-md border px-3 py-2 text-xs shadow-xl ${toneClass}`}
-      role="status"
-      aria-live="polite"
-    >
-      {toast.message}
-    </div>
-  );
 }

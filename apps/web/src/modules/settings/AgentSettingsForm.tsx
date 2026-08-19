@@ -1,5 +1,7 @@
 import { Plus } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+
 import type { AppSettings, ModelProvider, ProviderModel } from "../../shared/api";
 import {
   ChipListField,
@@ -98,14 +100,15 @@ export function AgentSettingsForm({
       <div className="grid gap-3 border-t border-line pt-4">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-ink">模型供应商</h2>
-          <button
-            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink"
+          <Button
+            size="sm"
+            variant="outline"
             type="button"
             onClick={onCreateProvider}
           >
             <Plus className="h-3.5 w-3.5" />
             新增
-          </button>
+          </Button>
         </div>
 
         <div className="grid gap-2">

@@ -1,4 +1,27 @@
-import { Check, Loader2, PlugZap, Save, Trash2, X } from "lucide-react";
+import { Check, Loader2, PlugZap, Save, Trash2 } from "lucide-react";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import type { ModelProvider } from "../../shared/api";
 import { ApiKeyField, TextField, ToggleField } from "./SettingsFields";
@@ -43,9 +66,9 @@ export function ProviderEditorCard({
   const displayBaseUrl = provider?.base_url ?? "default Anthropic endpoint";
 
   return (
-    <div
+    <Card
       className={`grid gap-3 rounded-md border px-3 py-2.5 ${
-        isActive ? "border-signal bg-soft" : "border-line bg-panel"
+        isActive ? "border-accent bg-muted" : ""
       }`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -56,14 +79,14 @@ export function ProviderEditorCard({
             onClick={() => onSelectProviderDraft(provider)}
           >
             <span className="block truncate text-xs font-semibold text-ink">{displayName}</span>
-            <span className="block truncate font-mono text-[10px] text-muted">
+            <span className="block truncate font-mono text-[10px] text-mutedText">
               {displayBaseUrl}
             </span>
           </button>
         ) : (
           <div className="min-w-0">
             <span className="block truncate text-xs font-semibold text-ink">{displayName}</span>
-            <span className="block truncate font-mono text-[10px] text-muted">
+            <span className="block truncate font-mono text-[10px] text-mutedText">
               Anthropic-compatible endpoint
             </span>
           </div>
@@ -103,18 +126,20 @@ export function ProviderEditorCard({
           />
           <div className="flex flex-wrap items-center justify-end gap-2 sm:col-span-2">
             {provider && !isActive ? (
-              <button
-                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-graphite hover:border-signal disabled:cursor-not-allowed disabled:opacity-60"
+              <Button
+                size="sm"
+                variant="outline"
                 type="button"
                 disabled={!provider.enabled}
                 onClick={() => onUseProvider(provider)}
               >
                 <Check className="h-3.5 w-3.5" />
                 使用
-              </button>
+              </Button>
             ) : null}
-            <button
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-graphite hover:border-signal disabled:cursor-not-allowed disabled:opacity-60"
+            <Button
+              size="sm"
+              variant="outline"
               type="button"
               disabled={isProviderSaving || !providerDraft.name.trim()}
               onClick={onTestProviderDraft}
@@ -125,16 +150,16 @@ export function ProviderEditorCard({
                 <PlugZap className="h-3.5 w-3.5" />
               )}
               测试
-            </button>
-            <button
-              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-60"
+            </Button>
+            <Button
+              size="sm"
               type="button"
               disabled={isProviderSaving || !providerDraft.name.trim() || !isProviderTested}
               onClick={onSaveProvider}
             >
               <Save className="h-3.5 w-3.5" />
               保存 Provider
-            </button>
+            </Button>
           </div>
           {testResult ? (
             <ProviderTestResultDialog
@@ -146,38 +171,66 @@ export function ProviderEditorCard({
       ) : (
         <div className="flex items-center gap-2">
           {provider && !isActive ? (
-            <button
-              className="inline-flex h-7 items-center gap-1 rounded-md border border-line px-2 text-[11px] font-semibold text-graphite hover:border-signal disabled:cursor-not-allowed disabled:opacity-50"
+            <Button
+              className="h-7 text-[11px]"
+              size="sm"
+              variant="outline"
               type="button"
               disabled={!provider.enabled}
               onClick={() => onUseProvider(provider)}
             >
               <Check className="h-3 w-3" />
               使用
-            </button>
+            </Button>
           ) : null}
-          <button
-            className="inline-flex h-7 items-center gap-1 rounded-md border border-line px-2 text-[11px] font-semibold text-graphite hover:border-signal"
+          <Button
+            className="h-7 text-[11px]"
+            size="sm"
+            variant="outline"
             type="button"
             onClick={() => provider && onSelectProviderDraft(provider)}
           >
             编辑
-          </button>
-          <button
-            className="inline-flex h-7 items-center gap-1 rounded-md border border-line px-2 text-[11px] font-semibold text-graphite hover:border-risk hover:text-risk disabled:cursor-not-allowed disabled:opacity-50"
-            type="button"
-            disabled={!provider || isActive}
-            onClick={() => provider && onDeleteProvider(provider)}
-          >
-            <Trash2 className="h-3 w-3" />
-            删除
-          </button>
+          </Button>
+          {provider ? (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  className="h-7 text-[11px]"
+                  size="sm"
+                  variant="outline"
+                  type="button"
+                  disabled={isActive}
+                >
+                  <Trash2 className="h-3 w-3" />
+                  删除
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>删除 Provider {provider.name}？</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    删除后该 Provider 会从模型供应商列表中移除，已保存的 API Key 也将不可用。
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={() => onDeleteProvider(provider)}
+                  >
+                    删除
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          ) : null}
           {provider?.has_api_key ? (
-            <span className="ml-auto font-mono text-[10px] text-muted">已保存密钥</span>
+            <span className="ml-auto font-mono text-[10px] text-mutedText">已保存密钥</span>
           ) : null}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -189,53 +242,34 @@ function ProviderTestResultDialog({
   onClose: () => void;
 }) {
   const title = result.ok ? "Provider 测试通过" : "Provider 测试失败";
-  const toneClass = result.ok
-    ? "border-brand/25 bg-gainSoft text-brand"
-    : "border-risk/25 bg-riskSoft text-risk";
 
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/35 px-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-    >
-      <div className="grid w-full max-w-md gap-4 rounded-lg border border-line bg-panel p-4 shadow-2xl">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClass}`}>
-              {result.ok ? "连接正常" : "连接失败"}
-            </div>
-            <h3 className="mt-3 text-base font-semibold text-ink">{title}</h3>
-            <p className="mt-1 text-xs leading-5 text-muted">
-              {result.ok
-                ? `已获取 ${result.modelCount} 个可用模型。`
-                : "未能从该 Provider 获取模型列表。"}
-            </p>
-          </div>
-          <button
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-soft hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
-            type="button"
-            aria-label="关闭测试结果"
-            onClick={onClose}
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <Badge
+            className="mb-2 w-fit"
+            variant={result.ok ? "default" : "destructive"}
           >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="rounded-md border border-line bg-soft px-3 py-2 text-xs leading-5 text-graphite">
+            {result.ok ? "连接正常" : "连接失败"}
+          </Badge>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            {result.ok
+              ? `已获取 ${result.modelCount} 个可用模型。`
+              : "未能从该 Provider 获取模型列表。"}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="rounded-md border bg-muted px-3 py-2 text-xs leading-5">
           {toChineseProviderMessage(result)}
         </div>
-        <div className="flex justify-end">
-          <button
-            className="inline-flex h-9 items-center rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite focus:outline-none focus:ring-2 focus:ring-signal/25"
-            type="button"
-            onClick={onClose}
-          >
+        <DialogFooter>
+          <Button size="sm" type="button" onClick={onClose}>
             知道了
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

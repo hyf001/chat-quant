@@ -61,7 +61,7 @@ export function SystemSettingsForm({
       </FormSection>
 
       <FormSection title="Worker Runtime">
-        <div className="rounded-md border border-line bg-soft px-3 py-2 text-xs leading-5 text-muted sm:col-span-2">
+        <div className="rounded-md border border-line bg-soft px-3 py-2 text-xs leading-5 text-mutedText sm:col-span-2">
           这些参数保存后需要重启 API 才会生效。
         </div>
         <NumberField

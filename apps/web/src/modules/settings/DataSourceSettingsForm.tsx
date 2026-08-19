@@ -15,9 +15,40 @@ import {
   Settings,
   Server,
   Trash2,
-  X,
 } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 import {
   deleteJobRuntimeInstance,
@@ -461,9 +492,6 @@ export function DataSourceSettingsForm({
   };
 
   const handleDeleteInstance = async (instance: JobRuntimeInstance) => {
-    if (!window.confirm(`删除实例 ${instance.id}？`)) {
-      return;
-    }
     setMutatingInstanceId(instance.id);
     try {
       await deleteJobRuntimeInstance(instance.id);
@@ -550,12 +578,13 @@ export function DataSourceSettingsForm({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-semibold text-ink">MindGo 数据源</h2>
-            <p className="mt-1 text-xs text-muted">连接配置保存到系统设置；Token 手动维护。</p>
+            <p className="mt-1 text-xs text-mutedText">连接配置保存到系统设置；Token 手动维护。</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
-              <button
-                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+              <Button
+                size="sm"
+                variant="outline"
                 type="button"
                 aria-expanded={isConnectionOpen}
                 onClick={() => setIsConnectionOpen((current) => !current)}
@@ -567,7 +596,7 @@ export function DataSourceSettingsForm({
                     isConnectionOpen ? "rotate-180" : ""
                   }`}
                 />
-              </button>
+              </Button>
               {isConnectionOpen ? (
                 <div className="absolute right-0 z-20 mt-2 w-[min(760px,calc(100vw-2rem))] rounded-md border border-line bg-panel p-3 shadow-lift">
                   <div className="grid gap-3 md:grid-cols-2">
@@ -592,14 +621,16 @@ export function DataSourceSettingsForm({
                       value={draft.mindgo.storage_root}
                       onChange={(storage_root) => updateMindgoSettings({ storage_root })}
                       action={
-                        <button
-                          className="inline-flex h-10 items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+                        <Button
+                          className="h-10"
+                          size="sm"
+                          variant="outline"
                           type="button"
                           onClick={() => void handleSelectMindgoStorageRoot()}
                         >
                           <FolderOpen className="h-3.5 w-3.5" />
                           浏览
-                        </button>
+                        </Button>
                       }
                     />
                     <NumberInput
@@ -609,27 +640,29 @@ export function DataSourceSettingsForm({
                     />
                   </div>
                   <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-line pt-3">
-                    <button
-                      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink"
+                    <Button
+                      size="sm"
+                      variant="outline"
                       type="button"
                       onClick={handleSaveMindgoSettings}
                     >
                       <Save className="h-3.5 w-3.5" />
                       保存配置
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ) : null}
             </div>
-            <button
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+            <Button
+              size="sm"
+              variant="outline"
               type="button"
               disabled={isTesting}
               onClick={handleTestConnection}
             >
               {isTesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Server className="h-3.5 w-3.5" />}
               测试连接
-            </button>
+            </Button>
           </div>
         </div>
       </section>
@@ -651,9 +684,10 @@ export function DataSourceSettingsForm({
               <h2 className="text-sm font-semibold text-ink">已接入数据源</h2>
             )}
             <div className="flex items-center gap-1.5">
-              {isLoadingSources ? <Loader2 className="h-4 w-4 animate-spin text-muted" /> : null}
-              <button
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+              {isLoadingSources ? <Loader2 className="h-4 w-4 animate-spin text-mutedText" /> : null}
+              <Button
+                size="iconSm"
+                variant="outline"
                 type="button"
                 title={isSourceSidebarCollapsed ? "展开数据源" : "收起数据源"}
                 aria-label={isSourceSidebarCollapsed ? "展开数据源" : "收起数据源"}
@@ -664,7 +698,7 @@ export function DataSourceSettingsForm({
                 ) : (
                   <ChevronLeft className="h-3.5 w-3.5" />
                 )}
-              </button>
+              </Button>
             </div>
           </div>
           {isSourceSidebarCollapsed ? (
@@ -692,7 +726,7 @@ export function DataSourceSettingsForm({
                     <span className="truncate text-xs font-semibold">{source.name}</span>
                     <SourceBadge sourceId={source.id} />
                   </span>
-                  <span className="text-[11px] leading-4 text-muted">
+                  <span className="text-[11px] leading-4 text-mutedText">
                     {source.category_path.join(" / ")}
                   </span>
                   <StorageSummary
@@ -721,7 +755,7 @@ export function DataSourceSettingsForm({
                   </h2>
                   {selectedSource ? <SourceBadge sourceId={selectedSource.id} /> : null}
                 </div>
-                <p className="mt-1 text-xs leading-5 text-muted">
+                <p className="mt-1 text-xs leading-5 text-mutedText">
                   {selectedSource?.description ?? "选择一个数据源后开始查询。"}
                 </p>
               </div>
@@ -729,13 +763,10 @@ export function DataSourceSettingsForm({
 
             {schema ? (
               <div className="grid gap-3">
-                <div className="inline-grid w-fit grid-cols-2 rounded-md border border-line bg-soft p-1">
-                  <button
-                    className={`inline-flex h-8 items-center gap-1.5 rounded px-2.5 text-xs font-semibold transition-colors ${
-                      queryMode === "mindgo"
-                        ? "bg-panel text-ink shadow-sm"
-                        : "text-muted hover:text-ink"
-                    }`}
+                <div className="inline-flex w-fit rounded-md border bg-muted p-1">
+                  <Button
+                    size="sm"
+                    variant={queryMode === "mindgo" ? "secondary" : "ghost"}
                     type="button"
                     onClick={() => {
                       setQueryMode("mindgo");
@@ -745,13 +776,10 @@ export function DataSourceSettingsForm({
                   >
                     <Server className="h-3.5 w-3.5" />
                     MindGo 查询
-                  </button>
-                  <button
-                    className={`inline-flex h-8 items-center gap-1.5 rounded px-2.5 text-xs font-semibold transition-colors ${
-                      queryMode === "sync"
-                        ? "bg-panel text-ink shadow-sm"
-                        : "text-muted hover:text-ink"
-                    }`}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={queryMode === "sync" ? "secondary" : "ghost"}
                     type="button"
                     onClick={() => {
                       setQueryMode("sync");
@@ -760,7 +788,7 @@ export function DataSourceSettingsForm({
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                     数据同步
-                  </button>
+                  </Button>
                 </div>
 
                 {queryMode === "mindgo" ? (
@@ -815,33 +843,37 @@ export function DataSourceSettingsForm({
             {queryMode !== "sync" ? (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-60"
+                <Button
+                  size="sm"
                   type="button"
                   disabled={!canUseSource || isBusy}
                   onClick={() => void handleQuery(1)}
                 >
                   {isQuerying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                   查询
-                </button>
+                </Button>
               </div>
-              <label className="flex items-center gap-2 text-xs font-semibold text-graphite">
+              <Label className="flex items-center gap-2">
                 每页
-                <select
-                  className="h-8 rounded-md border border-line bg-panel px-2 text-xs outline-none focus:border-signal"
-                  value={pageSize}
-                  onChange={(event) => {
-                    setPageSize(Number(event.target.value));
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
                     setPage(1);
                   }}
                 >
-                  {[20, 50, 100, 200].map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  <SelectTrigger className="h-8 w-20 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[20, 50, 100, 200].map((size) => (
+                      <SelectItem key={size} value={String(size)}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Label>
             </div>
             ) : null}
           </section>
@@ -907,7 +939,7 @@ export function DataSourceSettingsForm({
 function SourceBadge({ sourceId }: { sourceId: string }) {
   const meta = mindgoSourceUiMeta[sourceId];
   return (
-    <span className="inline-flex h-5 shrink-0 items-center rounded border border-line bg-soft px-1.5 font-mono text-[10px] font-semibold text-muted">
+    <span className="inline-flex h-5 shrink-0 items-center rounded border border-line bg-soft px-1.5 font-mono text-[10px] font-semibold text-mutedText">
       {meta?.badge ?? sourceId}
     </span>
   );
@@ -926,7 +958,7 @@ function StorageSummary({
     return (
       <span className="absolute right-2 top-2 z-10">
         <span
-          className="inline-flex h-6 items-center rounded-md border border-line bg-soft px-1.5 text-[10px] font-semibold text-muted transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+          className="inline-flex h-6 items-center rounded-md border border-line bg-soft px-1.5 text-[10px] font-semibold text-mutedText transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
           role="button"
           tabIndex={0}
           onClick={(event) => {
@@ -951,7 +983,7 @@ function StorageSummary({
     <div className="grid gap-2 rounded-md border border-line bg-soft px-3 py-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs font-semibold text-graphite">本地存储</span>
-        <span className="font-mono text-[11px] text-muted">{storage.format}</span>
+        <span className="font-mono text-[11px] text-mutedText">{storage.format}</span>
       </div>
       <div className="min-w-0 truncate font-mono text-[11px] text-ink">{storage.path}</div>
       <div className="flex flex-wrap gap-1.5">
@@ -976,30 +1008,16 @@ function SourceStorageDialog({
   const partitionRange = partitionRangeText(storage);
 
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/45 px-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="数据源本地存储"
-    >
-      <div className="w-full max-w-xl overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-line p-4">
-          <div className="min-w-0">
-            <div className="font-mono text-[10px] font-bold uppercase text-muted">Storage</div>
-            <h2 className="mt-1 truncate text-base font-semibold text-ink">{sourceName}</h2>
-          </div>
-          <button
-            className="grid h-8 w-8 place-items-center rounded-md text-muted transition-colors hover:bg-soft hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
-            type="button"
-            aria-label="关闭"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-xl overflow-hidden p-0">
+        <DialogHeader className="border-b p-4">
+          <div className="font-mono text-[10px] font-bold uppercase text-muted-foreground">Storage</div>
+          <DialogTitle className="truncate text-base">{sourceName}</DialogTitle>
+          <DialogDescription className="sr-only">数据源本地存储信息</DialogDescription>
+        </DialogHeader>
         <div className="grid gap-3 p-4">
-          <div className="rounded-md border border-line bg-soft p-3">
-            <div className="text-xs font-semibold text-graphite">本地存储</div>
+          <div className="rounded-md border bg-muted p-3">
+            <div className="text-xs font-semibold">本地存储</div>
             <div className="mt-2 break-all font-mono text-[11px] leading-5 text-ink">
               {storage.path}
             </div>
@@ -1013,26 +1031,22 @@ function SourceStorageDialog({
             <StorageBadge label="分区范围" value={partitionRange || "-"} />
           </div>
         </div>
-        <div className="flex justify-end border-t border-line p-4">
-          <button
-            className="inline-flex h-9 items-center rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
-            type="button"
-            onClick={onClose}
-          >
+        <DialogFooter className="border-t p-4">
+          <Button size="sm" variant="outline" type="button" onClick={onClose}>
             关闭
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 function StorageBadge({ label, value }: { label: string; value: string }) {
   return (
-    <span className="inline-flex min-h-6 items-center gap-1 rounded border border-line bg-panel px-2 text-[11px] text-muted">
+    <Badge className="min-h-6 justify-start gap-1 text-[11px]" variant="secondary">
       {label}
       <span className="font-mono font-semibold text-ink">{value}</span>
-    </span>
+    </Badge>
   );
 }
 
@@ -1061,10 +1075,10 @@ function TextInput({
 }) {
   return (
     <div className="grid gap-1.5">
-      <span className="text-xs font-semibold text-graphite">{label}</span>
+      <Label>{label}</Label>
       <span className="flex gap-2">
-        <input
-          className="h-10 min-w-0 flex-1 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
+        <Input
+          className="h-10 min-w-0 flex-1 text-xs"
           type={type}
           value={value}
           onChange={(event) => onChange(event.target.value)}
@@ -1085,16 +1099,16 @@ function NumberInput({
   onChange: (value: number) => void;
 }) {
   return (
-    <label className="grid gap-1.5">
-      <span className="text-xs font-semibold text-graphite">{label}</span>
-      <input
-        className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
+    <Label className="grid gap-1.5">
+      <span>{label}</span>
+      <Input
+        className="h-10 text-xs"
         min={1}
         type="number"
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
       />
-    </label>
+    </Label>
   );
 }
 
@@ -1111,26 +1125,21 @@ function ParamField({
     const selected = Array.isArray(value) ? value.map(String) : [];
     return (
       <div className="grid gap-1.5 md:col-span-2">
-        <span className="text-xs font-semibold text-graphite">{param.label}</span>
-        <div className="flex max-h-32 flex-wrap gap-1.5 overflow-auto rounded-md border border-line bg-soft p-2">
+        <Label>{param.label}</Label>
+        <div className="flex max-h-32 flex-wrap gap-1.5 overflow-auto rounded-md border bg-muted p-2">
           {param.options.map((option) => {
             const optionValue = String(option.value);
             const checked = selected.includes(optionValue);
             return (
               <label
-                className={`inline-flex h-7 items-center gap-1.5 rounded border px-2 text-[11px] ${
-                  checked
-                    ? "border-brand/35 bg-gainSoft text-brand"
-                    : "border-line bg-panel text-graphite"
-                }`}
+                className="inline-flex h-7 items-center gap-1.5 rounded-md border bg-background px-2 text-[11px]"
                 key={optionValue}
               >
-                <input
-                  className="h-3 w-3 accent-brand"
-                  type="checkbox"
+                <Switch
+                  className="scale-75"
                   checked={checked}
-                  onChange={(event) => {
-                    const nextValue = event.target.checked
+                  onCheckedChange={(nextChecked) => {
+                    const nextValue = nextChecked
                       ? [...selected, optionValue]
                       : selected.filter((item) => item !== optionValue);
                     onChange(nextValue);
@@ -1147,42 +1156,44 @@ function ParamField({
 
   if (param.value_type === "enum" && param.options.length > 0) {
     return (
-      <label className="grid gap-1.5">
-        <span className="text-xs font-semibold text-graphite">{param.label}</span>
-        <select
-          className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
+      <Label className="grid gap-1.5">
+        <span>{param.label}</span>
+        <Select
           value={stringParam(value)}
-          onChange={(event) => onChange(event.target.value)}
+          onValueChange={onChange}
         >
-          {param.options.map((option) => (
-            <option key={String(option.value)} value={String(option.value)}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
+          <SelectTrigger className="h-10 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {param.options.map((option) => (
+              <SelectItem key={String(option.value)} value={String(option.value)}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Label>
     );
   }
 
   if (param.value_type === "boolean") {
     return (
-      <label className="flex min-h-10 items-center justify-between gap-3 rounded-md border border-line bg-soft px-3 py-2">
-        <span className="text-xs font-semibold text-graphite">{param.label}</span>
-        <input
-          className="h-4 w-4 accent-brand"
-          type="checkbox"
+      <Label className="flex min-h-10 items-center justify-between gap-3 rounded-md border bg-card px-3 py-2 shadow-sm">
+        <span>{param.label}</span>
+        <Switch
           checked={Boolean(value)}
-          onChange={(event) => onChange(event.target.checked)}
+          onCheckedChange={onChange}
         />
-      </label>
+      </Label>
     );
   }
 
   return (
-    <label className="grid gap-1.5">
-      <span className="text-xs font-semibold text-graphite">{param.label}</span>
-      <input
-        className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
+    <Label className="grid gap-1.5">
+      <span>{param.label}</span>
+      <Input
+        className="h-10 text-xs"
         type={param.value_type === "date" ? "date" : param.value_type === "integer" || param.value_type === "number" ? "number" : "text"}
         value={stringParam(value)}
         onChange={(event) => {
@@ -1197,7 +1208,7 @@ function ParamField({
           onChange(event.target.value);
         }}
       />
-    </label>
+    </Label>
   );
 }
 
@@ -1219,12 +1230,13 @@ function QueryResultTable({
     <section className="grid gap-3 rounded-md border border-line bg-panel p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-ink">查询结果</h2>
-        <div className="flex items-center gap-2 text-xs text-muted">
+        <div className="flex items-center gap-2 text-xs text-mutedText">
           <span>
             {result.total} 行 · 第 {result.page}/{Math.max(result.total_pages, 1)} 页
           </span>
-          <button
-            className="grid h-8 w-8 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          <Button
+            size="iconSm"
+            variant="outline"
             type="button"
             title="上一页"
             aria-label="上一页"
@@ -1232,9 +1244,10 @@ function QueryResultTable({
             onClick={() => onPageChange(result.page - 1)}
           >
             <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            className="grid h-8 w-8 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          </Button>
+          <Button
+            size="iconSm"
+            variant="outline"
             type="button"
             title="下一页"
             aria-label="下一页"
@@ -1242,7 +1255,7 @@ function QueryResultTable({
             onClick={() => onPageChange(result.page + 1)}
           >
             <ChevronRight className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       </div>
       <div className="max-w-full overflow-auto rounded-md border border-line">
@@ -1268,7 +1281,7 @@ function QueryResultTable({
             ))}
             {result.rows.length === 0 ? (
               <tr>
-                <td className="px-3 py-8 text-center text-xs text-muted" colSpan={columns.length || 1}>
+                <td className="px-3 py-8 text-center text-xs text-mutedText" colSpan={columns.length || 1}>
                   暂无数据
                 </td>
               </tr>
@@ -1323,15 +1336,18 @@ function ManualSyncDialog({
   const invalidRange =
     !startDate || !endDate || startDate > endDate || !triggerTime || invalidQueryWindow;
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-ink/20 p-4">
-      <div className="grid w-full max-w-md gap-4 rounded-md border border-line bg-panel p-4 shadow-lift">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-ink">手动同步</h2>
-          <Play className="h-4 w-4 text-muted" />
-        </div>
-        <div className="grid gap-3 rounded-md border border-line bg-soft p-3">
+    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-sm">
+            <Play className="h-4 w-4" />
+            手动同步
+          </DialogTitle>
+          <DialogDescription>创建一次数据同步运行实例。</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 rounded-md border bg-muted p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-graphite">写入方式</span>
+            <Label>写入方式</Label>
             <WriteModeSwitch
               disabled={disabled}
               value={writeMode}
@@ -1339,42 +1355,42 @@ function ManualSyncDialog({
             />
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <label className="grid gap-1.5">
-              <span className="text-xs font-semibold text-graphite">开始日期</span>
-              <input
-                className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
+            <Label className="grid gap-1.5">
+              <span>开始日期</span>
+              <Input
+                className="h-10 text-xs"
                 type="date"
                 value={startDate}
                 onChange={(event) => onStartDateChange(event.target.value)}
               />
-            </label>
-            <label className="grid gap-1.5">
-              <span className="text-xs font-semibold text-graphite">结束日期</span>
-              <input
-                className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
+            </Label>
+            <Label className="grid gap-1.5">
+              <span>结束日期</span>
+              <Input
+                className="h-10 text-xs"
                 min={startDate}
                 type="date"
                 value={endDate}
                 onChange={(event) => onEndDateChange(event.target.value)}
               />
-            </label>
-            <label className="grid gap-1.5">
-              <span className="text-xs font-semibold text-graphite">触发时间</span>
-              <input
-                className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
+            </Label>
+            <Label className="grid gap-1.5">
+              <span>触发时间</span>
+              <Input
+                className="h-10 text-xs"
                 step={1}
                 type="time"
                 value={triggerTime}
                 onChange={(event) => onTriggerTimeChange(event.target.value)}
               />
-            </label>
+            </Label>
           </div>
           {supportsQueryWindow ? (
             <div className="grid gap-3 border-t border-line pt-3 sm:grid-cols-2">
-              <label className="grid gap-1.5">
-                <span className="text-xs font-semibold text-graphite">开始偏移</span>
-                <input
-                  className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
+              <Label className="grid gap-1.5">
+                <span>开始偏移</span>
+                <Input
+                  className="h-10 text-xs"
                   max={inputNumberValue(queryWindow.end_offset_days)}
                   min={minStartOffset}
                   step={1}
@@ -1387,11 +1403,11 @@ function ManualSyncDialog({
                     })
                   }
                 />
-              </label>
-              <label className="grid gap-1.5">
-                <span className="text-xs font-semibold text-graphite">结束偏移</span>
-                <input
-                  className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs text-ink outline-none focus:border-signal"
+              </Label>
+              <Label className="grid gap-1.5">
+                <span>结束偏移</span>
+                <Input
+                  className="h-10 text-xs"
                   max={maxEndOffset}
                   min={inputNumberValue(queryWindow.start_offset_days)}
                   step={1}
@@ -1404,9 +1420,9 @@ function ManualSyncDialog({
                     })
                   }
                 />
-              </label>
+              </Label>
               <div className="sm:col-span-2">
-                <p className="text-[11px] text-muted">
+                <p className="text-[11px] text-mutedText">
                   允许范围：{minStartOffset} 到 {maxEndOffset}
                 </p>
                 {queryWindowError ? (
@@ -1416,29 +1432,30 @@ function ManualSyncDialog({
             </div>
           ) : null}
           <div className="flex flex-wrap justify-end gap-2">
-            <button
-              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-60"
+            <Button
+              size="sm"
               type="button"
               disabled={disabled || invalidRange || isSyncing}
               onClick={onSync}
             >
               {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
               创建实例
-            </button>
+            </Button>
           </div>
         </div>
-        <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-3">
-          <button
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+        <DialogFooter>
+          <Button
+            size="sm"
+            variant="outline"
             type="button"
             disabled={disabled}
             onClick={onCancel}
           >
             关闭
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1601,20 +1618,21 @@ function SchedulerSyncDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-ink/20 p-4">
-      <div className="grid w-full max-w-xl gap-4 rounded-md border border-line bg-panel p-4 shadow-lift">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-ink">周期同步设置</h2>
+    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-sm">
+            <CalendarClock className="h-4 w-4" />
+            周期同步设置
             <StatusBadge tone={schedulerConfigured ? "success" : "muted"}>
               {schedulerConfigured ? "已开启同步" : "未开启同步"}
             </StatusBadge>
-          </div>
-          <CalendarClock className="h-4 w-4 text-muted" />
-        </div>
-        <div className="grid gap-3 rounded-md border border-line bg-soft p-3">
+          </DialogTitle>
+          <DialogDescription>配置数据源同步调度和写入方式。</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 rounded-md border bg-muted p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-graphite">写入方式</span>
+            <Label>写入方式</Label>
             <WriteModeSwitch
               disabled={disabled}
               value={writeMode}
@@ -1623,90 +1641,95 @@ function SchedulerSyncDialog({
           </div>
           <div className="grid gap-3 border-t border-line pt-3">
             <div className="grid gap-1.5">
-              <span className="text-xs font-semibold text-graphite">执行周期</span>
+              <Label>执行周期</Label>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {schedulerFrequencyOptions.map((option) => {
                   const isActive = schedule.frequency === option.value;
                   return (
-                    <button
-                      className={`inline-flex h-9 items-center justify-center rounded-md border px-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                        isActive
-                          ? "border-ink bg-ink text-panel"
-                          : "border-line bg-panel text-graphite hover:border-signal hover:text-ink"
-                      }`}
+                    <Button
                       key={option.value}
+                      size="sm"
+                      variant={isActive ? "default" : "outline"}
                       type="button"
                       disabled={disabled}
                       onClick={() => updateSchedule({ frequency: option.value })}
                     >
                       {option.label}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
             </div>
 
             {schedule.frequency === "custom" ? (
-              <label className="grid gap-1.5">
-                <span className="text-xs font-semibold text-graphite">自定义 Cron</span>
-                <input
-                  className="h-10 rounded-md border border-line bg-panel px-2.5 font-mono text-xs text-ink outline-none focus:border-signal"
+              <Label className="grid gap-1.5">
+                <span>自定义 Cron</span>
+                <Input
+                  className="h-10 font-mono text-xs"
                   value={schedule.customCron}
                   disabled={disabled}
                   onChange={(event) => updateSchedule({ customCron: event.target.value })}
                 />
-              </label>
+              </Label>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="grid gap-1.5">
-                  <span className="text-xs font-semibold text-graphite">触发时间</span>
-                  <input
-                    className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-ink outline-none focus:border-signal"
+                <Label className="grid gap-1.5">
+                  <span>触发时间</span>
+                  <Input
+                    className="h-10 text-xs font-semibold"
                     type="time"
                     step={60}
                     value={schedule.time}
                     disabled={disabled}
                     onChange={(event) => updateSchedule({ time: event.target.value })}
                   />
-                </label>
+                </Label>
                 {schedule.frequency === "weekly" ? (
-                  <label className="grid gap-1.5">
-                    <span className="text-xs font-semibold text-graphite">执行日</span>
-                    <select
-                      className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-ink outline-none focus:border-signal"
+                  <Label className="grid gap-1.5">
+                    <span>执行日</span>
+                    <Select
                       value={schedule.weekday}
                       disabled={disabled}
-                      onChange={(event) => updateSchedule({ weekday: event.target.value })}
+                      onValueChange={(weekday) => updateSchedule({ weekday })}
                     >
-                      {schedulerWeekdayOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                      <SelectTrigger className="h-10 text-xs font-semibold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {schedulerWeekdayOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Label>
                 ) : null}
                 {schedule.frequency === "monthly" ? (
-                  <label className="grid gap-1.5">
-                    <span className="text-xs font-semibold text-graphite">执行日</span>
-                    <select
-                      className="h-10 rounded-md border border-line bg-panel px-2.5 text-xs font-semibold text-ink outline-none focus:border-signal"
+                  <Label className="grid gap-1.5">
+                    <span>执行日</span>
+                    <Select
                       value={schedule.monthDay}
                       disabled={disabled}
-                      onChange={(event) => updateSchedule({ monthDay: event.target.value })}
+                      onValueChange={(monthDay) => updateSchedule({ monthDay })}
                     >
-                      {schedulerMonthDayOptions.map((day) => (
-                        <option key={day} value={day}>
-                          {day} 日
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                      <SelectTrigger className="h-10 text-xs font-semibold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {schedulerMonthDayOptions.map((day) => (
+                          <SelectItem key={day} value={day}>
+                            {day} 日
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Label>
                 ) : null}
               </div>
             )}
 
-            <div className="grid gap-1 rounded-md border border-line bg-panel px-3 py-2 text-[11px] text-muted">
+            <div className="grid gap-1 rounded-md border border-line bg-panel px-3 py-2 text-[11px] text-mutedText">
               <span className="font-semibold text-graphite">{schedulerDescription(schedule)}</span>
               <span>
                 生成 Cron：
@@ -1714,43 +1737,45 @@ function SchedulerSyncDialog({
               </span>
             </div>
           </div>
-          <div className="grid gap-1 rounded-md border border-line bg-panel px-3 py-2 text-[11px] text-muted">
+          <div className="grid gap-1 rounded-md border border-line bg-panel px-3 py-2 text-[11px] text-mutedText">
             <span>最近调度：{formatDateTime(lastRunAt)}</span>
             <span>下次调度：{formatDateTime(nextRunAt)}</span>
           </div>
           <div className="flex flex-wrap justify-end gap-2">
-            <button
-              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+            <Button
+              size="sm"
+              variant="outline"
               type="button"
               disabled={disabled || !schedulerConfigured || isSavingScheduler}
               onClick={onDisableScheduler}
             >
               {isSavingScheduler ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PowerOff className="h-3.5 w-3.5" />}
               下线
-            </button>
-            <button
-              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-60"
+            </Button>
+            <Button
+              size="sm"
               type="button"
               disabled={disabled || !generatedCron.trim() || isSavingScheduler}
               onClick={onEnableScheduler}
             >
               {isSavingScheduler ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : schedulerConfigured ? <CalendarClock className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
               {schedulerConfigured ? "更新周期" : "上线"}
-            </button>
+            </Button>
           </div>
         </div>
-        <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-3">
-          <button
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+        <DialogFooter>
+          <Button
+            size="sm"
+            variant="outline"
             type="button"
             disabled={disabled}
             onClick={onCancel}
           >
             关闭
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1764,22 +1789,21 @@ function WriteModeSwitch({
   onChange: (value: MindgoSourceSyncWriteMode) => void;
 }) {
   return (
-    <div className="inline-grid w-fit grid-cols-2 rounded-md border border-line bg-panel p-1">
+    <div className="inline-flex w-fit rounded-md border bg-background p-1">
       {[
         ["overwrite", "覆盖"],
         ["skip", "跳过"],
       ].map(([optionValue, label]) => (
-        <button
-          className={`inline-flex h-8 items-center justify-center rounded px-3 text-xs font-semibold transition-colors ${
-            value === optionValue ? "bg-ink text-panel shadow-sm" : "text-muted hover:text-ink"
-          }`}
+        <Button
           key={optionValue}
+          size="sm"
+          variant={value === optionValue ? "secondary" : "ghost"}
           type="button"
           disabled={disabled}
           onClick={() => onChange(optionValue as MindgoSourceSyncWriteMode)}
         >
           {label}
-        </button>
+        </Button>
       ))}
     </div>
   );
@@ -1839,32 +1863,33 @@ function SyncRuntimePanel({
   return (
     <div className="grid gap-4">
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-semibold text-panel transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-60"
+        <Button
+          size="sm"
           type="button"
           disabled={disabled || isSyncing}
           onClick={onOpenManualSync}
         >
           {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
           手动同步
-        </button>
-        <button
-          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line bg-panel px-3 text-xs font-semibold text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
           type="button"
           disabled={disabled}
           onClick={onOpenSchedulerSettings}
         >
           <CalendarClock className="h-3.5 w-3.5" />
           周期同步设置
-        </button>
+        </Button>
         <span
           className={`px-2 text-xs font-semibold ${
-            schedulerConfigured ? "text-brand" : "text-muted"
+            schedulerConfigured ? "text-brand" : "text-mutedText"
           }`}
         >
           {schedulerConfigured ? "已开启同步" : "未开启同步"}
         </span>
-        {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted" /> : null}
+        {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-mutedText" /> : null}
       </div>
 
       <div className="grid gap-2 border-t border-line pt-3">
@@ -1878,42 +1903,45 @@ function SyncRuntimePanel({
                   ? allInstanceCount
                   : statusCountMap.get(option.value) ?? 0;
               return (
-                <button
-                  className={`inline-flex h-8 items-center gap-1 rounded-md border px-2 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                    isActive
-                      ? "border-ink bg-ink text-panel"
-                      : "border-line bg-panel text-graphite hover:border-signal hover:text-ink"
-                  }`}
+                <Button
                   key={option.value}
+                  className="h-8 gap-1 text-[11px]"
+                  size="sm"
+                  variant={isActive ? "default" : "outline"}
                   type="button"
                   disabled={disabled}
                   onClick={() => onInstanceStatusFilterChange(option.value)}
                 >
                   <span>{option.label}</span>
-                  <span className={isActive ? "text-panel/75" : "text-muted"}>{count}</span>
-                </button>
+                  <span className={isActive ? "text-panel/75" : "text-mutedText"}>{count}</span>
+                </Button>
               );
             })}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-muted">{instances?.total ?? 0} 条</span>
-            <label className="flex items-center gap-1 text-[11px] font-semibold text-muted">
+            <span className="text-[11px] text-mutedText">{instances?.total ?? 0} 条</span>
+            <Label className="flex items-center gap-1 text-[11px] text-mutedText">
               每页
-              <select
-                className="h-8 rounded-md border border-line bg-panel px-2 text-[11px] outline-none focus:border-signal"
-                value={instancePageSize}
+              <Select
+                value={String(instancePageSize)}
                 disabled={disabled}
-                onChange={(event) => onInstancePageSizeChange(Number(event.target.value))}
+                onValueChange={(value) => onInstancePageSizeChange(Number(value))}
               >
-                {[8, 20, 50, 100].map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              className="grid h-8 w-8 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                <SelectTrigger className="h-8 w-20 text-[11px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[8, 20, 50, 100].map((size) => (
+                    <SelectItem key={size} value={String(size)}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Label>
+            <Button
+              size="iconSm"
+              variant="outline"
               type="button"
               title="刷新同步状态"
               aria-label="刷新同步状态"
@@ -1921,12 +1949,12 @@ function SyncRuntimePanel({
               onClick={onRefresh}
             >
               <RefreshCw className="h-3.5 w-3.5" />
-            </button>
+            </Button>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1180px] border-separate border-spacing-y-1.5 text-left text-xs">
-            <thead className="text-[11px] font-semibold text-muted">
+            <thead className="text-[11px] font-semibold text-mutedText">
               <tr>
                 <th className="px-2 py-1">id</th>
                 <th className="px-2 py-1">触发方式</th>
@@ -1948,11 +1976,11 @@ function SyncRuntimePanel({
                   <tr className="bg-soft text-graphite" key={instance.id}>
                     <td className="rounded-l-md px-2 py-2 font-mono text-[11px] text-ink">{instance.id}</td>
                     <td className="px-2 py-2">{triggerTypeLabel(instance.trigger_type)}</td>
-                    <td className="px-2 py-2 font-mono text-[11px] text-muted">{formatDateTime(instance.scheduled_for)}</td>
-                    <td className="px-2 py-2 font-mono text-[11px] text-muted">{formatDateTime(instance.started_at)}</td>
-                    <td className="px-2 py-2 font-mono text-[11px] text-muted">{formatDateTime(instance.completed_at)}</td>
-                    <td className="px-2 py-2 font-mono text-[11px] text-muted">{formatDateTime(instance.created_at)}</td>
-                    <td className="px-2 py-2 font-mono text-[11px] text-muted">{formatDateTime(instance.updated_at)}</td>
+                    <td className="px-2 py-2 font-mono text-[11px] text-mutedText">{formatDateTime(instance.scheduled_for)}</td>
+                    <td className="px-2 py-2 font-mono text-[11px] text-mutedText">{formatDateTime(instance.started_at)}</td>
+                    <td className="px-2 py-2 font-mono text-[11px] text-mutedText">{formatDateTime(instance.completed_at)}</td>
+                    <td className="px-2 py-2 font-mono text-[11px] text-mutedText">{formatDateTime(instance.created_at)}</td>
+                    <td className="px-2 py-2 font-mono text-[11px] text-mutedText">{formatDateTime(instance.updated_at)}</td>
                     <td className="px-2 py-2">
                       <StatusBadge tone={instance.status === "completed" ? "success" : instance.status === "failed" ? "danger" : "muted"}>
                         {instanceStatusLabel(instance.status)}
@@ -1964,8 +1992,10 @@ function SyncRuntimePanel({
                     </td>
                     <td className="rounded-r-md px-2 py-2">
                       <div className="flex justify-end gap-1">
-                        <button
-                          className="grid h-7 w-7 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                        <Button
+                          className="h-7 w-7"
+                          size="iconSm"
+                          variant="outline"
                           type="button"
                           title="详情"
                           aria-label={`查看实例 ${instance.id} 详情`}
@@ -1973,9 +2003,11 @@ function SyncRuntimePanel({
                           onClick={() => setDetailInstance(instance)}
                         >
                           <Eye className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          className="grid h-7 w-7 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                        </Button>
+                        <Button
+                          className="h-7 w-7"
+                          size="iconSm"
+                          variant="outline"
                           type="button"
                           title="重新执行"
                           aria-label={`重新执行实例 ${instance.id}`}
@@ -1983,17 +2015,39 @@ function SyncRuntimePanel({
                           onClick={() => onRerunInstance(instance)}
                         >
                           {isMutating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                        </button>
-                        <button
-                          className="grid h-7 w-7 place-items-center rounded-md border border-line bg-panel text-muted transition-colors hover:border-risk hover:text-risk disabled:cursor-not-allowed disabled:opacity-50"
-                          type="button"
-                          title="删除"
-                          aria-label={`删除实例 ${instance.id}`}
-                          disabled={disabled || Boolean(mutatingInstanceId)}
-                          onClick={() => onDeleteInstance(instance)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              className="h-7 w-7 text-mutedText hover:text-destructive"
+                              size="iconSm"
+                              variant="outline"
+                              type="button"
+                              title="删除"
+                              aria-label={`删除实例 ${instance.id}`}
+                              disabled={disabled || Boolean(mutatingInstanceId)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>删除实例 {instance.id}？</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                删除后该运行实例记录将从当前同步任务中移除。
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>取消</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => onDeleteInstance(instance)}
+                              >
+                                删除
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </td>
                   </tr>
@@ -2002,15 +2056,16 @@ function SyncRuntimePanel({
             </tbody>
           </table>
           {instanceRows.length === 0 ? (
-            <div className="rounded-md bg-soft px-3 py-6 text-center text-xs text-muted">暂无实例</div>
+            <div className="rounded-md bg-soft px-3 py-6 text-center text-xs text-mutedText">暂无实例</div>
           ) : null}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <span className="font-mono text-[11px] text-muted">
+          <span className="font-mono text-[11px] text-mutedText">
             {totalPages > 0 ? `${instancePage} / ${totalPages}` : "0 / 0"}
           </span>
-          <button
-            className="grid h-8 w-8 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          <Button
+            size="iconSm"
+            variant="outline"
             type="button"
             title="上一页"
             aria-label="上一页"
@@ -2018,9 +2073,10 @@ function SyncRuntimePanel({
             onClick={() => onInstancePageChange(instancePage - 1)}
           >
             <ChevronLeft className="h-3.5 w-3.5" />
-          </button>
-          <button
-            className="grid h-8 w-8 place-items-center rounded-md border border-line bg-panel text-graphite transition-colors hover:border-signal hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          </Button>
+          <Button
+            size="iconSm"
+            variant="outline"
             type="button"
             title="下一页"
             aria-label="下一页"
@@ -2028,7 +2084,7 @@ function SyncRuntimePanel({
             onClick={() => onInstancePageChange(instancePage + 1)}
           >
             <ChevronRight className="h-3.5 w-3.5" />
-          </button>
+          </Button>
         </div>
       </div>
       {detailInstance ? (
@@ -2049,29 +2105,13 @@ function JobInstanceDetailDialog({
   onClose: () => void;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/45 px-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="实例详情"
-    >
-      <div className="flex max-h-[calc(100vh-48px)] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-line p-4">
-          <div className="min-w-0">
-            <div className="font-mono text-[10px] font-bold uppercase text-muted">Job Instance</div>
-            <h2 className="mt-1 truncate font-mono text-base font-semibold text-ink">
-              {instance.id}
-            </h2>
-          </div>
-          <button
-            className="grid h-8 w-8 place-items-center rounded-md text-muted transition-colors hover:bg-soft hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
-            type="button"
-            aria-label="关闭"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[calc(100vh-48px)] max-w-3xl overflow-hidden p-0">
+        <DialogHeader className="border-b p-4">
+          <div className="font-mono text-[10px] font-bold uppercase text-muted-foreground">Job Instance</div>
+          <DialogTitle className="truncate font-mono text-base">{instance.id}</DialogTitle>
+          <DialogDescription className="sr-only">同步任务实例详情</DialogDescription>
+        </DialogHeader>
         <div className="min-h-0 overflow-y-auto p-4">
           <div className="grid gap-3">
             <div className="grid gap-2 sm:grid-cols-2">
@@ -2106,15 +2146,15 @@ function JobInstanceDetailDialog({
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 function InstanceDetailField({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-md border border-line bg-soft px-3 py-2">
-      <div className="text-[10px] font-semibold uppercase text-muted">{label}</div>
+      <div className="text-[10px] font-semibold uppercase text-mutedText">{label}</div>
       <div className="mt-1 break-all font-mono text-[11px] leading-5 text-ink">{value}</div>
     </div>
   );
@@ -2132,7 +2172,7 @@ function StatusBadge({
       ? "border-brand/25 bg-gainSoft text-brand"
       : tone === "danger"
         ? "border-risk/25 bg-riskSoft text-risk"
-        : "border-line bg-panel text-muted";
+        : "border-line bg-panel text-mutedText";
   return (
     <span className={`inline-flex h-6 items-center rounded border px-2 text-[11px] font-semibold ${className}`}>
       {children}

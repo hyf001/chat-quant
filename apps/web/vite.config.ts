@@ -25,6 +25,11 @@ const apiBaseUrl = process.env.NODE_ENV === "production" ? "" : `http://${apiHos
 export default defineConfig({
   base: "./",
   plugins: [react()],
+  resolve: {
+    alias: {
+      "@": resolve(dirname(fileURLToPath(import.meta.url)), "src"),
+    },
+  },
   define: {
     __CHATQ_API_BASE_URL__: JSON.stringify(apiBaseUrl),
   },

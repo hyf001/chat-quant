@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FolderOpen, Plus } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { AppSettingsPage } from "./AppSettingsPage";
 import { Composer } from "../modules/composer";
 import { ConversationShell } from "../modules/conversation";
@@ -534,38 +537,41 @@ function ProjectOnboarding({
 }: ProjectOnboardingProps) {
   return (
     <section className="grid min-h-[calc(100vh-160px)] place-items-center">
-      <div className="w-full max-w-xl rounded-lg border border-dashed border-strong bg-panel/70 p-8 text-center shadow-sm">
-        <div className="mx-auto grid h-12 w-12 place-items-center rounded-lg border border-line bg-soft text-signal">
-          <FolderOpen className="h-6 w-6" />
-        </div>
-        <h1 className="mt-5 text-xl font-semibold text-ink">创建或打开项目</h1>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">
-          Chat Quant 需要先绑定一个本地项目目录，策略、会话和运行产物都会归属到这个项目。
-        </p>
+      <Card className="w-full max-w-xl border-dashed text-center">
+        <CardHeader>
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-lg border bg-muted text-accent">
+            <FolderOpen className="h-6 w-6" />
+          </div>
+          <CardTitle className="mt-3 text-xl">创建或打开项目</CardTitle>
+          <CardDescription className="mx-auto max-w-md leading-6">
+            Chat Quant 需要先绑定一个本地项目目录，策略、会话和运行产物都会归属到这个项目。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
         {error ? (
-          <div className="mt-4 rounded-md border border-risk/30 bg-riskSoft px-3 py-2 text-left text-xs text-risk">
+          <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-left text-xs text-destructive">
             {error}
           </div>
         ) : null}
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <button
-            className="inline-flex h-10 items-center gap-2 rounded-md bg-ink px-4 text-sm font-semibold text-panel transition-colors hover:bg-graphite focus:outline-none focus:ring-2 focus:ring-signal/25"
+          <Button
             type="button"
             onClick={onCreateProject}
           >
             <Plus className="h-4 w-4" />
             新建项目
-          </button>
-          <button
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-line bg-panel px-4 text-sm font-semibold text-graphite transition-colors hover:border-signal hover:text-ink focus:outline-none focus:ring-2 focus:ring-signal/20"
+          </Button>
+          <Button
+            variant="outline"
             type="button"
             onClick={onOpenProject}
           >
             <FolderOpen className="h-4 w-4" />
             打开已有目录
-          </button>
+          </Button>
         </div>
-      </div>
+        </CardContent>
+      </Card>
     </section>
   );
 }
