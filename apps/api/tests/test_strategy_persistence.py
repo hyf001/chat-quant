@@ -40,4 +40,4 @@ async def test_strategy_service_persists_strategy_across_instances(
     assert detail.strategy.current_version_id == versions[0].id
     assert versions[0].strategy_mode == "single_symbol"
     assert versions[0].custom_params[0].name_en == "fast_period"
-    assert "GeneratedStrategy" in versions[0].source_code
+    assert "chatq_next" in versions[0].source_code

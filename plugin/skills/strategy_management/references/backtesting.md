@@ -52,24 +52,22 @@ backtest run --strategy-id str_xxx --symbol 600519.SH --start 2024-01-01 --end 2
 
 不要用 `--param` 传策略参数 schema。
 
-## 市场和资产类型
+## 标的和周期
 
-对于单只 A 股股票回测，`market=CN`、`asset_class=stock` 是默认值，通常省略。
+回测时传交易标的、日期、资金和费用参数即可。不要主动传 `--market` 或 `--asset-class`。
 
-只有用户明确要求其他市场或资产类型时再传：
+单标的策略传一个 `--symbol`；多标的策略重复传多个 `--symbol`：
 
 ```text
---market HK --asset-class stock
---market US --asset-class stock
---market CN --asset-class etf
---market CN --asset-class index
+backtest run --strategy-id str_xxx --symbol 600519.SH --symbol 000858.SZ --start 2024-01-01 --end 2024-04-30
 ```
 
-不支持的市场和资产类型组合会导致行情数据源错误。
+目前回测周期为日线；通常省略 `--timeframe`，需要显式传时只传 `--timeframe 1d`。
 
 ## 常用参数
 
 - `--symbol`：标的代码。单只股票策略只传一个。
+- `--timeframe`：周期，目前只支持 `1d`，通常省略。
 - `--start` / `--end`：回测日期区间。
 - `--cash`：初始资金。
 - `--commission`：手续费率。

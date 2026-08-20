@@ -92,15 +92,12 @@ def test_create_strategy_rejects_external_data_access(client: TestClient) -> Non
     assert detail["issues"][0]["detail"]["module"] == "akshare"
 
 
-def test_create_strategy_rejects_missing_trading_method(client: TestClient) -> None:
+def test_create_strategy_rejects_missing_protocol_function(client: TestClient) -> None:
     payload = strategy_create_payload()
     payload["source_code"] = "\n".join(
         [
-            "import backtrader as bt",
-            "",
-            "class GeneratedStrategy(bt.Strategy):",
-            "    def __init__(self):",
-            "        self.close = self.datas[0].close",
+            "def chatq_init(context):",
+            "    return {}",
         ]
     )
 
@@ -110,7 +107,7 @@ def test_create_strategy_rejects_missing_trading_method(client: TestClient) -> N
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"]["error_code"] == "STRATEGY_NO_TRADING_METHOD"
+    assert response.json()["detail"]["error_code"] == "STRATEGY_PROTOCOL_INVALID"
 
 
 def test_update_metadata_does_not_create_new_version(client: TestClient) -> None:
@@ -190,7 +187,7 @@ def test_create_strategy_version_rejects_request_custom_params(client: TestClien
     assert response.status_code == 422
 
 
-def test_create_strategy_version_smoke_failure_is_blocked_without_switching(
+def test_create_strategy_version_protocol_failure_is_blocked_without_switching(
     client: TestClient,
 ) -> None:
     created = client.post(
@@ -201,11 +198,8 @@ def test_create_strategy_version_smoke_failure_is_blocked_without_switching(
     payload = strategy_version_payload()
     payload["source_code"] = "\n".join(
         [
-            "import backtrader as bt",
-            "",
-            "class GeneratedStrategy(bt.Strategy):",
-            "    def next(self):",
-            "        raise RuntimeError('boom')",
+            "def chatq_init(context):",
+            "    return {}",
         ]
     )
 
@@ -215,7 +209,7 @@ def test_create_strategy_version_smoke_failure_is_blocked_without_switching(
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"]["error_code"] == "STRATEGY_SMOKE_RUN_FAILED"
+    assert response.json()["detail"]["error_code"] == "STRATEGY_PROTOCOL_INVALID"
     versions = client.get(f"/api/strategies/{created['strategy_id']}/versions").json()
     assert [version["id"] for version in versions] == [first_version["id"]]
     detail = client.get(f"/api/strategies/{created['strategy_id']}").json()
@@ -328,12 +322,10 @@ def strategy_create_payload(
         "description": "短期均线上穿长期均线买入，下穿卖出",
         "source_code": "\n".join(
             [
-                "import backtrader as bt",
+                "from app.service.strategy.protocol import ChatQBarContext, ChatQInitContext, ChatQNextResult, ChatQState",
                 "",
-                "class GeneratedStrategy(bt.Strategy):",
-                "    @classmethod",
-                "    def chatq_params(cls):",
-                "        return [",
+                "def chatq_params():",
+                "    return [",
                 chatq_param_source("fast_period", "integer", fast_period, "短期均线周期"),
                 chatq_param_source("slow_period", "integer", slow_period, "长期均线周期"),
                 chatq_param_source(
@@ -342,18 +334,25 @@ def strategy_create_payload(
                     volatility_filter,
                     "波动过滤",
                 ),
-                "        ]",
+                "    ]",
                 "",
-                "    def __init__(self):",
-                "        close = self.datas[0].close",
-                "        self.fast_ma = bt.ind.SMA(close, period=self.p.fast_period)",
-                "        self.slow_ma = bt.ind.SMA(close, period=self.p.slow_period)",
+                "def chatq_init(context: ChatQInitContext) -> ChatQState:",
+                "    return {}",
                 "",
-                "    def next(self):",
-                "        if not self.position and self.fast_ma[0] > self.slow_ma[0]:",
-                "            self.order_target_percent(target=0.95)",
-                "        elif self.position and self.fast_ma[0] < self.slow_ma[0]:",
-                "            self.order_target_percent(target=0)",
+                "def chatq_next(context: ChatQBarContext, state: ChatQState) -> ChatQNextResult:",
+                "    symbol = context['symbols'][0]",
+                "    params = context['params']",
+                "    bars = context['bars'][symbol]",
+                "    if len(bars) < params['slow_period']:",
+                "        return {'actions': [{'action': 'hold', 'reason': 'warmup'}], 'state': state}",
+                "    fast_ma = bars['close'].tail(params['fast_period']).mean()",
+                "    slow_ma = bars['close'].tail(params['slow_period']).mean()",
+                "    position = context['positions'].get(symbol, {'size': 0})",
+                "    if position['size'] == 0 and fast_ma > slow_ma:",
+                "        return {'actions': [{'action': 'buy', 'symbol': symbol, 'size': 10, 'reason': 'ma_cross_up'}], 'state': state}",
+                "    if position['size'] > 0 and fast_ma < slow_ma:",
+                "        return {'actions': [{'action': 'close', 'symbol': symbol, 'reason': 'ma_cross_down'}], 'state': state}",
+                "    return {'actions': [{'action': 'hold', 'reason': 'no_cross'}], 'state': state}",
             ]
         ),
         "strategy_mode": strategy_mode,
@@ -387,7 +386,7 @@ def chatq_param_source(
     label: str,
 ) -> str:
     return (
-        "            "
+        "        "
         f'{{"name": {name!r}, "type": {param_type!r}, '
         f'"default": {default!r}, "label": {label!r}}},'
     )

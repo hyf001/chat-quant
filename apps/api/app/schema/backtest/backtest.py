@@ -225,27 +225,35 @@ class StrategyBacktestDetail(BaseModel):
 
 
 class StrategyBacktestProtocol(BaseModel):
-    name: str = "chatq_backtrader_strategy_v2"
-    source_format: str = "A single Python source string defining one backtrader.Strategy subclass"
-    base_class: str = "backtrader.Strategy"
+    name: str = "chatq_signal_strategy_v1"
+    source_format: str = (
+        "A single Python source string defining chatq_params/chatq_init/chatq_next "
+        "with typed context contracts"
+    )
+    base_class: str | None = None
     required_contract: list[str] = Field(
         default_factory=lambda: [
-            "The source code must define exactly one backtrader.Strategy subclass.",
             (
-                "Strategy parameters should be declared through a class-level chatq_params() "
-                "method; Chat-Quant stores the returned schema as the strategy version "
-                "custom_params snapshot."
+                "The source code must define callable chatq_init(context) and "
+                "chatq_next(context, state)."
             ),
             (
-                "Chat-Quant injects custom_params into Backtrader params before execution, "
-                "then passes StrategyBacktestConfig.params as runtime overrides."
+                "Generated strategies may optionally import ChatQInitContext, ChatQBarContext, "
+                "ChatQState, and ChatQNextResult from app.service.strategy.protocol for annotations."
             ),
             (
-                "Trading logic should use Backtrader lifecycle methods such as __init__, "
-                "next, notify_order, and notify_trade."
+                "Strategy parameters may be declared through module-level chatq_params(); "
+                "Chat-Quant stores the returned schema as the strategy version custom_params snapshot."
             ),
             (
-                "Generated strategies may call self.chatq.sql(sql) to run a read-only SELECT "
+                "chatq_init(context) initializes serializable strategy state and must not place orders."
+            ),
+            (
+                "chatq_next(context, state) returns actions, state, and optional logs. Backtrader "
+                "is only used internally by Chat-Quant as the backtest adapter."
+            ),
+            (
+                "Generated strategies may call context['chatq'].sql(sql) to run a read-only SELECT "
                 "against datasets exposed to the agent Python environment."
             ),
             (

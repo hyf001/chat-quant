@@ -34,19 +34,129 @@ from app.service.backtest.market_data import (
     load_backtest_market_frame,
 )
 from app.service.strategy.protocol import (
+    ChatQBar,
+    ChatQBarContext,
+    ChatQInitContext,
+    ChatQOpenOrder,
+    ChatQOrderEvent,
+    ChatQPosition,
+    ChatQStrategyModule,
     StrategyProtocolError,
-    load_strategy_class,
-    with_backtrader_params,
+    load_strategy_module,
+    normalize_chatq_result,
 )
 from app.service.strategy.runtime import (
+    ChatQStrategyRuntime,
     ChatQStrategyRuntimeError,
-    attach_chatq_runtime,
 )
+
+
+class _ChatQBacktraderAdapter(bt.Strategy):
+    params = (
+        ("strategy_module", None),
+        ("chatq_param_values", None),
+        ("symbols", None),
+        ("timeframe", None),
+        ("history", None),
+        ("services", None),
+    )
+
+    def __init__(self) -> None:
+        self.strategy_module: ChatQStrategyModule = self.p.strategy_module
+        self.strategy_state: dict[str, object] = {}
+        self.open_order_by_ref: dict[str, bt.Order] = {}
+        self.pending_order_events: list[dict[str, object]] = []
+        self.data_by_symbol = {data._name: data for data in self.datas}
+
+        init_context: ChatQInitContext = {
+            "mode": "backtest",
+            "symbols": list(self.p.symbols),
+            "timeframe": self.p.timeframe,
+            "params": dict(self.p.chatq_param_values),
+            "history": self.p.history,
+            "chatq": self.p.services,
+        }
+        raw_state = self.strategy_module.chatq_init(init_context)
+        if not isinstance(raw_state, dict):
+            raise StrategyProtocolError(
+                "STRATEGY_STATE_INVALID",
+                "chatq_init must return an object",
+            )
+        self.strategy_state = raw_state
+
+    def next(self) -> None:
+        current_dt = self.datas[0].datetime.datetime(0)
+        context: ChatQBarContext = {
+            "mode": "backtest",
+            "datetime": current_dt.isoformat(),
+            "symbols": list(self.p.symbols),
+            "current_bars": _extract_current_bars(self.datas),
+            "bars": _history_until(self.p.history, current_dt),
+            "cash": float(self.broker.getcash()),
+            "portfolio_value": float(self.broker.getvalue()),
+            "positions": _normalize_positions(self),
+            "open_orders": _normalize_open_orders(self.broker.get_orders_open()),
+            "order_events": list(self.pending_order_events),
+            "params": dict(self.p.chatq_param_values),
+            "chatq": self.p.services,
+        }
+        self.pending_order_events = []
+
+        raw_result = self.strategy_module.chatq_next(context, self.strategy_state)
+        result = normalize_chatq_result(raw_result, old_state=self.strategy_state)
+        self.strategy_state = result["state"]
+
+        for action in result["actions"]:
+            self._execute_action(action)
+
+    def notify_order(self, order: bt.Order) -> None:
+        self.pending_order_events.append(_normalize_order_event(order))
+        if _is_terminal_order(order):
+            self.open_order_by_ref.pop(str(order.ref), None)
+
+    def _execute_action(self, action: dict[str, object]) -> None:
+        action_name = action["action"]
+        if action_name == "hold":
+            return
+        if action_name == "cancel":
+            order = self.open_order_by_ref.get(str(action["ref"]))
+            if order is not None:
+                self.cancel(order)
+            return
+
+        symbol = str(action["symbol"])
+        data = self.data_by_symbol[symbol]
+        size = action.get("size")
+        price = action.get("price")
+        order_type = str(action.get("order_type", "market"))
+
+        if action_name == "buy":
+            order = self.buy(
+                data=data,
+                size=size,
+                price=price,
+                exectype=_to_backtrader_exectype(order_type),
+            )
+        elif action_name == "sell":
+            order = self.sell(
+                data=data,
+                size=size,
+                price=price,
+                exectype=_to_backtrader_exectype(order_type),
+            )
+        elif action_name == "close":
+            order = self.close(data=data, size=size)
+        else:
+            raise StrategyProtocolError(
+                "STRATEGY_ACTION_INVALID",
+                f"unsupported action: {action_name}",
+            )
+        self.open_order_by_ref[str(order.ref)] = order
 
 
 class BacktraderStrategyBacktestEngine:
     name = "backtrader"
-    protocol_name = "chatq_backtrader_strategy_v2"
+    protocol_name = "chatq_signal_strategy_v1"
 
     def execute(
         self,
@@ -56,9 +166,7 @@ class BacktraderStrategyBacktestEngine:
     ) -> StrategyBacktestResultRecord:
         module_name = f"chatq_strategy_{uuid4().hex}"
         try:
-            strategy_cls = self._load_strategy_class(version, module_name)
-            strategy_cls = with_backtrader_params(strategy_cls, version.custom_params)
-            strategy_cls = attach_chatq_runtime(strategy_cls)
+            strategy_module = self._load_strategy_module(version, module_name)
             cerebro = bt.Cerebro(stdstats=False)
             cerebro.broker.setcash(float(backtest.config.initial_cash))
             cerebro.broker.setcommission(commission=float(backtest.config.commission))
@@ -81,8 +189,16 @@ class BacktraderStrategyBacktestEngine:
                 market_frames[symbol] = frame
                 cerebro.adddata(data, name=symbol)
 
-            params = {key: value for key, value in backtest.config.params.items()}
-            cerebro.addstrategy(strategy_cls, **params)
+            params = _strategy_param_values(version, backtest.config.params)
+            cerebro.addstrategy(
+                _ChatQBacktraderAdapter,
+                strategy_module=strategy_module,
+                chatq_param_values=params,
+                symbols=backtest.config.symbols,
+                timeframe=backtest.config.timeframe,
+                history=market_frames,
+                services=ChatQStrategyRuntime(),
+            )
             cerebro.addanalyzer(_EquityCurveAnalyzer, _name="equity_curve")
             cerebro.addanalyzer(_ClosedTradeAnalyzer, _name="closed_trades")
             cerebro.addanalyzer(_OrderExecutionAnalyzer, _name="orders")
@@ -90,11 +206,13 @@ class BacktraderStrategyBacktestEngine:
             executed = cerebro.run()
         except StrategyBacktestError:
             raise
+        except StrategyProtocolError as exc:
+            raise StrategyBacktestError(exc.error_code, exc.message) from exc
         except ChatQStrategyRuntimeError as exc:
             raise StrategyBacktestError(
                 _strategy_runtime_error_code(exc),
                 exc.message,
-                detail={"source": "self.chatq.sql", **exc.detail},
+                detail={"source": "context['chatq'].sql", **exc.detail},
             ) from exc
         except Exception as exc:
             raise StrategyBacktestError(
@@ -167,13 +285,13 @@ class BacktraderStrategyBacktestEngine:
             data_source=backtest_dataset_source_metadata(backtest.config.symbols),
         )
 
-    def _load_strategy_class(
+    def _load_strategy_module(
         self,
         version: StrategyVersionRecord,
         module_name: str,
-    ) -> type[bt.Strategy]:
+    ) -> ChatQStrategyModule:
         try:
-            return load_strategy_class(version.source_code, module_name=module_name)
+            return load_strategy_module(version.source_code, module_name=module_name)
         except StrategyProtocolError as exc:
             raise StrategyBacktestError(exc.error_code, exc.message) from exc
 
@@ -182,6 +300,121 @@ def _strategy_runtime_error_code(exc: ChatQStrategyRuntimeError) -> str:
     if exc.error_code == "DATASET_NOT_EXPOSED":
         return "STRATEGY_DATA_QUERY_FORBIDDEN"
     return "STRATEGY_DATA_QUERY_FAILED"
+
+
+def _strategy_param_values(
+    version: StrategyVersionRecord,
+    overrides: dict[str, object],
+) -> dict[str, object]:
+    params = {param.name_en: param.default for param in version.custom_params}
+    params.update(overrides)
+    return params
+
+
+def _extract_current_bars(datas: list[bt.LineSeries]) -> dict[str, ChatQBar]:
+    bars: dict[str, ChatQBar] = {}
+    for data in datas:
+        bars[data._name] = {
+            "symbol": data._name,
+            "datetime": data.datetime.datetime(0).isoformat(),
+            "open": float(data.open[0]),
+            "high": float(data.high[0]),
+            "low": float(data.low[0]),
+            "close": float(data.close[0]),
+            "volume": float(data.volume[0]),
+        }
+    return bars
+
+
+def _history_until(
+    history: dict[str, pd.DataFrame],
+    current_dt: datetime,
+) -> dict[str, pd.DataFrame]:
+    current_ts = pd.Timestamp(current_dt)
+    return {
+        symbol: frame.loc[frame.index <= current_ts]
+        for symbol, frame in history.items()
+    }
+
+
+def _normalize_positions(strategy: bt.Strategy) -> dict[str, ChatQPosition]:
+    positions: dict[str, ChatQPosition] = {}
+    for data in strategy.datas:
+        position = strategy.getposition(data)
+        size = float(position.size)
+        if size == 0:
+            continue
+        positions[data._name] = {
+            "symbol": data._name,
+            "size": size,
+            "price": float(position.price),
+        }
+    return positions
+
+
+def _normalize_open_orders(orders: list[bt.Order]) -> list[ChatQOpenOrder]:
+    return [_normalize_order(order) for order in orders if not _is_terminal_order(order)]
+
+
+def _normalize_order(order: bt.Order) -> ChatQOpenOrder:
+    price = _order_created_price(order)
+    return {
+        "ref": str(order.ref),
+        "symbol": order.data._name,
+        "side": "buy" if order.isbuy() else "sell",
+        "status": _order_status(order),
+        "order_type": _order_type(order),
+        "size": abs(float(order.created.size)),
+        "price": price,
+    }
+
+
+def _normalize_order_event(order: bt.Order) -> ChatQOrderEvent:
+    if order.status == order.Completed:
+        price = float(order.executed.price)
+        size = abs(float(order.executed.size))
+    else:
+        price = _order_created_price(order)
+        size = abs(float(order.created.size))
+    return {
+        "ref": str(order.ref),
+        "symbol": order.data._name,
+        "side": "buy" if order.isbuy() else "sell",
+        "status": _order_status(order),
+        "price": price,
+        "size": size,
+    }
+
+
+def _order_status(order: bt.Order) -> str:
+    if order.status == order.Completed:
+        return "filled"
+    if order.status == order.Canceled:
+        return "cancelled"
+    if order.status in {order.Margin, order.Rejected}:
+        return "rejected"
+    return order.getstatusname().lower()
+
+
+def _order_type(order: bt.Order) -> str:
+    if order.exectype == bt.Order.Limit:
+        return "limit"
+    return "market"
+
+
+def _order_created_price(order: bt.Order) -> float | None:
+    price = getattr(order.created, "price", None)
+    return float(price) if price else None
+
+
+def _is_terminal_order(order: bt.Order) -> bool:
+    return order.status in {order.Completed, order.Canceled, order.Margin, order.Rejected, order.Expired}
+
+
+def _to_backtrader_exectype(order_type: str) -> int:
+    if order_type == "limit":
+        return bt.Order.Limit
+    return bt.Order.Market
 
 
 class _EquityCurveAnalyzer(bt.Analyzer):

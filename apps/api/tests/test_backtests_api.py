@@ -136,11 +136,9 @@ def test_strategy_backtest_protocol_is_documented(client: TestClient) -> None:
 
     assert response.status_code == 200, response.json()
     data = response.json()
-    assert data["name"] == "chatq_backtrader_strategy_v2"
-    assert data["base_class"] == "backtrader.Strategy"
-    assert data["source_format"] == (
-        "A single Python source string defining one backtrader.Strategy subclass"
-    )
+    assert data["name"] == "chatq_signal_strategy_v1"
+    assert data["base_class"] is None
+    assert "chatq_params/chatq_init/chatq_next" in data["source_format"]
 
 
 def test_backtest_strategy_returns_backtest_result(client: TestClient, caplog) -> None:
@@ -159,7 +157,7 @@ def test_backtest_strategy_returns_backtest_result(client: TestClient, caplog) -
     assert data["backtest"]["execution_engine"] == "backtrader"
     assert data["backtest"]["config"]["strategy_mode"] == "single_symbol"
     assert data["backtest"]["config"]["symbols"] == ["600519.SH"]
-    assert data["result"]["protocol"] == "chatq_backtrader_strategy_v2"
+    assert data["result"]["protocol"] == "chatq_signal_strategy_v1"
     assert data["result"]["engine"] == "backtrader"
     assert data["result"]["data_source"]["mode"] == "dataset"
     assert data["result"]["data_source"]["market_dataset"]["dataset_id"] == "ds_backtest_market"
@@ -202,27 +200,30 @@ def test_backtest_strategy_can_query_exposed_dataset_with_chatq_sql(
             "name": "外部指数信号策略",
             "source_code": "\n".join(
                 [
-                    "import backtrader as bt",
+                    "from app.service.strategy.protocol import ChatQBarContext, ChatQInitContext, ChatQNextResult, ChatQState",
                     "",
-                    "class GeneratedStrategy(bt.Strategy):",
-                    "    def __init__(self):",
-                    "        frame = self.chatq.sql(",
-                    "            \"SELECT date, close FROM chatq_signal_index_prices \"",
-                    "            \"WHERE symbol = '399006.SZ' ORDER BY date\"",
-                    "        )",
-                    "        self.signal_dates = {",
-                    "            value.date().isoformat() if hasattr(value, 'date')",
-                    "            else value.isoformat() if hasattr(value, 'isoformat')",
-                    "            else str(value)",
-                    "            for value in frame.loc[frame['close'] > 100.5, 'date']",
-                    "        }",
+                    "def chatq_init(context: ChatQInitContext) -> ChatQState:",
+                    "    frame = context['chatq'].sql(",
+                    "        \"SELECT date, close FROM chatq_signal_index_prices \"",
+                    "        \"WHERE symbol = '399006.SZ' ORDER BY date\"",
+                    "    )",
+                    "    signal_dates = {",
+                    "        value.date().isoformat() if hasattr(value, 'date')",
+                    "        else value.isoformat() if hasattr(value, 'isoformat')",
+                    "        else str(value)",
+                    "        for value in frame.loc[frame['close'] > 100.5, 'date']",
+                    "    }",
+                    "    return {'signal_dates': sorted(signal_dates)}",
                     "",
-                    "    def next(self):",
-                    "        today = self.datas[0].datetime.date(0).isoformat()",
-                    "        if not self.position and today in self.signal_dates:",
-                    "            self.buy(size=10)",
-                    "        elif self.position and today not in self.signal_dates:",
-                    "            self.close()",
+                    "def chatq_next(context: ChatQBarContext, state: ChatQState) -> ChatQNextResult:",
+                    "    symbol = context['symbols'][0]",
+                    "    today = context['datetime'][:10]",
+                    "    position = context['positions'].get(symbol, {'size': 0})",
+                    "    if position['size'] == 0 and today in state['signal_dates']:",
+                    "        return {'actions': [{'action': 'buy', 'symbol': symbol, 'size': 10}], 'state': state}",
+                    "    if position['size'] > 0 and today not in state['signal_dates']:",
+                    "        return {'actions': [{'action': 'close', 'symbol': symbol}], 'state': state}",
+                    "    return {'actions': [{'action': 'hold'}], 'state': state}",
                 ]
             ),
         },
@@ -243,7 +244,7 @@ def test_backtest_strategy_can_query_exposed_dataset_with_chatq_sql(
     assert data["result"]["trades"][0]["side"] == "buy"
 
 
-def test_create_rejects_non_backtrader_strategy(client: TestClient) -> None:
+def test_create_rejects_missing_chatq_protocol(client: TestClient) -> None:
     payload = strategy_create_payload()
     payload["source_code"] = "class GeneratedStrategy:\n    pass\n"
 

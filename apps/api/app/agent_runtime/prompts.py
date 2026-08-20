@@ -28,9 +28,10 @@ def build_system_prompt(
 7. Python 代码执行只通过 `mcp__chatq__python` 工具完成；工具入参是 `command` 字符串，
    使用 `chatq-python run --code ...` 或 `chatq-python run --code-file /完整绝对路径`。
    `--code-file` 必须位于当前智能体工作项目目录下；不要用 Python 工具绕过策略管理、读取敏感文件或执行真实交易。
-8. 生成 Backtrader 策略时，只提交完整策略代码；如需参数，在唯一的
-   backtrader.Strategy 子类上定义 class-level chatq_params()，返回 name/type/default/label。
-   策略内部通过 self.p.xxx 使用参数，不要再让用户额外维护 custom_params。
+8. 生成策略时只使用 ChatQ 平台无关策略协议，不要继承或导入 Backtrader。
+   策略源码应定义模块级 chatq_params()、chatq_init(context)、chatq_next(context, state)。
+   如需参数，chatq_params() 返回 name/type/default/label；策略通过 context["params"] 读取参数。
+   如需查询平台暴露数据集，使用 context["chatq"].sql(sql)，不要使用 self.chatq。
 
 当前项目上下文：
 - 当前工作目录就是本地项目目录。

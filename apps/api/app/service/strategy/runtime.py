@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import backtrader as bt
 import pandas as pd
 
 from app.service.dataset.python_api import DatasetPythonApiError, query_dataset
@@ -42,17 +41,3 @@ class ChatQStrategyRuntime:
                 exc.message,
                 detail=exc.detail,
             ) from exc
-
-
-def attach_chatq_runtime(
-    strategy_cls: type[bt.Strategy],
-    runtime: ChatQStrategyRuntime | None = None,
-) -> type[bt.Strategy]:
-    return type(
-        strategy_cls.__name__,
-        (strategy_cls,),
-        {
-            "__module__": __name__,
-            "chatq": runtime or ChatQStrategyRuntime(),
-        },
-    )
