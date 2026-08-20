@@ -245,6 +245,10 @@ class StrategyBacktestProtocol(BaseModel):
                 "next, notify_order, and notify_trade."
             ),
             (
+                "Generated strategies may call self.chatq.sql(sql) to run a read-only SELECT "
+                "against datasets exposed to the agent Python environment."
+            ),
+            (
                 "The strategy must not fetch market data or place live orders; market data "
                 "and broker simulation are provided by Chat-Quant backtesting."
             ),

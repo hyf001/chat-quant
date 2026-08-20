@@ -38,6 +38,10 @@ from app.service.strategy.protocol import (
     load_strategy_class,
     with_backtrader_params,
 )
+from app.service.strategy.runtime import (
+    ChatQStrategyRuntimeError,
+    attach_chatq_runtime,
+)
 
 
 class BacktraderStrategyBacktestEngine:
@@ -54,6 +58,7 @@ class BacktraderStrategyBacktestEngine:
         try:
             strategy_cls = self._load_strategy_class(version, module_name)
             strategy_cls = with_backtrader_params(strategy_cls, version.custom_params)
+            strategy_cls = attach_chatq_runtime(strategy_cls)
             cerebro = bt.Cerebro(stdstats=False)
             cerebro.broker.setcash(float(backtest.config.initial_cash))
             cerebro.broker.setcommission(commission=float(backtest.config.commission))
@@ -85,6 +90,12 @@ class BacktraderStrategyBacktestEngine:
             executed = cerebro.run()
         except StrategyBacktestError:
             raise
+        except ChatQStrategyRuntimeError as exc:
+            raise StrategyBacktestError(
+                _strategy_runtime_error_code(exc),
+                exc.message,
+                detail={"source": "self.chatq.sql", **exc.detail},
+            ) from exc
         except Exception as exc:
             raise StrategyBacktestError(
                 "STRATEGY_EXECUTION_FAILED",
@@ -165,6 +176,12 @@ class BacktraderStrategyBacktestEngine:
             return load_strategy_class(version.source_code, module_name=module_name)
         except StrategyProtocolError as exc:
             raise StrategyBacktestError(exc.error_code, exc.message) from exc
+
+
+def _strategy_runtime_error_code(exc: ChatQStrategyRuntimeError) -> str:
+    if exc.error_code == "DATASET_NOT_EXPOSED":
+        return "STRATEGY_DATA_QUERY_FORBIDDEN"
+    return "STRATEGY_DATA_QUERY_FAILED"
 
 
 class _EquityCurveAnalyzer(bt.Analyzer):

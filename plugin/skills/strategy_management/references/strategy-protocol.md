@@ -13,6 +13,41 @@ Chat-Quant 策略源码使用 `backtrader` 框架。策略文件应定义一个 
 - 参数通过源码协议注册，策略内部通过 `self.p.<param_name>` 使用。
 - 不要在源码中维护外部 API key、数据库连接、行情下载逻辑或实盘交易逻辑。
 
+## 读取平台数据集
+
+交易标的行情仍由回测配置加载，策略中通常只用 `self.datas[0]` 访问当前交易标的的前复权行情。若策略需要读取指数、财务、公告、新闻等已暴露给智能体的补充信号数据集，可在策略中调用 `self.chatq.sql(sql)`，返回 pandas DataFrame。
+
+- `self.chatq.sql` 只用于查询平台已暴露的补充信号数据集，不能连接外部 API、数据库或文件。
+- 一般不要用 `self.chatq.sql` 加载股票交易行情；交易标的行情由回测引擎提供。
+- 写 SQL 前先按 [dataset-api.md](dataset-api.md) 查询真实数据集、字段和口径，不要猜视图名或字段名。
+- SQL 必须是只读 SELECT。
+- 查询结果可以在 `__init__` 中二次计算后保存为策略状态，在 `next` 中按当前 bar 决策。
+
+示例：读取指数信号数据生成日期信号，交易标的行情仍只走 `self.datas[0]`。
+
+```python
+import backtrader as bt
+
+
+class GeneratedStrategy(bt.Strategy):
+    def __init__(self):
+        frame = self.chatq.sql(
+            "SELECT signal_date, is_bullish FROM index_event_signal "
+            "WHERE index_symbol = '399006.SZ' ORDER BY signal_date"
+        )
+        self.buy_dates = {
+            value.date().isoformat() if hasattr(value, "date") else str(value)
+            for value in frame.loc[frame["is_bullish"], "signal_date"]
+        }
+
+    def next(self):
+        today = self.datas[0].datetime.date(0).isoformat()
+        if not self.position and today in self.buy_dates:
+            self.buy()
+        elif self.position and today not in self.buy_dates:
+            self.close()
+```
+
 ## 参数注册协议
 
 推荐在策略类上定义 `chatq_params()`：

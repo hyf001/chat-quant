@@ -16,6 +16,7 @@ from app.service.strategy.protocol import (
     parse_strategy_source,
     with_backtrader_params,
 )
+from app.service.strategy.runtime import attach_chatq_runtime
 
 _BANNED_IMPORT_PREFIXES = {
     "aiohttp",
@@ -137,6 +138,7 @@ def _inspect_strategy_lifecycle(strategy_cls: type[bt.Strategy]) -> StrategyVali
 
 def _run_smoke_backtest(spec: StrategyProtocolSpec, *, strategy_mode: StrategyMode) -> None:
     strategy_cls = with_backtrader_params(spec.strategy_cls, spec.custom_params)
+    strategy_cls = attach_chatq_runtime(strategy_cls)
     symbols = _symbols_for_mode(strategy_mode)
     bar_count = _bar_count_for_params(spec)
     data_dir = _sample_data_dir()

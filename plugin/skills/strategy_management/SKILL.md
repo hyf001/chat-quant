@@ -19,6 +19,7 @@ description: 当需要在 Chat-Quant 中管理量化策略和回测时使用，�
 - 策略查看、编辑、版本切换、归档、删除：读取 [references/strategy-management.md](references/strategy-management.md)。
 - 回测执行、指定版本回测、回测记录查看、回测参数覆盖：读取 [references/backtesting.md](references/backtesting.md)。
 - 编写或检查策略源码、解释参数协议、确认使用框架：读取 [references/strategy-protocol.md](references/strategy-protocol.md)。
+- 策略需要使用指数、财务、公告、新闻等平台数据集作为补充信号时：同时读取 [references/dataset-api.md](references/dataset-api.md)，先确认可用数据集、字段和示例 SQL。
 
 ## 通用流程
 

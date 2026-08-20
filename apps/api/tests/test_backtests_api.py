@@ -48,6 +48,23 @@ def configured_backtest_datasets(client: TestClient, project_test: None) -> None
         },
     )
     assert benchmark_response.status_code == 201
+    signal_response = client.post(
+        "/api/datasets",
+        json={
+            "id": "ds_chatq_signal_index",
+            "name": "chatq_signal_index_prices",
+            "description": "策略可读指数信号测试数据",
+            "category_path": ["CN", "指数", "日频", "策略信号"],
+            "exposed_to_agent": True,
+            "create_sql": (
+                "CREATE VIEW chatq_signal_index_prices AS "
+                "SELECT * FROM (VALUES "
+                f"{_price_values_sql('399006.SZ', close_start=100.0)}"
+                ") AS t(symbol, date, open, high, low, close, volume)"
+            ),
+        },
+    )
+    assert signal_response.status_code == 201
     config_response = client.put(
         "/api/config",
         json={
@@ -81,7 +98,7 @@ def create_strategy(client: TestClient) -> dict[str, object]:
         "/api/strategies",
         json=strategy_create_payload(),
     )
-    assert response.status_code == 201
+    assert response.status_code == 201, response.json()
     return response.json()
 
 
@@ -117,7 +134,7 @@ def test_backtest_config_defaults_to_sse50_and_past_year() -> None:
 def test_strategy_backtest_protocol_is_documented(client: TestClient) -> None:
     response = client.get("/api/strategy-backtest/protocol")
 
-    assert response.status_code == 200
+    assert response.status_code == 200, response.json()
     data = response.json()
     assert data["name"] == "chatq_backtrader_strategy_v2"
     assert data["base_class"] == "backtrader.Strategy"
@@ -135,7 +152,7 @@ def test_backtest_strategy_returns_backtest_result(client: TestClient, caplog) -
         json=create_backtest_payload(),
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 200, response.json()
     data = response.json()
     assert data["backtest"]["status"] == "succeeded"
     assert data["backtest"]["id"].startswith("sbt_")
@@ -173,6 +190,57 @@ def test_backtest_strategy_returns_backtest_result(client: TestClient, caplog) -
         "strategy backtest started",
         "strategy backtest succeeded",
     ]
+
+
+def test_backtest_strategy_can_query_exposed_dataset_with_chatq_sql(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/api/strategies",
+        json={
+            **strategy_create_payload(),
+            "name": "外部指数信号策略",
+            "source_code": "\n".join(
+                [
+                    "import backtrader as bt",
+                    "",
+                    "class GeneratedStrategy(bt.Strategy):",
+                    "    def __init__(self):",
+                    "        frame = self.chatq.sql(",
+                    "            \"SELECT date, close FROM chatq_signal_index_prices \"",
+                    "            \"WHERE symbol = '399006.SZ' ORDER BY date\"",
+                    "        )",
+                    "        self.signal_dates = {",
+                    "            value.date().isoformat() if hasattr(value, 'date')",
+                    "            else value.isoformat() if hasattr(value, 'isoformat')",
+                    "            else str(value)",
+                    "            for value in frame.loc[frame['close'] > 100.5, 'date']",
+                    "        }",
+                    "",
+                    "    def next(self):",
+                    "        today = self.datas[0].datetime.date(0).isoformat()",
+                    "        if not self.position and today in self.signal_dates:",
+                    "            self.buy(size=10)",
+                    "        elif self.position and today not in self.signal_dates:",
+                    "            self.close()",
+                ]
+            ),
+        },
+    )
+    assert response.status_code == 201, response.json()
+    created = response.json()
+
+    backtest_payload = create_backtest_payload()
+    backtest_payload["config"]["params"] = {}
+    response = client.post(
+        f"/api/strategies/{created['strategy_id']}/backtest",
+        json=backtest_payload,
+    )
+
+    assert response.status_code == 200, response.json()
+    data = response.json()
+    assert data["backtest"]["status"] == "succeeded"
+    assert data["result"]["trades"][0]["side"] == "buy"
 
 
 def test_create_rejects_non_backtrader_strategy(client: TestClient) -> None:
