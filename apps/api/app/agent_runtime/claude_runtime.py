@@ -383,8 +383,6 @@ def _sdk_env(settings: Settings) -> dict[str, str]:
 
 
 def _sdk_thinking_config(settings: Settings) -> dict[str, object] | None:
-    if settings.agent_thinking_type == "disabled":
-        return None
     if settings.agent_thinking_type == "enabled":
         return {
             "type": "enabled",

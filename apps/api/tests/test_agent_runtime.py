@@ -41,7 +41,7 @@ def test_runtime_interrupts_active_sdk_client() -> None:
     asyncio.run(_run_runtime_interrupt_assertions())
 
 
-def test_sdk_options_omit_thinking_by_default_for_compatible_agent_api() -> None:
+def test_sdk_options_pass_disabled_thinking_by_default() -> None:
     (Path.cwd() / "plugin").mkdir()
     runtime = ClaudeAgentRuntime(
         settings=Settings(),
@@ -68,7 +68,7 @@ def test_sdk_options_omit_thinking_by_default_for_compatible_agent_api() -> None
     assert sdk_options.permission_mode == "bypassPermissions"
     assert sdk_options.strict_mcp_config is True
     assert set(sdk_options.mcp_servers) == {CHATQ_SERVER_NAME}
-    assert sdk_options.thinking is None
+    assert sdk_options.thinking == {"type": "disabled"}
     assert sdk_options.plugins == [
         {
             "type": "local",
