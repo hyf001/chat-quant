@@ -6,7 +6,6 @@ from app.service.config import AppConfigService
 
 router = APIRouter()
 
-
 @router.get("", response_model=AppConfigResponse)
 async def get_app_config(db: DatabaseSession) -> AppConfigResponse:
     return await AppConfigService(db).get_config()
