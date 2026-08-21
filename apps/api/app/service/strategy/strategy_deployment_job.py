@@ -251,18 +251,24 @@ async def execute_strategy_deployment_tick(
     saved_signals = []
     generated_count = 0
     rejected_count = 0
+    ignored_count = 0
     for action in result.actions:
         status = StrategySignalStatus.GENERATED
         reason = str(action.get("reason")) if action.get("reason") is not None else None
-        try:
-            signal_action = _signal_action(action)
-        except Exception as exc:
+        if action.get("action") == "hold":
             signal_action = action
-            status = StrategySignalStatus.REJECTED
-            rejected_count += 1
-            reason = str(exc)
+            status = StrategySignalStatus.IGNORED
+            ignored_count += 1
         else:
-            generated_count += 1
+            try:
+                signal_action = _signal_action(action)
+            except Exception as exc:
+                signal_action = action
+                status = StrategySignalStatus.REJECTED
+                rejected_count += 1
+                reason = str(exc)
+            else:
+                generated_count += 1
         saved_signals.append(
             await service.save_signal(
                 deployment_id=deployment.id,
@@ -280,12 +286,14 @@ async def execute_strategy_deployment_tick(
         result_status="completed",
         summary=(
             f"saved {len(saved_signals)} signals "
-            f"({generated_count} generated, {rejected_count} rejected)"
+            f"({generated_count} generated, {ignored_count} ignored, "
+            f"{rejected_count} rejected)"
         ),
         payload={
             "deployment_id": deployment.id,
             "signal_count": len(saved_signals),
             "generated_count": generated_count,
+            "ignored_count": ignored_count,
             "rejected_count": rejected_count,
         },
     )

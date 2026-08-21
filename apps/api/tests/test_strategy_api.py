@@ -485,6 +485,7 @@ def test_list_strategy_signals_returns_backend_action_counts(client: TestClient)
         "sell": 0,
         "close": 1,
         "cancel": 0,
+        "hold": 0,
     }
     assert filtered_response.status_code == 200
     filtered_payload = filtered_response.json()
@@ -495,7 +496,9 @@ def test_list_strategy_signals_returns_backend_action_counts(client: TestClient)
     ] == 1
 
 
-def test_strategy_deployment_persists_rejected_non_hold_actions(client: TestClient) -> None:
+def test_strategy_deployment_persists_all_actions_and_marks_hold_ignored(
+    client: TestClient,
+) -> None:
     payload = strategy_create_payload()
     payload["source_code"] = "\n".join(
         [
@@ -532,15 +535,26 @@ def test_strategy_deployment_persists_rejected_non_hold_actions(client: TestClie
     result = asyncio.run(_execute_static_strategy_deployment(deployment["id"]))
     response = client.get(f"/api/strategy-deployments/{deployment['id']}/signals")
 
-    assert result.payload["signal_count"] == 3
+    assert result.payload["signal_count"] == 4
     assert result.payload["generated_count"] == 1
+    assert result.payload["ignored_count"] == 1
     assert result.payload["rejected_count"] == 2
     payload = response.json()
-    assert payload["total"] == 3
+    assert payload["total"] == 4
     signals = sorted(payload["items"], key=lambda item: item["action"]["action"])
-    assert [signal["status"] for signal in signals] == ["rejected", "rejected", "generated"]
-    assert [signal["action"]["action"] for signal in signals] == ["buy", "dance", "sell"]
-    assert all(signal["action"]["action"] != "hold" for signal in signals)
+    assert [signal["status"] for signal in signals] == [
+        "rejected",
+        "rejected",
+        "ignored",
+        "generated",
+    ]
+    assert [signal["action"]["action"] for signal in signals] == [
+        "buy",
+        "dance",
+        "hold",
+        "sell",
+    ]
+    assert {item["action"]: item["count"] for item in payload["action_counts"]}["hold"] == 1
 
 
 async def _execute_static_strategy_deployment(deployment_id: str):

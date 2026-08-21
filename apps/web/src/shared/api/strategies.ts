@@ -246,7 +246,7 @@ export type StrategyCopySummary = {
 
 export type StrategyDeploymentMode = "signal" | "paper" | "live";
 
-export type StrategySignalActionType = "buy" | "sell" | "close" | "cancel";
+export type StrategySignalActionType = "buy" | "sell" | "close" | "cancel" | "hold";
 
 export type StrategySignalAction = {
   action?: StrategySignalActionType | string;

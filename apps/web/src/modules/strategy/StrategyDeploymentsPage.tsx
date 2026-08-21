@@ -2,6 +2,8 @@ import {
   CalendarClock,
   CalendarX,
   Activity,
+  ChevronLeft,
+  ChevronRight,
   ListChecks,
   MoreHorizontal,
   Pencil,
@@ -108,6 +110,15 @@ type DeploymentFilters = {
 
 type DeploymentInstanceStatusFilter = "all" | JobInstanceStatus;
 type SignalActionFilter = "all" | StrategySignalActionType;
+type ScheduleMode = "weekdays" | "daily" | "weekly" | "monthly" | "custom";
+
+type ScheduleForm = {
+  mode: ScheduleMode;
+  time: string;
+  weekdays: string[];
+  monthDay: string;
+  cron: string;
+};
 
 const defaultForm: DeploymentForm = {
   strategyVersionId: "",
@@ -127,6 +138,17 @@ const defaultFilters: DeploymentFilters = {
   schedule: "all",
   symbol: "",
 };
+
+const defaultScheduleForm: ScheduleForm = {
+  mode: "weekdays",
+  time: "15:00",
+  weekdays: ["1", "2", "3", "4", "5"],
+  monthDay: "1",
+  cron: "0 15 * * 1-5",
+};
+
+const defaultPageSize = 20;
+const pageSizeOptions = [10, 20, 50, 100];
 
 const instanceStatusFilterOptions: {
   label: string;
@@ -150,6 +172,28 @@ const signalActionFilterOptions: {
   { label: "卖出", value: "sell" },
   { label: "平仓", value: "close" },
   { label: "撤单", value: "cancel" },
+  { label: "持有", value: "hold" },
+];
+
+const scheduleModeOptions: {
+  label: string;
+  value: ScheduleMode;
+}[] = [
+  { label: "每天", value: "daily" },
+  { label: "周一至周五", value: "weekdays" },
+  { label: "每周", value: "weekly" },
+  { label: "每月", value: "monthly" },
+  { label: "自定义", value: "custom" },
+];
+
+const weekdayOptions = [
+  { label: "周一", value: "1" },
+  { label: "周二", value: "2" },
+  { label: "周三", value: "3" },
+  { label: "周四", value: "4" },
+  { label: "周五", value: "5" },
+  { label: "周六", value: "6" },
+  { label: "周日", value: "0" },
 ];
 
 export function StrategyDeploymentsPage({ project }: StrategyDeploymentsPageProps) {
@@ -167,19 +211,23 @@ export function StrategyDeploymentsPage({ project }: StrategyDeploymentsPageProp
     useState<StrategyDeployment | null>(null);
   const [scheduleDialogDeployment, setScheduleDialogDeployment] =
     useState<StrategyDeployment | null>(null);
-  const [scheduleCron, setScheduleCron] = useState("0 15 * * 1-5");
+  const [scheduleForm, setScheduleForm] = useState<ScheduleForm>(defaultScheduleForm);
   const [instancesDialogDeployment, setInstancesDialogDeployment] =
     useState<StrategyDeployment | null>(null);
   const [deploymentInstances, setDeploymentInstances] =
     useState<JobRuntimeInstanceListResponse | null>(null);
   const [instanceStatusFilter, setInstanceStatusFilter] =
     useState<DeploymentInstanceStatusFilter>("all");
+  const [instancePage, setInstancePage] = useState(1);
+  const [instancePageSize, setInstancePageSize] = useState(defaultPageSize);
   const [isLoadingInstances, setIsLoadingInstances] = useState(false);
   const [signalsDialogDeployment, setSignalsDialogDeployment] =
     useState<StrategyDeployment | null>(null);
   const [deploymentSignals, setDeploymentSignals] =
     useState<StrategySignalListResponse | null>(null);
   const [signalActionFilter, setSignalActionFilter] = useState<SignalActionFilter>("all");
+  const [signalPage, setSignalPage] = useState(1);
+  const [signalPageSize, setSignalPageSize] = useState(defaultPageSize);
   const [isLoadingSignals, setIsLoadingSignals] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingDeploymentId, setPendingDeploymentId] = useState<string | null>(null);
@@ -394,6 +442,8 @@ export function StrategyDeploymentsPage({ project }: StrategyDeploymentsPageProp
   const loadDeploymentInstances = async (
     deployment: StrategyDeployment,
     statusFilter: DeploymentInstanceStatusFilter,
+    page: number,
+    pageSize: number,
   ) => {
     setIsLoadingInstances(true);
     try {
@@ -401,8 +451,8 @@ export function StrategyDeploymentsPage({ project }: StrategyDeploymentsPageProp
         job_type: "strategy_deployment_tick",
         job_id: deployment.id,
         status: statusFilter === "all" ? undefined : statusFilter,
-        page: 1,
-        page_size: 20,
+        page,
+        page_size: pageSize,
       });
       setDeploymentInstances(response);
     } catch (caught) {
@@ -416,26 +466,51 @@ export function StrategyDeploymentsPage({ project }: StrategyDeploymentsPageProp
     setInstancesDialogDeployment(deployment);
     setDeploymentInstances(null);
     setInstanceStatusFilter("all");
-    await loadDeploymentInstances(deployment, "all");
+    setInstancePage(1);
+    await loadDeploymentInstances(deployment, "all", 1, instancePageSize);
   };
 
   const handleInstanceStatusFilterChange = async (
     statusFilter: DeploymentInstanceStatusFilter,
   ) => {
     setInstanceStatusFilter(statusFilter);
+    setInstancePage(1);
     if (instancesDialogDeployment) {
-      await loadDeploymentInstances(instancesDialogDeployment, statusFilter);
+      await loadDeploymentInstances(instancesDialogDeployment, statusFilter, 1, instancePageSize);
+    }
+  };
+
+  const handleInstancePageChange = async (page: number) => {
+    setInstancePage(page);
+    if (instancesDialogDeployment) {
+      await loadDeploymentInstances(
+        instancesDialogDeployment,
+        instanceStatusFilter,
+        page,
+        instancePageSize,
+      );
+    }
+  };
+
+  const handleInstancePageSizeChange = async (pageSize: number) => {
+    setInstancePageSize(pageSize);
+    setInstancePage(1);
+    if (instancesDialogDeployment) {
+      await loadDeploymentInstances(instancesDialogDeployment, instanceStatusFilter, 1, pageSize);
     }
   };
 
   const loadDeploymentSignals = async (
     deployment: StrategyDeployment,
     actionFilter: SignalActionFilter,
+    page: number,
+    pageSize: number,
   ) => {
     setIsLoadingSignals(true);
     try {
       const signals = await listStrategySignals(deployment.id, {
-        limit: 100,
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
         action: actionFilter === "all" ? undefined : actionFilter,
       });
       setDeploymentSignals(signals);
@@ -450,13 +525,35 @@ export function StrategyDeploymentsPage({ project }: StrategyDeploymentsPageProp
     setSignalsDialogDeployment(deployment);
     setDeploymentSignals(null);
     setSignalActionFilter("all");
-    await loadDeploymentSignals(deployment, "all");
+    setSignalPage(1);
+    await loadDeploymentSignals(deployment, "all", 1, signalPageSize);
   };
 
   const handleSignalActionFilterChange = async (actionFilter: SignalActionFilter) => {
     setSignalActionFilter(actionFilter);
+    setSignalPage(1);
     if (signalsDialogDeployment) {
-      await loadDeploymentSignals(signalsDialogDeployment, actionFilter);
+      await loadDeploymentSignals(signalsDialogDeployment, actionFilter, 1, signalPageSize);
+    }
+  };
+
+  const handleSignalPageChange = async (page: number) => {
+    setSignalPage(page);
+    if (signalsDialogDeployment) {
+      await loadDeploymentSignals(
+        signalsDialogDeployment,
+        signalActionFilter,
+        page,
+        signalPageSize,
+      );
+    }
+  };
+
+  const handleSignalPageSizeChange = async (pageSize: number) => {
+    setSignalPageSize(pageSize);
+    setSignalPage(1);
+    if (signalsDialogDeployment) {
+      await loadDeploymentSignals(signalsDialogDeployment, signalActionFilter, 1, pageSize);
     }
   };
 
@@ -489,7 +586,7 @@ export function StrategyDeploymentsPage({ project }: StrategyDeploymentsPageProp
   };
 
   const handleOpenSchedule = (deployment: StrategyDeployment) => {
-    setScheduleCron(deployment.schedule_cron || "0 15 * * 1-5");
+    setScheduleForm(scheduleFormFromCron(deployment.schedule_cron || defaultScheduleForm.cron));
     setScheduleDialogDeployment(deployment);
   };
 
@@ -497,11 +594,16 @@ export function StrategyDeploymentsPage({ project }: StrategyDeploymentsPageProp
     if (!scheduleDialogDeployment) {
       return;
     }
+    const cron = cronFromScheduleForm(scheduleForm);
+    if (!cron) {
+      notify("调度配置不完整", "error");
+      return;
+    }
     setPendingDeploymentId(scheduleDialogDeployment.id);
     try {
       const updated = await upsertStrategyDeploymentSchedule(
         scheduleDialogDeployment.id,
-        scheduleCron,
+        cron,
       );
       setDeployments((current) =>
         current.map((item) => (item.id === updated.id ? updated : item)),
@@ -787,6 +889,8 @@ export function StrategyDeploymentsPage({ project }: StrategyDeploymentsPageProp
         deployment={instancesDialogDeployment}
         instances={deploymentInstances}
         isLoading={isLoadingInstances}
+        page={instancePage}
+        pageSize={instancePageSize}
         statusFilter={instanceStatusFilter}
         onClose={() => {
           setInstancesDialogDeployment(null);
@@ -794,8 +898,19 @@ export function StrategyDeploymentsPage({ project }: StrategyDeploymentsPageProp
         }}
         onRefresh={() => {
           if (instancesDialogDeployment) {
-            void loadDeploymentInstances(instancesDialogDeployment, instanceStatusFilter);
+            void loadDeploymentInstances(
+              instancesDialogDeployment,
+              instanceStatusFilter,
+              instancePage,
+              instancePageSize,
+            );
           }
+        }}
+        onPageChange={(page) => {
+          void handleInstancePageChange(page);
+        }}
+        onPageSizeChange={(pageSize) => {
+          void handleInstancePageSizeChange(pageSize);
         }}
         onStatusFilterChange={(statusFilter) => {
           void handleInstanceStatusFilterChange(statusFilter);
@@ -806,6 +921,8 @@ export function StrategyDeploymentsPage({ project }: StrategyDeploymentsPageProp
         signals={deploymentSignals}
         isLoading={isLoadingSignals}
         actionFilter={signalActionFilter}
+        page={signalPage}
+        pageSize={signalPageSize}
         onClose={() => {
           setSignalsDialogDeployment(null);
           setDeploymentSignals(null);
@@ -815,8 +932,19 @@ export function StrategyDeploymentsPage({ project }: StrategyDeploymentsPageProp
         }}
         onRefresh={() => {
           if (signalsDialogDeployment) {
-            void loadDeploymentSignals(signalsDialogDeployment, signalActionFilter);
+            void loadDeploymentSignals(
+              signalsDialogDeployment,
+              signalActionFilter,
+              signalPage,
+              signalPageSize,
+            );
           }
+        }}
+        onPageChange={(page) => {
+          void handleSignalPageChange(page);
+        }}
+        onPageSizeChange={(pageSize) => {
+          void handleSignalPageSizeChange(pageSize);
         }}
       />
       <DeploymentStateDialog
@@ -852,15 +980,21 @@ export function StrategyDeploymentsPage({ project }: StrategyDeploymentsPageProp
         </AlertDialogContent>
       </AlertDialog>
       <ScheduleDialog
-        cron={scheduleCron}
         deployment={scheduleDialogDeployment}
+        form={scheduleForm}
         isSaving={
           scheduleDialogDeployment
             ? pendingDeploymentId === scheduleDialogDeployment.id
             : false
         }
-        onChange={setScheduleCron}
+        onChange={setScheduleForm}
         onClose={() => setScheduleDialogDeployment(null)}
+        onDisable={() => {
+          if (scheduleDialogDeployment) {
+            void handleDeleteSchedule(scheduleDialogDeployment);
+            setScheduleDialogDeployment(null);
+          }
+        }}
         onSubmit={() => void handleSaveSchedule()}
       />
     </section>
@@ -1142,8 +1276,12 @@ type DeploymentInstancesDialogProps = {
   deployment: StrategyDeployment | null;
   instances: JobRuntimeInstanceListResponse | null;
   isLoading: boolean;
+  page: number;
+  pageSize: number;
   statusFilter: DeploymentInstanceStatusFilter;
   onClose: () => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
   onRefresh: () => void;
   onStatusFilterChange: (statusFilter: DeploymentInstanceStatusFilter) => void;
 };
@@ -1152,8 +1290,12 @@ function DeploymentInstancesDialog({
   deployment,
   instances,
   isLoading,
+  page,
+  pageSize,
   statusFilter,
   onClose,
+  onPageChange,
+  onPageSizeChange,
   onRefresh,
   onStatusFilterChange,
 }: DeploymentInstancesDialogProps) {
@@ -1290,15 +1432,23 @@ function DeploymentInstancesDialog({
                           </TooltipContent>
                         </Tooltip>
                       </TableCell>
-                      <TableCell className="max-w-64">
-                        <div className="truncate text-xs text-graphite">
-                          {instance.summary || instance.result_status || "-"}
-                        </div>
-                        {instance.error_message ? (
-                          <div className="mt-1 truncate text-xs text-destructive">
-                            {instance.error_message}
-                          </div>
-                        ) : null}
+                      <TableCell>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant={instance.error_message ? "destructive" : "outline"}
+                              type="button"
+                            >
+                              摘要
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-h-80 max-w-xl overflow-auto p-3">
+                            <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed">
+                              {formatInstanceSummary(instance)}
+                            </pre>
+                          </TooltipContent>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))
@@ -1306,6 +1456,15 @@ function DeploymentInstancesDialog({
             </TableBody>
           </Table>
         </div>
+        <PaginationControls
+          isLoading={isLoading}
+          page={page}
+          pageSize={pageSize}
+          total={instances?.total ?? 0}
+          totalPages={instances?.total_pages ?? 0}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
         <DialogFooter>
           <Button variant="outline" type="button" onClick={onClose}>
             关闭
@@ -1321,8 +1480,12 @@ type DeploymentSignalsDialogProps = {
   signals: StrategySignalListResponse | null;
   isLoading: boolean;
   actionFilter: SignalActionFilter;
+  page: number;
+  pageSize: number;
   onClose: () => void;
   onActionFilterChange: (actionFilter: SignalActionFilter) => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
   onRefresh: () => void;
 };
 
@@ -1331,8 +1494,12 @@ function DeploymentSignalsDialog({
   signals,
   isLoading,
   actionFilter,
+  page,
+  pageSize,
   onClose,
   onActionFilterChange,
+  onPageChange,
+  onPageSizeChange,
   onRefresh,
 }: DeploymentSignalsDialogProps) {
   const actionCountMap = new Map(
@@ -1466,6 +1633,15 @@ function DeploymentSignalsDialog({
             </TableBody>
           </Table>
         </div>
+        <PaginationControls
+          isLoading={isLoading}
+          page={page}
+          pageSize={pageSize}
+          total={signals?.total ?? 0}
+          totalPages={signals ? Math.ceil(signals.total / signals.limit) : 0}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
         <DialogFooter>
           <Button variant="outline" type="button" onClick={onClose}>
             关闭
@@ -1473,6 +1649,76 @@ function DeploymentSignalsDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+type PaginationControlsProps = {
+  isLoading: boolean;
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+};
+
+function PaginationControls({
+  isLoading,
+  page,
+  pageSize,
+  total,
+  totalPages,
+  onPageChange,
+  onPageSizeChange,
+}: PaginationControlsProps) {
+  const normalizedTotalPages = Math.max(totalPages, total > 0 ? 1 : 0);
+  const firstItem = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const lastItem = Math.min(total, page * pageSize);
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-line bg-panel px-3 py-2">
+      <div className="text-[11px] text-mutedText">
+        {total === 0
+          ? "暂无记录"
+          : `${firstItem}-${lastItem} / ${total} 条 · 第 ${page}/${normalizedTotalPages} 页`}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-1 text-[11px] text-mutedText">
+          每页
+          <select
+            className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+            value={pageSize}
+            disabled={isLoading}
+            onChange={(event) => onPageSizeChange(Number.parseInt(event.target.value, 10))}
+          >
+            {pageSizeOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button
+          size="sm"
+          variant="outline"
+          type="button"
+          disabled={isLoading || page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          <ChevronLeft className="h-4 w-4" />
+          上一页
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          type="button"
+          disabled={isLoading || normalizedTotalPages === 0 || page >= normalizedTotalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          下一页
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -1505,40 +1751,169 @@ function DeploymentStateDialog({ deployment, onClose }: DeploymentStateDialogPro
 }
 
 type ScheduleDialogProps = {
-  cron: string;
   deployment: StrategyDeployment | null;
+  form: ScheduleForm;
   isSaving: boolean;
-  onChange: (cron: string) => void;
+  onChange: (form: ScheduleForm) => void;
   onClose: () => void;
+  onDisable: () => void;
   onSubmit: () => void;
 };
 
 function ScheduleDialog({
-  cron,
   deployment,
+  form,
   isSaving,
   onChange,
   onClose,
+  onDisable,
   onSubmit,
 }: ScheduleDialogProps) {
+  const cron = cronFromScheduleForm(form);
+
   return (
     <Dialog open={Boolean(deployment)} onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent>
+      <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>配置调度</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-sm">
+            <CalendarClock className="h-4 w-4" />
+            配置调度
+            <Badge variant={deployment?.scheduled ? "default" : "outline"}>
+              {deployment?.scheduled ? "已开启调度" : "未开启调度"}
+            </Badge>
+          </DialogTitle>
           <DialogDescription>{deployment?.name ?? ""}</DialogDescription>
         </DialogHeader>
-        <label className="grid gap-1 text-xs font-semibold text-graphite">
-          Cron
-          <Input value={cron} onChange={(event) => onChange(event.target.value)} />
-        </label>
+        <div className="grid gap-3 rounded-md border bg-muted p-3">
+          <div className="grid gap-3 border-b border-line pb-3">
+            <div className="grid gap-1.5">
+              <span className="text-xs font-bold text-ink">执行周期</span>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                {scheduleModeOptions.map((option) => (
+                  <Button
+                    key={option.value}
+                    size="sm"
+                    variant={form.mode === option.value ? "default" : "outline"}
+                    type="button"
+                    disabled={isSaving}
+                    onClick={() => onChange({ ...form, mode: option.value })}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {form.mode !== "custom" ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1.5 text-xs font-semibold text-graphite">
+                  <span>触发时间</span>
+                  <Input
+                    className="h-10 text-xs font-semibold"
+                    type="time"
+                    step={60}
+                    value={form.time}
+                    disabled={isSaving}
+                    onChange={(event) => onChange({ ...form, time: event.target.value })}
+                  />
+                </label>
+
+                {form.mode === "monthly" ? (
+                  <label className="grid gap-1.5 text-xs font-semibold text-graphite">
+                    <span>执行日</span>
+                    <Input
+                      className="h-10 text-xs font-semibold"
+                      max={31}
+                      min={1}
+                      type="number"
+                      value={form.monthDay}
+                      disabled={isSaving}
+                      onChange={(event) => onChange({ ...form, monthDay: event.target.value })}
+                    />
+                  </label>
+                ) : null}
+              </div>
+            ) : (
+              <label className="grid gap-1.5 text-xs font-semibold text-graphite">
+                <span>自定义 Cron</span>
+                <Input
+                  className="h-10 font-mono text-xs"
+                  value={form.cron}
+                  disabled={isSaving}
+                  onChange={(event) => onChange({ ...form, cron: event.target.value })}
+                />
+              </label>
+            )}
+
+            {form.mode === "weekly" ? (
+              <div className="grid gap-1.5">
+                <span className="text-xs font-semibold text-graphite">执行日</span>
+                <div className="flex flex-wrap gap-2">
+                  {weekdayOptions.map((option) => {
+                    const checked = form.weekdays.includes(option.value);
+                    return (
+                      <Button
+                        key={option.value}
+                        size="sm"
+                        variant={checked ? "default" : "outline"}
+                        type="button"
+                        disabled={isSaving}
+                        onClick={() =>
+                          onChange({
+                            ...form,
+                            weekdays: nextWeekdays(form.weekdays, option.value, !checked),
+                          })
+                        }
+                      >
+                        {option.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="grid gap-1 rounded-md border border-line bg-panel px-3 py-2 text-[11px] text-mutedText">
+              <span className="font-semibold text-graphite">{scheduleSummary(form)}</span>
+              <span>
+                生成 Cron：
+                <code className="ml-1 rounded bg-soft px-1.5 py-0.5 font-mono text-ink">
+                  {cron || "-"}
+                </code>
+              </span>
+            </div>
+          </div>
+
+          <div className="grid gap-1 rounded-md border border-line bg-panel px-3 py-2 text-[11px] text-mutedText">
+            <span>最近调度：-</span>
+            <span>下次调度：-</span>
+          </div>
+
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              type="button"
+              disabled={isSaving || !deployment?.scheduled}
+              onClick={onDisable}
+            >
+              <CalendarX className="h-3.5 w-3.5" />
+              下线
+            </Button>
+            <Button
+              size="sm"
+              type="button"
+              disabled={!cron.trim() || isSaving}
+              onClick={onSubmit}
+            >
+              <CalendarClock className="h-3.5 w-3.5" />
+              {deployment?.scheduled ? "更新周期" : "上线"}
+            </Button>
+          </div>
+        </div>
         <DialogFooter>
-          <Button variant="outline" type="button" onClick={onClose}>
-            取消
-          </Button>
-          <Button type="button" disabled={!cron.trim() || isSaving} onClick={onSubmit}>
-            <CalendarClock className="h-4 w-4" />
-            保存
+          <Button size="sm" variant="outline" type="button" disabled={isSaving} onClick={onClose}>
+            关闭
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1556,6 +1931,131 @@ function parseSymbols(value: string): string[] {
 function parseLookbackBars(value: string): number {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 250;
+}
+
+function scheduleFormFromCron(cron: string): ScheduleForm {
+  const parts = cron.trim().split(/\s+/);
+  if (parts.length !== 5) {
+    return { ...defaultScheduleForm, mode: "custom", cron };
+  }
+  const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+  const time = cronTimeFromParts(hour, minute);
+  if (!time || month !== "*") {
+    return { ...defaultScheduleForm, mode: "custom", cron };
+  }
+  if (dayOfMonth === "*" && dayOfWeek === "1-5") {
+    return { ...defaultScheduleForm, mode: "weekdays", time, cron };
+  }
+  if (dayOfMonth === "*" && dayOfWeek === "*") {
+    return { ...defaultScheduleForm, mode: "daily", time, cron };
+  }
+  if (dayOfMonth === "*" && dayOfWeek !== "*") {
+    const weekdays = parseCronWeekdays(dayOfWeek);
+    return weekdays.length
+      ? { ...defaultScheduleForm, mode: "weekly", time, weekdays, cron }
+      : { ...defaultScheduleForm, mode: "custom", cron };
+  }
+  if (/^\d+$/.test(dayOfMonth) && dayOfWeek === "*") {
+    return { ...defaultScheduleForm, mode: "monthly", time, monthDay: dayOfMonth, cron };
+  }
+  return { ...defaultScheduleForm, mode: "custom", cron };
+}
+
+function cronFromScheduleForm(form: ScheduleForm): string {
+  if (form.mode === "custom") {
+    return form.cron.trim();
+  }
+  const time = parseScheduleTime(form.time);
+  if (!time) {
+    return "";
+  }
+  const { hour, minute } = time;
+  if (form.mode === "daily") {
+    return `${minute} ${hour} * * *`;
+  }
+  if (form.mode === "weekdays") {
+    return `${minute} ${hour} * * 1-5`;
+  }
+  if (form.mode === "weekly") {
+    const days = normalizeWeekdays(form.weekdays);
+    return days.length ? `${minute} ${hour} * * ${days.join(",")}` : "";
+  }
+  const day = parseMonthDay(form.monthDay);
+  return day ? `${minute} ${hour} ${day} * *` : "";
+}
+
+function scheduleSummary(form: ScheduleForm): string {
+  if (form.mode === "custom") {
+    return "自定义 Cron";
+  }
+  if (form.mode === "daily") {
+    return `每天 ${form.time} 执行`;
+  }
+  if (form.mode === "weekdays") {
+    return `周一至周五 ${form.time} 执行`;
+  }
+  if (form.mode === "weekly") {
+    const days = normalizeWeekdays(form.weekdays)
+      .map((value) => weekdayOptions.find((option) => option.value === value)?.label ?? value)
+      .join("、");
+    return `${days || "未选择日期"} ${form.time} 执行`;
+  }
+  return `每月 ${parseMonthDay(form.monthDay) || "-"} 日 ${form.time} 执行`;
+}
+
+function nextWeekdays(current: string[], value: string, checked: boolean): string[] {
+  const next = checked ? [...current, value] : current.filter((item) => item !== value);
+  return normalizeWeekdays(next);
+}
+
+function normalizeWeekdays(values: string[]): string[] {
+  const order = ["1", "2", "3", "4", "5", "6", "0"];
+  return order.filter((value) => values.includes(value));
+}
+
+function parseCronWeekdays(value: string): string[] {
+  const days = new Set<string>();
+  for (const part of value.split(",")) {
+    if (/^\d-\d$/.test(part)) {
+      const [start, end] = part.split("-").map((item) => Number.parseInt(item, 10));
+      for (let day = start; day <= end; day += 1) {
+        days.add(String(day % 7));
+      }
+    } else if (/^\d$/.test(part)) {
+      days.add(String(Number.parseInt(part, 10) % 7));
+    }
+  }
+  return normalizeWeekdays(Array.from(days));
+}
+
+function cronTimeFromParts(hour: string, minute: string): string | null {
+  if (!/^\d+$/.test(hour) || !/^\d+$/.test(minute)) {
+    return null;
+  }
+  const parsedHour = Number.parseInt(hour, 10);
+  const parsedMinute = Number.parseInt(minute, 10);
+  if (parsedHour < 0 || parsedHour > 23 || parsedMinute < 0 || parsedMinute > 59) {
+    return null;
+  }
+  return `${String(parsedHour).padStart(2, "0")}:${String(parsedMinute).padStart(2, "0")}`;
+}
+
+function parseScheduleTime(value: string): { hour: number; minute: number } | null {
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) {
+    return null;
+  }
+  const hour = Number.parseInt(match[1], 10);
+  const minute = Number.parseInt(match[2], 10);
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+    return null;
+  }
+  return { hour, minute };
+}
+
+function parseMonthDay(value: string): number | null {
+  const day = Number.parseInt(value, 10);
+  return Number.isFinite(day) && day >= 1 && day <= 31 ? day : null;
 }
 
 type StrategyParameterSource = {
@@ -1703,6 +2203,9 @@ function signalActionLabel(action: StrategySignal["action"]["action"]): string {
   if (action === "cancel") {
     return "撤单";
   }
+  if (action === "hold") {
+    return "持有";
+  }
   return action || "未知";
 }
 
@@ -1737,6 +2240,14 @@ function formatPayload(value: unknown): string {
   } catch {
     return String(value ?? "");
   }
+}
+
+function formatInstanceSummary(instance: DeploymentInstance): string {
+  return formatPayload({
+    summary: instance.summary || null,
+    result_status: instance.result_status || null,
+    error_message: instance.error_message || null,
+  });
 }
 
 function modeLabel(mode: StrategyDeploymentMode): string {

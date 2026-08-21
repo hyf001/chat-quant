@@ -46,6 +46,7 @@ class StrategySignalActionType(StrEnum):
     SELL = "sell"
     CLOSE = "close"
     CANCEL = "cancel"
+    HOLD = "hold"
 
 
 class StrategySignalAction(BaseModel):
@@ -62,6 +63,8 @@ class StrategySignalAction(BaseModel):
 
     @model_validator(mode="after")
     def validate_action(self) -> StrategySignalAction:
+        if self.action == StrategySignalActionType.HOLD:
+            return self
         if self.action == StrategySignalActionType.CANCEL:
             if not self.ref:
                 raise ValueError("cancel action must define ref")

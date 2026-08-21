@@ -290,8 +290,6 @@ def validate_chatq_action(action: dict[str, Any]) -> dict[str, Any]:
 def _raw_action_payload(raw_action: object) -> dict[str, Any] | None:
     if not isinstance(raw_action, dict):
         return {"action": "__invalid__", "raw": repr(raw_action)}
-    if raw_action.get("action") == "hold":
-        return None
     return dict(raw_action)
 
 
