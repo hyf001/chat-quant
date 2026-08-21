@@ -19,7 +19,7 @@ DEFAULT_WEB_HOST = "127.0.0.1"
 DEFAULT_WEB_PORT = 12346
 DEFAULT_MINDGO_NOTEBOOK_PATH = "deepsolo_v3/少标的分时实时.ipynb"
 DEFAULT_MINDGO_STORAGE_ROOT = "data/mindgo/parquet"
-DEFAULT_BACKTEST_MARKET_DATASET: JsonObject = {
+DEFAULT_MARKET_DATASET: JsonObject = {
     "dataset_id": "",
     "symbol_field": "",
     "datetime_field": "",
@@ -29,7 +29,7 @@ DEFAULT_BACKTEST_MARKET_DATASET: JsonObject = {
     "close_field": "",
     "volume_field": "",
 }
-DEFAULT_BACKTEST_BENCHMARK_DATASET: JsonObject = {
+DEFAULT_BENCHMARK_DATASET: JsonObject = {
     "dataset_id": "",
     "symbol_field": "",
     "datetime_field": "",
@@ -276,20 +276,20 @@ APP_CONFIG_DEFINITIONS: tuple[ConfigDefinition, ...] = (
         "MindGo 数据源本地存储根目录；数据按 storage_root/source_id/partition 管理。",
     ),
     ConfigDefinition(
-        "backtest_market_dataset",
-        "回测行情数据集",
-        "backtest",
+        "market_data_dataset",
+        "行情数据集",
+        "market_data",
         "json",
-        DEFAULT_BACKTEST_MARKET_DATASET,
-        "Backtrader 回测使用的数据集和 OHLCV 字段映射。",
+        DEFAULT_MARKET_DATASET,
+        "策略执行和回测使用的行情数据集和 OHLCV 字段映射。",
     ),
     ConfigDefinition(
-        "backtest_benchmark_dataset",
-        "回测基准数据集",
-        "backtest",
+        "benchmark_dataset",
+        "基准数据集",
+        "market_data",
         "json",
-        DEFAULT_BACKTEST_BENCHMARK_DATASET,
-        "Backtrader 回测使用的基准指数数据集和字段映射。",
+        DEFAULT_BENCHMARK_DATASET,
+        "策略执行和回测使用的基准数据集和字段映射。",
     ),
 )
 
@@ -331,12 +331,8 @@ class Settings(BaseModel):
     mindgo_kernel_id: str | None = None
     mindgo_timeout_seconds: int = 120
     mindgo_storage_root: str = DEFAULT_MINDGO_STORAGE_ROOT
-    backtest_market_dataset: JsonObject = Field(
-        default_factory=lambda: dict(DEFAULT_BACKTEST_MARKET_DATASET)
-    )
-    backtest_benchmark_dataset: JsonObject = Field(
-        default_factory=lambda: dict(DEFAULT_BACKTEST_BENCHMARK_DATASET)
-    )
+    market_data_dataset: JsonObject = Field(default_factory=lambda: dict(DEFAULT_MARKET_DATASET))
+    benchmark_dataset: JsonObject = Field(default_factory=lambda: dict(DEFAULT_BENCHMARK_DATASET))
 
     @field_validator("agent_available_tools", mode="before")
     @classmethod
@@ -514,19 +510,77 @@ def _load_sqlite_config_values(database_path: Path) -> dict[str, ConfigValue]:
         return {}
 
     values: dict[str, ConfigValue] = {}
+    legacy_market_dataset: dict[str, object] | None = None
+    legacy_benchmark_dataset: dict[str, object] | None = None
     for key, value_json in rows:
         config_key = _normalized_config_key(str(key))
+        try:
+            decoded = json.loads(str(value_json))
+        except (TypeError, json.JSONDecodeError):
+            continue
+        if config_key == "backtest_market_dataset":
+            if isinstance(decoded, dict):
+                legacy_market_dataset = dict(decoded)
+            continue
+        if config_key == "backtest_benchmark_dataset":
+            if isinstance(decoded, dict):
+                legacy_benchmark_dataset = dict(decoded)
+            continue
+        if config_key == "market_data_day_dataset":
+            if isinstance(decoded, dict):
+                legacy_market_dataset = dict(decoded)
+            continue
+        if config_key == "benchmark_day_dataset":
+            if isinstance(decoded, dict):
+                legacy_benchmark_dataset = dict(decoded)
+            continue
+        if config_key == "market_data_datasets":
+            if isinstance(decoded, dict):
+                daily_dataset = _legacy_daily_dataset_config(decoded)
+                if daily_dataset is not None:
+                    legacy_market_dataset = daily_dataset
+            continue
+        if config_key == "market_data_benchmark_datasets":
+            if isinstance(decoded, dict):
+                daily_dataset = _legacy_daily_dataset_config(decoded)
+                if daily_dataset is not None:
+                    legacy_benchmark_dataset = daily_dataset
+            continue
         definition = definitions.get(config_key)
         if definition is None:
             continue
         try:
-            decoded = json.loads(str(value_json))
             if config_key == "agent_available_tools" and _is_legacy_agent_tools_default(decoded):
                 continue
             values[definition.key] = coerce_config_value(definition, decoded)
-        except (TypeError, ValueError, json.JSONDecodeError):
+        except (TypeError, ValueError):
             continue
+    if (
+        not _dataset_configured(values.get("market_data_dataset"))
+        and legacy_market_dataset is not None
+    ):
+        values["market_data_dataset"] = legacy_market_dataset
+    if (
+        not _dataset_configured(values.get("benchmark_dataset"))
+        and legacy_benchmark_dataset is not None
+    ):
+        values["benchmark_dataset"] = legacy_benchmark_dataset
     return values
+
+
+def _dataset_configured(value: object) -> bool:
+    if not isinstance(value, dict):
+        return False
+    dataset_id = value.get("dataset_id")
+    return isinstance(dataset_id, str) and bool(dataset_id.strip())
+
+
+def _legacy_daily_dataset_config(value: dict[str, object]) -> dict[str, object] | None:
+    for key in ("day", "1d", "daily", "d"):
+        raw_value = value.get(key)
+        if isinstance(raw_value, dict):
+            return dict(raw_value)
+    return None
 
 
 def _normalized_config_key(key: str) -> str:

@@ -17,7 +17,7 @@ import { LoadingState } from "@/shared/components";
 
 import { DatasetPage } from "../modules/dataset";
 import { AgentSettingsForm } from "../modules/settings/AgentSettingsForm";
-import { BacktestSettingsForm } from "../modules/settings/BacktestSettingsForm";
+import { MarketDataSettingsForm } from "../modules/settings/MarketDataSettingsForm";
 import { DataSourceSettingsForm } from "../modules/settings/DataSourceSettingsForm";
 import { LoggingSettingsForm } from "../modules/settings/LoggingSettingsForm";
 import { SystemSettingsForm } from "../modules/settings/SystemSettingsForm";
@@ -56,7 +56,7 @@ const tabs: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
   { id: "logging", label: "日志", icon: ScrollText },
   { id: "data", label: "数据源", icon: Database },
   { id: "datasets", label: "数据集", icon: TableProperties },
-  { id: "backtest", label: "回测", icon: BarChart3 },
+  { id: "market-data", label: "行情数据集", icon: BarChart3 },
 ];
 
 export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
@@ -207,7 +207,7 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
         system: patch.system ? nextConfig.settings.system : current.system,
         logging: patch.logging ? nextConfig.settings.logging : current.logging,
         mindgo: patch.mindgo ? nextConfig.settings.mindgo : current.mindgo,
-        backtest: patch.backtest ? nextConfig.settings.backtest : current.backtest,
+        market_data: patch.market_data ? nextConfig.settings.market_data : current.market_data,
         agent: patch.agent
           ? {
               ...current.agent,
@@ -508,12 +508,12 @@ export function AppSettingsPage({ onBack }: AppSettingsPageProps) {
                 />
               ) : null}
               {activeTab === "datasets" ? <DatasetPage embedded /> : null}
-              {activeTab === "backtest" ? (
-                <BacktestSettingsForm
+              {activeTab === "market-data" ? (
+                <MarketDataSettingsForm
                   draft={draft}
                   onChange={setDraft}
-                  onSaveBacktestSettings={(backtest, message) =>
-                    void saveSettingsField({ backtest }, message)
+                  onSaveMarketDataSettings={(market_data, message) =>
+                    void saveSettingsField({ market_data }, message)
                   }
                   onToast={showToast}
                 />
@@ -537,5 +537,8 @@ function settingsTabFromPath(pathname: string): SettingsTab {
   if (suffix === "system" || suffix === "logging" || suffix === "data" || suffix === "datasets") {
     return suffix;
   }
-  return suffix === "backtest" ? "backtest" : "agent";
+  if (suffix === "market-data" || suffix === "backtest") {
+    return "market-data";
+  }
+  return "agent";
 }

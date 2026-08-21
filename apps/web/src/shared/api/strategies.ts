@@ -87,7 +87,6 @@ export type StrategyBacktestConfig = {
   benchmark_symbol?: string | null;
   start_date: string;
   end_date: string;
-  timeframe?: "1d";
   initial_cash: string;
   commission: string;
   slippage?: string;
@@ -245,6 +244,112 @@ export type StrategyCopySummary = {
   copy_record_id: string;
 };
 
+export type StrategyDeploymentMode = "signal" | "paper" | "live";
+
+export type StrategySignalActionType = "buy" | "sell" | "close" | "cancel";
+
+export type StrategySignalAction = {
+  action?: StrategySignalActionType | string;
+  symbol?: string | null;
+  order_type?: "market" | "limit" | null;
+  size?: number | null;
+  price?: number | null;
+  ref?: string | number | null;
+  reason?: string | null;
+  client_signal_id?: string | null;
+  [key: string]: StrategyJsonValue | undefined;
+};
+
+export type StrategyDeployment = {
+  id: string;
+  project_id: string;
+  strategy_id: string;
+  strategy_version_id: string;
+  name: string;
+  mode: StrategyDeploymentMode;
+  scheduled: boolean;
+  schedule_cron?: string | null;
+  scheduler_id?: string | null;
+  symbols: string[];
+  lookback_bars: number;
+  params: Record<string, StrategyJsonValue>;
+  broker_id?: string | null;
+  requires_manual_confirm: boolean;
+  risk_config: Record<string, StrategyJsonValue>;
+  state: Record<string, StrategyJsonValue>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type StrategyDeploymentCreatePayload = {
+  project_id: string;
+  strategy_id: string;
+  strategy_version_id: string;
+  name: string;
+  mode: StrategyDeploymentMode;
+  symbols: string[];
+  lookback_bars?: number;
+  params?: Record<string, StrategyJsonValue>;
+  broker_id?: string | null;
+  requires_manual_confirm?: boolean;
+  risk_config?: Record<string, StrategyJsonValue>;
+};
+
+export type StrategyDeploymentUpdatePayload = Partial<
+  Omit<StrategyDeploymentCreatePayload, "project_id" | "strategy_id">
+> & {
+  state?: Record<string, StrategyJsonValue>;
+};
+
+export type StrategySignal = {
+  id: string;
+  deployment_id: string;
+  job_instance_id?: string | null;
+  strategy_version_id: string;
+  signal_datetime: string;
+  action: StrategySignalAction;
+  status: "generated" | "rejected" | "converted" | "ignored";
+  reason?: string | null;
+  created_at: string;
+};
+
+export type StrategySignalActionCount = {
+  action: StrategySignalActionType;
+  count: number;
+};
+
+export type StrategySignalListResponse = {
+  items: StrategySignal[];
+  total: number;
+  limit: number;
+  offset: number;
+  action_counts: StrategySignalActionCount[];
+};
+
+export type StrategyDeploymentTriggerPayload = {
+  trigger_key?: string | null;
+  payload?: Record<string, StrategyJsonValue>;
+};
+
+export type StrategyDeploymentJobInstance = {
+  id: string;
+  job_type: string;
+  job_id: string;
+  trigger_type: "schedule" | "manual" | "rerun" | "system";
+  trigger_key: string;
+  payload: Record<string, unknown>;
+  priority: number;
+  scheduled_for: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  status: "waiting" | "dispatching" | "running" | "completed" | "failed" | "cancelled";
+  result_status?: string | null;
+  summary: string;
+  error_message: string;
+  created_at: string;
+  updated_at: string;
+};
+
 type ApiFetchOptions = RequestInit & {
   projectId?: string;
 };
@@ -362,6 +467,96 @@ export async function copyStrategySummary(versionId: string): Promise<StrategyCo
     method: "POST",
     body: JSON.stringify({ mode: "summary" }),
   });
+}
+
+export async function listStrategyDeployments(
+  projectId?: string,
+  strategyId?: string,
+): Promise<StrategyDeployment[]> {
+  if (!projectId) {
+    return [];
+  }
+  const params = new URLSearchParams({ project_id: projectId });
+  if (strategyId) {
+    params.set("strategy_id", strategyId);
+  }
+  return apiFetch<StrategyDeployment[]>(`/api/strategy-deployments?${params.toString()}`);
+}
+
+export async function createStrategyDeployment(
+  payload: StrategyDeploymentCreatePayload,
+): Promise<StrategyDeployment> {
+  return apiFetch<StrategyDeployment>("/api/strategy-deployments", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateStrategyDeployment(
+  deploymentId: string,
+  payload: StrategyDeploymentUpdatePayload,
+): Promise<StrategyDeployment> {
+  return apiFetch<StrategyDeployment>(`/api/strategy-deployments/${deploymentId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteStrategyDeployment(deploymentId: string): Promise<StrategyDeployment> {
+  return apiFetch<StrategyDeployment>(`/api/strategy-deployments/${deploymentId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function triggerStrategyDeployment(
+  deploymentId: string,
+  payload: StrategyDeploymentTriggerPayload = {},
+): Promise<StrategyDeploymentJobInstance> {
+  return apiFetch<StrategyDeploymentJobInstance>(
+    `/api/strategy-deployments/${deploymentId}/trigger`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function upsertStrategyDeploymentSchedule(
+  deploymentId: string,
+  cron: string,
+): Promise<StrategyDeployment> {
+  return apiFetch<StrategyDeployment>(`/api/strategy-deployments/${deploymentId}/schedule`, {
+    method: "PUT",
+    body: JSON.stringify({ cron }),
+  });
+}
+
+export async function deleteStrategyDeploymentSchedule(
+  deploymentId: string,
+): Promise<StrategyDeployment> {
+  return apiFetch<StrategyDeployment>(`/api/strategy-deployments/${deploymentId}/schedule`, {
+    method: "DELETE",
+  });
+}
+
+export async function listStrategySignals(
+  deploymentId: string,
+  options: {
+    limit?: number;
+    offset?: number;
+    action?: StrategySignalActionType;
+  } = {},
+): Promise<StrategySignalListResponse> {
+  const params = new URLSearchParams({
+    limit: String(options.limit ?? 100),
+    offset: String(options.offset ?? 0),
+  });
+  if (options.action) {
+    params.set("action", options.action);
+  }
+  return apiFetch<StrategySignalListResponse>(
+    `/api/strategy-deployments/${deploymentId}/signals?${params.toString()}`,
+  );
 }
 
 async function apiFetch<T>(path: string, init?: ApiFetchOptions): Promise<T> {

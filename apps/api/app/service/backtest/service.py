@@ -25,7 +25,7 @@ from app.schema.strategy import (
 )
 from app.service.backtest.backtrader import BacktraderStrategyBacktestEngine
 from app.service.backtest.execution import StrategyBacktestEngine, StrategyBacktestError
-from app.service.strategy.service import StrategyError, StrategyService
+from app.service.strategy.strategy_service import StrategyError, StrategyService
 
 logger = get_logger(__name__)
 
@@ -488,8 +488,23 @@ def _backtest_payload(
 
 def _payload_from_json(payload: object) -> StrategyBacktestPayload:
     if isinstance(payload, dict) and "backtest" in payload:
-        return StrategyBacktestPayload.model_validate(payload)
-    return StrategyBacktestPayload(backtest=StrategyBacktestRecord.model_validate(payload))
+        return StrategyBacktestPayload.model_validate(_strip_legacy_timeframe(payload))
+    return StrategyBacktestPayload(
+        backtest=StrategyBacktestRecord.model_validate(_strip_legacy_timeframe(payload))
+    )
+
+
+def _strip_legacy_timeframe(payload: object) -> object:
+    if not isinstance(payload, dict):
+        return payload
+    cleaned = dict(payload)
+    config = cleaned.get("config")
+    if isinstance(config, dict):
+        cleaned["config"] = {key: value for key, value in config.items() if key != "timeframe"}
+    backtest = cleaned.get("backtest")
+    if isinstance(backtest, dict):
+        cleaned["backtest"] = _strip_legacy_timeframe(backtest)
+    return cleaned
 
 
 def _result_from_json(payload: object | None) -> StrategyBacktestResultRecord | None:

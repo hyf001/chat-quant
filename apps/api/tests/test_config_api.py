@@ -86,13 +86,13 @@ def test_config_api_returns_structured_settings(client: TestClient) -> None:
     assert payload["settings"]["mindgo"]["notebook_path"] == "deepsolo_v3/少标的分时实时.ipynb"
     assert payload["settings"]["mindgo"]["timeout_seconds"] == 120
     assert payload["settings"]["mindgo"]["storage_root"] == "data/mindgo/parquet"
-    assert payload["settings"]["backtest"]["market_dataset"]["dataset_id"] == ""
-    assert payload["settings"]["backtest"]["market_dataset"]["open_field"] == ""
-    assert "openinterest_field" not in payload["settings"]["backtest"]["market_dataset"]
-    assert payload["settings"]["backtest"]["benchmark_dataset"]["dataset_id"] == ""
-    assert payload["settings"]["backtest"]["benchmark_dataset"]["symbol_field"] == ""
-    assert payload["settings"]["backtest"]["benchmark_dataset"]["close_field"] == ""
-    assert "symbol" not in payload["settings"]["backtest"]["benchmark_dataset"]
+    assert payload["settings"]["market_data"]["market_data_dataset"]["dataset_id"] == ""
+    assert payload["settings"]["market_data"]["market_data_dataset"]["open_field"] == ""
+    assert "openinterest_field" not in payload["settings"]["market_data"]["market_data_dataset"]
+    assert payload["settings"]["market_data"]["benchmark_dataset"]["dataset_id"] == ""
+    assert payload["settings"]["market_data"]["benchmark_dataset"]["symbol_field"] == ""
+    assert payload["settings"]["market_data"]["benchmark_dataset"]["close_field"] == ""
+    assert "symbol" not in payload["settings"]["market_data"]["benchmark_dataset"]
     assert payload["settings"]["system"]["job_runtime_creation_tick_minutes"] == 1
     assert payload["settings"]["system"]["job_runtime_dispatch_interval_seconds"] == 30
     assert payload["settings"]["system"]["job_runtime_dispatch_limit"] == 20
@@ -140,13 +140,13 @@ def test_config_api_updates_mindgo_settings(client: TestClient) -> None:
     assert get_settings().mindgo_storage_root == "/tmp/chatq-mindgo"
 
 
-def test_config_api_updates_backtest_dataset_settings(client: TestClient) -> None:
+def test_config_api_updates_market_data_dataset_settings(client: TestClient) -> None:
     response = client.put(
         "/api/config",
         json={
             "settings": {
-                "backtest": {
-                    "market_dataset": {
+                "market_data": {
+                    "market_data_dataset": {
                         "dataset_id": "ds_market",
                         "symbol_field": "ts_code",
                         "datetime_field": "trade_date",
@@ -162,22 +162,66 @@ def test_config_api_updates_backtest_dataset_settings(client: TestClient) -> Non
                         "datetime_field": "trade_date",
                         "close_field": "close_px",
                     },
-                }
+                },
             }
         },
     )
 
     assert response.status_code == 200
-    updated = response.json()["settings"]["backtest"]
-    assert updated["market_dataset"]["dataset_id"] == "ds_market"
-    assert updated["market_dataset"]["open_field"] == "open_px"
-    assert "openinterest_field" not in updated["market_dataset"]
-    assert updated["benchmark_dataset"]["dataset_id"] == "ds_index"
-    assert "symbol" not in updated["benchmark_dataset"]
-    assert updated["benchmark_dataset"]["symbol_field"] == "index_code"
-    assert get_settings().backtest_market_dataset["symbol_field"] == "ts_code"
-    assert get_settings().backtest_benchmark_dataset["symbol_field"] == "index_code"
-    assert get_settings().backtest_benchmark_dataset["close_field"] == "close_px"
+    updated = response.json()["settings"]
+    assert updated["market_data"]["market_data_dataset"]["dataset_id"] == "ds_market"
+    assert updated["market_data"]["market_data_dataset"]["open_field"] == "open_px"
+    assert "openinterest_field" not in updated["market_data"]["market_data_dataset"]
+    assert updated["market_data"]["benchmark_dataset"]["dataset_id"] == "ds_index"
+    assert "symbol" not in updated["market_data"]["benchmark_dataset"]
+    assert updated["market_data"]["benchmark_dataset"]["symbol_field"] == "index_code"
+    assert get_settings().market_data_dataset["symbol_field"] == "ts_code"
+    assert get_settings().benchmark_dataset["symbol_field"] == "index_code"
+    assert get_settings().benchmark_dataset["close_field"] == "close_px"
+
+
+def test_config_api_migrates_legacy_backtest_market_dataset(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    database_path = tmp_path / "chat-quant.db"
+    connection = config_module.sqlite3.connect(database_path)
+    try:
+        connection.execute(
+            "CREATE TABLE app_settings (scope TEXT, namespace TEXT, key TEXT, value_json TEXT)"
+        )
+        connection.execute(
+            "INSERT INTO app_settings VALUES ('global', 'backtest', 'backtest_market_dataset', ?)",
+            [
+                json.dumps(
+                    {
+                        "dataset_id": "ds_market",
+                        "symbol_field": "ts_code",
+                        "datetime_field": "trade_date",
+                        "open_field": "open_px",
+                        "high_field": "high_px",
+                        "low_field": "low_px",
+                        "close_field": "close_px",
+                        "volume_field": "vol",
+                    }
+                )
+            ],
+        )
+        connection.commit()
+    finally:
+        connection.close()
+    config_file = tmp_path / "config.json"
+    config_file.write_text(
+        json.dumps({"database_path": str(database_path)}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(config_module, "DEFAULT_CONFIG_FILE_PATH", config_file)
+    get_settings.cache_clear()
+
+    settings = get_settings()
+
+    assert settings.market_data_dataset["dataset_id"] == "ds_market"
+    assert settings.market_data_dataset["symbol_field"] == "ts_code"
 
 
 def test_config_api_updates_sqlite_backed_settings(client: TestClient) -> None:

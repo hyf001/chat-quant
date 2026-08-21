@@ -1,4 +1,5 @@
 """Job runtime bootstrap helpers."""
+
 from __future__ import annotations
 
 from .registry import JobRuntimeRegistry, job_runtime_registry
@@ -18,10 +19,14 @@ def register_default_job_runtime_events(
     from app.service.datasource.mindgo.stock_a_daily_price.job import (
         register_stock_a_daily_price_job_runtime_handlers,
     )
+    from app.service.strategy.strategy_deployment_job import (
+        register_strategy_deployment_job_runtime_handlers,
+    )
 
     register_index_a_daily_price_job_runtime_handlers(registry)
     register_stock_a_adjust_factor_job_runtime_handlers(registry)
     register_stock_a_daily_price_job_runtime_handlers(registry)
+    register_strategy_deployment_job_runtime_handlers(registry)
     return registry
 
 

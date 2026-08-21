@@ -28,6 +28,61 @@ class StrategyMode(StrEnum):
     UNIVERSE_SELECTION = "universe_selection"
 
 
+class StrategyDeploymentMode(StrEnum):
+    SIGNAL = "signal"
+    PAPER = "paper"
+    LIVE = "live"
+
+
+class StrategySignalStatus(StrEnum):
+    GENERATED = "generated"
+    REJECTED = "rejected"
+    CONVERTED = "converted"
+    IGNORED = "ignored"
+
+
+class StrategySignalActionType(StrEnum):
+    BUY = "buy"
+    SELL = "sell"
+    CLOSE = "close"
+    CANCEL = "cancel"
+
+
+class StrategySignalAction(BaseModel):
+    action: StrategySignalActionType
+    symbol: str | None = Field(default=None, min_length=1, max_length=64)
+    order_type: Literal["market", "limit"] | None = None
+    size: float | None = None
+    price: float | None = None
+    ref: str | int | None = None
+    reason: str | None = None
+    client_signal_id: str | None = Field(default=None, min_length=1, max_length=128)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_action(self) -> StrategySignalAction:
+        if self.action == StrategySignalActionType.CANCEL:
+            if not self.ref:
+                raise ValueError("cancel action must define ref")
+            return self
+        if not self.symbol:
+            raise ValueError(f"{self.action} action must define symbol")
+        if self.action in {StrategySignalActionType.BUY, StrategySignalActionType.SELL}:
+            if self.size is None or self.size <= 0:
+                raise ValueError(f"{self.action} action must define size > 0")
+            if self.order_type == "limit" and self.price is None:
+                raise ValueError("limit order must define price")
+            return self
+        if (
+            self.action == StrategySignalActionType.CLOSE
+            and self.size is not None
+            and self.size <= 0
+        ):
+            raise ValueError("close action size must be empty or > 0")
+        return self
+
+
 class StrategyCustomParameter(BaseModel):
     name_cn: str = Field(min_length=1, max_length=64)
     name_en: str = Field(min_length=1, max_length=64)
@@ -94,6 +149,91 @@ class StrategySummary(BaseModel):
 
 class StrategyDetail(BaseModel):
     strategy: StrategyRecord
+
+
+class StrategyDeploymentCreate(BaseModel):
+    project_id: str = Field(min_length=1, max_length=128)
+    strategy_id: str = Field(min_length=1, max_length=64)
+    strategy_version_id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=128)
+    mode: StrategyDeploymentMode = StrategyDeploymentMode.SIGNAL
+    symbols: list[str] = Field(default_factory=list)
+    lookback_bars: int = Field(default=250, ge=1, le=10000)
+    params: dict[str, JsonValue] = Field(default_factory=dict)
+    broker_id: str | None = Field(default=None, max_length=128)
+    requires_manual_confirm: bool = True
+    risk_config: dict[str, JsonValue] = Field(default_factory=dict)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_deployment(self) -> StrategyDeploymentCreate:
+        if self.mode == StrategyDeploymentMode.SIGNAL:
+            return self
+        if not self.broker_id:
+            raise ValueError("broker_id is required for paper/live deployments")
+        return self
+
+
+class StrategyDeploymentUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=128)
+    strategy_version_id: str | None = Field(default=None, min_length=1, max_length=64)
+    mode: StrategyDeploymentMode | None = None
+    symbols: list[str] | None = None
+    lookback_bars: int | None = Field(default=None, ge=1, le=10000)
+    params: dict[str, JsonValue] | None = None
+    broker_id: str | None = Field(default=None, max_length=128)
+    requires_manual_confirm: bool | None = None
+    risk_config: dict[str, JsonValue] | None = None
+    state: dict[str, JsonValue] | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class StrategyDeploymentRecord(BaseModel):
+    id: str
+    project_id: str
+    strategy_id: str
+    strategy_version_id: str
+    name: str
+    mode: StrategyDeploymentMode = StrategyDeploymentMode.SIGNAL
+    scheduled: bool = False
+    schedule_cron: str | None = None
+    scheduler_id: str | None = None
+    symbols: list[str] = Field(default_factory=list)
+    lookback_bars: int = 250
+    params: dict[str, JsonValue] = Field(default_factory=dict)
+    broker_id: str | None = None
+    requires_manual_confirm: bool = True
+    risk_config: dict[str, JsonValue] = Field(default_factory=dict)
+    state: dict[str, JsonValue] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=local_now)
+    updated_at: datetime = Field(default_factory=local_now)
+
+
+class StrategySignalRecord(BaseModel):
+    id: str
+    deployment_id: str
+    job_instance_id: str | None = None
+    strategy_version_id: str
+    signal_datetime: datetime
+    action: dict[str, JsonValue]
+    status: StrategySignalStatus = StrategySignalStatus.GENERATED
+    reason: str | None = None
+    created_at: datetime = Field(default_factory=local_now)
+
+
+class StrategySignalActionCount(BaseModel):
+    action: StrategySignalActionType
+    count: int = 0
+
+
+class StrategySignalListResponse(BaseModel):
+    items: list[StrategySignalRecord] = Field(default_factory=list)
+    total: int = 0
+    limit: int = 100
+    offset: int = 0
+    action_counts: list[StrategySignalActionCount] = Field(default_factory=list)
 
 
 class StrategyCreateResult(BaseModel):

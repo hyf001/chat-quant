@@ -40,6 +40,8 @@ def ensure_database_schema(settings: Settings) -> None:
             _migrate_strategy_source_code(engine)
             _migrate_strategy_version_contract(engine)
             _merge_backtest_payloads(engine)
+            _migrate_strategy_deployment_schema(engine)
+            _migrate_market_data_settings(engine)
             _seed_model_providers(engine)
             _seed_app_settings(engine, settings)
             _migrate_legacy_agent_provider_settings(engine)
@@ -186,6 +188,148 @@ def _seed_app_settings(engine: Engine, settings: Settings) -> None:
             )
 
 
+def _migrate_market_data_settings(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if "app_settings" not in inspector.get_table_names():
+        return
+    with engine.begin() as connection:
+        legacy_market = _legacy_setting_json(connection, "market_data_dataset")
+        legacy_benchmark = _legacy_setting_json(connection, "benchmark_dataset")
+        if not _dataset_configured(legacy_market):
+            legacy_market = _legacy_setting_json(connection, "market_data_day_dataset")
+        if not _dataset_configured(legacy_benchmark):
+            legacy_benchmark = _legacy_setting_json(connection, "benchmark_day_dataset")
+        if not _dataset_configured(legacy_market):
+            legacy_market = _legacy_setting_json(connection, "backtest_market_dataset")
+        if not _dataset_configured(legacy_benchmark):
+            legacy_benchmark = _legacy_setting_json(connection, "backtest_benchmark_dataset")
+        grouped_market = _legacy_setting_json(connection, "market_data_datasets")
+        grouped_benchmark = _legacy_setting_json(connection, "market_data_benchmark_datasets")
+        market_day = _legacy_daily_dataset(grouped_market)
+        benchmark_day = _legacy_daily_dataset(grouped_benchmark)
+        if not _dataset_configured(market_day):
+            market_day = legacy_market
+        if not _dataset_configured(benchmark_day):
+            benchmark_day = legacy_benchmark
+        if _dataset_configured(market_day):
+            _upsert_app_setting(
+                connection,
+                namespace="market_data",
+                key="market_data_dataset",
+                value=market_day,
+                label="行情数据集",
+                description="策略执行和回测使用的行情数据集和 OHLCV 字段映射。",
+            )
+        if _dataset_configured(benchmark_day):
+            _upsert_app_setting(
+                connection,
+                namespace="market_data",
+                key="benchmark_dataset",
+                value=benchmark_day,
+                label="基准数据集",
+                description="策略执行和回测使用的基准数据集和字段映射。",
+            )
+        connection.execute(
+            text(
+                "DELETE FROM app_settings "
+                "WHERE scope = 'global' "
+                "AND key IN ("
+                "'backtest_market_dataset', "
+                "'backtest_benchmark_dataset', "
+                "'market_data_datasets', "
+                "'market_data_benchmark_datasets', "
+                "'market_data_month_dataset', "
+                "'market_data_week_dataset', "
+                "'market_data_day_dataset', "
+                "'market_data_hour_dataset', "
+                "'market_data_minute_dataset', "
+                "'benchmark_month_dataset', "
+                "'benchmark_week_dataset', "
+                "'benchmark_day_dataset', "
+                "'benchmark_hour_dataset', "
+                "'benchmark_minute_dataset'"
+                ")"
+            )
+        )
+
+
+def _legacy_setting_json(connection, key: str) -> dict[str, object] | None:
+    row = connection.execute(
+        text(
+            "SELECT value_json FROM app_settings "
+            "WHERE scope = 'global' AND key = :key "
+            "ORDER BY updated_at DESC LIMIT 1"
+        ),
+        {"key": key},
+    ).mappings().first()
+    if row is None:
+        return None
+    return _json_object(row["value_json"])
+
+
+def _legacy_daily_dataset(value: dict[str, object] | None) -> dict[str, object] | None:
+    if value is None:
+        return None
+    for key in ("day", "1d", "daily", "d"):
+        dataset = _json_object(value.get(key))
+        if dataset is not None:
+            return dataset
+    return None
+
+
+def _dataset_configured(value: dict[str, object] | None) -> bool:
+    if value is None:
+        return False
+    dataset_id = value.get("dataset_id")
+    return isinstance(dataset_id, str) and bool(dataset_id.strip())
+
+
+def _upsert_app_setting(
+    connection,
+    *,
+    namespace: str,
+    key: str,
+    value: dict[str, object],
+    label: str,
+    description: str,
+) -> None:
+    count = connection.execute(
+        text(
+            "SELECT COUNT(*) FROM app_settings "
+            "WHERE scope = 'global' AND namespace = :namespace AND key = :key"
+        ),
+        {"namespace": namespace, "key": key},
+    ).scalar_one()
+    params = {
+        "namespace": namespace,
+        "key": key,
+        "value_json": json.dumps(value),
+        "label": label,
+        "description": description,
+    }
+    if count:
+        connection.execute(
+            text(
+                "UPDATE app_settings "
+                "SET value_json = :value_json, value_type = 'json', is_secret = 0, "
+                "label = :label, description = :description, updated_at = CURRENT_TIMESTAMP "
+                "WHERE scope = 'global' AND namespace = :namespace AND key = :key"
+            ),
+            params,
+        )
+        return
+    connection.execute(
+        text(
+            "INSERT INTO app_settings "
+            "(scope, namespace, key, value_json, value_type, is_secret, "
+            "label, description, updated_at) VALUES "
+            "('global', :namespace, :key, :value_json, 'json', 0, "
+            ":label, :description, CURRENT_TIMESTAMP)"
+        ),
+        params,
+    )
+
+
 def _migrate_legacy_agent_provider_settings(engine: Engine) -> None:
     inspector = inspect(engine)
     table_names = set(inspector.get_table_names())
@@ -263,6 +407,7 @@ def _drop_retired_strategy_columns(engine: Engine) -> None:
             "code_artifact_id",
         },
         "strategy_backtests": {"chat_session_id", "config_hash", "result_payload_json", "run_type"},
+        "strategy_deployments": {"timeframe"},
     }
     with engine.begin() as connection:
         connection.execute(text("DROP INDEX IF EXISTS idx_strategies_chat_session"))
@@ -276,6 +421,30 @@ def _drop_retired_strategy_columns(engine: Engine) -> None:
             columns = {column["name"] for column in inspector.get_columns(table_name)}
             for column_name in sorted(columns & retired_columns):
                 connection.execute(text(f"ALTER TABLE {table_name} DROP COLUMN {column_name}"))
+
+
+def _migrate_strategy_deployment_schema(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if "strategy_deployments" not in inspector.get_table_names():
+        return
+    columns = {column["name"] for column in inspector.get_columns("strategy_deployments")}
+    with engine.begin() as connection:
+        connection.execute(text("DROP INDEX IF EXISTS idx_strategy_deployments_enabled_mode"))
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS "
+                "idx_strategy_deployments_mode ON strategy_deployments(mode)"
+            )
+        )
+        if "lookback_bars" not in columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE strategy_deployments "
+                    "ADD COLUMN lookback_bars INTEGER NOT NULL DEFAULT 250"
+                )
+            )
+    for column_name in ("enabled", "market_data_source_id"):
+        _drop_column_if_exists(engine, inspect(engine), "strategy_deployments", column_name, ())
 
 
 def _migrate_strategy_source_code(engine: Engine) -> None:

@@ -1,3 +1,15 @@
-from app.model.strategy.strategy import StrategyBacktestRow, StrategyRow, StrategyVersionRow
+from app.model.strategy.strategy import (
+    StrategyBacktestRow,
+    StrategyDeploymentRow,
+    StrategyRow,
+    StrategySignalRow,
+    StrategyVersionRow,
+)
 
-__all__ = ["StrategyBacktestRow", "StrategyRow", "StrategyVersionRow"]
+__all__ = [
+    "StrategyBacktestRow",
+    "StrategyDeploymentRow",
+    "StrategyRow",
+    "StrategySignalRow",
+    "StrategyVersionRow",
+]

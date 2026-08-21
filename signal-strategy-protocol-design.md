@@ -716,8 +716,6 @@ class StrategyDeploymentTickExecutor:
 
 ## 推荐落库模型
 
-第一版上线运行至少需要这些概念。字段可以先放 JSON，后续再规范化。
-
 ### strategy_deployments
 
 策略部署配置。

@@ -69,8 +69,8 @@ def configured_backtest_datasets(client: TestClient, project_test: None) -> None
         "/api/config",
         json={
             "settings": {
-                "backtest": {
-                    "market_dataset": {
+                "market_data": {
+                    "market_data_dataset": {
                         "dataset_id": "ds_backtest_market",
                         "symbol_field": "symbol",
                         "datetime_field": "date",
@@ -160,7 +160,10 @@ def test_backtest_strategy_returns_backtest_result(client: TestClient, caplog) -
     assert data["result"]["protocol"] == "chatq_signal_strategy_v1"
     assert data["result"]["engine"] == "backtrader"
     assert data["result"]["data_source"]["mode"] == "dataset"
-    assert data["result"]["data_source"]["market_dataset"]["dataset_id"] == "ds_backtest_market"
+    assert (
+        data["result"]["data_source"]["market_data_dataset"]["dataset_id"]
+        == "ds_backtest_market"
+    )
     assert data["result"]["market_data"][0]["symbol"] == "600519.SH"
     assert data["result"]["market_data"][0]["candles"][0]["open"]
     assert data["result"]["trades"][0]["side"] in {"buy", "sell"}
@@ -200,11 +203,12 @@ def test_backtest_strategy_can_query_exposed_dataset_with_chatq_sql(
             "name": "外部指数信号策略",
             "source_code": "\n".join(
                 [
-                    "from app.service.strategy.protocol import ChatQBarContext, ChatQInitContext, ChatQNextResult, ChatQState",
+                    "from app.service.strategy.protocol import "
+                    "ChatQBarContext, ChatQInitContext, ChatQNextResult, ChatQState",
                     "",
                     "def chatq_init(context: ChatQInitContext) -> ChatQState:",
                     "    frame = context['chatq'].sql(",
-                    "        \"SELECT date, close FROM chatq_signal_index_prices \"",
+                    '        "SELECT date, close FROM chatq_signal_index_prices "',
                     "        \"WHERE symbol = '399006.SZ' ORDER BY date\"",
                     "    )",
                     "    signal_dates = {",
@@ -215,15 +219,21 @@ def test_backtest_strategy_can_query_exposed_dataset_with_chatq_sql(
                     "    }",
                     "    return {'signal_dates': sorted(signal_dates)}",
                     "",
-                    "def chatq_next(context: ChatQBarContext, state: ChatQState) -> ChatQNextResult:",
+                    "def chatq_next("
+                    "context: ChatQBarContext, state: ChatQState"
+                    ") -> ChatQNextResult:",
                     "    symbol = context['symbols'][0]",
                     "    today = context['datetime'][:10]",
                     "    position = context['positions'].get(symbol, {'size': 0})",
                     "    if position['size'] == 0 and today in state['signal_dates']:",
-                    "        return {'actions': [{'action': 'buy', 'symbol': symbol, 'size': 10}], 'state': state}",
+                    "        return {'actions': ["
+                    "{'action': 'buy', 'symbol': symbol, 'size': 10}"
+                    "], 'state': state}",
                     "    if position['size'] > 0 and today not in state['signal_dates']:",
-                    "        return {'actions': [{'action': 'close', 'symbol': symbol}], 'state': state}",
-                    "    return {'actions': [{'action': 'hold'}], 'state': state}",
+                    "        return {'actions': ["
+                    "{'action': 'close', 'symbol': symbol}"
+                    "], 'state': state}",
+                    "    return {'actions': [], 'state': state}",
                 ]
             ),
         },
@@ -351,10 +361,10 @@ def _price_values_sql(symbol: str, *, close_start: float) -> str:
         high = max(open_price, close) * 1.01
         low = min(open_price, close) * 0.99
         rows.append(
-            (
+            
                 f"('{symbol}', DATE '{current.isoformat()}', "
                 f"{open_price:.6f}, {high:.6f}, {low:.6f}, {close:.6f}, {1000000 + index})"
-            )
+            
         )
         current = date.fromordinal(current.toordinal() + 1)
     return ", ".join(rows)

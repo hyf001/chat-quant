@@ -324,7 +324,6 @@ def add_backtest_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--benchmark-symbol")
     parser.add_argument("--start", dest="start_date")
     parser.add_argument("--end", dest="end_date")
-    parser.add_argument("--timeframe", choices=["1d"])
     parser.add_argument("--cash", dest="initial_cash")
     parser.add_argument("--commission")
     parser.add_argument("--slippage")
@@ -467,7 +466,6 @@ def build_backtest_config(args: argparse.Namespace) -> dict[str, object]:
         "benchmark_symbol": args.benchmark_symbol,
         "start_date": args.start_date,
         "end_date": args.end_date,
-        "timeframe": args.timeframe,
         "initial_cash": args.initial_cash,
         "commission": args.commission,
         "slippage": args.slippage,

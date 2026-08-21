@@ -7,6 +7,7 @@ import {
   FolderOpen,
   Pencil,
   Plus,
+  RadioTower,
   Search,
   Settings,
   Trash2,
@@ -160,6 +161,16 @@ export function HistoryPanel({
           >
             <FileText className="h-4 w-4" />
             <span>策略</span>
+          </Button>
+          <Button
+            className="mt-1 w-full justify-start"
+            size="sm"
+            variant={activeRoute === "strategy-deployments" ? "default" : "ghost"}
+            type="button"
+            onClick={() => onNavigateRoute("strategy-deployments")}
+          >
+            <RadioTower className="h-4 w-4" />
+            <span>策略部署</span>
           </Button>
         </div>
 

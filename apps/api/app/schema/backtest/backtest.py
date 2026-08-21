@@ -64,7 +64,6 @@ class StrategyBacktestConfig(BaseModel):
     benchmark_symbol: str | None = "000016.SH"
     start_date: date = Field(default_factory=default_backtest_start_date)
     end_date: date = Field(default_factory=default_backtest_end_date)
-    timeframe: Literal["1d"] = "1d"
     initial_cash: Decimal = Field(default=Decimal("100000"), gt=0)
     commission: Decimal = Field(default=Decimal("0.0005"), ge=0)
     slippage: Decimal = Field(default=Decimal("0"), ge=0)
@@ -239,14 +238,17 @@ class StrategyBacktestProtocol(BaseModel):
             ),
             (
                 "Generated strategies may optionally import ChatQInitContext, ChatQBarContext, "
-                "ChatQState, and ChatQNextResult from app.service.strategy.protocol for annotations."
+                "ChatQState, and ChatQNextResult from app.service.strategy.protocol for "
+                "annotations."
             ),
             (
                 "Strategy parameters may be declared through module-level chatq_params(); "
-                "Chat-Quant stores the returned schema as the strategy version custom_params snapshot."
+                "Chat-Quant stores the returned schema as the strategy version custom_params "
+                "snapshot."
             ),
             (
-                "chatq_init(context) initializes serializable strategy state and must not place orders."
+                "chatq_init(context) initializes serializable strategy state and must not place "
+                "orders."
             ),
             (
                 "chatq_next(context, state) returns actions, state, and optional logs. Backtrader "

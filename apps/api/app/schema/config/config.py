@@ -94,7 +94,7 @@ class MindgoSettingsUpdatePayload(BaseModel):
     storage_root: str | None = Field(default=None, min_length=1)
 
 
-class BacktestMarketDatasetSettingsPayload(BaseModel):
+class MarketDataDatasetSettingsPayload(BaseModel):
     dataset_id: str = ""
     symbol_field: str = ""
     datetime_field: str = ""
@@ -105,19 +105,19 @@ class BacktestMarketDatasetSettingsPayload(BaseModel):
     volume_field: str = ""
 
 
-class BacktestBenchmarkDatasetSettingsPayload(BaseModel):
+class MarketDataBenchmarkDatasetSettingsPayload(BaseModel):
     dataset_id: str = ""
     symbol_field: str = ""
     datetime_field: str = ""
     close_field: str = ""
 
 
-class BacktestSettingsPayload(BaseModel):
-    market_dataset: BacktestMarketDatasetSettingsPayload
-    benchmark_dataset: BacktestBenchmarkDatasetSettingsPayload
+class MarketDataSettingsPayload(BaseModel):
+    market_data_dataset: MarketDataDatasetSettingsPayload
+    benchmark_dataset: MarketDataBenchmarkDatasetSettingsPayload
 
 
-class BacktestMarketDatasetSettingsUpdatePayload(BaseModel):
+class MarketDataDatasetSettingsUpdatePayload(BaseModel):
     dataset_id: str | None = None
     symbol_field: str | None = None
     datetime_field: str | None = None
@@ -128,16 +128,16 @@ class BacktestMarketDatasetSettingsUpdatePayload(BaseModel):
     volume_field: str | None = None
 
 
-class BacktestBenchmarkDatasetSettingsUpdatePayload(BaseModel):
+class MarketDataBenchmarkDatasetSettingsUpdatePayload(BaseModel):
     dataset_id: str | None = None
     symbol_field: str | None = None
     datetime_field: str | None = None
     close_field: str | None = None
 
 
-class BacktestSettingsUpdatePayload(BaseModel):
-    market_dataset: BacktestMarketDatasetSettingsUpdatePayload | None = None
-    benchmark_dataset: BacktestBenchmarkDatasetSettingsUpdatePayload | None = None
+class MarketDataSettingsUpdatePayload(BaseModel):
+    market_data_dataset: MarketDataDatasetSettingsUpdatePayload | None = None
+    benchmark_dataset: MarketDataBenchmarkDatasetSettingsUpdatePayload | None = None
 
 
 class AppSettingsPayload(BaseModel):
@@ -145,7 +145,7 @@ class AppSettingsPayload(BaseModel):
     logging: LoggingSettingsPayload
     agent: AgentSettingsPayload
     mindgo: MindgoSettingsPayload
-    backtest: BacktestSettingsPayload
+    market_data: MarketDataSettingsPayload
 
 
 class AppSettingsUpdatePayload(BaseModel):
@@ -153,7 +153,7 @@ class AppSettingsUpdatePayload(BaseModel):
     logging: LoggingSettingsUpdatePayload | None = None
     agent: AgentSettingsUpdatePayload | None = None
     mindgo: MindgoSettingsUpdatePayload | None = None
-    backtest: BacktestSettingsUpdatePayload | None = None
+    market_data: MarketDataSettingsUpdatePayload | None = None
 
 
 class ConfigFieldDefinitionResponse(BaseModel):

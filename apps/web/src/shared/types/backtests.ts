@@ -7,7 +7,6 @@ export type BacktestConfig = {
   benchmark_symbol: string | null;
   start_date: string;
   end_date: string;
-  timeframe: string;
   data_source: string;
   data_as_of: string | null;
   initial_cash: string;

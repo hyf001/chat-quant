@@ -117,7 +117,7 @@ def test_log_service_reads_json_lines_and_filters_categories(tmp_path: Path) -> 
             {
                 "timestamp": "2026-08-13T08:00:00+00:00",
                 "level": "INFO",
-                "logger": "app.service.strategy.service",
+                "logger": "app.service.strategy.strategy_service",
                 "message": "strategy created",
             },
             {
@@ -132,7 +132,7 @@ def test_log_service_reads_json_lines_and_filters_categories(tmp_path: Path) -> 
     business = LogService(log_file).list_logs(category="business", limit=5)
     access = LogService(log_file).list_logs(category="access", limit=5)
 
-    assert [item.logger for item in business.items] == ["app.service.strategy.service"]
+    assert [item.logger for item in business.items] == ["app.service.strategy.strategy_service"]
     assert business.items[0].category == "business"
     assert [item.logger for item in access.items] == ["uvicorn.access"]
     assert access.items[0].category == "access"
@@ -209,8 +209,7 @@ def test_warning_and_error_logs_include_error_and_stack_context(capsys) -> None:
 def _write_log_lines(log_file: Path, lines: list[str | dict[str, object]]) -> None:
     log_file.write_text(
         "".join(
-            f"{line}\n" if isinstance(line, str) else f"{json.dumps(line)}\n"
-            for line in lines
+            f"{line}\n" if isinstance(line, str) else f"{json.dumps(line)}\n" for line in lines
         ),
         encoding="utf-8",
     )

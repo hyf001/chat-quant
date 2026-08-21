@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
-from app.service.backtest.execution import StrategyBacktestError
-from app.service.backtest.market_data import (
+from app.service.market_data.dataset_market_data import (
+    MarketDataError,
     _normalize_dataset_benchmark_frame,
     _normalize_dataset_market_frame,
 )
@@ -31,13 +31,13 @@ def test_normalize_dataset_market_frame_accepts_mapped_columns() -> None:
 
 
 def test_normalize_dataset_market_frame_rejects_missing_columns() -> None:
-    with pytest.raises(StrategyBacktestError) as raised:
+    with pytest.raises(MarketDataError) as raised:
         _normalize_dataset_market_frame(
             pd.DataFrame([{"datetime": "2024-01-02", "close": 10.5}]),
             symbol="600519.SH",
         )
 
-    assert raised.value.error_code == "BACKTEST_DATASET_FORMAT_INVALID"
+    assert raised.value.error_code == "MARKET_DATASET_FORMAT_INVALID"
     assert "open" in raised.value.detail["missing_columns"]
 
 

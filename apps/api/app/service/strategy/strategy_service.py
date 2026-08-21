@@ -288,6 +288,7 @@ class StrategyService:
         )
         return (result or 0) + 1
 
+
 def _new_id(prefix: str) -> str:
     return f"{prefix}_{uuid4().hex[:12]}"
 

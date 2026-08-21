@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
+from enum import StrEnum
 from types import ModuleType
 from typing import Any, Literal, NotRequired, Protocol, Required, TypedDict
 from uuid import uuid4
@@ -14,15 +15,20 @@ from app.schema.strategy import StrategyCustomParameter, StrategyParamValue
 
 ParamSource = Literal["chatq_params", "none"]
 ChatQMode = Literal["backtest", "signal", "paper", "live"]
-ChatQActionName = Literal["buy", "sell", "close", "cancel", "hold"]
 ChatQOrderSide = Literal["buy", "sell"]
 ChatQOrderType = Literal["market", "limit"]
 ChatQState = dict[str, Any]
 
 
+class ChatQActionType(StrEnum):
+    BUY = "buy"
+    SELL = "sell"
+    CLOSE = "close"
+    CANCEL = "cancel"
+
+
 class ChatQReadOnlyServices(Protocol):
-    def sql(self, sql: str) -> pd.DataFrame:
-        ...
+    def sql(self, sql: str) -> pd.DataFrame: ...
 
 
 class ChatQBar(TypedDict):
@@ -63,7 +69,6 @@ class ChatQOrderEvent(TypedDict):
 class ChatQInitContext(TypedDict):
     mode: ChatQMode
     symbols: list[str]
-    timeframe: str
     params: dict[str, Any]
     history: dict[str, pd.DataFrame]
     chatq: ChatQReadOnlyServices
@@ -85,7 +90,7 @@ class ChatQBarContext(TypedDict):
 
 
 class ChatQAction(TypedDict, total=False):
-    action: Required[ChatQActionName]
+    action: Required[ChatQActionType]
     symbol: str
     order_type: ChatQOrderType
     size: float
@@ -177,6 +182,7 @@ def normalize_chatq_result(
     raw_result: object,
     *,
     old_state: ChatQState,
+    validate_actions: bool = True,
 ) -> ChatQNextResult:
     if not isinstance(raw_result, dict):
         raise StrategyProtocolError(
@@ -200,7 +206,18 @@ def normalize_chatq_result(
             "actions must be a list",
         )
 
-    actions = [_normalize_action(action) for action in raw_actions]
+    if validate_actions:
+        actions = [
+            action
+            for action in (_normalize_action(action) for action in raw_actions)
+            if action is not None
+        ]
+    else:
+        actions = [
+            action
+            for action in (_raw_action_payload(action) for action in raw_actions)
+            if action is not None
+        ]
     state = raw_result.get("state", old_state)
     logs = raw_result.get("logs", [])
     if not isinstance(state, dict):
@@ -215,7 +232,7 @@ def normalize_chatq_result(
         )
 
     return {
-        "actions": actions or [{"action": "hold"}],
+        "actions": actions,
         "state": state,
         "logs": logs,
     }
@@ -223,17 +240,14 @@ def normalize_chatq_result(
 
 def validate_chatq_action(action: dict[str, Any]) -> dict[str, Any]:
     action_name = action["action"]
-    if action_name == "hold":
-        return action
-
     symbol = action.get("symbol")
-    if action_name != "cancel" and (not isinstance(symbol, str) or not symbol):
+    if action_name != ChatQActionType.CANCEL and (not isinstance(symbol, str) or not symbol):
         raise StrategyProtocolError(
             "STRATEGY_ACTION_INVALID",
             f"{action_name} action must define symbol",
         )
 
-    if action_name in {"buy", "sell"}:
+    if action_name in {ChatQActionType.BUY, ChatQActionType.SELL}:
         size = action.get("size")
         if not isinstance(size, int | float) or isinstance(size, bool) or size <= 0:
             raise StrategyProtocolError(
@@ -252,7 +266,7 @@ def validate_chatq_action(action: dict[str, Any]) -> dict[str, Any]:
                 "limit order must define price",
             )
 
-    if action_name == "close":
+    if action_name == ChatQActionType.CLOSE:
         size = action.get("size")
         if size is not None and (
             not isinstance(size, int | float) or isinstance(size, bool) or size <= 0
@@ -262,7 +276,7 @@ def validate_chatq_action(action: dict[str, Any]) -> dict[str, Any]:
                 "close action size must be empty or > 0",
             )
 
-    if action_name == "cancel":
+    if action_name == ChatQActionType.CANCEL:
         ref = action.get("ref")
         if not isinstance(ref, str | int) or ref == "":
             raise StrategyProtocolError(
@@ -271,6 +285,14 @@ def validate_chatq_action(action: dict[str, Any]) -> dict[str, Any]:
             )
 
     return action
+
+
+def _raw_action_payload(raw_action: object) -> dict[str, Any] | None:
+    if not isinstance(raw_action, dict):
+        return {"action": "__invalid__", "raw": repr(raw_action)}
+    if raw_action.get("action") == "hold":
+        return None
+    return dict(raw_action)
 
 
 def _required_callable(module: ModuleType, name: str) -> Callable[..., Any]:
@@ -346,20 +368,25 @@ def _parse_chatq_params(raw_params: object) -> list[StrategyCustomParameter]:
     return params
 
 
-def _normalize_action(raw_action: object) -> ChatQAction:
+def _normalize_action(raw_action: object) -> ChatQAction | None:
     if not isinstance(raw_action, dict):
         raise StrategyProtocolError(
             "STRATEGY_RESULT_INVALID",
             "Each action must be an object",
         )
     action_name = raw_action.get("action")
-    if action_name not in {"buy", "sell", "close", "cancel", "hold"}:
+    if action_name == "hold":
+        return None
+    try:
+        action_type = ChatQActionType(action_name)
+    except ValueError as exc:
         raise StrategyProtocolError(
             "STRATEGY_ACTION_INVALID",
-            "action must be buy, sell, close, cancel, or hold",
-        )
+            "action must be buy, sell, close, or cancel",
+        ) from exc
     action = dict(raw_action)
-    if action_name in {"buy", "sell"}:
+    action["action"] = action_type
+    if action_type in {ChatQActionType.BUY, ChatQActionType.SELL}:
         action.setdefault("order_type", "market")
     return validate_chatq_action(action)
 

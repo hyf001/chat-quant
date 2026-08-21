@@ -28,12 +28,14 @@ from app.schema.backtest import (
 )
 from app.schema.strategy import StrategyVersionRecord
 from app.service.backtest.execution import StrategyBacktestError
-from app.service.backtest.market_data import (
-    backtest_dataset_source_metadata,
-    load_backtest_benchmark_frame,
-    load_backtest_market_frame,
+from app.service.market_data import (
+    MarketDataError,
+    load_benchmark,
+    load_market,
+    market_data_source_metadata,
 )
 from app.service.strategy.protocol import (
+    ChatQActionType,
     ChatQBar,
     ChatQBarContext,
     ChatQInitContext,
@@ -56,7 +58,6 @@ class _ChatQBacktraderAdapter(bt.Strategy):
         ("strategy_module", None),
         ("chatq_param_values", None),
         ("symbols", None),
-        ("timeframe", None),
         ("history", None),
         ("services", None),
     )
@@ -71,7 +72,6 @@ class _ChatQBacktraderAdapter(bt.Strategy):
         init_context: ChatQInitContext = {
             "mode": "backtest",
             "symbols": list(self.p.symbols),
-            "timeframe": self.p.timeframe,
             "params": dict(self.p.chatq_param_values),
             "history": self.p.history,
             "chatq": self.p.services,
@@ -116,9 +116,7 @@ class _ChatQBacktraderAdapter(bt.Strategy):
 
     def _execute_action(self, action: dict[str, object]) -> None:
         action_name = action["action"]
-        if action_name == "hold":
-            return
-        if action_name == "cancel":
+        if action_name == ChatQActionType.CANCEL:
             order = self.open_order_by_ref.get(str(action["ref"]))
             if order is not None:
                 self.cancel(order)
@@ -130,21 +128,21 @@ class _ChatQBacktraderAdapter(bt.Strategy):
         price = action.get("price")
         order_type = str(action.get("order_type", "market"))
 
-        if action_name == "buy":
+        if action_name == ChatQActionType.BUY:
             order = self.buy(
                 data=data,
                 size=size,
                 price=price,
                 exectype=_to_backtrader_exectype(order_type),
             )
-        elif action_name == "sell":
+        elif action_name == ChatQActionType.SELL:
             order = self.sell(
                 data=data,
                 size=size,
                 price=price,
                 exectype=_to_backtrader_exectype(order_type),
             )
-        elif action_name == "close":
+        elif action_name == ChatQActionType.CLOSE:
             order = self.close(data=data, size=size)
         else:
             raise StrategyProtocolError(
@@ -195,7 +193,6 @@ class BacktraderStrategyBacktestEngine:
                 strategy_module=strategy_module,
                 chatq_param_values=params,
                 symbols=backtest.config.symbols,
-                timeframe=backtest.config.timeframe,
                 history=market_frames,
                 services=ChatQStrategyRuntime(),
             )
@@ -282,7 +279,7 @@ class BacktraderStrategyBacktestEngine:
             warnings=warnings,
             engine=self.name,
             protocol=self.protocol_name,
-            data_source=backtest_dataset_source_metadata(backtest.config.symbols),
+            data_source=_backtest_data_source_metadata(backtest.config.symbols),
         )
 
     def _load_strategy_module(
@@ -331,10 +328,7 @@ def _history_until(
     current_dt: datetime,
 ) -> dict[str, pd.DataFrame]:
     current_ts = pd.Timestamp(current_dt)
-    return {
-        symbol: frame.loc[frame.index <= current_ts]
-        for symbol, frame in history.items()
-    }
+    return {symbol: frame.loc[frame.index <= current_ts] for symbol, frame in history.items()}
 
 
 def _normalize_positions(strategy: bt.Strategy) -> dict[str, ChatQPosition]:
@@ -408,7 +402,13 @@ def _order_created_price(order: bt.Order) -> float | None:
 
 
 def _is_terminal_order(order: bt.Order) -> bool:
-    return order.status in {order.Completed, order.Canceled, order.Margin, order.Rejected, order.Expired}
+    return order.status in {
+        order.Completed,
+        order.Canceled,
+        order.Margin,
+        order.Rejected,
+        order.Expired,
+    }
 
 
 def _to_backtrader_exectype(order_type: str) -> int:
@@ -536,13 +536,13 @@ def _load_market_data_feed(
     backtest: StrategyBacktestRecord,
 ) -> tuple[bt.feeds.PandasData, pd.DataFrame]:
     try:
-        result = load_backtest_market_frame(
+        result = load_market(
             symbol=symbol,
             start_date=backtest.config.start_date,
             end_date=backtest.config.end_date,
         )
-    except StrategyBacktestError:
-        raise
+    except MarketDataError as exc:
+        raise _backtest_error(exc) from exc
     except Exception as exc:
         raise StrategyBacktestError(
             "BACKTEST_DATASET_LOAD_FAILED",
@@ -618,9 +618,7 @@ def _build_metrics(
     sharpe = _sharpe_ratio(returns)
     winning = [item for item in trade_items if float(item["pnl"]) > 0]
     win_rate = (
-        Decimal(len(winning)) / Decimal(len(trade_items)) * Decimal("100")
-        if trade_items
-        else None
+        Decimal(len(winning)) / Decimal(len(trade_items)) * Decimal("100") if trade_items else None
     )
     duration = (max_end - max_start).days if max_start is not None and max_end is not None else None
     metrics = StrategyBacktestMetrics(
@@ -724,7 +722,7 @@ def _build_benchmark_series(
         return None
 
     try:
-        result = load_backtest_benchmark_frame(
+        result = load_benchmark(
             symbol=benchmark_symbol,
             start_date=backtest.config.start_date,
             end_date=backtest.config.end_date,
@@ -756,6 +754,39 @@ def _build_benchmark_series(
         total_return_pct=points[-1].normalized_value if points else None,
         points=points,
     )
+
+
+def _backtest_data_source_metadata(symbols: list[str]) -> dict[str, object]:
+    try:
+        return market_data_source_metadata(symbols)
+    except MarketDataError as exc:
+        raise _backtest_error(exc) from exc
+
+
+def _backtest_error(error: MarketDataError) -> StrategyBacktestError:
+    return StrategyBacktestError(
+        _backtest_error_code(error.error_code),
+        error.message,
+        detail=dict(error.detail),
+    )
+
+
+def _backtest_error_code(error_code: str) -> str:
+    mapping = {
+        "MARKET_DATA_DATASET_NOT_CONFIGURED": "BACKTEST_MARKET_DATASET_NOT_CONFIGURED",
+        "MARKET_DATA_BENCHMARK_NOT_CONFIGURED": "BACKTEST_BENCHMARK_DATASET_NOT_CONFIGURED",
+        "MARKET_DATASET_NOT_FOUND": "BACKTEST_DATASET_NOT_FOUND",
+        "MARKET_DATASET_QUERY_FAILED": "BACKTEST_DATASET_QUERY_FAILED",
+        "MARKET_DATASET_FIELD_NOT_FOUND": "BACKTEST_DATASET_FIELD_NOT_FOUND",
+        "MARKET_DATASET_FORMAT_INVALID": "BACKTEST_DATASET_FORMAT_INVALID",
+        "MARKET_DATASET_EMPTY": "BACKTEST_DATASET_EMPTY",
+        "MARKET_BENCHMARK_FORMAT_INVALID": "BACKTEST_BENCHMARK_FORMAT_INVALID",
+        "MARKET_BENCHMARK_EMPTY": "BACKTEST_BENCHMARK_EMPTY",
+        "MARKET_DATASET_MAPPING_INVALID": "BACKTEST_DATASET_MAPPING_INVALID",
+        "MARKET_DATA_WINDOW_INVALID": "BACKTEST_DATASET_MAPPING_INVALID",
+        "MARKET_DATA_LOOKBACK_INVALID": "BACKTEST_DATASET_MAPPING_INVALID",
+    }
+    return mapping.get(error_code, error_code.replace("MARKET_", "BACKTEST_"))
 
 
 def _sharpe_ratio(returns: list[Decimal]) -> Decimal | None:

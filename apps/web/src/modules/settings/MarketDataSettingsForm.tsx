@@ -7,31 +7,35 @@ import {
   listDatasets,
   queryDatasets,
   type AppSettings,
-  type BacktestSettings,
+  type BenchmarkDatasetSettings,
   type Dataset,
+  type MarketDataDatasetSettings,
+  type MarketDataSettings,
 } from "../../shared/api";
 import { FormSection, SelectField } from "./SettingsFields";
 
-type BacktestSettingsFormProps = {
+type MarketDataSettingsFormProps = {
   draft: AppSettings;
   onChange: (settings: AppSettings) => void;
-  onSaveBacktestSettings: (settings: Partial<BacktestSettings>, message: string) => void;
+  onSaveMarketDataSettings: (settings: Partial<MarketDataSettings>, message: string) => void;
   onToast: (message: string, tone?: "success" | "error" | "info") => void;
 };
 
-export function BacktestSettingsForm({
+export function MarketDataSettingsForm({
   draft,
   onChange,
-  onSaveBacktestSettings,
+  onSaveMarketDataSettings,
   onToast,
-}: BacktestSettingsFormProps) {
+}: MarketDataSettingsFormProps) {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [marketColumns, setMarketColumns] = useState<string[]>([]);
   const [benchmarkColumns, setBenchmarkColumns] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMarketColumns, setIsLoadingMarketColumns] = useState(false);
   const [isLoadingBenchmarkColumns, setIsLoadingBenchmarkColumns] = useState(false);
-  const backtest = draft.backtest;
+  const marketData = draft.market_data;
+  const marketDataset = marketData.market_data_dataset;
+  const benchmarkDataset = marketData.benchmark_dataset;
   const datasetOptions = useMemo(
     () =>
       datasets.map((dataset) => ({
@@ -85,64 +89,64 @@ export function BacktestSettingsForm({
 
   useEffect(() => {
     void loadDatasetColumns(
-      backtest.market_dataset.dataset_id,
+      marketDataset.dataset_id,
       setMarketColumns,
       setIsLoadingMarketColumns,
     );
-  }, [backtest.market_dataset.dataset_id, loadDatasetColumns]);
+  }, [marketDataset.dataset_id, loadDatasetColumns]);
 
   useEffect(() => {
     void loadDatasetColumns(
-      backtest.benchmark_dataset.dataset_id,
+      benchmarkDataset.dataset_id,
       setBenchmarkColumns,
       setIsLoadingBenchmarkColumns,
     );
-  }, [backtest.benchmark_dataset.dataset_id, loadDatasetColumns]);
+  }, [benchmarkDataset.dataset_id, loadDatasetColumns]);
 
   useEffect(() => {
     if (isLoadingMarketColumns || marketColumns.length === 0) {
       return;
     }
-    const sanitized = sanitizeMarketDatasetFields(backtest.market_dataset, marketColumns);
-    if (sanitized !== backtest.market_dataset) {
+    const sanitized = sanitizeMarketDatasetFields(marketDataset, marketColumns);
+    if (sanitized !== marketDataset) {
       updateMarket(sanitized);
     }
-  }, [backtest.market_dataset, isLoadingMarketColumns, marketColumns]);
+  }, [marketDataset, isLoadingMarketColumns, marketColumns]);
 
   useEffect(() => {
     if (isLoadingBenchmarkColumns || benchmarkColumns.length === 0) {
       return;
     }
     const sanitized = sanitizeBenchmarkDatasetFields(
-      backtest.benchmark_dataset,
+      benchmarkDataset,
       benchmarkColumns,
     );
-    if (sanitized !== backtest.benchmark_dataset) {
+    if (sanitized !== benchmarkDataset) {
       updateBenchmark(sanitized);
     }
-  }, [backtest.benchmark_dataset, benchmarkColumns, isLoadingBenchmarkColumns]);
+  }, [benchmarkDataset, benchmarkColumns, isLoadingBenchmarkColumns]);
 
-  const updateBacktest = (patch: Partial<BacktestSettings>) => {
+  const updateMarketData = (patch: Partial<MarketDataSettings>) => {
     onChange({
       ...draft,
-      backtest: {
-        ...backtest,
+      market_data: {
+        ...marketData,
         ...patch,
       },
     });
   };
-  const updateMarket = (patch: Partial<BacktestSettings["market_dataset"]>) => {
-    updateBacktest({
-      market_dataset: {
-        ...backtest.market_dataset,
+  const updateMarket = (patch: Partial<MarketDataDatasetSettings>) => {
+    updateMarketData({
+      market_data_dataset: {
+        ...marketDataset,
         ...patch,
       },
     });
   };
-  const updateBenchmark = (patch: Partial<BacktestSettings["benchmark_dataset"]>) => {
-    updateBacktest({
+  const updateBenchmark = (patch: Partial<BenchmarkDatasetSettings>) => {
+    updateMarketData({
       benchmark_dataset: {
-        ...backtest.benchmark_dataset,
+        ...benchmarkDataset,
         ...patch,
       },
     });
@@ -151,7 +155,7 @@ export function BacktestSettingsForm({
   return (
     <div className="grid gap-5">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-line bg-soft px-3 py-2">
-        <div className="text-xs text-mutedText">Backtrader 回测只从平台数据集读取行情和基准。</div>
+        <div className="text-xs text-mutedText">策略执行和回测从平台数据集读取行情和基准。</div>
         <Button
           size="sm"
           variant="outline"
@@ -174,9 +178,11 @@ export function BacktestSettingsForm({
           <SaveButton
             label="保存行情配置"
             onClick={() =>
-              onSaveBacktestSettings(
-                { market_dataset: normalizeMarketDataset(backtest.market_dataset) },
-                "回测行情数据集已保存",
+              onSaveMarketDataSettings(
+                {
+                  market_data_dataset: normalizeMarketDataset(marketDataset),
+                },
+                "行情数据集已保存",
               )
             }
           />
@@ -184,56 +190,56 @@ export function BacktestSettingsForm({
       >
         <SelectField
           label="数据集"
-          value={backtest.market_dataset.dataset_id}
+          value={marketDataset.dataset_id}
           options={datasetOptions}
           placeholder="选择数据集"
           onChange={(dataset_id) => updateMarket(emptyMarketFieldPatch(dataset_id))}
         />
         <FieldSelect
           label="代码字段"
-          value={backtest.market_dataset.symbol_field}
+          value={marketDataset.symbol_field}
           columns={marketColumns}
           isLoading={isLoadingMarketColumns}
           onChange={(symbol_field) => updateMarket({ symbol_field })}
         />
         <FieldSelect
           label="日期字段"
-          value={backtest.market_dataset.datetime_field}
+          value={marketDataset.datetime_field}
           columns={marketColumns}
           isLoading={isLoadingMarketColumns}
           onChange={(datetime_field) => updateMarket({ datetime_field })}
         />
         <FieldSelect
           label="开盘字段"
-          value={backtest.market_dataset.open_field}
+          value={marketDataset.open_field}
           columns={marketColumns}
           isLoading={isLoadingMarketColumns}
           onChange={(open_field) => updateMarket({ open_field })}
         />
         <FieldSelect
           label="最高字段"
-          value={backtest.market_dataset.high_field}
+          value={marketDataset.high_field}
           columns={marketColumns}
           isLoading={isLoadingMarketColumns}
           onChange={(high_field) => updateMarket({ high_field })}
         />
         <FieldSelect
           label="最低字段"
-          value={backtest.market_dataset.low_field}
+          value={marketDataset.low_field}
           columns={marketColumns}
           isLoading={isLoadingMarketColumns}
           onChange={(low_field) => updateMarket({ low_field })}
         />
         <FieldSelect
           label="收盘字段"
-          value={backtest.market_dataset.close_field}
+          value={marketDataset.close_field}
           columns={marketColumns}
           isLoading={isLoadingMarketColumns}
           onChange={(close_field) => updateMarket({ close_field })}
         />
         <FieldSelect
           label="成交量字段"
-          value={backtest.market_dataset.volume_field}
+          value={marketDataset.volume_field}
           columns={marketColumns}
           isLoading={isLoadingMarketColumns}
           onChange={(volume_field) => updateMarket({ volume_field })}
@@ -246,9 +252,11 @@ export function BacktestSettingsForm({
           <SaveButton
             label="保存基准配置"
             onClick={() =>
-              onSaveBacktestSettings(
-                { benchmark_dataset: normalizeBenchmarkDataset(backtest.benchmark_dataset) },
-                "回测基准数据集已保存",
+              onSaveMarketDataSettings(
+                {
+                  benchmark_dataset: normalizeBenchmarkDataset(benchmarkDataset),
+                },
+                "基准数据集已保存",
               )
             }
           />
@@ -256,28 +264,28 @@ export function BacktestSettingsForm({
       >
         <SelectField
           label="数据集"
-          value={backtest.benchmark_dataset.dataset_id}
+          value={benchmarkDataset.dataset_id}
           options={datasetOptions}
           placeholder="选择数据集"
           onChange={(dataset_id) => updateBenchmark(emptyBenchmarkFieldPatch(dataset_id))}
         />
         <FieldSelect
           label="代码字段"
-          value={backtest.benchmark_dataset.symbol_field}
+          value={benchmarkDataset.symbol_field}
           columns={benchmarkColumns}
           isLoading={isLoadingBenchmarkColumns}
           onChange={(symbol_field) => updateBenchmark({ symbol_field })}
         />
         <FieldSelect
           label="日期字段"
-          value={backtest.benchmark_dataset.datetime_field}
+          value={benchmarkDataset.datetime_field}
           columns={benchmarkColumns}
           isLoading={isLoadingBenchmarkColumns}
           onChange={(datetime_field) => updateBenchmark({ datetime_field })}
         />
         <FieldSelect
           label="收盘字段"
-          value={backtest.benchmark_dataset.close_field}
+          value={benchmarkDataset.close_field}
           columns={benchmarkColumns}
           isLoading={isLoadingBenchmarkColumns}
           onChange={(close_field) => updateBenchmark({ close_field })}
@@ -345,7 +353,7 @@ function quoteDuckdbIdentifier(identifier: string): string {
 
 function emptyMarketFieldPatch(
   datasetId: string,
-): Partial<BacktestSettings["market_dataset"]> {
+): MarketDataDatasetSettings {
   return {
     dataset_id: datasetId,
     symbol_field: "",
@@ -360,7 +368,7 @@ function emptyMarketFieldPatch(
 
 function emptyBenchmarkFieldPatch(
   datasetId: string,
-): Partial<BacktestSettings["benchmark_dataset"]> {
+): BenchmarkDatasetSettings {
   return {
     dataset_id: datasetId,
     symbol_field: "",
@@ -370,9 +378,9 @@ function emptyBenchmarkFieldPatch(
 }
 
 function sanitizeMarketDatasetFields(
-  settings: BacktestSettings["market_dataset"],
+  settings: MarketDataDatasetSettings,
   columns: string[],
-): BacktestSettings["market_dataset"] {
+): MarketDataDatasetSettings {
   const next = {
     ...settings,
     symbol_field: keepColumn(settings.symbol_field, columns),
@@ -387,9 +395,9 @@ function sanitizeMarketDatasetFields(
 }
 
 function sanitizeBenchmarkDatasetFields(
-  settings: BacktestSettings["benchmark_dataset"],
+  settings: BenchmarkDatasetSettings,
   columns: string[],
-): BacktestSettings["benchmark_dataset"] {
+): BenchmarkDatasetSettings {
   const next = {
     ...settings,
     symbol_field: keepColumn(settings.symbol_field, columns),
@@ -408,8 +416,8 @@ function shallowEqual<T extends Record<string, unknown>>(left: T, right: T): boo
 }
 
 function normalizeMarketDataset(
-  settings: BacktestSettings["market_dataset"],
-): BacktestSettings["market_dataset"] {
+  settings: MarketDataDatasetSettings,
+): MarketDataDatasetSettings {
   return {
     ...settings,
     dataset_id: settings.dataset_id.trim(),
@@ -424,8 +432,8 @@ function normalizeMarketDataset(
 }
 
 function normalizeBenchmarkDataset(
-  settings: BacktestSettings["benchmark_dataset"],
-): BacktestSettings["benchmark_dataset"] {
+  settings: BenchmarkDatasetSettings,
+): BenchmarkDatasetSettings {
   return {
     ...settings,
     dataset_id: settings.dataset_id.trim(),

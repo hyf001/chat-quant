@@ -22,12 +22,12 @@ from app.schema.config import (
     AppConfigResponse,
     AppSettingsPayload,
     AppSettingsUpdatePayload,
-    BacktestBenchmarkDatasetSettingsPayload,
-    BacktestMarketDatasetSettingsPayload,
-    BacktestSettingsPayload,
     BootstrapConfigResponse,
     ConfigFieldDefinitionResponse,
     LoggingSettingsPayload,
+    MarketDataBenchmarkDatasetSettingsPayload,
+    MarketDataDatasetSettingsPayload,
+    MarketDataSettingsPayload,
     MindgoSettingsPayload,
     SystemSettingsPayload,
     UpdateAppConfigRequest,
@@ -170,12 +170,12 @@ def _payload_from_settings(settings: Settings) -> AppSettingsPayload:
             timeout_seconds=settings.mindgo_timeout_seconds,
             storage_root=settings.mindgo_storage_root,
         ),
-        backtest=BacktestSettingsPayload(
-            market_dataset=BacktestMarketDatasetSettingsPayload(
-                **settings.backtest_market_dataset
+        market_data=MarketDataSettingsPayload(
+            market_data_dataset=MarketDataDatasetSettingsPayload(
+                **settings.market_data_dataset
             ),
-            benchmark_dataset=BacktestBenchmarkDatasetSettingsPayload(
-                **settings.backtest_benchmark_dataset
+            benchmark_dataset=MarketDataBenchmarkDatasetSettingsPayload(
+                **settings.benchmark_dataset
             ),
         ),
     )
@@ -242,32 +242,52 @@ def _flatten_payload(payload: AppSettingsUpdatePayload) -> dict[str, ConfigValue
             values["mindgo_timeout_seconds"] = payload.mindgo.timeout_seconds
         if payload.mindgo.storage_root is not None:
             values["mindgo_storage_root"] = payload.mindgo.storage_root
-    if payload.backtest is not None:
-        if payload.backtest.market_dataset is not None:
-            current_market = _only_keys(
-                get_settings().backtest_market_dataset,
-                {
-                    "dataset_id",
-                    "symbol_field",
-                    "datetime_field",
-                    "open_field",
-                    "high_field",
-                    "low_field",
-                    "close_field",
-                    "volume_field",
-                },
+    if payload.market_data is not None:
+        settings = get_settings()
+        if payload.market_data.market_data_dataset is not None:
+            current_dataset = _market_data_dataset_config(settings.market_data_dataset)
+            values["market_data_dataset"] = {
+                **current_dataset,
+                **payload.market_data.market_data_dataset.model_dump(exclude_unset=True),
+            }
+        if payload.market_data.benchmark_dataset is not None:
+            current_dataset = _market_data_benchmark_dataset_config(
+                settings.benchmark_dataset
             )
-            market_patch = payload.backtest.market_dataset.model_dump(exclude_unset=True)
-            values["backtest_market_dataset"] = {**current_market, **market_patch}
-        if payload.backtest.benchmark_dataset is not None:
-            current_benchmark = _only_keys(
-                get_settings().backtest_benchmark_dataset,
-                {"dataset_id", "symbol_field", "datetime_field", "close_field"},
-            )
-            benchmark_patch = payload.backtest.benchmark_dataset.model_dump(exclude_unset=True)
-            values["backtest_benchmark_dataset"] = {**current_benchmark, **benchmark_patch}
+            values["benchmark_dataset"] = {
+                **current_dataset,
+                **payload.market_data.benchmark_dataset.model_dump(exclude_unset=True),
+            }
     return values
 
 
 def _only_keys(value: dict[str, object], keys: set[str]) -> dict[str, object]:
     return {key: raw_value for key, raw_value in value.items() if key in keys}
+
+
+def _market_data_dataset_config(value: dict[str, object]) -> dict[str, object]:
+    return _only_keys(
+        value,
+        {
+            "dataset_id",
+            "symbol_field",
+            "datetime_field",
+            "open_field",
+            "high_field",
+            "low_field",
+            "close_field",
+            "volume_field",
+        },
+    )
+
+
+def _market_data_benchmark_dataset_config(value: dict[str, object]) -> dict[str, object]:
+    return _only_keys(
+        value,
+        {
+            "dataset_id",
+            "symbol_field",
+            "datetime_field",
+            "close_field",
+        },
+    )

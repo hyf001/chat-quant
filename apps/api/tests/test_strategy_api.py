@@ -1,13 +1,24 @@
+import asyncio
 import logging
+from datetime import datetime
 
 import pytest
+from app.core.config import get_settings
+from app.db.session import get_session_factory
+from app.model.strategy import StrategySignalRow
+from app.service.strategy.strategy_deployment_job import (
+    StrategyDeploymentRuntimeContext,
+    StrategyRuntimeTrigger,
+    execute_strategy_deployment_tick,
+)
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
 
 pytestmark = pytest.mark.usefixtures("project_test")
 
 
 def test_create_strategy_returns_draft_first_version(client: TestClient, caplog) -> None:
-    caplog.set_level(logging.INFO, logger="app.service.strategy.service")
+    caplog.set_level(logging.INFO, logger="app.service.strategy.strategy_service")
 
     response = client.post(
         "/api/strategies",
@@ -21,7 +32,7 @@ def test_create_strategy_returns_draft_first_version(client: TestClient, caplog)
 
     assert any(
         record.levelname == "INFO"
-        and record.name == "app.service.strategy.service"
+        and record.name == "app.service.strategy.strategy_service"
         and record.message == "strategy created"
         and record.strategy_id == data["strategy_id"]
         for record in caplog.records
@@ -309,6 +320,255 @@ def test_deleted_strategy_is_hidden_from_list(client: TestClient) -> None:
     assert client.get("/api/strategies?project_id=project_test").json() == []
 
 
+def test_strategy_deployment_stores_complete_param_snapshot(client: TestClient) -> None:
+    created = client.post(
+        "/api/strategies",
+        json=strategy_create_payload(),
+    ).json()
+    strategy = client.get("/api/strategies?project_id=project_test").json()[0]
+
+    response = client.post(
+        "/api/strategy-deployments",
+        json={
+            "project_id": "project_test",
+            "strategy_id": created["strategy_id"],
+            "strategy_version_id": strategy["strategy_version_id"],
+            "name": "MA signal deployment",
+            "mode": "signal",
+            "symbols": ["000001.SZ"],
+            "params": {"fast_period": 12},
+        },
+    )
+
+    assert response.status_code == 201
+    deployment = response.json()
+    assert deployment["params"] == {
+        "fast_period": 12,
+        "slow_period": 60,
+        "volatility_filter": "medium",
+    }
+
+    update_response = client.patch(
+        f"/api/strategy-deployments/{deployment['id']}",
+        json={"params": {"slow_period": 80}},
+    )
+
+    assert update_response.status_code == 200
+    assert update_response.json()["params"] == {
+        "fast_period": 20,
+        "slow_period": 80,
+        "volatility_filter": "medium",
+    }
+
+
+def test_delete_strategy_deployment_cleans_schedule_and_instances(client: TestClient) -> None:
+    created = client.post(
+        "/api/strategies",
+        json=strategy_create_payload(),
+    ).json()
+    strategy = client.get("/api/strategies?project_id=project_test").json()[0]
+    deployment = client.post(
+        "/api/strategy-deployments",
+        json={
+            "project_id": "project_test",
+            "strategy_id": created["strategy_id"],
+            "strategy_version_id": strategy["strategy_version_id"],
+            "name": "Cleanup deployment",
+            "mode": "signal",
+            "symbols": ["000001.SZ"],
+        },
+    ).json()
+    schedule_response = client.put(
+        f"/api/strategy-deployments/{deployment['id']}/schedule",
+        json={"cron": "0 15 * * 1-5"},
+    )
+    trigger_response = client.post(
+        f"/api/strategy-deployments/{deployment['id']}/trigger",
+        json={},
+    )
+
+    assert schedule_response.status_code == 200
+    assert schedule_response.json()["scheduled"] is True
+    assert trigger_response.status_code == 201
+    instances_before = client.get(
+        "/api/job-runtime/instances",
+        params={"job_type": "strategy_deployment_tick", "job_id": deployment["id"]},
+    ).json()
+    assert instances_before["total"] == 1
+
+    delete_response = client.delete(f"/api/strategy-deployments/{deployment['id']}")
+
+    assert delete_response.status_code == 200
+    assert delete_response.json()["id"] == deployment["id"]
+    assert client.get(f"/api/strategy-deployments/{deployment['id']}").status_code == 404
+    instances_after = client.get(
+        "/api/job-runtime/instances",
+        params={"job_type": "strategy_deployment_tick", "job_id": deployment["id"]},
+    ).json()
+    assert instances_after["total"] == 0
+
+
+def test_list_strategy_signals_returns_backend_action_counts(client: TestClient) -> None:
+    created = client.post(
+        "/api/strategies",
+        json=strategy_create_payload(),
+    ).json()
+    strategy = client.get("/api/strategies?project_id=project_test").json()[0]
+    deployment = client.post(
+        "/api/strategy-deployments",
+        json={
+            "project_id": "project_test",
+            "strategy_id": created["strategy_id"],
+            "strategy_version_id": strategy["strategy_version_id"],
+            "name": "Signal counts deployment",
+            "mode": "signal",
+            "symbols": ["000001.SZ"],
+        },
+    ).json()
+    now = datetime.now()
+    settings = get_settings()
+    engine = create_engine(f"sqlite:///{settings.database_path}")
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                StrategySignalRow.__table__.insert(),
+                [
+                    {
+                        "id": "ssig_buy_1",
+                        "deployment_id": deployment["id"],
+                        "job_instance_id": None,
+                        "strategy_version_id": strategy["strategy_version_id"],
+                        "signal_datetime": now,
+                        "action_json": {"action": "buy", "symbol": "000001.SZ", "size": 10},
+                        "status": "generated",
+                        "reason": None,
+                        "created_at": now,
+                    },
+                    {
+                        "id": "ssig_buy_2",
+                        "deployment_id": deployment["id"],
+                        "job_instance_id": None,
+                        "strategy_version_id": strategy["strategy_version_id"],
+                        "signal_datetime": now,
+                        "action_json": {"action": "buy", "symbol": "000002.SZ", "size": 20},
+                        "status": "generated",
+                        "reason": None,
+                        "created_at": now,
+                    },
+                    {
+                        "id": "ssig_close_1",
+                        "deployment_id": deployment["id"],
+                        "job_instance_id": None,
+                        "strategy_version_id": strategy["strategy_version_id"],
+                        "signal_datetime": now,
+                        "action_json": {"action": "close", "symbol": "000001.SZ"},
+                        "status": "generated",
+                        "reason": None,
+                        "created_at": now,
+                    },
+                ],
+            )
+    finally:
+        engine.dispose()
+
+    response = client.get(f"/api/strategy-deployments/{deployment['id']}/signals")
+    filtered_response = client.get(
+        f"/api/strategy-deployments/{deployment['id']}/signals",
+        params={"action": "buy"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 3
+    assert {item["action"]: item["count"] for item in payload["action_counts"]} == {
+        "buy": 2,
+        "sell": 0,
+        "close": 1,
+        "cancel": 0,
+    }
+    assert filtered_response.status_code == 200
+    filtered_payload = filtered_response.json()
+    assert filtered_payload["total"] == 2
+    assert {item["action"]["action"] for item in filtered_payload["items"]} == {"buy"}
+    assert {item["action"]: item["count"] for item in filtered_payload["action_counts"]}[
+        "close"
+    ] == 1
+
+
+def test_strategy_deployment_persists_rejected_non_hold_actions(client: TestClient) -> None:
+    payload = strategy_create_payload()
+    payload["source_code"] = "\n".join(
+        [
+            "def chatq_init(context):",
+            "    return {}",
+            "",
+            "def chatq_next(context, state):",
+            "    symbol = context['symbols'][0]",
+            "    return {",
+            "        'actions': [",
+            "            {'action': 'hold', 'reason': 'no_signal'},",
+            "            {'action': 'buy', 'size': 10, 'reason': 'missing_symbol'},",
+            "            {'action': 'dance', 'foo': 'bar'},",
+            "            {'action': 'sell', 'symbol': symbol, 'size': 5, 'reason': 'valid_sell'},",
+            "        ],",
+            "        'state': state,",
+            "    }",
+        ]
+    )
+    created = client.post("/api/strategies", json=payload).json()
+    strategy = client.get("/api/strategies?project_id=project_test").json()[0]
+    deployment = client.post(
+        "/api/strategy-deployments",
+        json={
+            "project_id": "project_test",
+            "strategy_id": created["strategy_id"],
+            "strategy_version_id": strategy["strategy_version_id"],
+            "name": "Rejected action deployment",
+            "mode": "signal",
+            "symbols": ["000001.SZ"],
+        },
+    ).json()
+
+    result = asyncio.run(_execute_static_strategy_deployment(deployment["id"]))
+    response = client.get(f"/api/strategy-deployments/{deployment['id']}/signals")
+
+    assert result.payload["signal_count"] == 3
+    assert result.payload["generated_count"] == 1
+    assert result.payload["rejected_count"] == 2
+    payload = response.json()
+    assert payload["total"] == 3
+    signals = sorted(payload["items"], key=lambda item: item["action"]["action"])
+    assert [signal["status"] for signal in signals] == ["rejected", "rejected", "generated"]
+    assert [signal["action"]["action"] for signal in signals] == ["buy", "dance", "sell"]
+    assert all(signal["action"]["action"] != "hold" for signal in signals)
+
+
+async def _execute_static_strategy_deployment(deployment_id: str):
+    async with get_session_factory()() as db:
+        return await execute_strategy_deployment_tick(
+            db,
+            deployment_id=deployment_id,
+            trigger=StrategyRuntimeTrigger(
+                instance_id="inst_test_rejected_actions",
+                scheduled_for=datetime.now(),
+                payload={},
+            ),
+            context_provider=_StaticDeploymentContextProvider(),
+        )
+
+
+class _StaticDeploymentContextProvider:
+    async def load_context(self, db, *, deployment, trigger):
+        del db, deployment, trigger
+        return StrategyDeploymentRuntimeContext(
+            history={},
+            current_bars={},
+            bars={},
+            cash=100000,
+            portfolio_value=100000,
+        )
+
+
 def strategy_create_payload(
     *,
     fast_period: int = 20,
@@ -344,7 +604,7 @@ def strategy_create_payload(
                 "    params = context['params']",
                 "    bars = context['bars'][symbol]",
                 "    if len(bars) < params['slow_period']:",
-                "        return {'actions': [{'action': 'hold', 'reason': 'warmup'}], 'state': state}",
+                "        return {'actions': [], 'state': state}",
                 "    fast_ma = bars['close'].tail(params['fast_period']).mean()",
                 "    slow_ma = bars['close'].tail(params['slow_period']).mean()",
                 "    position = context['positions'].get(symbol, {'size': 0})",
@@ -352,7 +612,7 @@ def strategy_create_payload(
                 "        return {'actions': [{'action': 'buy', 'symbol': symbol, 'size': 10, 'reason': 'ma_cross_up'}], 'state': state}",
                 "    if position['size'] > 0 and fast_ma < slow_ma:",
                 "        return {'actions': [{'action': 'close', 'symbol': symbol, 'reason': 'ma_cross_down'}], 'state': state}",
-                "    return {'actions': [{'action': 'hold', 'reason': 'no_cross'}], 'state': state}",
+                "    return {'actions': [], 'state': state}",
             ]
         ),
         "strategy_mode": strategy_mode,

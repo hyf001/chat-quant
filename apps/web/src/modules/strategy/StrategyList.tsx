@@ -3258,7 +3258,6 @@ function buildBacktestConfig(
       benchmark_symbol: form.benchmarkSymbol.trim() || null,
       start_date: form.startDate,
       end_date: form.endDate,
-      timeframe: "1d",
       initial_cash: form.initialCash,
       commission: form.commission,
       slippage: form.slippage.trim() || "0",

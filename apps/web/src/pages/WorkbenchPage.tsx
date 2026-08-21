@@ -9,7 +9,7 @@ import { Composer } from "../modules/composer";
 import { ConversationShell } from "../modules/conversation";
 import { HistoryPanel } from "../modules/history";
 import { InsightPanel } from "../modules/insight";
-import { StrategyList } from "../modules/strategy";
+import { StrategyDeploymentsPage, StrategyList } from "../modules/strategy";
 import { WorkspaceLayout } from "../modules/workspace";
 import {
   createProject,
@@ -42,6 +42,7 @@ import type { PrimaryRoute } from "../shared/routes";
 const routePaths: Record<PrimaryRoute, string> = {
   "new-task": "/tasks/new",
   strategies: "/strategies",
+  "strategy-deployments": "/strategy-deployments",
   settings: "/settings",
 };
 
@@ -483,6 +484,8 @@ export function WorkbenchPage() {
           />
         ) : activeRoute === "strategies" ? (
           <StrategyList project={activeProject} />
+        ) : activeRoute === "strategy-deployments" ? (
+          <StrategyDeploymentsPage project={activeProject} />
         ) : null
       }
       composer={
@@ -577,6 +580,12 @@ async function selectOpenProjectPath(): Promise<string | null> {
 function routeFromPath(pathname: string): PrimaryRoute {
   if (pathname === routePaths.settings || pathname.startsWith(`${routePaths.settings}/`)) {
     return "settings";
+  }
+  if (
+    pathname === routePaths["strategy-deployments"] ||
+    pathname.startsWith(`${routePaths["strategy-deployments"]}/`)
+  ) {
+    return "strategy-deployments";
   }
   return pathname.endsWith(routePaths.strategies) ? "strategies" : "new-task";
 }
