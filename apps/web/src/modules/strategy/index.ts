@@ -1,2 +1,2 @@
-export { StrategyList } from "./StrategyList";
+export { StrategiesPage } from "./StrategiesPage";
 export { StrategyDeploymentsPage } from "./StrategyDeploymentsPage";

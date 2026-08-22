@@ -9,7 +9,7 @@ import { Composer } from "../modules/composer";
 import { ConversationShell } from "../modules/conversation";
 import { HistoryPanel } from "../modules/history";
 import { InsightPanel } from "../modules/insight";
-import { StrategyDeploymentsPage, StrategyList } from "../modules/strategy";
+import { StrategiesPage, StrategyDeploymentsPage } from "../modules/strategy";
 import { WorkspaceLayout } from "../modules/workspace";
 import {
   createProject,
@@ -483,7 +483,7 @@ export function WorkbenchPage() {
             onPromptSelect={handleSendMessage}
           />
         ) : activeRoute === "strategies" ? (
-          <StrategyList project={activeProject} />
+          <StrategiesPage project={activeProject} />
         ) : activeRoute === "strategy-deployments" ? (
           <StrategyDeploymentsPage project={activeProject} />
         ) : null

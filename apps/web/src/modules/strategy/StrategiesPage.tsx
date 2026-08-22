@@ -93,7 +93,7 @@ import {
   type StrategyVersionCreatePayload,
 } from "../../shared/api";
 
-type StrategyListProps = {
+type StrategiesPageProps = {
   project: Project | null;
 };
 
@@ -256,7 +256,7 @@ const defaultCode = [
   "            self.order_target_percent(target=0)",
 ].join("\n");
 
-export function StrategyList({ project }: StrategyListProps) {
+export function StrategiesPage({ project }: StrategiesPageProps) {
   const [strategies, setStrategies] = useState<StrategySummary[]>([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
