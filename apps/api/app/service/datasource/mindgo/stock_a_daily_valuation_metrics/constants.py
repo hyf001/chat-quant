@@ -1,0 +1,2 @@
+STOCK_A_VALUATION_METRICS_SOURCE_ID = "a_stock_daily_valuation_metrics"
+STOCK_A_VALUATION_METRICS_SYNC_JOB_TYPE = "mindgo.a_stock_daily_valuation_metrics.sync"

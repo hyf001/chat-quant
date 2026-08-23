@@ -26,6 +26,7 @@ LOCAL_PROXY_HOST="${LOCAL_PROXY_HOST:-127.0.0.1}"
 TUNNEL_REMOTE_HOST="${TUNNEL_REMOTE_HOST:-127.0.0.1}"
 TUNNEL_REMOTE_PORT="${TUNNEL_REMOTE_PORT:-18080}"
 STOP_CHATQ="${STOP_CHATQ:-true}"
+CLEAN_REMOTE_TUNNEL="${CLEAN_REMOTE_TUNNEL:-true}"
 
 STATE_DIR="${ROOT_DIR}/.dev"
 PID_DIR="${STATE_DIR}/pids"
@@ -33,6 +34,22 @@ CADDY_PID_FILE="${PID_DIR}/local-tunnel-caddy.pid"
 SSH_PID_FILE="${PID_DIR}/local-tunnel-ssh.pid"
 export NO_PROXY="127.0.0.1,localhost,${NO_PROXY:-}"
 export no_proxy="127.0.0.1,localhost,${no_proxy:-}"
+
+if [[ -n "${SERVER_USER:-}" && -n "${SERVER_IP:-}" ]]; then
+    SSH_TARGET="${SERVER_USER}@${SERVER_IP}"
+    SSH_OPTS=(
+        -p "${SSH_PORT:-22}"
+        -o StrictHostKeyChecking=accept-new
+        -o BatchMode=yes
+        -o ConnectTimeout=10
+        -o ServerAliveInterval=30
+        -o ServerAliveCountMax=3
+    )
+
+    if [[ -n "${SSH_KEY_PATH:-}" ]]; then
+        SSH_OPTS+=(-i "$SSH_KEY_PATH")
+    fi
+fi
 
 is_pid_running() {
     local pid_file="$1"
@@ -140,11 +157,72 @@ find_ssh_tunnel_pid() {
         return 0
     fi
 
-    local ssh_target="${SERVER_USER}@${SERVER_IP}"
     ps -axo pid=,command= | awk \
         -v reverse="-R ${TUNNEL_REMOTE_HOST}:${TUNNEL_REMOTE_PORT}:${LOCAL_PROXY_HOST}:${LOCAL_PROXY_PORT}" \
-        -v target="$ssh_target" \
+        -v target="$SSH_TARGET" \
         'index($0, "ssh ") && index($0, reverse) && index($0, target) && !found { print $1; found = 1 } END { exit 0 }'
+}
+
+cleanup_remote_tunnel_listener() {
+    if [[ -z "${SSH_TARGET:-}" ]]; then
+        return 0
+    fi
+
+    if [[ -n "${SSH_KEY_PATH:-}" && ! -f "$SSH_KEY_PATH" ]]; then
+        echo "[!] Cannot clean remote SSH tunnel because SSH key is missing: ${SSH_KEY_PATH}" >&2
+        return 0
+    fi
+
+    if ! ssh "${SSH_OPTS[@]}" "$SSH_TARGET" \
+        "TUNNEL_REMOTE_HOST='${TUNNEL_REMOTE_HOST}' TUNNEL_REMOTE_PORT='${TUNNEL_REMOTE_PORT}' bash -s" <<'REMOTE_SCRIPT'
+set -euo pipefail
+
+if ! command -v ss >/dev/null 2>&1; then
+    echo "[!] Cannot inspect remote tunnel listener because ss is unavailable." >&2
+    exit 0
+fi
+
+listener_lines="$(
+    ss -H -ltnp "sport = :${TUNNEL_REMOTE_PORT}" 2>/dev/null | awk \
+        -v endpoint="${TUNNEL_REMOTE_HOST}:${TUNNEL_REMOTE_PORT}" \
+        -v endpoint6="[${TUNNEL_REMOTE_HOST}]:${TUNNEL_REMOTE_PORT}" \
+        '$4 == endpoint || $4 == endpoint6'
+)"
+
+if [[ -z "$listener_lines" ]]; then
+    exit 0
+fi
+
+pids="$(printf '%s\n' "$listener_lines" | sed -n 's/.*"sshd",pid=\([0-9][0-9]*\).*/\1/p' | sort -u)"
+if [[ -z "$pids" ]]; then
+    echo "[!] Remote ${TUNNEL_REMOTE_HOST}:${TUNNEL_REMOTE_PORT} is in use, but not by sshd:" >&2
+    printf '%s\n' "$listener_lines" >&2
+    exit 0
+fi
+
+for pid in $pids; do
+    echo "==> Stopping remote SSH tunnel listener (pid ${pid})"
+    kill "$pid" 2>/dev/null || true
+done
+
+for _ in {1..40}; do
+    if ! ss -H -ltnp "sport = :${TUNNEL_REMOTE_PORT}" 2>/dev/null | awk \
+        -v endpoint="${TUNNEL_REMOTE_HOST}:${TUNNEL_REMOTE_PORT}" \
+        -v endpoint6="[${TUNNEL_REMOTE_HOST}]:${TUNNEL_REMOTE_PORT}" \
+        '$4 == endpoint || $4 == endpoint6' | grep -q .; then
+        exit 0
+    fi
+    sleep 0.25
+done
+
+for pid in $pids; do
+    echo "==> Forcing remote SSH tunnel listener to stop (pid ${pid})"
+    kill -9 "$pid" 2>/dev/null || true
+done
+REMOTE_SCRIPT
+    then
+        echo "[!] Failed to clean remote SSH tunnel listener on ${SSH_TARGET}:${TUNNEL_REMOTE_PORT}" >&2
+    fi
 }
 
 if ! is_pid_running "$SSH_PID_FILE"; then
@@ -162,6 +240,10 @@ if ! is_pid_running "$CADDY_PID_FILE"; then
 fi
 
 stop_pid_file "SSH reverse tunnel" "$SSH_PID_FILE"
+if [[ "$CLEAN_REMOTE_TUNNEL" == "true" ]]; then
+    echo "==> Cleaning remote SSH tunnel listeners"
+    cleanup_remote_tunnel_listener
+fi
 stop_pid_file "local Caddy" "$CADDY_PID_FILE"
 stop_extra_local_caddy_listeners
 

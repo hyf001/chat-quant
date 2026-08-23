@@ -6,6 +6,9 @@ from app.service.datasource.mindgo.index_a_daily_price.adaptor import index_a_da
 from app.service.datasource.mindgo.jupyter_runner import _portable_mcp_root
 from app.service.datasource.mindgo.stock_a_adjust_factor.adaptor import stock_a_adjust_factor_schema
 from app.service.datasource.mindgo.stock_a_daily_price.adaptor import stock_a_daily_price_schema
+from app.service.datasource.mindgo.stock_a_daily_valuation_metrics.adaptor import (
+    stock_a_daily_valuation_metrics_schema,
+)
 from fastapi.testclient import TestClient
 
 
@@ -16,7 +19,8 @@ def test_mindgo_api_lists_first_source(client: TestClient) -> None:
     payload = response.json()
     assert payload["sources"][0]["id"] == "a_stock_daily_price"
     assert payload["sources"][1]["id"] == "a_stock_daily_adjust_factor"
-    assert payload["sources"][2]["id"] == "a_index_daily_price"
+    assert payload["sources"][2]["id"] == "a_stock_daily_valuation_metrics"
+    assert payload["sources"][3]["id"] == "a_index_daily_price"
     assert payload["sources"][0]["category_path_en"] == [
         "a",
         "stock",
@@ -110,6 +114,31 @@ def test_mindgo_api_returns_index_daily_schema(client: TestClient) -> None:
         {"label": "沪深300 000300.SH", "value": "000300.SH"},
         {"label": "中证500 000905.SH", "value": "000905.SH"},
         {"label": "中证1000 000852.SH", "value": "000852.SH"},
+    ]
+
+
+def test_mindgo_api_returns_stock_valuation_metrics_schema(client: TestClient) -> None:
+    response = client.get("/api/mindgo/sources/a_stock_daily_valuation_metrics/schema")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["name"] == "A股股票日估值指标"
+    assert payload["name_zh"] == "A股股票日估值指标"
+    assert payload["name_en"] == "a_stock_daily_valuation_metrics"
+    assert payload["category_path"] == ["A股", "股票", "日", "估值指标"]
+    assert payload["category_path_en"] == ["a", "stock", "daily", "valuation_metrics"]
+    assert payload["mindgo_function"] == "get_fundamentals"
+    assert payload["storage"]["path"] == "data/mindgo/parquet/a_stock_daily_valuation_metrics"
+    assert payload["storage"]["format"] == "parquet"
+    assert payload["storage"]["partitioned_by"] == ["trade_day"]
+    assert [field["name"] for field in payload["result_schema"][:7]] == [
+        "symbol",
+        "trade_date",
+        "report_date",
+        "stat_date",
+        "pe_lyr",
+        "pe_mrq",
+        "pe_ttm",
     ]
 
 
@@ -369,6 +398,45 @@ def test_mindgo_sync_supports_stock_adjust_factor(
     payload = response.json()
     assert payload["instance"]["job_type"] == "mindgo.a_stock_daily_adjust_factor.sync"
     assert payload["instance"]["payload"]["params"] == {"fields": ["factor"]}
+
+
+def test_mindgo_sync_supports_stock_valuation_metrics(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    class FakeAdapter:
+        source_id = "a_stock_daily_valuation_metrics"
+
+        async def get_source_schema(self):
+            return stock_a_daily_valuation_metrics_schema()
+
+        async def query_from_mindgo(self, request):
+            raise AssertionError("query_from_mindgo should not run")
+
+        async def sync(self, request):
+            raise AssertionError("sync should not run")
+
+    monkeypatch.setattr(
+        mindgo_service,
+        "_adapter_for_source",
+        lambda source_id, allow_missing_runner=False: FakeAdapter(),
+    )
+
+    response = client.post(
+        "/api/mindgo/sources/a_stock_daily_valuation_metrics/sync",
+        json={
+            "trigger_start_date": "2026-08-13",
+            "trigger_end_date": "2026-08-13",
+            "trigger_time": "10:30:15",
+            "write_mode": "overwrite",
+            "params": {"fields": ["pe_ttm", "pb_mrq"]},
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["instance"]["job_type"] == "mindgo.a_stock_daily_valuation_metrics.sync"
+    assert payload["instance"]["payload"]["params"] == {"fields": ["pe_ttm", "pb_mrq"]}
 
 
 def test_mindgo_sync_supports_index_daily_price(

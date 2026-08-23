@@ -37,6 +37,7 @@ START_CADDY="${START_CADDY:-true}"
 LOCAL_HEALTH_TIMEOUT_SECONDS="${LOCAL_HEALTH_TIMEOUT_SECONDS:-60}"
 REMOTE_HEALTH_TIMEOUT_SECONDS="${REMOTE_HEALTH_TIMEOUT_SECONDS:-60}"
 CHECK_PUBLIC_URL="${CHECK_PUBLIC_URL:-true}"
+CLEAN_REMOTE_TUNNEL="${CLEAN_REMOTE_TUNNEL:-true}"
 
 STATE_DIR="${ROOT_DIR}/.dev"
 PID_DIR="${STATE_DIR}/pids"
@@ -154,6 +155,56 @@ find_ssh_tunnel_pid() {
         -v reverse="-R ${TUNNEL_REMOTE_HOST}:${TUNNEL_REMOTE_PORT}:${LOCAL_PROXY_HOST}:${LOCAL_PROXY_PORT}" \
         -v target="$SSH_TARGET" \
         'index($0, "ssh ") && index($0, reverse) && index($0, target) && !found { print $1; found = 1 } END { exit 0 }'
+}
+
+cleanup_remote_tunnel_listener() {
+    ssh "${SSH_OPTS[@]}" "$SSH_TARGET" \
+        "TUNNEL_REMOTE_HOST='${TUNNEL_REMOTE_HOST}' TUNNEL_REMOTE_PORT='${TUNNEL_REMOTE_PORT}' bash -s" <<'REMOTE_SCRIPT'
+set -euo pipefail
+
+if ! command -v ss >/dev/null 2>&1; then
+    echo "[!] Cannot inspect remote tunnel listener because ss is unavailable." >&2
+    exit 0
+fi
+
+listener_lines="$(
+    ss -H -ltnp "sport = :${TUNNEL_REMOTE_PORT}" 2>/dev/null | awk \
+        -v endpoint="${TUNNEL_REMOTE_HOST}:${TUNNEL_REMOTE_PORT}" \
+        -v endpoint6="[${TUNNEL_REMOTE_HOST}]:${TUNNEL_REMOTE_PORT}" \
+        '$4 == endpoint || $4 == endpoint6'
+)"
+
+if [[ -z "$listener_lines" ]]; then
+    exit 0
+fi
+
+pids="$(printf '%s\n' "$listener_lines" | sed -n 's/.*"sshd",pid=\([0-9][0-9]*\).*/\1/p' | sort -u)"
+if [[ -z "$pids" ]]; then
+    echo "[!] Remote ${TUNNEL_REMOTE_HOST}:${TUNNEL_REMOTE_PORT} is in use, but not by sshd:" >&2
+    printf '%s\n' "$listener_lines" >&2
+    exit 1
+fi
+
+for pid in $pids; do
+    echo "==> Stopping stale remote SSH tunnel listener (pid ${pid})"
+    kill "$pid" 2>/dev/null || true
+done
+
+for _ in {1..40}; do
+    if ! ss -H -ltnp "sport = :${TUNNEL_REMOTE_PORT}" 2>/dev/null | awk \
+        -v endpoint="${TUNNEL_REMOTE_HOST}:${TUNNEL_REMOTE_PORT}" \
+        -v endpoint6="[${TUNNEL_REMOTE_HOST}]:${TUNNEL_REMOTE_PORT}" \
+        '$4 == endpoint || $4 == endpoint6' | grep -q .; then
+        exit 0
+    fi
+    sleep 0.25
+done
+
+for pid in $pids; do
+    echo "==> Forcing stale remote SSH tunnel listener to stop (pid ${pid})"
+    kill -9 "$pid" 2>/dev/null || true
+done
+REMOTE_SCRIPT
 }
 
 if [[ "$START_CHATQ" == "true" ]]; then
@@ -279,6 +330,11 @@ elif remote_entrypoint_ready; then
 else
     if is_pid_running "$SSH_PID_FILE"; then
         stop_pid_file "SSH reverse tunnel" "$SSH_PID_FILE"
+    fi
+
+    if [[ "$CLEAN_REMOTE_TUNNEL" == "true" ]]; then
+        echo "==> Clearing stale remote SSH tunnel listeners"
+        cleanup_remote_tunnel_listener
     fi
 
     rm -f "$SSH_PID_FILE"

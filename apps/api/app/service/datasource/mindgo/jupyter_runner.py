@@ -85,7 +85,14 @@ class MindgoJupyterRunner:
             )
 
         stdout = "".join(execution.stdout)
-        return _extract_marked_json(stdout, marker_start=marker_start, marker_end=marker_end)
+        stderr = "".join(execution.stderr)
+        return _extract_marked_json(
+            stdout,
+            marker_start=marker_start,
+            marker_end=marker_end,
+            stderr=stderr,
+            result=execution.result,
+        )
 
 
 async def _find_or_create_kernel(api: Any, notebook_path: str) -> str:
@@ -129,12 +136,19 @@ def _extract_marked_json(
     *,
     marker_start: str,
     marker_end: str,
+    stderr: str = "",
+    result: Any = None,
 ) -> dict[str, Any]:
     start = stdout.find(marker_start)
     end = stdout.find(marker_end, start + len(marker_start))
     if start < 0 or end < 0:
         preview = stdout[-2000:] if stdout else "<empty stdout>"
-        raise MindgoRemoteExecutionError(f"Could not find MindGo JSON markers in stdout: {preview}")
+        detail = f"Could not find MindGo JSON markers in stdout: {preview}"
+        if stderr:
+            detail += f"; stderr: {stderr[-2000:]}"
+        if result is not None:
+            detail += f"; result: {str(result)[-2000:]}"
+        raise MindgoRemoteExecutionError(detail)
     text = stdout[start + len(marker_start) : end].strip()
     payload = json.loads(text)
     if not isinstance(payload, dict):

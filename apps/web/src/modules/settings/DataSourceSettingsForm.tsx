@@ -129,6 +129,7 @@ const defaultSyncInstancePageSize = 8;
 const hiddenMindgoQueryParamNames = new Set(["fields", "fq"]);
 const hiddenMindgoSyncParamNames = new Set([
   ...hiddenMindgoQueryParamNames,
+  "date",
   "baseDay",
   "start_date",
   "end_date",
@@ -140,6 +141,9 @@ const mindgoSourceUiMeta: Record<string, MindgoSourceUiMeta> = {
   },
   a_stock_daily_adjust_factor: {
     badge: "1016 复权因子",
+  },
+  a_stock_daily_valuation_metrics: {
+    badge: "345 估值指标",
   },
   a_index_daily_price: {
     badge: "指数日行情",

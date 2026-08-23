@@ -44,6 +44,12 @@ from app.service.datasource.mindgo.stock_a_daily_price.adaptor import (
 from app.service.datasource.mindgo.stock_a_daily_price.constants import (
     STOCK_A_DAILY_PRICE_SOURCE_ID,
 )
+from app.service.datasource.mindgo.stock_a_daily_valuation_metrics.adaptor import (
+    StockAValuationMetricsAdapter,
+)
+from app.service.datasource.mindgo.stock_a_daily_valuation_metrics.constants import (
+    STOCK_A_VALUATION_METRICS_SOURCE_ID,
+)
 from app.service.datasource.mindgo.storage import MindgoSourceStorage
 
 MINDGO_CONNECTION_TEST_MARKER_START = "MINDGO_CONNECTION_TEST_JSON_START"
@@ -134,6 +140,7 @@ def _source_ids() -> tuple[str, ...]:
     return (
         STOCK_A_DAILY_PRICE_SOURCE_ID,
         STOCK_A_ADJUST_FACTOR_SOURCE_ID,
+        STOCK_A_VALUATION_METRICS_SOURCE_ID,
         INDEX_A_DAILY_PRICE_SOURCE_ID,
     )
 
@@ -157,6 +164,8 @@ def _adapter_for_source(
         return StockADailyPriceAdapter(runner, storage=storage)
     if source_id == STOCK_A_ADJUST_FACTOR_SOURCE_ID:
         return StockAAdjustFactorAdapter(runner, storage=storage)
+    if source_id == STOCK_A_VALUATION_METRICS_SOURCE_ID:
+        return StockAValuationMetricsAdapter(runner, storage=storage)
     if source_id == INDEX_A_DAILY_PRICE_SOURCE_ID:
         return IndexADailyPriceAdapter(runner, storage=storage)
     raise MindgoSourceNotFoundError(source_id)

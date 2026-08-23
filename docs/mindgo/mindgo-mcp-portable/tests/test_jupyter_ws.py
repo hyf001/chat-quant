@@ -61,9 +61,52 @@ def test_handle_messages_collects_stream_result_error_and_image(tmp_path: Path) 
         },
         result,
     )
+    idle = _handle_message(
+        {
+            "header": {"msg_type": "status"},
+            "parent_header": parent_header,
+            "content": {"execution_state": "idle"},
+        },
+        result,
+    )
 
-    assert done
+    assert not done
+    assert idle
     assert result.stdout == ["hello\n"]
     assert result.result == "42"
     assert len(result.images) == 1
     assert Path(result.images[0].path).read_bytes() == b"png-bytes"
+
+
+def test_handle_messages_waits_for_idle_after_execute_reply() -> None:
+    result = ExecutionResult()
+    parent_header = {"msg_id": "abc"}
+
+    done = _handle_message(
+        {
+            "header": {"msg_type": "execute_reply"},
+            "parent_header": parent_header,
+            "content": {"status": "ok"},
+        },
+        result,
+    )
+    _handle_message(
+        {
+            "header": {"msg_type": "stream"},
+            "parent_header": parent_header,
+            "content": {"name": "stdout", "text": "late stdout\n"},
+        },
+        result,
+    )
+    idle = _handle_message(
+        {
+            "header": {"msg_type": "status"},
+            "parent_header": parent_header,
+            "content": {"execution_state": "idle"},
+        },
+        result,
+    )
+
+    assert not done
+    assert idle
+    assert result.stdout == ["late stdout\n"]

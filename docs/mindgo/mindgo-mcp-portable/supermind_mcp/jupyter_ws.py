@@ -149,6 +149,9 @@ def _handle_message(
         }
         return False
 
+    if msg_type == "status":
+        return content.get("execution_state") == "idle"
+
     if msg_type == "execute_reply":
         status = content.get("status")
         if status == "error" and result.error is None:
@@ -157,7 +160,7 @@ def _handle_message(
                 "evalue": content.get("evalue"),
                 "traceback": content.get("traceback", []),
             }
-        return True
+        return False
 
     return False
 
