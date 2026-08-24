@@ -83,6 +83,16 @@ bash deploy/5_stop_local_tunnel.sh
 TUNNEL_REMOTE_PORT=18081 LOCAL_PROXY_PORT=18081 bash deploy/4_start_local_tunnel.sh
 ```
 
+如果要让公网访问先输入密码：
+
+```bash
+printf '%s\n' '换成你的访问密码' > deploy/public-auth.password
+PUBLIC_AUTH_ENABLED=true PUBLIC_AUTH_USER=friend bash deploy/3_setup_local_tunnel_server.sh
+PUBLIC_AUTH_USER=friend bash deploy/4_start_local_tunnel.sh
+```
+
+`deploy/public-auth.password` 已被 git 忽略。脚本会在阿里云服务器上生成 `/etc/nginx/chat-quant.htpasswd`，并把认证加到公网 Nginx 入口；本地 Caddy 和 SSH 隧道端口不会额外加密码。
+
 下面的章节是脚本背后的手动步骤，方便排查和理解。
 
 ## 1. 本机准备运行配置
@@ -289,63 +299,34 @@ https://chatq.nanbende.com
 
 当前项目没有完整登录系统，设置页可能包含模型 API Key、数据源 token、运行配置等敏感信息。给好友试用时，不建议裸露到公网。
 
-可以在阿里云 Nginx 上加 Basic Auth。
-
-安装工具：
+推荐直接用脚本开启阿里云 Nginx Basic Auth：
 
 ```bash
-# Debian/Ubuntu
-apt-get install -y apache2-utils
-
-# CentOS/Alibaba Cloud Linux
-yum install -y httpd-tools
+printf '%s\n' '换成你的访问密码' > deploy/public-auth.password
+PUBLIC_AUTH_ENABLED=true PUBLIC_AUTH_USER=friend bash deploy/3_setup_local_tunnel_server.sh
 ```
 
-创建密码文件：
+之后再启动公网隧道：
 
 ```bash
-htpasswd -c /etc/nginx/.chat-quant.htpasswd friend
+PUBLIC_AUTH_USER=friend bash deploy/4_start_local_tunnel.sh
 ```
 
-在 `/etc/nginx/conf.d/chat-quant.conf` 的 `location /` 中加入：
+脚本会在服务器 `/etc/nginx/conf.d/chat-quant.conf` 的公网代理 `location /` 中加入：
 
 ```nginx
 auth_basic "Chat-Quant";
-auth_basic_user_file /etc/nginx/.chat-quant.htpasswd;
+auth_basic_user_file /etc/nginx/chat-quant.htpasswd;
 ```
 
-完整示例：
-
-```nginx
-server {
-    listen 80;
-    server_name chatq.nanbende.com;
-
-    location / {
-        auth_basic "Chat-Quant";
-        auth_basic_user_file /etc/nginx/.chat-quant.htpasswd;
-
-        proxy_pass http://127.0.0.1:18080;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 300s;
-        proxy_send_timeout 300s;
-        client_max_body_size 50m;
-    }
-}
-```
-
-重新加载：
+如果你想手工验证公网认证是否生效：
 
 ```bash
-nginx -t
-systemctl reload nginx
+curl -i https://chatq.nanbende.com/api/health
+curl -u friend:你的访问密码 https://chatq.nanbende.com/api/health
 ```
 
-如果已经通过 Certbot 生成了 HTTPS 配置，需要把 `auth_basic` 两行加到 HTTPS 的 `server` 块里。
+第一条应该返回 `401 Unauthorized`，第二条应该返回 API 健康检查结果。
 
 ## 8. 让隧道更稳定
 

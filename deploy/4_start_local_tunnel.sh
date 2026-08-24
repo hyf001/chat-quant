@@ -38,6 +38,18 @@ LOCAL_HEALTH_TIMEOUT_SECONDS="${LOCAL_HEALTH_TIMEOUT_SECONDS:-60}"
 REMOTE_HEALTH_TIMEOUT_SECONDS="${REMOTE_HEALTH_TIMEOUT_SECONDS:-60}"
 CHECK_PUBLIC_URL="${CHECK_PUBLIC_URL:-true}"
 CLEAN_REMOTE_TUNNEL="${CLEAN_REMOTE_TUNNEL:-true}"
+PUBLIC_AUTH_USER="${PUBLIC_AUTH_USER:-friend}"
+PUBLIC_AUTH_PASSWORD_FILE="${PUBLIC_AUTH_PASSWORD_FILE:-${SCRIPT_DIR}/public-auth.password}"
+PUBLIC_AUTH_PASSWORD="${PUBLIC_AUTH_PASSWORD:-}"
+
+if [[ -f "$PUBLIC_AUTH_PASSWORD_FILE" ]]; then
+    PUBLIC_AUTH_PASSWORD="$(head -n 1 "$PUBLIC_AUTH_PASSWORD_FILE")"
+fi
+
+PUBLIC_AUTH_CURL_ARGS=()
+if [[ -n "$PUBLIC_AUTH_PASSWORD" ]]; then
+    PUBLIC_AUTH_CURL_ARGS=(-u "${PUBLIC_AUTH_USER}:${PUBLIC_AUTH_PASSWORD}")
+fi
 
 STATE_DIR="${ROOT_DIR}/.dev"
 PID_DIR="${STATE_DIR}/pids"
@@ -379,7 +391,7 @@ fi
 
 echo "==> Public URL: https://${DOMAIN}"
 if [[ "$CHECK_PUBLIC_URL" == "true" ]]; then
-    if curl --noproxy '*' -fsS --max-time 10 "https://${DOMAIN}/api/health" | grep -q 'chat-quant-api'; then
+    if curl --noproxy '*' -fsS --max-time 10 "${PUBLIC_AUTH_CURL_ARGS[@]}" "https://${DOMAIN}/api/health" | grep -q 'chat-quant-api'; then
         echo "==> Public health check passed: https://${DOMAIN}/api/health"
     else
         echo "[!] Public health check failed: https://${DOMAIN}/api/health"

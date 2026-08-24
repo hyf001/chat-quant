@@ -32,6 +32,16 @@ bash deploy/4_start_local_tunnel.sh
 
 请使用 `bash` 执行脚本，不要用 `sh`。启动脚本会逐项检查本地 dev 服务、Caddy 和 SSH 隧道；已经启动且健康的服务会跳过。启动完成后好友可以访问 `deploy/server.config` 中 `DOMAIN` 对应的域名，例如 `https://chatq.nanbende.com`。
 
+如果希望公网访问时先输入密码，启用 Nginx Basic Auth：
+
+```bash
+printf '%s\n' '换成你的访问密码' > deploy/public-auth.password
+PUBLIC_AUTH_ENABLED=true PUBLIC_AUTH_USER=friend bash deploy/3_setup_local_tunnel_server.sh
+PUBLIC_AUTH_USER=friend bash deploy/4_start_local_tunnel.sh
+```
+
+`deploy/public-auth.password` 已被 git 忽略，只放公网访问密码，不要放服务器 SSH 密码。
+
 停止本机公开访问栈：
 
 ```bash
@@ -71,5 +81,6 @@ systemctl reload nginx
 
 - `deploy/server.config`：服务器、SSH 密钥、域名、仓库、应用目录配置。
 - `deploy/server.password`：服务器密码 fallback，本文件已被 `deploy/.gitignore` 忽略。
+- `deploy/public-auth.password`：公网 Basic Auth 密码，本文件已被 `deploy/.gitignore` 忽略。
 - `/opt/chat-quant/config.json`：运行配置，部署脚本会生成并供后端与前端构建共同使用。
 - `deploy/nginx.conf`：HTTPS Nginx 模板。

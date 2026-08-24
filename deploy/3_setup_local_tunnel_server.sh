@@ -26,6 +26,29 @@ source "$CONFIG_FILE"
 TUNNEL_REMOTE_HOST="${TUNNEL_REMOTE_HOST:-127.0.0.1}"
 TUNNEL_REMOTE_PORT="${TUNNEL_REMOTE_PORT:-18080}"
 ENABLE_CERTBOT="${ENABLE_CERTBOT:-true}"
+PUBLIC_AUTH_ENABLED="${PUBLIC_AUTH_ENABLED:-false}"
+PUBLIC_AUTH_USER="${PUBLIC_AUTH_USER:-friend}"
+PUBLIC_AUTH_PASSWORD_FILE="${PUBLIC_AUTH_PASSWORD_FILE:-${SCRIPT_DIR}/public-auth.password}"
+PUBLIC_AUTH_PASSWORD="${PUBLIC_AUTH_PASSWORD:-}"
+
+if [[ -f "$PUBLIC_AUTH_PASSWORD_FILE" ]]; then
+    PUBLIC_AUTH_PASSWORD="$(head -n 1 "$PUBLIC_AUTH_PASSWORD_FILE")"
+fi
+
+if [[ "$PUBLIC_AUTH_ENABLED" == "true" ]]; then
+    if [[ ! "$PUBLIC_AUTH_USER" =~ ^[A-Za-z0-9._-]+$ ]]; then
+        echo "[x] PUBLIC_AUTH_USER may only contain letters, numbers, dot, underscore, and dash." >&2
+        exit 1
+    fi
+
+    if [[ -z "$PUBLIC_AUTH_PASSWORD" ]]; then
+        echo "[x] PUBLIC_AUTH_ENABLED=true but no password was provided." >&2
+        echo "    Put the password on the first line of ${PUBLIC_AUTH_PASSWORD_FILE}, or set PUBLIC_AUTH_PASSWORD." >&2
+        exit 1
+    fi
+fi
+
+PUBLIC_AUTH_PASSWORD_B64="$(printf '%s' "$PUBLIC_AUTH_PASSWORD" | base64 | tr -d '\n')"
 
 SSH_TARGET="${SERVER_USER}@${SERVER_IP}"
 SSH_OPTS=(
@@ -45,9 +68,14 @@ fi
 echo "==> Configuring local-tunnel Nginx on ${SSH_TARGET}:${SSH_PORT}"
 echo "==> Domain: ${DOMAIN}"
 echo "==> Remote tunnel upstream: http://${TUNNEL_REMOTE_HOST}:${TUNNEL_REMOTE_PORT}"
+if [[ "$PUBLIC_AUTH_ENABLED" == "true" ]]; then
+    echo "==> Public Basic Auth: enabled for user ${PUBLIC_AUTH_USER}"
+else
+    echo "==> Public Basic Auth: disabled"
+fi
 
 ssh "${SSH_OPTS[@]}" "$SSH_TARGET" \
-    "SERVICE_NAME='${SERVICE_NAME}' DOMAIN='${DOMAIN}' SSL_EMAIL='${SSL_EMAIL}' TUNNEL_REMOTE_HOST='${TUNNEL_REMOTE_HOST}' TUNNEL_REMOTE_PORT='${TUNNEL_REMOTE_PORT}' ENABLE_CERTBOT='${ENABLE_CERTBOT}' bash -s" <<'REMOTE_SCRIPT'
+    "SERVICE_NAME='${SERVICE_NAME}' DOMAIN='${DOMAIN}' SSL_EMAIL='${SSL_EMAIL}' TUNNEL_REMOTE_HOST='${TUNNEL_REMOTE_HOST}' TUNNEL_REMOTE_PORT='${TUNNEL_REMOTE_PORT}' ENABLE_CERTBOT='${ENABLE_CERTBOT}' PUBLIC_AUTH_ENABLED='${PUBLIC_AUTH_ENABLED}' PUBLIC_AUTH_USER='${PUBLIC_AUTH_USER}' PUBLIC_AUTH_PASSWORD_B64='${PUBLIC_AUTH_PASSWORD_B64}' bash -s" <<'REMOTE_SCRIPT'
 set -euo pipefail
 
 [[ $EUID -ne 0 ]] && { echo "[x] Please login as root or a sudo-capable user and run through sudo." >&2; exit 1; }
@@ -56,6 +84,7 @@ NGINX_CONF="/etc/nginx/conf.d/${SERVICE_NAME}.conf"
 CERT_PATH="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
 KEY_PATH="/etc/letsencrypt/live/${DOMAIN}/privkey.pem"
 UPSTREAM="http://${TUNNEL_REMOTE_HOST}:${TUNNEL_REMOTE_PORT}"
+AUTH_FILE="/etc/nginx/${SERVICE_NAME}.htpasswd"
 
 if ! command -v nginx >/dev/null 2>&1; then
     echo "[x] Nginx is not installed on this server." >&2
@@ -64,11 +93,44 @@ fi
 
 mkdir -p /etc/nginx/conf.d /var/www/certbot
 
+setup_public_auth() {
+    if [[ "$PUBLIC_AUTH_ENABLED" != "true" ]]; then
+        return 0
+    fi
+
+    if [[ -z "${PUBLIC_AUTH_PASSWORD_B64:-}" ]]; then
+        echo "[x] PUBLIC_AUTH_ENABLED=true but PUBLIC_AUTH_PASSWORD_B64 is empty." >&2
+        exit 1
+    fi
+
+    if ! command -v openssl >/dev/null 2>&1; then
+        echo "[x] openssl is required to generate the Nginx Basic Auth password hash." >&2
+        exit 1
+    fi
+
+    auth_password="$(printf '%s' "$PUBLIC_AUTH_PASSWORD_B64" | base64 -d)"
+    auth_hash="$(printf '%s' "$auth_password" | openssl passwd -apr1 -stdin)"
+    printf '%s:%s\n' "$PUBLIC_AUTH_USER" "$auth_hash" > "$AUTH_FILE"
+    chmod 644 "$AUTH_FILE"
+    echo "==> Wrote public Basic Auth file: ${AUTH_FILE}"
+}
+
+render_auth_basic() {
+    if [[ "$PUBLIC_AUTH_ENABLED" == "true" ]]; then
+        cat <<EOF
+        auth_basic "Chat-Quant";
+        auth_basic_user_file ${AUTH_FILE};
+EOF
+    fi
+}
+
 if [[ -f "$NGINX_CONF" ]]; then
     BACKUP="${NGINX_CONF}.bak.$(date +%Y%m%d-%H%M%S)"
     cp "$NGINX_CONF" "$BACKUP"
     echo "==> Backed up existing Nginx config: ${BACKUP}"
 fi
+
+setup_public_auth
 
 write_http_proxy_conf() {
     cat > "$NGINX_CONF" <<EOF
@@ -81,6 +143,7 @@ server {
     }
 
     location / {
+$(render_auth_basic)
         proxy_pass ${UPSTREAM};
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
@@ -127,6 +190,7 @@ server {
     gzip_min_length 1024;
 
     location / {
+$(render_auth_basic)
         proxy_pass ${UPSTREAM};
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
