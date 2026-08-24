@@ -6,6 +6,7 @@ from app.agent_runtime.custom_tools import build_chatq_mcp_server
 from app.agent_runtime.custom_tools.chatq_python import CHATQ_PYTHON_TOOL_NAME
 from app.agent_runtime.custom_tools.chatq_strategy import (
     CHATQ_STRATEGY_TOOL_NAME,
+    format_cli_result,
     handle_chatq_strategy_tool,
 )
 from app.schema.agent_runtime import AgentExecutionCommand
@@ -28,6 +29,20 @@ def test_chatq_strategy_rejects_project_id_argument() -> None:
 
 def test_chatq_strategy_handler_returns_source_validation_issues(tmp_path: Path) -> None:
     asyncio.run(_run_source_validation_error_assertions(tmp_path))
+
+
+def test_backtest_trade_and_equity_commands_have_dedicated_output() -> None:
+    payload = _backtest_tool_payload()
+
+    trades_text = format_cli_result("backtest trades", {"ok": True, "data": payload["trades"]})
+    equity_text = format_cli_result("backtest equity", {"ok": True, "data": payload["equity"]})
+
+    assert "Backtest trades:" in trades_text
+    assert "start_date: 2024-01-02" in trades_text
+    assert "2024-01-02T15:00:00  600519.SH  buy" in trades_text
+    assert "Backtest equity curve:" in equity_text
+    assert "filter_start_date: 2024-01-02" in equity_text
+    assert "2024-01-02  100000.0000" in equity_text
 
 
 def test_update_strategy_can_update_metadata_and_create_version(tmp_path: Path) -> None:
@@ -152,3 +167,55 @@ def _command(project_dir: Path | None = None) -> AgentExecutionCommand:
         request_id="req_1",
         user_prompt="创建策略",
     )
+
+
+def _backtest_tool_payload() -> dict[str, object]:
+    backtest = {
+        "id": "sbt_1",
+        "status": "succeeded",
+        "strategy_id": "str_1",
+        "strategy_version_id": "stv_1",
+    }
+    return {
+        "trades": {
+            "backtest": backtest,
+            "start_date": "2024-01-02",
+            "end_date": "2024-01-02",
+            "total_trades": 1,
+            "returned_trades": 1,
+            "trades": [
+                {
+                    "symbol": "600519.SH",
+                    "side": "buy",
+                    "status": "opened",
+                    "trade_datetime": "2024-01-02T15:00:00",
+                    "price": "100.0000",
+                    "size": "10.000000",
+                    "value": "1000.0000",
+                    "commission": "1.0000",
+                    "pnl": None,
+                    "pnl_pct": None,
+                }
+            ],
+        },
+        "equity": {
+            "backtest": backtest,
+            "start_date": "2024-01-02",
+            "end_date": "2024-01-02",
+            "returned_points": 1,
+            "curve": {
+                "curve_type": "equity",
+                "point_count": 1,
+                "start_date": "2024-01-02",
+                "end_date": "2024-01-02",
+                "points": [
+                    {
+                        "date": "2024-01-02",
+                        "value": "100000.0000",
+                        "normalized_value": None,
+                        "extra": {"cash": "99000.0000"},
+                    }
+                ],
+            },
+        },
+    }

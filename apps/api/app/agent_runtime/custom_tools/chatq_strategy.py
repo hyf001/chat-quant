@@ -6,10 +6,11 @@ import json
 import shlex
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from app.db.session import get_session_factory
 from app.schema.agent_runtime import AgentExecutionCommand
@@ -46,6 +47,8 @@ Operator = Literal[
     "run_backtest",
     "list_backtests",
     "get_backtest",
+    "get_backtest_trades",
+    "get_backtest_equity",
 ]
 
 
@@ -79,6 +82,40 @@ class BacktestIdParams(BaseModel):
     backtest_id: str = Field(min_length=1)
 
     model_config = ConfigDict(extra="forbid")
+
+
+class BacktestTradesParams(BacktestIdParams):
+    limit: int = Field(default=100, ge=1, le=1000)
+    symbol: str | None = Field(default=None, min_length=1)
+    start_date: date | None = None
+    end_date: date | None = None
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> BacktestTradesParams:
+        if (
+            self.start_date is not None
+            and self.end_date is not None
+            and self.start_date > self.end_date
+        ):
+            raise ValueError("start_date must be before or equal to end_date")
+        return self
+
+
+class BacktestEquityParams(BacktestIdParams):
+    limit: int = Field(default=120, ge=1, le=2000)
+    tail: bool = False
+    start_date: date | None = None
+    end_date: date | None = None
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> BacktestEquityParams:
+        if (
+            self.start_date is not None
+            and self.end_date is not None
+            and self.start_date > self.end_date
+        ):
+            raise ValueError("start_date must be before or equal to end_date")
+        return self
 
 
 class ListBacktestsParams(BaseModel):
@@ -288,6 +325,20 @@ def build_command_parser() -> argparse.ArgumentParser:
     show_backtest = backtest_subparsers.add_parser("show", help="Show one backtest result.")
     show_backtest.add_argument("--backtest-id", required=True)
 
+    trades = backtest_subparsers.add_parser("trades", help="Show trade executions.")
+    trades.add_argument("--backtest-id", required=True)
+    trades.add_argument("--symbol")
+    trades.add_argument("--start", dest="start_date")
+    trades.add_argument("--end", dest="end_date")
+    trades.add_argument("--limit", type=int, default=100)
+
+    equity = backtest_subparsers.add_parser("equity", help="Show equity curve points.")
+    equity.add_argument("--backtest-id", required=True)
+    equity.add_argument("--start", dest="start_date")
+    equity.add_argument("--end", dest="end_date")
+    equity.add_argument("--limit", type=int, default=120)
+    equity.add_argument("--tail", action="store_true")
+
     return parser
 
 
@@ -437,6 +488,32 @@ async def run_cli_command(
             "get_backtest",
             {"backtest_id": args.backtest_id},
         )
+    if command_name == "backtest trades":
+        return await execute_chatq_strategy(
+            command,
+            "get_backtest_trades",
+            compact(
+                {
+                    "backtest_id": args.backtest_id,
+                    "symbol": args.symbol,
+                    "start_date": args.start_date,
+                    "end_date": args.end_date,
+                    "limit": args.limit,
+                }
+            ),
+        )
+    if command_name == "backtest equity":
+        return await execute_chatq_strategy(
+            command,
+            "get_backtest_equity",
+            {
+                "backtest_id": args.backtest_id,
+                "start_date": args.start_date,
+                "end_date": args.end_date,
+                "limit": args.limit,
+                "tail": args.tail,
+            },
+        )
     raise ToolExecutionError("CHATQ_COMMAND_UNSUPPORTED", f"Unsupported command: {command_name}")
 
 
@@ -537,6 +614,10 @@ def format_cli_result(command_name: str, payload: dict[str, Any]) -> str:
         return _format_mutation_result(summary, data)
     if command_name in {"backtest run", "backtest show"} and isinstance(data, dict):
         return _format_backtest_detail(summary, data)
+    if command_name == "backtest trades" and isinstance(data, dict):
+        return _format_backtest_trades(data)
+    if command_name == "backtest equity" and isinstance(data, dict):
+        return _format_backtest_equity(data)
     return _format_data(data)
 
 
@@ -649,6 +730,83 @@ def _format_backtest_detail(summary: object, data: dict[str, Any]) -> str:
         warnings = result.get("warnings")
         if warnings:
             lines.append(f"warnings: {warnings}")
+    return "\n".join(lines)
+
+
+def _format_backtest_trades(data: dict[str, Any]) -> str:
+    lines = ["Backtest trades:"]
+    backtest = data.get("backtest")
+    if isinstance(backtest, dict):
+        lines.append(f"backtest_id: {backtest.get('id')}")
+        lines.append(f"status: {backtest.get('status')}")
+    lines.append(f"total_trades: {data.get('total_trades', 0)}")
+    lines.append(f"returned_trades: {data.get('returned_trades', 0)}")
+    if data.get("start_date"):
+        lines.append(f"start_date: {data.get('start_date')}")
+    if data.get("end_date"):
+        lines.append(f"end_date: {data.get('end_date')}")
+    trades = data.get("trades")
+    if not isinstance(trades, list) or not trades:
+        lines.append("No trade executions.")
+        return "\n".join(lines)
+    lines.append("datetime  symbol  side  status  price  size  value  commission  pnl  pnl_pct")
+    for trade in trades:
+        if not isinstance(trade, dict):
+            continue
+        lines.append(
+            "{trade_datetime}  {symbol}  {side}  {status}  {price}  {size}  "
+            "{value}  {commission}  {pnl}  {pnl_pct}".format(
+                trade_datetime=trade.get("trade_datetime", "-"),
+                symbol=trade.get("symbol", "-"),
+                side=trade.get("side", "-"),
+                status=trade.get("status", "-"),
+                price=trade.get("price", "-"),
+                size=trade.get("size", "-"),
+                value=trade.get("value", "-"),
+                commission=trade.get("commission", "-"),
+                pnl=trade.get("pnl", "-"),
+                pnl_pct=trade.get("pnl_pct", "-"),
+            )
+        )
+    return "\n".join(lines)
+
+
+def _format_backtest_equity(data: dict[str, Any]) -> str:
+    lines = ["Backtest equity curve:"]
+    backtest = data.get("backtest")
+    if isinstance(backtest, dict):
+        lines.append(f"backtest_id: {backtest.get('id')}")
+        lines.append(f"status: {backtest.get('status')}")
+    curve = data.get("curve")
+    if not isinstance(curve, dict):
+        lines.append("No equity curve.")
+        return "\n".join(lines)
+    lines.append(f"point_count: {curve.get('point_count', 0)}")
+    lines.append(f"returned_points: {data.get('returned_points', 0)}")
+    if data.get("start_date"):
+        lines.append(f"filter_start_date: {data.get('start_date')}")
+    if data.get("end_date"):
+        lines.append(f"filter_end_date: {data.get('end_date')}")
+    lines.append(f"start_date: {curve.get('start_date')}")
+    lines.append(f"end_date: {curve.get('end_date')}")
+    points = curve.get("points")
+    if not isinstance(points, list) or not points:
+        lines.append("No equity points.")
+        return "\n".join(lines)
+    lines.append("date  value  normalized_value  cash")
+    for point in points:
+        if not isinstance(point, dict):
+            continue
+        extra = point.get("extra")
+        cash = extra.get("cash", "-") if isinstance(extra, dict) else "-"
+        lines.append(
+            "{date}  {value}  {normalized_value}  {cash}".format(
+                date=point.get("date", "-"),
+                value=point.get("value", "-"),
+                normalized_value=point.get("normalized_value", "-"),
+                cash=cash,
+            )
+        )
     return "\n".join(lines)
 
 
@@ -913,6 +1071,18 @@ async def execute_chatq_strategy(
             _ensure_strategy_project(detail.backtest.project_id, command.project_id)
             return _success(operator, _backtest_detail_for_tool(detail))
 
+        if operator == "get_backtest_trades":
+            parsed = BacktestTradesParams.model_validate(params)
+            detail = await backtest_service.get_detail(db, parsed.backtest_id)
+            _ensure_strategy_project(detail.backtest.project_id, command.project_id)
+            return _success(operator, _backtest_trades_for_tool(detail, parsed))
+
+        if operator == "get_backtest_equity":
+            parsed = BacktestEquityParams.model_validate(params)
+            detail = await backtest_service.get_detail(db, parsed.backtest_id)
+            _ensure_strategy_project(detail.backtest.project_id, command.project_id)
+            return _success(operator, _backtest_equity_for_tool(detail, parsed))
+
     raise ToolExecutionError("CHATQ_OPERATOR_UNSUPPORTED", f"Unsupported operator: {operator}")
 
 
@@ -961,6 +1131,104 @@ def _backtest_detail_for_tool(detail: Any) -> dict[str, Any]:
         result.pop("market_data", None)
         result["market_data_omitted"] = True
     return data
+
+
+def _backtest_trades_for_tool(detail: Any, params: BacktestTradesParams) -> dict[str, Any]:
+    data = _backtest_detail_for_tool(detail)
+    result = data.get("result")
+    trades: list[Any] = []
+    if isinstance(result, dict):
+        raw_trades = result.get("trades")
+        if isinstance(raw_trades, list):
+            trades = raw_trades
+    if params.symbol is not None:
+        symbol = params.symbol.strip().upper()
+        trades = [
+            trade
+            for trade in trades
+            if isinstance(trade, dict) and str(trade.get("symbol", "")).upper() == symbol
+        ]
+    trades = _filter_records_by_date(
+        trades,
+        field="trade_datetime",
+        start_date=params.start_date,
+        end_date=params.end_date,
+    )
+    selected = trades[: params.limit]
+    return {
+        "backtest": data.get("backtest"),
+        "start_date": params.start_date.isoformat() if params.start_date else None,
+        "end_date": params.end_date.isoformat() if params.end_date else None,
+        "total_trades": len(trades),
+        "returned_trades": len(selected),
+        "trades": selected,
+    }
+
+
+def _backtest_equity_for_tool(detail: Any, params: BacktestEquityParams) -> dict[str, Any]:
+    data = _backtest_detail_for_tool(detail)
+    result = data.get("result")
+    equity_curve: dict[str, Any] | None = None
+    if isinstance(result, dict):
+        curves = result.get("curves")
+        if isinstance(curves, list):
+            for curve in curves:
+                if isinstance(curve, dict) and curve.get("curve_type") == "equity":
+                    equity_curve = curve
+                    break
+    if equity_curve is None:
+        return {"backtest": data.get("backtest"), "curve": None, "returned_points": 0}
+    points = equity_curve.get("points")
+    if not isinstance(points, list):
+        points = []
+    points = _filter_records_by_date(
+        points,
+        field="date",
+        start_date=params.start_date,
+        end_date=params.end_date,
+    )
+    selected_points = points[-params.limit :] if params.tail else points[: params.limit]
+    curve_view = dict(equity_curve)
+    curve_view["points"] = selected_points
+    return {
+        "backtest": data.get("backtest"),
+        "start_date": params.start_date.isoformat() if params.start_date else None,
+        "end_date": params.end_date.isoformat() if params.end_date else None,
+        "curve": curve_view,
+        "returned_points": len(selected_points),
+    }
+
+
+def _filter_records_by_date(
+    records: list[Any],
+    *,
+    field: str,
+    start_date: date | None,
+    end_date: date | None,
+) -> list[Any]:
+    if start_date is None and end_date is None:
+        return records
+    start = start_date.isoformat() if start_date else None
+    end = end_date.isoformat() if end_date else None
+    filtered: list[Any] = []
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        value_date = _date_prefix(record.get(field))
+        if value_date is None:
+            continue
+        if start is not None and value_date < start:
+            continue
+        if end is not None and value_date > end:
+            continue
+        filtered.append(record)
+    return filtered
+
+
+def _date_prefix(value: object) -> str | None:
+    if not isinstance(value, str) or len(value) < 10:
+        return None
+    return value[:10]
 
 
 def _ensure_strategy_project(actual_project_id: str, expected_project_id: str) -> None:

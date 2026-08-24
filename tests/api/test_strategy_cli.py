@@ -37,6 +37,59 @@ class FakeClient:
                 {"id": "stv_1", "strategy_mode": "single_symbol"},
                 {"id": "stv_2", "strategy_mode": "multi_symbol"},
             ]
+        if method == "GET" and path == "/backtests/sbt_1":
+            return {
+                "backtest": {
+                    "id": "sbt_1",
+                    "status": "succeeded",
+                    "strategy_id": "str_1",
+                    "strategy_version_id": "stv_1",
+                },
+                "result": {
+                    "trades": [
+                        {
+                            "symbol": "600519.SH",
+                            "side": "buy",
+                            "status": "opened",
+                            "trade_datetime": "2024-01-02T15:00:00",
+                            "price": "100.0000",
+                            "size": "10.000000",
+                            "value": "1000.0000",
+                            "commission": "1.0000",
+                        },
+                        {
+                            "symbol": "000858.SZ",
+                            "side": "sell",
+                            "status": "opened",
+                            "trade_datetime": "2024-01-03T15:00:00",
+                            "price": "200.0000",
+                            "size": "5.000000",
+                            "value": "1000.0000",
+                            "commission": "1.0000",
+                        },
+                    ],
+                    "curves": [
+                        {
+                            "curve_type": "equity",
+                            "point_count": 2,
+                            "start_date": "2024-01-02",
+                            "end_date": "2024-01-03",
+                            "points": [
+                                {
+                                    "date": "2024-01-02",
+                                    "value": "100000.0000",
+                                    "extra": {"cash": "99000.0000"},
+                                },
+                                {
+                                    "date": "2024-01-03",
+                                    "value": "100500.0000",
+                                    "extra": {"cash": "99500.0000"},
+                                },
+                            ],
+                        }
+                    ],
+                },
+            }
         return {"method": method, "path": path, "payload": payload, "query": query}
 
     def with_strategy_context(self, strategy_id: str) -> tuple[FakeClient, dict[str, object]]:
@@ -224,6 +277,72 @@ def test_backtest_can_target_specific_strategy_version() -> None:
     assert result["payload"]["config"]["strategy_mode"] == "multi_symbol"
 
 
+def test_backtest_trades_returns_filtered_trade_executions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    parser = chatq_strategy.build_parser()
+    args = parser.parse_args(
+        [
+            "backtest-trades",
+            "sbt_1",
+            "--start",
+            "2024-01-03",
+            "--end",
+            "2024-01-03",
+            "--limit",
+            "10",
+        ]
+    )
+    client = FakeClient()
+
+    monkeypatch.setattr(chatq_strategy, "ApiClient", lambda base_url: client)
+
+    result = chatq_strategy.run(args)
+
+    assert result["total_trades"] == 1
+    assert result["returned_trades"] == 1
+    assert result["start_date"] == "2024-01-03"
+    assert result["end_date"] == "2024-01-03"
+    assert result["trades"][0]["symbol"] == "000858.SZ"
+    assert client.calls[0][0:2] == ("GET", "/backtests/sbt_1")
+
+
+def test_backtest_equity_returns_limited_equity_points(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    parser = chatq_strategy.build_parser()
+    args = parser.parse_args(
+        [
+            "backtest-equity",
+            "sbt_1",
+            "--start",
+            "2024-01-02",
+            "--end",
+            "2024-01-03",
+            "--tail",
+            "--limit",
+            "1",
+        ]
+    )
+    client = FakeClient()
+
+    monkeypatch.setattr(chatq_strategy, "ApiClient", lambda base_url: client)
+
+    result = chatq_strategy.run(args)
+
+    assert result["returned_points"] == 1
+    assert result["start_date"] == "2024-01-02"
+    assert result["end_date"] == "2024-01-03"
+    assert result["curve"]["curve_type"] == "equity"
+    assert result["curve"]["points"] == [
+        {
+            "date": "2024-01-03",
+            "value": "100500.0000",
+            "extra": {"cash": "99500.0000"},
+        }
+    ]
+
+
 def test_project_scoped_commands_resolve_current_directory(monkeypatch: pytest.MonkeyPatch) -> None:
     parser = chatq_strategy.build_parser()
     args = parser.parse_args(["list"])
@@ -356,6 +475,8 @@ def test_show_and_backtest_records_do_not_require_context() -> None:
     assert "backtest" not in chatq_strategy.CONTEXT_COMMANDS
     assert "backtests" not in chatq_strategy.CONTEXT_COMMANDS
     assert "backtest-show" not in chatq_strategy.CONTEXT_COMMANDS
+    assert "backtest-trades" not in chatq_strategy.CONTEXT_COMMANDS
+    assert "backtest-equity" not in chatq_strategy.CONTEXT_COMMANDS
 
 
 def test_version_create_command_is_not_exposed() -> None:

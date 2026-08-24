@@ -6,6 +6,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import date
 from pathlib import Path
 
 from cli.config import get_config
@@ -106,6 +107,20 @@ def build_parser() -> argparse.ArgumentParser:
     backtest_show = command("backtest-show", help="Show one backtest result.")
     backtest_show.add_argument("backtest_id")
 
+    backtest_trades = command("backtest-trades", help="Show trade executions for one backtest.")
+    backtest_trades.add_argument("backtest_id")
+    backtest_trades.add_argument("--symbol")
+    backtest_trades.add_argument("--start", dest="start_date")
+    backtest_trades.add_argument("--end", dest="end_date")
+    backtest_trades.add_argument("--limit", type=int, default=100)
+
+    backtest_equity = command("backtest-equity", help="Show equity curve points for one backtest.")
+    backtest_equity.add_argument("backtest_id")
+    backtest_equity.add_argument("--start", dest="start_date")
+    backtest_equity.add_argument("--end", dest="end_date")
+    backtest_equity.add_argument("--limit", type=int, default=120)
+    backtest_equity.add_argument("--tail", action="store_true")
+
     return parser
 
 
@@ -199,6 +214,10 @@ def run(args: argparse.Namespace) -> object:
         return list_backtests(client, args)
     if args.command == "backtest-show":
         return client.request("GET", f"/backtests/{quote_path(args.backtest_id)}")
+    if args.command == "backtest-trades":
+        return backtest_trades(client, args)
+    if args.command == "backtest-equity":
+        return backtest_equity(client, args)
     raise CliError(f"Unsupported command: {args.command}")
 
 
@@ -314,6 +333,140 @@ def list_backtests(client: ApiClient, args: argparse.Namespace) -> object:
     if args.strategy_version_id is not None:
         query["strategy_version_id"] = args.strategy_version_id
     return client.request("GET", "/backtests", query=query)
+
+
+def backtest_trades(client: ApiClient, args: argparse.Namespace) -> object:
+    detail = _backtest_detail(client, args.backtest_id)
+    result = _backtest_result(detail)
+    trades = result.get("trades")
+    if not isinstance(trades, list):
+        trades = []
+    if args.symbol is not None:
+        symbol = args.symbol.strip().upper()
+        trades = [
+            trade
+            for trade in trades
+            if isinstance(trade, dict) and str(trade.get("symbol", "")).upper() == symbol
+        ]
+    start_date, end_date = parse_date_filter(args)
+    trades = filter_records_by_date(
+        trades,
+        field="trade_datetime",
+        start_date=start_date,
+        end_date=end_date,
+    )
+    selected = trades[: args.limit]
+    return {
+        "backtest": detail.get("backtest"),
+        "start_date": start_date.isoformat() if start_date else None,
+        "end_date": end_date.isoformat() if end_date else None,
+        "total_trades": len(trades),
+        "returned_trades": len(selected),
+        "trades": selected,
+    }
+
+
+def backtest_equity(client: ApiClient, args: argparse.Namespace) -> object:
+    detail = _backtest_detail(client, args.backtest_id)
+    result = _backtest_result(detail)
+    curve = _equity_curve(result)
+    if curve is None:
+        return {
+            "backtest": detail.get("backtest"),
+            "curve": None,
+            "returned_points": 0,
+        }
+    points = curve.get("points")
+    if not isinstance(points, list):
+        points = []
+    start_date, end_date = parse_date_filter(args)
+    points = filter_records_by_date(
+        points,
+        field="date",
+        start_date=start_date,
+        end_date=end_date,
+    )
+    selected_points = points[-args.limit :] if args.tail else points[: args.limit]
+    curve_view = dict(curve)
+    curve_view["points"] = selected_points
+    return {
+        "backtest": detail.get("backtest"),
+        "start_date": start_date.isoformat() if start_date else None,
+        "end_date": end_date.isoformat() if end_date else None,
+        "curve": curve_view,
+        "returned_points": len(selected_points),
+    }
+
+
+def _backtest_detail(client: ApiClient, backtest_id: str) -> dict[str, object]:
+    detail = client.request("GET", f"/backtests/{quote_path(backtest_id)}")
+    if not isinstance(detail, dict):
+        raise CliError("Failed to resolve backtest detail")
+    return detail
+
+
+def _backtest_result(detail: dict[str, object]) -> dict[str, object]:
+    result = detail.get("result")
+    return result if isinstance(result, dict) else {}
+
+
+def _equity_curve(result: dict[str, object]) -> dict[str, object] | None:
+    curves = result.get("curves")
+    if not isinstance(curves, list):
+        return None
+    for curve in curves:
+        if isinstance(curve, dict) and curve.get("curve_type") == "equity":
+            return curve
+    return None
+
+
+def parse_date_filter(args: argparse.Namespace) -> tuple[date | None, date | None]:
+    start_date = parse_optional_date(getattr(args, "start_date", None), "--start")
+    end_date = parse_optional_date(getattr(args, "end_date", None), "--end")
+    if start_date is not None and end_date is not None and start_date > end_date:
+        raise CliError("--start must be before or equal to --end")
+    return start_date, end_date
+
+
+def parse_optional_date(value: str | None, flag: str) -> date | None:
+    if value is None:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise CliError(f"{flag} must use YYYY-MM-DD format: {value}") from exc
+
+
+def filter_records_by_date(
+    records: list[object],
+    *,
+    field: str,
+    start_date: date | None,
+    end_date: date | None,
+) -> list[object]:
+    if start_date is None and end_date is None:
+        return records
+    start = start_date.isoformat() if start_date else None
+    end = end_date.isoformat() if end_date else None
+    filtered: list[object] = []
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        record_date = date_prefix(record.get(field))
+        if record_date is None:
+            continue
+        if start is not None and record_date < start:
+            continue
+        if end is not None and record_date > end:
+            continue
+        filtered.append(record)
+    return filtered
+
+
+def date_prefix(value: object) -> str | None:
+    if not isinstance(value, str) or len(value) < 10:
+        return None
+    return value[:10]
 
 
 def current_strategy_mode(client: ApiClient, detail: dict[str, object]) -> str:

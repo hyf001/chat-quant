@@ -22,6 +22,8 @@ ID 前缀含义：
 backtest run --help
 backtest list --help
 backtest show --help
+backtest trades --help
+backtest equity --help
 ```
 
 ## 默认回测当前版本
@@ -110,10 +112,36 @@ backtest list --strategy-version-id stv_xxx --limit 20
 backtest show --backtest-id sbt_xxx
 ```
 
+查看交易执行明细：
+
+```text
+backtest trades --backtest-id sbt_xxx --start 2024-01-01 --end 2024-04-30 --limit 100
+```
+
+按标的和时间过滤交易明细：
+
+```text
+backtest trades --backtest-id sbt_xxx --symbol 600519.SH --start 2024-01-01 --end 2024-04-30 --limit 100
+```
+
+查看权益曲线点位，默认从头返回：
+
+```text
+backtest equity --backtest-id sbt_xxx --start 2024-01-01 --end 2024-04-30 --limit 120
+```
+
+查看权益曲线末尾点位：
+
+```text
+backtest equity --backtest-id sbt_xxx --start 2024-01-01 --end 2024-04-30 --tail --limit 120
+```
+
 ## 结果处理
 
 回测完成后记录 `backtest_id`，并关注：
 
 - 回测状态。
 - 总收益、年化收益、最大回撤、夏普比率、交易次数。
+- 需要逐笔执行记录时使用 `backtest trades`，可加 `--start` / `--end` 过滤交易时间，不要依赖 `backtest show`。
+- 需要权益曲线点位时使用 `backtest equity`，可加 `--start` / `--end` 过滤曲线日期，不要依赖 `backtest show`。
 - 失败时的 `failure_code`、`failure_message` 和详细错误。
