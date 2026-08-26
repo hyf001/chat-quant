@@ -121,6 +121,34 @@ export type ProjectListResponse = {
   offset: number;
 };
 
+export type ProjectFileEntry = {
+  name: string;
+  relative_path: string;
+  type: "directory" | "file";
+  size: number | null;
+  modified_at: string;
+  extension: string | null;
+};
+
+export type ProjectDirectoryResponse = {
+  project_id: string;
+  root_name: string;
+  current_path: string;
+  parent_path: string | null;
+  items: ProjectFileEntry[];
+};
+
+export type ProjectFileContentResponse = {
+  project_id: string;
+  name: string;
+  relative_path: string;
+  size: number;
+  modified_at: string;
+  extension: string | null;
+  content: string;
+  truncated: boolean;
+};
+
 export type CreateProjectPayload = {
   local_path: string;
   name?: string | null;

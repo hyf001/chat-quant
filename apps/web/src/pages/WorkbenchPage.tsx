@@ -7,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AppSettingsPage } from "./AppSettingsPage";
 import { Composer } from "../modules/composer";
 import { ConversationShell } from "../modules/conversation";
+import { ProjectFilesPanel } from "../modules/files";
 import { HistoryPanel } from "../modules/history";
-import { InsightPanel } from "../modules/insight";
 import { StrategiesPage, StrategyDeploymentsPage } from "../modules/strategy";
 import { WorkspaceLayout } from "../modules/workspace";
 import {
@@ -30,7 +30,6 @@ import {
   type AppSettings,
   type ChatSession,
   type ChatSessionDetail,
-  type InspectorObject,
   type Project,
   type ProviderModel,
   type SDKStreamEnvelope,
@@ -61,7 +60,6 @@ export function WorkbenchPage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [detail, setDetail] = useState<ChatSessionDetail | null>(null);
   const [conversationEnvelopes, setConversationEnvelopes] = useState<SDKStreamEnvelope[]>([]);
-  const [activeInspectorObject, setActiveInspectorObject] = useState<InspectorObject | null>(null);
   const [historyQuery, setHistoryQuery] = useState("");
   const [isProjectLoading, setIsProjectLoading] = useState(true);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
@@ -235,7 +233,6 @@ export function WorkbenchPage() {
     setActiveSessionId(null);
     setDetail(null);
     setConversationEnvelopes([]);
-    setActiveInspectorObject(null);
     void refreshSessions("", activeProjectId);
   }, [activeProjectId, refreshSessions]);
 
@@ -246,7 +243,6 @@ export function WorkbenchPage() {
       loadDetailRequestIdRef.current += 1;
       setDetail(null);
       setConversationEnvelopes([]);
-      setActiveInspectorObject(null);
     }
   }, [activeSessionId, loadDetail]);
 
@@ -268,7 +264,6 @@ export function WorkbenchPage() {
       setActiveSessionId(null);
       setDetail(null);
       setConversationEnvelopes([]);
-      setActiveInspectorObject(null);
     }
   };
 
@@ -285,7 +280,6 @@ export function WorkbenchPage() {
     if (window.location.pathname !== routePaths["new-task"]) {
       window.history.pushState({}, "", routePaths["new-task"]);
     }
-    setActiveInspectorObject(null);
     setActiveSessionId(chatSessionId);
   };
 
@@ -479,7 +473,6 @@ export function WorkbenchPage() {
             assets={detail?.assets ?? []}
             isLoading={isDetailLoading}
             isStreaming={isSending}
-            onOpenInspectorObject={setActiveInspectorObject}
             onPromptSelect={handleSendMessage}
           />
         ) : activeRoute === "strategies" ? (
@@ -507,12 +500,7 @@ export function WorkbenchPage() {
         ) : null
       }
       insight={
-        <InsightPanel
-          session={activeSession}
-          assets={detail?.assets ?? []}
-          activeObject={activeInspectorObject}
-          onOpenObject={setActiveInspectorObject}
-        />
+        <ProjectFilesPanel project={activeProject} />
       }
     />
   );

@@ -8,6 +8,7 @@ from app.agent_runtime.custom_tools import (
     CHATQ_PYTHON_TOOL_NAME,
     CHATQ_SERVER_NAME,
     CHATQ_STRATEGY_TOOL_NAME,
+    CHATQ_VISUALIZATION_TOOL_NAME,
 )
 from app.core.config import DEFAULT_AGENT_TOOLS, Settings
 from app.schema.agent_runtime import (
@@ -62,6 +63,7 @@ def test_sdk_options_pass_disabled_thinking_by_default() -> None:
         *DEFAULT_AGENT_TOOLS,
         CHATQ_STRATEGY_TOOL_NAME,
         CHATQ_PYTHON_TOOL_NAME,
+        CHATQ_VISUALIZATION_TOOL_NAME,
     ]
     assert "Skill" not in sdk_options.tools
     assert sdk_options.allowed_tools == sdk_options.tools
@@ -142,6 +144,7 @@ def test_runtime_uses_fixed_plugin_dir_skills_without_copying_into_cwd(
         "Skill",
         CHATQ_STRATEGY_TOOL_NAME,
         CHATQ_PYTHON_TOOL_NAME,
+        CHATQ_VISUALIZATION_TOOL_NAME,
     ]
     assert "Skill" in sdk_options.tools
     assert sdk_options.skills == [
@@ -176,6 +179,7 @@ def test_sdk_options_delegate_permissions_to_sdk_rules_without_hooks() -> None:
         "Skill",
         CHATQ_STRATEGY_TOOL_NAME,
         CHATQ_PYTHON_TOOL_NAME,
+        CHATQ_VISUALIZATION_TOOL_NAME,
     ]
     assert "Skill" in sdk_options.tools
     assert sdk_options.allowed_tools == sdk_options.tools
@@ -288,6 +292,7 @@ def test_runtime_uses_configured_tools_and_adds_system_skill_tool() -> None:
         "Skill",
         CHATQ_STRATEGY_TOOL_NAME,
         CHATQ_PYTHON_TOOL_NAME,
+        CHATQ_VISUALIZATION_TOOL_NAME,
     ]
     assert sdk_options.allowed_tools == sdk_options.tools
     assert sdk_options.permission_mode == "bypassPermissions"
@@ -320,6 +325,7 @@ def test_runtime_adds_skill_tool_when_plugin_skills_exist() -> None:
         "Skill",
         CHATQ_STRATEGY_TOOL_NAME,
         CHATQ_PYTHON_TOOL_NAME,
+        CHATQ_VISUALIZATION_TOOL_NAME,
     ]
     assert sdk_options.skills == ["chat-quant:financial_data_query"]
 

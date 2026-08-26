@@ -4,6 +4,7 @@ import {
   BarChart3,
   Brain,
   ChevronDown,
+  ExternalLink,
   FileCode2,
   FileText,
   Loader2,
@@ -21,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableCell, TableHead } from "@/components/ui/table";
 import { EmptyState, InlineAlert, LoadingState } from "@/shared/components";
 
+import { API_BASE_URL } from "../../shared/api";
 import type { AssetLink, ChatSession, SDKStreamEnvelope, SdkMessage } from "../../shared/api";
 import type { Components } from "react-markdown";
 import type { ReactNode } from "react";
@@ -72,6 +74,18 @@ type ThinkingProcessView = {
   sequence: number;
 };
 
+type VisualizationResultView = {
+  id: string;
+  turnId: string | null;
+  title: string;
+  kind: string;
+  outputFile: string;
+  iframeUrl: string;
+  toolUseId: string;
+  completedAt: string;
+  sequence: number;
+};
+
 type TimelineItem =
   | {
       type: "message";
@@ -86,6 +100,13 @@ type TimelineItem =
       timestamp: string;
       sequence: number;
       thinking: ThinkingProcessView;
+    }
+  | {
+      type: "visualization";
+      id: string;
+      timestamp: string;
+      sequence: number;
+      visualization: VisualizationResultView;
     }
   | {
       type: "tool";
@@ -253,12 +274,20 @@ export function ConversationShell({
 }: ConversationShellProps) {
   const [now, setNow] = useState(() => Date.now());
   const textMessages = useMemo(() => messages.filter(hasTextContent), [messages]);
-  const toolCalls = useMemo(() => buildToolCalls(envelopes), [envelopes]);
+  const visualizationResults = useMemo(() => buildVisualizationResults(envelopes), [envelopes]);
+  const visualizationToolUseIds = useMemo(
+    () => new Set(visualizationResults.map((result) => result.toolUseId)),
+    [visualizationResults],
+  );
+  const toolCalls = useMemo(
+    () => buildToolCalls(envelopes, visualizationToolUseIds),
+    [envelopes, visualizationToolUseIds],
+  );
   const toolGroups = useMemo(() => buildToolGroups(toolCalls), [toolCalls]);
   const thinkingProcesses = useMemo(() => buildThinkingProcesses(envelopes), [envelopes]);
   const timelineItems = useMemo(
-    () => buildTimelineItems(textMessages, thinkingProcesses, toolGroups),
-    [textMessages, thinkingProcesses, toolGroups],
+    () => buildTimelineItems(textMessages, thinkingProcesses, toolGroups, visualizationResults),
+    [textMessages, thinkingProcesses, toolGroups, visualizationResults],
   );
   const timelineGroups = useMemo(() => buildTimelineGroups(timelineItems), [timelineItems]);
   const activityLabel = useMemo(
@@ -357,6 +386,13 @@ export function ConversationShell({
                       return (
                         <TimelineStage isActive={isActive} key={item.id} tone="thinking">
                           <ThinkingEntry isActive={isActive} thinking={item.thinking} />
+                        </TimelineStage>
+                      );
+                    }
+                    if (item.type === "visualization") {
+                      return (
+                        <TimelineStage key={item.id} tone="answer">
+                          <VisualizationResultEntry visualization={item.visualization} />
                         </TimelineStage>
                       );
                     }
@@ -638,6 +674,40 @@ function MarkdownContent({
   );
 }
 
+function VisualizationResultEntry({
+  visualization,
+}: {
+  visualization: VisualizationResultView;
+}) {
+  const frameSrc = visualizationFrameSrc(visualization.iframeUrl);
+  return (
+    <article className="overflow-hidden rounded-md border border-line bg-panel shadow-sm">
+      <div className="flex items-center justify-between gap-3 border-b border-line bg-soft px-3.5 py-2">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-semibold text-ink">{visualization.title}</div>
+          <div className="mt-0.5 truncate font-mono text-[10px] uppercase text-mutedText">
+            {visualization.kind} · {visualization.outputFile}
+          </div>
+        </div>
+        <a
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-mutedText transition-colors hover:border-brandBlue hover:text-brandBlue focus:outline-none focus:ring-2 focus:ring-ring/30"
+          href={frameSrc}
+          rel="noreferrer"
+          target="_blank"
+          title="新窗口打开"
+        >
+          <ExternalLink className="h-4 w-4" />
+        </a>
+      </div>
+      <iframe
+        className="block h-[640px] w-full bg-app"
+        src={frameSrc}
+        title={visualization.title}
+      />
+    </article>
+  );
+}
+
 function ThinkingEntry({
   thinking,
   isActive,
@@ -859,6 +929,7 @@ function buildTimelineItems(
   messages: SdkMessage[],
   thinkingProcesses: ThinkingProcessView[],
   toolGroups: ToolGroupView[],
+  visualizationResults: VisualizationResultView[],
 ): TimelineItem[] {
   const messageItems: TimelineItem[] = messages.map((message) => ({
     type: "message",
@@ -874,6 +945,13 @@ function buildTimelineItems(
     sequence: thinking.sequence,
     thinking,
   }));
+  const visualizationItems: TimelineItem[] = visualizationResults.map((visualization) => ({
+    type: "visualization",
+    id: `visualization_${visualization.id}`,
+    timestamp: visualization.completedAt,
+    sequence: visualization.sequence,
+    visualization,
+  }));
   const toolItems: TimelineItem[] = toolGroups.map((toolGroup) => ({
     type: "tool",
     id: `tool_${toolGroup.id}`,
@@ -882,16 +960,18 @@ function buildTimelineItems(
     toolGroup,
   }));
 
-  const sortedItems = [...messageItems, ...thinkingItems, ...toolItems].sort((left, right) => {
-    if (left.sequence > 0 && right.sequence > 0 && left.sequence !== right.sequence) {
+  const sortedItems = [...messageItems, ...thinkingItems, ...toolItems, ...visualizationItems].sort(
+    (left, right) => {
+      if (left.sequence > 0 && right.sequence > 0 && left.sequence !== right.sequence) {
+        return left.sequence - right.sequence;
+      }
+      const timeDelta = timestampMs(left.timestamp) - timestampMs(right.timestamp);
+      if (timeDelta !== 0) {
+        return timeDelta;
+      }
       return left.sequence - right.sequence;
-    }
-    const timeDelta = timestampMs(left.timestamp) - timestampMs(right.timestamp);
-    if (timeDelta !== 0) {
-      return timeDelta;
-    }
-    return left.sequence - right.sequence;
-  });
+    },
+  );
 
   return mergeConsecutiveTimelineItems(sortedItems);
 }
@@ -1121,7 +1201,144 @@ function isHumanUserBoundaryEvent(event: UnknownRecord): boolean {
   return typeof message?.content === "string";
 }
 
-function buildToolCalls(envelopes: SDKStreamEnvelope[]): ToolCallView[] {
+function buildVisualizationResults(envelopes: SDKStreamEnvelope[]): VisualizationResultView[] {
+  const toolUses = new Map<
+    string,
+    {
+      name: string;
+      command: string;
+      turnId: string | null;
+      sequence: number;
+    }
+  >();
+  const results: VisualizationResultView[] = [];
+  const sortedEnvelopes = [...envelopes].sort((left, right) => left.sequence - right.sequence);
+  let currentFallbackTurnId: string | null = null;
+
+  sortedEnvelopes.forEach((envelope) => {
+    const event = unwrapEvent(envelope.sdk_event);
+    const eventTurnId = envelope.turn_id ?? promptIdFromEvent(event);
+    if (eventTurnId) {
+      currentFallbackTurnId = eventTurnId;
+    } else if (isHumanUserBoundaryEvent(event)) {
+      currentFallbackTurnId = `fallback_turn_${envelope.sequence}`;
+    }
+    const turnId = eventTurnId ?? currentFallbackTurnId;
+
+    extractToolUses(event).forEach((toolUse) => {
+      toolUses.set(toolUse.id, {
+        name: toolUse.name,
+        command: toolUse.command,
+        turnId,
+        sequence: envelope.sequence,
+      });
+    });
+
+    extractToolResults(event).forEach((toolResult) => {
+      if (toolResult.isError) {
+        return;
+      }
+      const toolUse = toolUses.get(toolResult.id);
+      if (!toolUse || !isVisualizationTool(toolUse)) {
+        return;
+      }
+      const payload = parseVisualizationResultPayload(toolResult.content);
+      if (!payload) {
+        return;
+      }
+      results.push({
+        id: `${toolResult.id}_${envelope.sequence}`,
+        turnId: toolUse.turnId ?? turnId,
+        title: payload.title ?? payload.outputFile,
+        kind: payload.kind,
+        outputFile: payload.outputFile,
+        iframeUrl: payload.iframeUrl,
+        toolUseId: toolResult.id,
+        completedAt: envelope.received_at,
+        sequence: envelope.sequence,
+      });
+    });
+  });
+
+  return results;
+}
+
+function isVisualizationTool(toolUse: { name: string; command: string }): boolean {
+  const name = toolUse.name.toLowerCase();
+  if (name === "visualization" || name === "mcp__chatq__visualization") {
+    return true;
+  }
+  return /^(chart|table|card|report)\s+render\b/.test(toolUse.command);
+}
+
+function parseVisualizationResultPayload(
+  content: string | null,
+): { title?: string; kind: string; outputFile: string; iframeUrl: string } | null {
+  if (!content) {
+    return null;
+  }
+  const parsedJson = parseJsonObject(content);
+  if (parsedJson) {
+    const ok = parsedJson.ok === true;
+    const data = asRecord(parsedJson.data);
+    const iframeUrl = asString(data?.iframe_url);
+    const outputFile = asString(data?.output_file);
+    const kind = asString(data?.kind);
+    if (!ok || !iframeUrl || !outputFile || !kind) {
+      return null;
+    }
+    return {
+      title: titleFromArtifacts(parsedJson.artifacts) ?? outputFile,
+      kind,
+      outputFile,
+      iframeUrl,
+    };
+  }
+
+  const fields = parseKeyValueLines(content);
+  const iframeUrl = fields.get("iframe_url");
+  const outputFile = fields.get("output_file");
+  const kind = fields.get("kind");
+  if (!iframeUrl || !outputFile || !kind) {
+    return null;
+  }
+  return {
+    kind,
+    outputFile,
+    iframeUrl,
+  };
+}
+
+function titleFromArtifacts(artifacts: unknown): string | null {
+  if (!Array.isArray(artifacts)) {
+    return null;
+  }
+  for (const artifact of artifacts) {
+    const record = asRecord(artifact);
+    const assetType = asString(record?.asset_type);
+    const title = asString(record?.title);
+    if (assetType === "html" && title) {
+      return title;
+    }
+  }
+  return null;
+}
+
+function parseKeyValueLines(content: string): Map<string, string> {
+  const fields = new Map<string, string>();
+  content.split(/\r?\n/).forEach((line) => {
+    const match = line.match(/^([A-Za-z_]+):\s*(.+)$/);
+    if (match) {
+      fields.set(match[1], match[2]);
+    }
+  });
+  return fields;
+}
+
+function buildToolCalls(
+  envelopes: SDKStreamEnvelope[],
+  hiddenToolUseIds: Set<string> = new Set(),
+): ToolCallView[] {
   const toolCalls = new Map<string, ToolCallView>();
   const sortedEnvelopes = [...envelopes].sort((left, right) => left.sequence - right.sequence);
   let currentFallbackTurnId: string | null = null;
@@ -1179,7 +1396,7 @@ function buildToolCalls(envelopes: SDKStreamEnvelope[]): ToolCallView[] {
     });
   });
 
-  return [...toolCalls.values()];
+  return [...toolCalls.values()].filter((toolCall) => !hiddenToolUseIds.has(toolCall.id));
 }
 
 function buildToolGroups(toolCalls: ToolCallView[]): ToolGroupView[] {
@@ -1387,6 +1604,23 @@ function formatDetail(value: unknown): string | null {
   } catch {
     return String(value);
   }
+}
+
+function parseJsonObject(value: string): UnknownRecord | null {
+  try {
+    return asRecord(JSON.parse(value));
+  } catch {
+    return null;
+  }
+}
+
+function visualizationFrameSrc(iframeUrl: string): string {
+  if (/^https?:\/\//.test(iframeUrl)) {
+    return iframeUrl;
+  }
+  const base = API_BASE_URL.replace(/\/$/, "");
+  const path = iframeUrl.startsWith("/") ? iframeUrl : `/${iframeUrl}`;
+  return `${base}${path}`;
 }
 
 function getRunStartedAt(messages: SdkMessage[], envelopes: SDKStreamEnvelope[]): string | null {

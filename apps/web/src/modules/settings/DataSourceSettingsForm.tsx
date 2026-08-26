@@ -192,7 +192,7 @@ export function DataSourceSettingsForm({
   const [selectedSourceId, setSelectedSourceId] = useState("a_stock_daily_price");
   const [schema, setSchema] = useState<MindgoSourceSchema | null>(null);
   const [params, setParams] = useState<MindgoParamDraft>({});
-  const [queryMode, setQueryMode] = useState<MindgoSourceMode>("mindgo");
+  const [queryMode, setQueryMode] = useState<MindgoSourceMode>("sync");
   const [queryResult, setQueryResult] = useState<MindgoSourceQueryResponse | null>(null);
   const [syncStatus, setSyncStatus] = useState<MindgoSourceSyncStatusResponse | null>(null);
   const [syncInstances, setSyncInstances] = useState<JobRuntimeInstanceListResponse | null>(null);

@@ -12,6 +12,8 @@ import type {
   CreateProjectPayload,
   CreateChatSessionPayload,
   Project,
+  ProjectDirectoryResponse,
+  ProjectFileContentResponse,
   ProjectListResponse,
   SendMessageResponse,
   UpdateProjectPayload,
@@ -819,6 +821,28 @@ export async function listProjects(query?: string): Promise<ProjectListResponse>
   }
   const suffix = params.toString() ? `?${params.toString()}` : "";
   return requestJson<ProjectListResponse>(`/api/projects${suffix}`);
+}
+
+export async function listProjectFiles(
+  projectId: string,
+  path = "",
+): Promise<ProjectDirectoryResponse> {
+  const params = new URLSearchParams();
+  if (path) {
+    params.set("path", path);
+  }
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return requestJson<ProjectDirectoryResponse>(`/api/projects/${projectId}/files${suffix}`);
+}
+
+export async function getProjectFileContent(
+  projectId: string,
+  path: string,
+): Promise<ProjectFileContentResponse> {
+  const params = new URLSearchParams({ path });
+  return requestJson<ProjectFileContentResponse>(
+    `/api/projects/${projectId}/files/content?${params.toString()}`,
+  );
 }
 
 export async function createProject(payload: CreateProjectPayload): Promise<Project> {

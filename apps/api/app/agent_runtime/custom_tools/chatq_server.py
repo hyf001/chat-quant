@@ -16,6 +16,11 @@ from app.agent_runtime.custom_tools.chatq_strategy import (
     build_chatq_strategy_tool_schema,
     handle_chatq_strategy_tool,
 )
+from app.agent_runtime.custom_tools.chatq_visualization import (
+    CHATQ_VISUALIZATION_MCP_TOOL_NAME,
+    build_chatq_visualization_tool_schema,
+    handle_chatq_visualization_tool,
+)
 from app.schema.agent_runtime import AgentExecutionCommand
 
 CHATQ_SERVER_NAME = "chatq"
@@ -50,6 +55,18 @@ def build_chatq_mcp_server(command: AgentExecutionCommand) -> object:
                     "inputSchema": build_chatq_python_tool_schema(),
                 }
             ),
+            Tool.model_validate(
+                {
+                    "name": CHATQ_VISUALIZATION_MCP_TOOL_NAME,
+                    "description": (
+                        "Validate and render strict Chat-Quant visualization specs using "
+                        "a chatq-visualization command string. Supports chart/table/card/"
+                        "report render, validate, and schema commands. The spec file and "
+                        "output file must stay under the current project directory."
+                    ),
+                    "inputSchema": build_chatq_visualization_tool_schema(),
+                }
+            ),
         ]
 
     @server.call_tool(validate_input=False)
@@ -58,6 +75,8 @@ def build_chatq_mcp_server(command: AgentExecutionCommand) -> object:
             result = await handle_chatq_strategy_tool(command, arguments)
         elif name == CHATQ_PYTHON_MCP_TOOL_NAME:
             result = await handle_chatq_python_tool(command, arguments)
+        elif name == CHATQ_VISUALIZATION_MCP_TOOL_NAME:
+            result = await handle_chatq_visualization_tool(command, arguments)
         else:
             raise ValueError(f"Tool not found: {name}")
         return CallToolResult(

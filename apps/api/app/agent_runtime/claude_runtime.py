@@ -11,6 +11,7 @@ from app.agent_runtime.custom_tools import (
     CHATQ_PYTHON_TOOL_NAME,
     CHATQ_SERVER_NAME,
     CHATQ_STRATEGY_TOOL_NAME,
+    CHATQ_VISUALIZATION_TOOL_NAME,
     build_chatq_mcp_server,
 )
 from app.agent_runtime.hooks import AgentRuntimeHooks
@@ -323,7 +324,14 @@ class ClaudeAgentRuntime:
             tuple(command.allowed_tools or self.settings.agent_available_tools),
         )
         tools = _ensure_skill_tool(tools, skills)
-        tools = _dedupe_tools((*tools, CHATQ_STRATEGY_TOOL_NAME, CHATQ_PYTHON_TOOL_NAME))
+        tools = _dedupe_tools(
+            (
+                *tools,
+                CHATQ_STRATEGY_TOOL_NAME,
+                CHATQ_PYTHON_TOOL_NAME,
+                CHATQ_VISUALIZATION_TOOL_NAME,
+            )
+        )
         return ClaudeAgentOptions(
             tools=list(tools),
             allowed_tools=list(tools),

@@ -2,7 +2,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
+from app.agent_runtime.custom_tools.chatq_visualization import (
+    VISUALIZATION_ASSET_ROUTE,
+    VISUALIZATION_STATIC_DIR,
+)
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import RequestLoggingMiddleware, configure_logging, get_logger
@@ -52,6 +57,11 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(api_router, prefix=settings.api_prefix)
+    app.mount(
+        VISUALIZATION_ASSET_ROUTE,
+        StaticFiles(directory=VISUALIZATION_STATIC_DIR),
+        name="visualization-assets",
+    )
     return app
 
 
