@@ -9,6 +9,7 @@ import { Composer } from "../modules/composer";
 import { ConversationShell } from "../modules/conversation";
 import { ProjectFilesPanel } from "../modules/files";
 import { HistoryPanel } from "../modules/history";
+import { NotebookPage } from "../modules/notebook";
 import { StrategiesPage, StrategyDeploymentsPage } from "../modules/strategy";
 import { WorkspaceLayout } from "../modules/workspace";
 import {
@@ -40,6 +41,7 @@ import type { PrimaryRoute } from "../shared/routes";
 
 const routePaths: Record<PrimaryRoute, string> = {
   "new-task": "/tasks/new",
+  notebooks: "/notebooks",
   strategies: "/strategies",
   "strategy-deployments": "/strategy-deployments",
   settings: "/settings",
@@ -475,6 +477,8 @@ export function WorkbenchPage() {
             isStreaming={isSending}
             onPromptSelect={handleSendMessage}
           />
+        ) : activeRoute === "notebooks" ? (
+          <NotebookPage project={activeProject} />
         ) : activeRoute === "strategies" ? (
           <StrategiesPage project={activeProject} />
         ) : activeRoute === "strategy-deployments" ? (
@@ -500,8 +504,9 @@ export function WorkbenchPage() {
         ) : null
       }
       insight={
-        <ProjectFilesPanel project={activeProject} />
+        activeRoute === "notebooks" ? null : <ProjectFilesPanel project={activeProject} />
       }
+      contentClassName={activeRoute === "notebooks" ? "p-0" : undefined}
     />
   );
 }
@@ -574,6 +579,9 @@ function routeFromPath(pathname: string): PrimaryRoute {
     pathname.startsWith(`${routePaths["strategy-deployments"]}/`)
   ) {
     return "strategy-deployments";
+  }
+  if (pathname === routePaths.notebooks || pathname.startsWith(`${routePaths.notebooks}/`)) {
+    return "notebooks";
   }
   return pathname.endsWith(routePaths.strategies) ? "strategies" : "new-task";
 }

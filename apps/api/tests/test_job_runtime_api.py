@@ -108,6 +108,7 @@ def test_job_runtime_instances_rerun_and_delete(client: TestClient) -> None:
     rerun_payload = rerun_response.json()
     assert rerun_payload["id"] == "inst_rerun"
     assert rerun_payload["trigger_type"] == "rerun"
+    assert rerun_payload["scheduled_for"] == "2026-08-15T10:00:00"
     assert rerun_payload["status"] == "waiting"
     assert rerun_payload["started_at"] is None
     assert rerun_payload["completed_at"] is None

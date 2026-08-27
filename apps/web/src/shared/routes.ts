@@ -1,1 +1,6 @@
-export type PrimaryRoute = "new-task" | "strategies" | "strategy-deployments" | "settings";
+export type PrimaryRoute =
+  | "new-task"
+  | "notebooks"
+  | "strategies"
+  | "strategy-deployments"
+  | "settings";

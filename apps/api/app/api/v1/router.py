@@ -11,6 +11,7 @@ from app.api.v1 import (
     log_api,
     mindgo_api,
     model_provider_api,
+    notebook_api,
     project_api,
     runtime_api,
     strategy_api,
@@ -31,6 +32,7 @@ api_router.include_router(
     prefix="/model-providers",
     tags=["model-providers"],
 )
+api_router.include_router(notebook_api.router, prefix="/notebooks", tags=["notebooks"])
 api_router.include_router(project_api.router, prefix="/projects", tags=["projects"])
 api_router.include_router(runtime_api.router, prefix="/runtime", tags=["runtime"])
 api_router.include_router(strategy_api.router, tags=["strategies"])

@@ -63,7 +63,6 @@ class JobInstanceRow(Base):
         UniqueConstraint(
             "job_type",
             "job_id",
-            "trigger_type",
             "trigger_key",
             name="uq_job_instances_trigger",
         ),

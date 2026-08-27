@@ -6,6 +6,7 @@ type WorkspaceLayoutProps = {
   result?: ReactNode;
   composer?: ReactNode;
   insight?: ReactNode;
+  contentClassName?: string;
 };
 
 export function WorkspaceLayout({
@@ -14,13 +15,14 @@ export function WorkspaceLayout({
   result,
   composer,
   insight,
+  contentClassName = "p-5 lg:p-7",
 }: WorkspaceLayoutProps) {
   return (
     <main className="workbench-surface flex h-screen overflow-hidden font-sans text-ink">
       <div className="flex h-full min-w-0 flex-1">
         {history}
         <section className="flex h-full min-w-0 flex-1 flex-col bg-app/70">
-          <div className="min-h-0 flex-1 overflow-y-auto p-5 lg:p-7">
+          <div className={`min-h-0 flex-1 overflow-y-auto ${contentClassName}`}>
             {conversation}
             {result ? (
               <div className="mx-auto mt-6 w-full max-w-5xl">

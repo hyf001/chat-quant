@@ -64,7 +64,6 @@ class JobRuntimeInstanceService:
         if await self._job_instance_exists(
             db,
             job_ref=job_ref,
-            trigger_type=trigger_type,
             trigger_key=trigger_key,
         ):
             raise DuplicateJobInstanceError(
@@ -324,7 +323,6 @@ class JobRuntimeInstanceService:
     ) -> JobInstanceRow:
         source_instance.status = InstanceStatus.WAITING
         source_instance.trigger_type = TriggerType.RERUN
-        source_instance.scheduled_for = _now()
         source_instance.started_at = None
         source_instance.completed_at = None
         source_instance.result_status = None
@@ -404,14 +402,12 @@ class JobRuntimeInstanceService:
         db: AsyncSession,
         *,
         job_ref: JobRef,
-        trigger_type: TriggerType,
         trigger_key: str,
     ) -> bool:
         result = await db.execute(
             select(JobInstanceRow.id).where(
                 JobInstanceRow.job_type == job_ref.job_type,
                 JobInstanceRow.job_id == job_ref.job_id,
-                JobInstanceRow.trigger_type == trigger_type,
                 JobInstanceRow.trigger_key == trigger_key,
             )
         )

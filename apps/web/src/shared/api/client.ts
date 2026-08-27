@@ -570,6 +570,48 @@ export type DatasetQueryResponse = {
   rows: Array<Record<string, MindgoJsonValue>>;
 };
 
+export type NotebookServer = {
+  project_id: string;
+  status: "starting" | "running" | "stopped" | "error";
+  url: string;
+  base_url: string;
+  token: string;
+  root_dir: string;
+  pid: number;
+  runtime_id: string;
+  detail: string | null;
+};
+
+export type NotebookServerStatus = {
+  project_id: string;
+  status: "running" | "stopped";
+  url: string | null;
+  base_url: string | null;
+  root_dir: string | null;
+  pid: number | null;
+  runtime_id: string | null;
+};
+
+export type NotebookFile = {
+  name: string;
+  relative_path: string;
+  size: number;
+  modified_at: string;
+};
+
+export type NotebookFileListResponse = {
+  project_id: string;
+  root_dir: string;
+  files: NotebookFile[];
+};
+
+export type NotebookSession = {
+  path: string;
+  session_id: string | null;
+  kernel_id: string | null;
+  kernel_name: string | null;
+};
+
 export async function getHealth(): Promise<{ status: string; service?: string }> {
   return requestJson<{ status: string; service?: string }>("/api/health");
 }
@@ -776,6 +818,69 @@ export async function queryDatasets(
   return requestJson<DatasetQueryResponse>("/api/datasets/query", {
     method: "POST",
     body: payload,
+  });
+}
+
+export async function listNotebookFiles(projectId: string): Promise<NotebookFileListResponse> {
+  return requestJson<NotebookFileListResponse>(`/api/notebooks/${projectId}/files`);
+}
+
+export async function createNotebookFile(
+  projectId: string,
+  name?: string | null,
+): Promise<NotebookFile> {
+  return requestJson<NotebookFile>(`/api/notebooks/${projectId}/files`, {
+    method: "POST",
+    body: { name },
+  });
+}
+
+export async function renameNotebookFile(
+  projectId: string,
+  path: string,
+  name: string,
+): Promise<NotebookFile> {
+  return requestJson<NotebookFile>(`/api/notebooks/${projectId}/files`, {
+    method: "PATCH",
+    body: { path, name },
+  });
+}
+
+export async function deleteNotebookFile(
+  projectId: string,
+  path: string,
+): Promise<void> {
+  return requestJson<void>(`/api/notebooks/${projectId}/files`, {
+    method: "DELETE",
+    body: { path },
+  });
+}
+
+export async function ensureNotebookServer(projectId: string): Promise<NotebookServer> {
+  return requestJson<NotebookServer>(`/api/notebooks/${projectId}/server`, {
+    method: "POST",
+  });
+}
+
+export async function getNotebookServerStatus(
+  projectId: string,
+): Promise<NotebookServerStatus> {
+  return requestJson<NotebookServerStatus>(`/api/notebooks/${projectId}/server`);
+}
+
+export async function ensureNotebookSession(
+  projectId: string,
+  path: string,
+): Promise<NotebookSession> {
+  return requestJson<NotebookSession>(`/api/notebooks/${projectId}/sessions`, {
+    method: "POST",
+    body: { path },
+  });
+}
+
+export async function stopNotebookServer(projectId: string): Promise<void> {
+  return requestJson<void>(`/api/notebooks/${projectId}/server`, {
+    method: "DELETE",
   });
 }
 

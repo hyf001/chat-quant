@@ -12,6 +12,7 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import RequestLoggingMiddleware, configure_logging, get_logger
 from app.service.job_runtime import JobRuntimeWorker, register_default_job_runtime_events
+from app.service.notebook import notebook_runtime_manager
 
 logger = get_logger(__name__)
 
@@ -19,6 +20,7 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     register_default_job_runtime_events()
+    await notebook_runtime_manager.cleanup_stale_runtimes()
     settings = get_settings()
     worker = JobRuntimeWorker(
         creation_tick_minutes=settings.job_runtime_creation_tick_minutes,
@@ -32,6 +34,7 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         await worker.stop()
+        await notebook_runtime_manager.stop_all()
 
 
 def create_app() -> FastAPI:

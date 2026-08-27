@@ -1,5 +1,6 @@
 import {
   Check,
+  BarChart3,
   ChevronsUpDown,
   CircleHelp,
   FileText,
@@ -151,6 +152,16 @@ export function HistoryPanel({
           >
             <Plus className="h-4 w-4" />
             <span>新建任务</span>
+          </Button>
+          <Button
+            className="mt-1 w-full justify-start"
+            size="sm"
+            variant={activeRoute === "notebooks" ? "default" : "ghost"}
+            type="button"
+            onClick={() => onNavigateRoute("notebooks")}
+          >
+            <BarChart3 className="h-4 w-4" />
+            <span>数据分析</span>
           </Button>
           <Button
             className="mt-1 w-full justify-start"

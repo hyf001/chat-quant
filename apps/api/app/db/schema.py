@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import logging
 from threading import Lock
 
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 
 from app.core.config import (
     APP_CONFIG_DEFINITIONS,
@@ -24,6 +26,7 @@ from app.model.strategy import strategy as strategy_model  # noqa: F401
 
 _SCHEMA_LOCK = Lock()
 _INITIALIZED_DATABASE_URLS: set[str] = set()
+logger = logging.getLogger(__name__)
 
 
 def ensure_database_schema(settings: Settings) -> None:
@@ -36,6 +39,7 @@ def ensure_database_schema(settings: Settings) -> None:
         try:
             Base.metadata.create_all(engine)
             _migrate_job_runtime_scheduler_schema(engine)
+            _migrate_job_runtime_instance_trigger_schema(engine)
             _migrate_local_project_schema(engine, settings)
             _migrate_strategy_source_code(engine)
             _migrate_strategy_version_contract(engine)
@@ -126,6 +130,33 @@ def _migrate_job_runtime_scheduler_schema(engine: Engine) -> None:
         )
     for column_name in ("enabled", "run_mode", "run_at", "timezone"):
         _drop_column_if_exists(engine, inspect(engine), "job_schedulers", column_name, ())
+
+
+def _migrate_job_runtime_instance_trigger_schema(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if "job_instances" not in inspector.get_table_names():
+        return
+    trigger_columns = ("job_type", "job_id", "trigger_key")
+    for constraint in inspector.get_unique_constraints("job_instances"):
+        if tuple(constraint.get("column_names") or ()) == trigger_columns:
+            return
+    for index in inspector.get_indexes("job_instances"):
+        if tuple(index.get("column_names") or ()) == trigger_columns and index.get("unique"):
+            return
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS "
+                    "idx_job_instances_trigger_key_unique "
+                    "ON job_instances(job_type, job_id, trigger_key)"
+                )
+            )
+    except IntegrityError:
+        logger.warning(
+            "job_instances has duplicate job_type/job_id/trigger_key rows; "
+            "skipping trigger-key unique index migration"
+        )
 
 
 def _seed_model_providers(engine: Engine) -> None:
