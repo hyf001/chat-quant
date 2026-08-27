@@ -69,6 +69,13 @@ def test_project_visualization_html_serves_project_html(tmp_path) -> None:
     assert response.text == "<!doctype html><title>chart</title>"
 
 
+def test_visualization_assets_served_under_api_prefix() -> None:
+    response = client.get("/api/visualization-assets/echarts.5.6.0.min.js")
+
+    assert response.status_code == 200
+    assert "javascript" in response.headers["content-type"]
+
+
 def test_project_visualization_html_rejects_non_html_and_path_escape(tmp_path) -> None:
     local_path = tmp_path / "viz-project"
     project = client.post("/api/projects/create", json={"local_path": str(local_path)}).json()

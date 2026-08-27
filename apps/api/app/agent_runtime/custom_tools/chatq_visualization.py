@@ -445,7 +445,7 @@ def run_cli_command(command: AgentExecutionCommand, args: argparse.Namespace) ->
             "kind": expected_kind,
             "output_file": relative_output,
             "iframe_url": project_visualization_html_url(command.project_id, relative_output),
-            "asset_base_url": VISUALIZATION_ASSET_ROUTE,
+            "asset_base_url": visualization_asset_url(),
         }
         return _success(
             f"{expected_kind} render",
@@ -1081,6 +1081,11 @@ def project_visualization_html_url(project_id: str, output_file: str) -> str:
     return f"{api_prefix}/projects/{quoted_project_id}/visualization-html/{quoted_file}"
 
 
+def visualization_asset_url() -> str:
+    api_prefix = get_settings().api_prefix.rstrip("/")
+    return f"{api_prefix}{VISUALIZATION_ASSET_ROUTE}" if api_prefix else VISUALIZATION_ASSET_ROUTE
+
+
 def _render_page(
     title: str,
     *,
@@ -1109,15 +1114,16 @@ def _render_page(
     )
     table_section = f'<section class="tables-stack">{tables_html}</section>' if tables else ""
     modal_html = _render_chart_modal() if charts else ""
+    asset_url = visualization_asset_url()
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{safe_title}</title>
-  <script src="{VISUALIZATION_ASSET_ROUTE}/tailwindcss-3.4.16.js"></script>
-  <script src="{VISUALIZATION_ASSET_ROUTE}/lucide.js"></script>
-  <script src="{VISUALIZATION_ASSET_ROUTE}/echarts.5.6.0.min.js"></script>
+  <script src="{asset_url}/tailwindcss-3.4.16.js"></script>
+  <script src="{asset_url}/lucide.js"></script>
+  <script src="{asset_url}/echarts.5.6.0.min.js"></script>
   <style>
     :root {{
       --cq-app: #f6f7f3;

@@ -3,8 +3,8 @@ import json
 from pathlib import Path
 
 from app.agent_runtime.custom_tools.chatq_visualization import (
-    VISUALIZATION_ASSET_ROUTE,
     handle_chatq_visualization_tool,
+    visualization_asset_url,
 )
 from app.schema.agent_runtime import AgentExecutionCommand
 
@@ -80,11 +80,11 @@ async def _run_candlestick_render_assertions(project_dir: Path) -> None:
         payload["data"]["iframe_url"]
         == "/api/projects/project_test/visualization-html/dashboard/kline.html"
     )
-    assert payload["data"]["asset_base_url"] == VISUALIZATION_ASSET_ROUTE
+    assert payload["data"]["asset_base_url"] == visualization_asset_url()
     html = output_file.read_text(encoding="utf-8")
     assert '"type": "candlestick"' in html
     assert '"scale": true' in html
-    assert f'{VISUALIZATION_ASSET_ROUTE}/echarts.5.6.0.min.js' in html
+    assert f'{visualization_asset_url()}/echarts.5.6.0.min.js' in html
 
 
 async def _run_card_render_assertions(project_dir: Path) -> None:

@@ -37,7 +37,11 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings)
-    app = FastAPI(title=settings.app_name, lifespan=lifespan)
+    app = FastAPI(title=settings.app_name, 
+                  docs_url=None,
+                  redoc_url=None,
+                  openapi_url=None,
+                  lifespan=lifespan)
     logger.info(
         "creating FastAPI app",
         extra={"app_name": settings.app_name, "environment": settings.environment},
@@ -57,6 +61,17 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(api_router, prefix=settings.api_prefix)
+    api_visualization_asset_route = (
+        f"{settings.api_prefix.rstrip('/')}{VISUALIZATION_ASSET_ROUTE}"
+        if settings.api_prefix.rstrip("/")
+        else VISUALIZATION_ASSET_ROUTE
+    )
+    if api_visualization_asset_route != VISUALIZATION_ASSET_ROUTE:
+        app.mount(
+            api_visualization_asset_route,
+            StaticFiles(directory=VISUALIZATION_STATIC_DIR),
+            name="api-visualization-assets",
+        )
     app.mount(
         VISUALIZATION_ASSET_ROUTE,
         StaticFiles(directory=VISUALIZATION_STATIC_DIR),
