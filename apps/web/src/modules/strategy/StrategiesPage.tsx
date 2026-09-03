@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea as UiTextarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { LightweightKlineChart, type LightweightKlineMarker } from "@/shared/components/charts";
 import { EmptyState, InlineAlert, LoadingState } from "@/shared/components";
 import { notify } from "@/shared/notify";
 
@@ -1810,120 +1811,93 @@ function CandlestickChart({
   initialCash: string;
   dailyPositions: StrategyDailyPortfolioSnapshot[];
 }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const dates = useMemo(() => candles.map((candle) => candle.date), [candles]);
+  const chartCandles = useMemo(
+    () =>
+      candles.map((candle) => ({
+        date: candle.date,
+        open: toNumber(candle.open),
+        high: toNumber(candle.high),
+        low: toNumber(candle.low),
+        close: toNumber(candle.close),
+        volume: toNumber(candle.volume),
+      })),
+    [candles],
+  );
+  const tradeMarkers = useMemo(
+    () =>
+      trades
+        .map((trade) => tradeToKlineMarker(trade, dates))
+        .filter((marker): marker is LightweightKlineMarker => marker !== null),
+    [dates, trades],
+  );
+  const strategyReturnByDate = useMemo(
+    () =>
+      new Map(
+        equityPoints.map((point) => [
+          point.date,
+          (toNumber(point.value) / Math.max(1, toNumber(initialCash)) - 1) * 100,
+        ]),
+      ),
+    [equityPoints, initialCash],
+  );
+  const dailyMap = useMemo(
+    () => new Map(dailyPositions.map((snapshot) => [snapshot.date, snapshot])),
+    [dailyPositions],
+  );
+
   if (candles.length === 0) {
     return <Notice text="暂无K线数据" />;
   }
 
-  const dates = candles.map((candle) => candle.date);
-  const buyPoints = trades
-    .filter((trade) => trade.side === "buy")
-    .map((trade) => tradeToChartPoint(trade, dates))
-    .filter((point): point is TradeChartPoint => point !== null);
-  const sellPoints = trades
-    .filter((trade) => trade.side !== "buy")
-    .map((trade) => tradeToChartPoint(trade, dates))
-    .filter((point): point is TradeChartPoint => point !== null);
-  const strategyReturnByDate = new Map(
-    equityPoints.map((point) => [
-      point.date,
-      (toNumber(point.value) / Math.max(1, toNumber(initialCash)) - 1) * 100,
-    ]),
-  );
-  const dailyMap = new Map(dailyPositions.map((snapshot) => [snapshot.date, snapshot]));
-  const option: EChartsOption = {
-    animation: false,
-    color: ["#16a34a", "#dc2626"],
-    grid: { left: 48, right: 48, top: 24, bottom: 42 },
-    tooltip: {
-      trigger: "axis",
-      axisPointer: { type: "cross" },
-      borderColor: "#2563eb",
-      formatter: (params: unknown) =>
-        formatKlineTooltip(params, candles, trades, strategyReturnByDate, dailyMap),
-    },
-    xAxis: {
-      type: "category",
-      data: dates,
-      boundaryGap: true,
-      axisLine: { lineStyle: { color: "#d4d4d8" } },
-      axisLabel: { color: "#71717a", fontSize: 10 },
-      splitLine: { show: true, lineStyle: { color: "#e4e4e7" } },
-    },
-    yAxis: {
-      type: "value",
-      scale: true,
-      axisLabel: { color: "#71717a", fontSize: 10 },
-      splitLine: { lineStyle: { color: "#e4e4e7" } },
-    },
-    dataZoom: [
-      { type: "inside", start: 0, end: 100 },
-      { type: "slider", height: 18, bottom: 8, start: 0, end: 100 },
-    ],
-    series: [
-      {
-        name: "K线",
-        type: "candlestick",
-        data: candles.map((candle) => [
-          toNumber(candle.open),
-          toNumber(candle.close),
-          toNumber(candle.low),
-          toNumber(candle.high),
-        ]),
-        itemStyle: {
-          color: "#16a34a",
-          color0: "#dc2626",
-          borderColor: "#16a34a",
-          borderColor0: "#dc2626",
-        },
-      },
-      {
-        name: "买入",
-        type: "scatter",
-        symbol: "triangle",
-        symbolSize: 14,
-        z: 20,
-        label: {
-          show: true,
-          formatter: "B",
-          position: "bottom",
-          color: "#16a34a",
-          fontSize: 11,
-          fontWeight: 700,
-        },
-        itemStyle: { color: "#16a34a" },
-        data: buyPoints.map((point) => point.value),
-      },
-      {
-        name: "卖出",
-        type: "scatter",
-        symbol: "triangle",
-        symbolRotate: 180,
-        symbolSize: 14,
-        z: 20,
-        label: {
-          show: true,
-          formatter: "S",
-          position: "top",
-          color: "#dc2626",
-          fontSize: 11,
-          fontWeight: 700,
-        },
-        itemStyle: { color: "#dc2626" },
-        data: sellPoints.map((point) => point.value),
-      },
-    ],
-  };
+  const fallbackIndex = candles.length - 1;
+  const index =
+    activeIndex !== null && activeIndex >= 0 && activeIndex < candles.length
+      ? activeIndex
+      : fallbackIndex;
+  const activeCandle = candles[index];
+  const activeDate = activeCandle.date;
+  const strategyReturn = strategyReturnByDate.get(activeDate);
+  const snapshot = dailyMap.get(activeDate);
+  const dayTrades = trades.filter((trade) => trade.trade_datetime.startsWith(activeDate));
+  const buyCount = dayTrades.filter((trade) => trade.side === "buy").length;
+  const sellCount = dayTrades.length - buyCount;
 
   return (
     <section className="rounded-md border border-zinc-200 p-3">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="text-xs font-semibold text-zinc-800">{title}</div>
+        <div className="min-w-0">
+          <div className="text-xs font-semibold text-zinc-800">{title}</div>
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-zinc-500">
+            <span>{formatTooltipDate(activeDate)}</span>
+            <span>
+              策略收益: {strategyReturn === undefined ? "-" : `${formatSigned(strategyReturn)}%`}
+            </span>
+            <span>当日收益: {snapshot ? formatMoney(snapshot.daily_pnl) : "-"}</span>
+            <span>开: {activeCandle.open}</span>
+            <span>高: {activeCandle.high}</span>
+            <span>低: {activeCandle.low}</span>
+            <span>收: {activeCandle.close}</span>
+            <span>买入: {buyCount}</span>
+            <span>卖出: {sellCount}</span>
+          </div>
+        </div>
         <div className="flex items-center gap-3 text-[11px] text-zinc-500">
           <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-600" />买入</span>
           <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-600" />卖出</span>
         </div>
       </div>
-      <EChartsPanel option={option} height={360} ariaLabel={title} />
+      <LightweightKlineChart
+        ariaLabel={title}
+        candles={chartCandles}
+        className="w-full min-w-[760px]"
+        enablePriceLineActions
+        height={360}
+        markers={tradeMarkers}
+        showMovingAverages={false}
+        onActiveCandleChange={(_, nextIndex) => setActiveIndex(nextIndex)}
+      />
     </section>
   );
 }
@@ -2144,17 +2118,18 @@ function tradesForSeries(
   return matched.length > 0 ? matched : trades;
 }
 
-function tradeToChartPoint(
+function tradeToKlineMarker(
   trade: StrategyTradeRecord,
   candleDates: string[],
-): TradeChartPoint | null {
+): LightweightKlineMarker | null {
   const alignedDate = alignTradeDateToCandle(trade.trade_datetime.slice(0, 10), candleDates);
   if (!alignedDate) {
     return null;
   }
   return {
-    trade,
-    value: [alignedDate, toNumber(trade.price)],
+    date: alignedDate,
+    side: trade.side === "buy" ? "buy" : "sell",
+    text: trade.side === "buy" ? "B" : "S",
   };
 }
 
@@ -2231,36 +2206,6 @@ function formatReturnTooltip(
     tooltipRow("#65a30d", "当日盈亏", snapshot ? formatMoney(snapshot.daily_pnl) : "-"),
     tooltipRow("#0891b2", "当日开仓", String(buyCount)),
     tooltipRow("#7c3aed", "当日平仓", String(sellCount)),
-    `</div>`,
-  ].join("");
-}
-
-function formatKlineTooltip(
-  params: unknown,
-  candles: StrategyMarketCandle[],
-  trades: StrategyTradeRecord[],
-  strategyReturnByDate: Map<string, number>,
-  dailyMap: Map<string, StrategyDailyPortfolioSnapshot>,
-): string {
-  const tooltipParams = toTooltipParams(params);
-  const first = tooltipParams[0];
-  const index = first?.dataIndex ?? 0;
-  const date = String(first?.axisValueLabel ?? first?.axisValue ?? candles[index]?.date ?? "");
-  const candle = candles.find((item) => item.date === date) ?? candles[index];
-  const dayTrades = trades.filter((trade) => trade.trade_datetime.startsWith(date));
-  const strategyReturn = strategyReturnByDate.get(date);
-  const snapshot = dailyMap.get(date);
-  return [
-    `<div style="min-width:180px;font-size:12px;line-height:1.6;color:#27272a">`,
-    `<div style="margin-bottom:4px;color:#52525b">${formatTooltipDate(date)}</div>`,
-    tooltipRow("#2563eb", "策略收益", strategyReturn === undefined ? "-" : `${formatSigned(strategyReturn)}%`),
-    tooltipRow("#65a30d", "当日收益", snapshot ? formatMoney(snapshot.daily_pnl) : "-"),
-    tooltipRow("#52525b", "开盘", candle?.open ?? "-"),
-    tooltipRow("#52525b", "最高", candle?.high ?? "-"),
-    tooltipRow("#52525b", "最低", candle?.low ?? "-"),
-    tooltipRow("#52525b", "收盘", candle?.close ?? "-"),
-    tooltipRow("#16a34a", "买入", String(dayTrades.filter((trade) => trade.side === "buy").length)),
-    tooltipRow("#dc2626", "卖出", String(dayTrades.filter((trade) => trade.side !== "buy").length)),
     `</div>`,
   ].join("");
 }

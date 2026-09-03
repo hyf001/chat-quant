@@ -1,5 +1,6 @@
 export * from "../types/agentRuntime";
 export * from "../types/backtests";
+export * from "./market";
 export * from "./stockPools";
 export * from "./strategies";
 export {

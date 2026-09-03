@@ -43,6 +43,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { EmptyState, LoadingState } from "@/shared/components";
+import { StockHoverCard } from "@/shared/components/stockPreview";
 import {
   addPoolStock,
   createStockPool,
@@ -608,10 +609,22 @@ export function StockPoolsPage({ project }: StockPoolsPageProps) {
                     ? stockRows.map((stock) => (
                         <TableRow key={stock.id}>
                           <TableCell className="font-mono text-xs font-bold text-ink">
-                            {stock.symbol}
+                            <StockHoverCard symbol={stock.symbol}>
+                              <span className="text-brandBlue underline-offset-2 hover:underline">
+                                {stock.symbol}
+                              </span>
+                            </StockHoverCard>
                           </TableCell>
                           <TableCell className="text-sm text-graphite">
-                            {stock.name || "-"}
+                            {stock.name ? (
+                              <StockHoverCard symbol={stock.symbol}>
+                                <span className="underline-offset-2 hover:text-brandBlue hover:underline">
+                                  {stock.name}
+                                </span>
+                              </StockHoverCard>
+                            ) : (
+                              "-"
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
