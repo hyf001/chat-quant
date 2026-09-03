@@ -14,6 +14,7 @@ from app.api.v1 import (
     notebook_api,
     project_api,
     runtime_api,
+    stock_pool_api,
     strategy_api,
 )
 
@@ -35,4 +36,5 @@ api_router.include_router(
 api_router.include_router(notebook_api.router, prefix="/notebooks", tags=["notebooks"])
 api_router.include_router(project_api.router, prefix="/projects", tags=["projects"])
 api_router.include_router(runtime_api.router, prefix="/runtime", tags=["runtime"])
+api_router.include_router(stock_pool_api.router, prefix="/stock-pools", tags=["stock-pools"])
 api_router.include_router(strategy_api.router, tags=["strategies"])

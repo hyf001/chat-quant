@@ -22,6 +22,7 @@ from app.model.config import model_provider as model_provider_model  # noqa: F40
 from app.model.dataset import dataset as dataset_model  # noqa: F401
 from app.model.job_runtime import job_runtime as job_runtime_model  # noqa: F401
 from app.model.project import project as project_model  # noqa: F401
+from app.model.stock_pool import stock_pool as stock_pool_model  # noqa: F401
 from app.model.strategy import strategy as strategy_model  # noqa: F401
 
 _SCHEMA_LOCK = Lock()

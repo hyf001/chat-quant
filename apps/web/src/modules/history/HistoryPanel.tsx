@@ -3,6 +3,7 @@ import {
   BarChart3,
   ChevronsUpDown,
   CircleHelp,
+  Database,
   FileText,
   Folder,
   FolderOpen,
@@ -172,6 +173,16 @@ export function HistoryPanel({
           >
             <FileText className="h-4 w-4" />
             <span>策略</span>
+          </Button>
+          <Button
+            className="mt-1 w-full justify-start"
+            size="sm"
+            variant={activeRoute === "stock-pools" ? "default" : "ghost"}
+            type="button"
+            onClick={() => onNavigateRoute("stock-pools")}
+          >
+            <Database className="h-4 w-4" />
+            <span>股票池</span>
           </Button>
           <Button
             className="mt-1 w-full justify-start"

@@ -10,6 +10,7 @@ import { ConversationShell } from "../modules/conversation";
 import { ProjectFilesPanel } from "../modules/files";
 import { HistoryPanel } from "../modules/history";
 import { NotebookPage } from "../modules/notebook";
+import { StockPoolsPage } from "../modules/stockPool";
 import { StrategiesPage, StrategyDeploymentsPage } from "../modules/strategy";
 import { WorkspaceLayout } from "../modules/workspace";
 import {
@@ -42,6 +43,7 @@ import type { PrimaryRoute } from "../shared/routes";
 const routePaths: Record<PrimaryRoute, string> = {
   "new-task": "/tasks/new",
   notebooks: "/notebooks",
+  "stock-pools": "/stock-pools",
   strategies: "/strategies",
   "strategy-deployments": "/strategy-deployments",
   settings: "/settings",
@@ -479,6 +481,8 @@ export function WorkbenchPage() {
           />
         ) : activeRoute === "notebooks" ? (
           <NotebookPage project={activeProject} />
+        ) : activeRoute === "stock-pools" ? (
+          <StockPoolsPage project={activeProject} />
         ) : activeRoute === "strategies" ? (
           <StrategiesPage project={activeProject} />
         ) : activeRoute === "strategy-deployments" ? (
@@ -504,7 +508,9 @@ export function WorkbenchPage() {
         ) : null
       }
       insight={
-        activeRoute === "notebooks" ? null : <ProjectFilesPanel project={activeProject} />
+        activeRoute === "notebooks" || activeRoute === "stock-pools" ? null : (
+          <ProjectFilesPanel project={activeProject} />
+        )
       }
       contentClassName={activeRoute === "notebooks" ? "p-0" : undefined}
     />
@@ -582,6 +588,12 @@ function routeFromPath(pathname: string): PrimaryRoute {
   }
   if (pathname === routePaths.notebooks || pathname.startsWith(`${routePaths.notebooks}/`)) {
     return "notebooks";
+  }
+  if (
+    pathname === routePaths["stock-pools"] ||
+    pathname.startsWith(`${routePaths["stock-pools"]}/`)
+  ) {
+    return "stock-pools";
   }
   return pathname.endsWith(routePaths.strategies) ? "strategies" : "new-task";
 }

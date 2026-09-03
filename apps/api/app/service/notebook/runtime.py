@@ -322,7 +322,7 @@ def _prepare_ipython_startup(runtime_id: str) -> Path:
     ipython_dir = _runtime_dir() / f"ipython-{runtime_id}"
     startup_dir = ipython_dir / "profile_default" / "startup"
     startup_dir.mkdir(parents=True, exist_ok=True)
-    startup_file = startup_dir / "00-chatq-dataset.py"
+    startup_file = startup_dir / "00-chatq-python-api.py"
     startup_file.write_text(
         "\n".join(
             [
@@ -333,11 +333,27 @@ def _prepare_ipython_startup(runtime_id: str) -> Path:
                 "    preview_dataset,",
                 "    query_dataset,",
                 ")",
+                "from app.service.stock_pool.python_api import (",
+                "    add_pool_stocks,",
+                "    get_stock_pool,",
+                "    list_pool_stocks,",
+                "    list_stock_pools,",
+                "    stock_pool_symbols,",
+                "    stock_pool_symbols_by_tag,",
+                "    stock_pool_tags,",
+                ")",
                 "chatq = SimpleNamespace(",
                 "    list_datasets=list_datasets,",
                 "    describe_dataset=describe_dataset,",
                 "    preview_dataset=preview_dataset,",
                 "    query_dataset=query_dataset,",
+                "    add_pool_stocks=add_pool_stocks,",
+                "    list_stock_pools=list_stock_pools,",
+                "    get_stock_pool=get_stock_pool,",
+                "    list_pool_stocks=list_pool_stocks,",
+                "    stock_pool_symbols=stock_pool_symbols,",
+                "    stock_pool_tags=stock_pool_tags,",
+                "    stock_pool_symbols_by_tag=stock_pool_symbols_by_tag,",
                 ")",
                 "",
             ]
