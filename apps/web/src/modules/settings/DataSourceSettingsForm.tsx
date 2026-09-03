@@ -148,6 +148,9 @@ const mindgoSourceUiMeta: Record<string, MindgoSourceUiMeta> = {
   a_index_daily_price: {
     badge: "指数日行情",
   },
+  a_stock_snapshot_info: {
+    badge: "1018 快照维表",
+  },
 };
 const syncInstanceStatusOptions: Array<{ value: SyncInstanceStatusFilter; label: string }> = [
   { value: "all", label: "全部" },
@@ -974,6 +977,7 @@ function StorageSummary({
   compact?: boolean;
   onOpen?: () => void;
 }) {
+  const isSnapshot = isSnapshotStorage(storage);
   if (compact) {
     return (
       <span className="absolute right-2 top-2 z-10">
@@ -987,7 +991,7 @@ function StorageSummary({
             onOpen?.();
           }}
         >
-          存储
+          {isSnapshot ? "快照" : "存储"}
         </Button>
       </span>
     );
@@ -1001,10 +1005,16 @@ function StorageSummary({
       </div>
       <div className="min-w-0 truncate font-mono text-[11px] text-ink">{storage.path}</div>
       <div className="flex flex-wrap gap-1.5">
-        <StorageBadge label="分区字段" value={storage.partitioned_by.join(", ") || "-"} />
-        <StorageBadge label="分区数量" value={String(storage.partition_count)} />
-        <StorageBadge label="最小分区" value={storage.min_partition ?? "-"} />
-        <StorageBadge label="最大分区" value={storage.max_partition ?? "-"} />
+        {isSnapshot ? (
+          <StorageBadge label="存储类型" value="快照文件" />
+        ) : (
+          <>
+            <StorageBadge label="分区字段" value={storage.partitioned_by.join(", ")} />
+            <StorageBadge label="分区数量" value={String(storage.partition_count)} />
+            <StorageBadge label="最小分区" value={storage.min_partition ?? "-"} />
+            <StorageBadge label="最大分区" value={storage.max_partition ?? "-"} />
+          </>
+        )}
       </div>
     </div>
   );
@@ -1020,6 +1030,7 @@ function SourceStorageDialog({
   onClose: () => void;
 }) {
   const partitionRange = partitionRangeText(storage);
+  const isSnapshot = isSnapshotStorage(storage);
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -1038,11 +1049,17 @@ function SourceStorageDialog({
           </div>
           <div className="grid grid-cols-2 gap-2">
             <StorageBadge label="格式" value={storage.format} />
-            <StorageBadge label="分区数量" value={String(storage.partition_count)} />
-            <StorageBadge label="最小分区" value={storage.min_partition ?? "-"} />
-            <StorageBadge label="最大分区" value={storage.max_partition ?? "-"} />
-            <StorageBadge label="分区字段" value={storage.partitioned_by.join(", ") || "-"} />
-            <StorageBadge label="分区范围" value={partitionRange || "-"} />
+            {isSnapshot ? (
+              <StorageBadge label="存储类型" value="快照文件" />
+            ) : (
+              <>
+                <StorageBadge label="分区数量" value={String(storage.partition_count)} />
+                <StorageBadge label="最小分区" value={storage.min_partition ?? "-"} />
+                <StorageBadge label="最大分区" value={storage.max_partition ?? "-"} />
+                <StorageBadge label="分区字段" value={storage.partitioned_by.join(", ")} />
+                <StorageBadge label="分区范围" value={partitionRange || "-"} />
+              </>
+            )}
           </div>
         </div>
         <DialogFooter className="border-t p-4">
@@ -1072,6 +1089,10 @@ function partitionRangeText(storage: MindgoSourceStorageSpec): string {
     return storage.min_partition;
   }
   return `${storage.min_partition}..${storage.max_partition}`;
+}
+
+function isSnapshotStorage(storage: MindgoSourceStorageSpec): boolean {
+  return storage.partitioned_by.length === 0 && storage.path.endsWith(".parquet");
 }
 
 function TextInput({

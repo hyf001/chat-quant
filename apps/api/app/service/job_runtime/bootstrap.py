@@ -22,6 +22,9 @@ def register_default_job_runtime_events(
     from app.service.datasource.mindgo.stock_a_daily_valuation_metrics.job import (
         register_stock_a_daily_valuation_metrics_job_runtime_handlers,
     )
+    from app.service.datasource.mindgo.stock_a_snapshot_info.job import (
+        register_stock_a_snapshot_info_job_runtime_handlers,
+    )
     from app.service.strategy.strategy_deployment_job import (
         register_strategy_deployment_job_runtime_handlers,
     )
@@ -30,6 +33,7 @@ def register_default_job_runtime_events(
     register_stock_a_adjust_factor_job_runtime_handlers(registry)
     register_stock_a_daily_price_job_runtime_handlers(registry)
     register_stock_a_daily_valuation_metrics_job_runtime_handlers(registry)
+    register_stock_a_snapshot_info_job_runtime_handlers(registry)
     register_strategy_deployment_job_runtime_handlers(registry)
     return registry
 

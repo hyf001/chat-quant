@@ -9,6 +9,9 @@ from app.service.datasource.mindgo.stock_a_daily_price.adaptor import stock_a_da
 from app.service.datasource.mindgo.stock_a_daily_valuation_metrics.adaptor import (
     stock_a_daily_valuation_metrics_schema,
 )
+from app.service.datasource.mindgo.stock_a_snapshot_info.adaptor import (
+    stock_a_snapshot_info_schema,
+)
 from fastapi.testclient import TestClient
 
 
@@ -21,6 +24,7 @@ def test_mindgo_api_lists_first_source(client: TestClient) -> None:
     assert payload["sources"][1]["id"] == "a_stock_daily_adjust_factor"
     assert payload["sources"][2]["id"] == "a_stock_daily_valuation_metrics"
     assert payload["sources"][3]["id"] == "a_index_daily_price"
+    assert payload["sources"][4]["id"] == "a_stock_snapshot_info"
     assert payload["sources"][0]["category_path_en"] == [
         "a",
         "stock",
@@ -140,6 +144,23 @@ def test_mindgo_api_returns_stock_valuation_metrics_schema(client: TestClient) -
         "pe_mrq",
         "pe_ttm",
     ]
+
+
+def test_mindgo_api_returns_stock_snapshot_info_schema(client: TestClient) -> None:
+    response = client.get("/api/mindgo/sources/a_stock_snapshot_info/schema")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["name"] == "A股股票信息维表"
+    assert payload["name_zh"] == "A股股票信息维表"
+    assert payload["name_en"] == "a_stock_snapshot_info"
+    assert payload["category_path"] == ["A股", "股票", "快照", "信息维表"]
+    assert payload["category_path_en"] == ["a", "stock", "snapshot", "info"]
+    assert payload["mindgo_function"] == "query_index"
+    assert payload["storage"]["path"] == "data/mindgo/parquet/a_stock_snapshot_info/data.parquet"
+    assert payload["storage"]["format"] == "parquet"
+    assert payload["storage"]["partitioned_by"] == []
+    assert [field["name"] for field in payload["result_schema"]] == ["symbol", "name"]
 
 
 def test_mindgo_jupyter_runner_finds_bundled_supermind_mcp() -> None:
@@ -437,6 +458,45 @@ def test_mindgo_sync_supports_stock_valuation_metrics(
     payload = response.json()
     assert payload["instance"]["job_type"] == "mindgo.a_stock_daily_valuation_metrics.sync"
     assert payload["instance"]["payload"]["params"] == {"fields": ["pe_ttm", "pb_mrq"]}
+
+
+def test_mindgo_sync_supports_stock_snapshot_info(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    class FakeAdapter:
+        source_id = "a_stock_snapshot_info"
+
+        async def get_source_schema(self):
+            return stock_a_snapshot_info_schema()
+
+        async def query_from_mindgo(self, request):
+            raise AssertionError("query_from_mindgo should not run")
+
+        async def sync(self, request):
+            raise AssertionError("sync should not run")
+
+    monkeypatch.setattr(
+        mindgo_service,
+        "_adapter_for_source",
+        lambda source_id, allow_missing_runner=False: FakeAdapter(),
+    )
+
+    response = client.post(
+        "/api/mindgo/sources/a_stock_snapshot_info/sync",
+        json={
+            "trigger_start_date": "2026-08-13",
+            "trigger_end_date": "2026-08-13",
+            "trigger_time": "10:30:15",
+            "write_mode": "overwrite",
+            "params": {},
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["instance"]["job_type"] == "mindgo.a_stock_snapshot_info.sync"
+    assert payload["instance"]["payload"]["params"] == {}
 
 
 def test_mindgo_sync_supports_index_daily_price(

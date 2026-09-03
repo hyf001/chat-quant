@@ -18,6 +18,14 @@ def test_mindgo_source_storage_builds_source_partition_path() -> None:
     )
 
 
+def test_mindgo_source_storage_builds_source_snapshot_path() -> None:
+    storage = MindgoSourceStorage("/tmp/mindgo-root")
+
+    path = storage.snapshot_path("a_stock_snapshot_info")
+
+    assert path.as_posix() == "/tmp/mindgo-root/a_stock_snapshot_info/data.parquet"
+
+
 def test_mindgo_source_partition_path_rejects_unsafe_segments() -> None:
     with pytest.raises(ValueError):
         mindgo_source_partition_path(

@@ -18,6 +18,14 @@ class MindgoSourceStorage:
     def source_root(self, source_id: str) -> Path:
         return self.storage_root / _safe_path_segment(source_id)
 
+    def snapshot_path(
+        self,
+        source_id: str,
+        *,
+        filename: str = DEFAULT_MINDGO_PARTITION_FILENAME,
+    ) -> Path:
+        return self.source_root(source_id) / _safe_path_segment(filename)
+
     def partition_path(
         self,
         source_id: str,

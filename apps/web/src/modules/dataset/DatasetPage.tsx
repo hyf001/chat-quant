@@ -122,7 +122,10 @@ const defaultNamingOptions: DatasetNamingOptionsResponse = {
     { value: "股票", label: "股票", name_en: "stock" },
     { value: "指数", label: "指数", name_en: "index" },
   ],
-  frequencies: [{ value: "日", label: "日", name_en: "daily" }],
+  frequencies: [
+    { value: "日", label: "日", name_en: "daily" },
+    { value: "快照", label: "快照", name_en: "snapshot" },
+  ],
 };
 
 type DatasetPageProps = {

@@ -24,6 +24,7 @@ class DatasetFrequency(StrEnum):
     MONTHLY = "月"
     QUARTERLY = "季"
     YEARLY = "年"
+    SNAPSHOT = "快照"
     STATIC = "静态"
 
 
@@ -48,6 +49,7 @@ FREQUENCY_ENGLISH: dict[DatasetFrequency, str] = {
     DatasetFrequency.MONTHLY: "monthly",
     DatasetFrequency.QUARTERLY: "quarterly",
     DatasetFrequency.YEARLY: "yearly",
+    DatasetFrequency.SNAPSHOT: "snapshot",
     DatasetFrequency.STATIC: "static",
 }
 
