@@ -1,1 +1,1 @@
-export { StockHoverCard } from "./StockHoverCard";
+export { StockHoverCard, StockKlineDialog } from "./StockHoverCard";

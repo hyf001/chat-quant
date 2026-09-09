@@ -123,22 +123,14 @@ export function HistoryPanel({
       >
         <div className="border-b border-line px-4 py-4">
           <div className="flex items-center gap-3">
-            <div className="cq-brand-mark" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-              <span />
-              <span />
-              <span />
-              <span />
-              <span />
-              <span />
-            </div>
+            <img
+              className="h-9 w-9 shrink-0"
+              src="/chat-quant-logo.png"
+              alt=""
+              aria-hidden="true"
+            />
             <div className="min-w-0">
-              <div className="text-sm font-bold leading-none text-ink">Chat Quant</div>
-              <div className="mt-1 font-mono text-[10px] font-bold uppercase text-mutedText">
-                AI Quant Cockpit
-              </div>
+              <div className="cq-brand-wordmark">Chat Quant</div>
             </div>
           </div>
         </div>

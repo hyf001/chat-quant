@@ -2,7 +2,32 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.service.notebook.runtime import NotebookRuntimeRecord, _server_response
 from fastapi.testclient import TestClient
+
+
+def test_notebook_server_response_includes_same_origin_proxy_url() -> None:
+    record = NotebookRuntimeRecord(
+        runtime_id="nb_test",
+        project_id="project_test",
+        project_path="/tmp/chatq-test-project",
+        root_dir="/tmp/chatq-test-project/notebook",
+        ipython_dir="/tmp/chatq-runtime/ipython-nb_test",
+        host="127.0.0.1",
+        port=18888,
+        token="token-test",
+        pid=123,
+        process_group_id=123,
+        started_at="2026-09-04T00:00:00",
+        updated_at="2026-09-04T00:00:00",
+        status="running",
+    )
+
+    response = _server_response(record, status="running")
+
+    assert response.base_url == "http://127.0.0.1:18888"
+    assert response.proxy_base_url == "/api/notebooks/project_test/proxy"
+    assert response.url == "/api/notebooks/project_test/proxy/tree?token=token-test"
 
 
 def test_notebook_file_create_rename_and_delete(

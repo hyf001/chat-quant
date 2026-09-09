@@ -60,8 +60,12 @@ class NotebookRuntimeRecord:
         return f"http://{self.host}:{self.port}"
 
     @property
+    def proxy_base_url(self) -> str:
+        return _jupyter_base_path(self.project_id).rstrip("/")
+
+    @property
     def url(self) -> str:
-        return f"{self.base_url}/tree?token={self.token}"
+        return f"{self.proxy_base_url}/tree?token={self.token}"
 
 
 class NotebookRuntimeManager:
@@ -124,10 +128,18 @@ class NotebookRuntimeManager:
                 status="running",
                 url=record.url,
                 base_url=record.base_url,
+                proxy_base_url=record.proxy_base_url,
                 root_dir=record.root_dir,
                 pid=record.pid,
                 runtime_id=record.runtime_id,
             )
+
+    async def running_record(self, *, project_id: str) -> NotebookRuntimeRecord:
+        async with self._lock:
+            record = self._records.get(project_id)
+            if record is None or not _is_pid_running(record.pid):
+                raise NotebookRuntimeError("Jupyter Notebook is not running")
+            return record
 
     async def ensure_session(
         self,
@@ -201,6 +213,7 @@ class NotebookRuntimeManager:
             f"--ServerApp.port={port}",
             f"--ServerApp.token={token}",
             "--ServerApp.password=",
+            f"--ServerApp.base_url={_jupyter_base_path(project_id)}",
             f"--ServerApp.root_dir={root_dir}",
             "--ServerApp.open_browser=False",
             "--ServerApp.allow_origin=*",
@@ -297,11 +310,18 @@ def _server_response(
         status=status,  # type: ignore[arg-type]
         url=record.url,
         base_url=record.base_url,
+        proxy_base_url=record.proxy_base_url,
         token=record.token,
         root_dir=record.root_dir,
         pid=record.pid,
         runtime_id=record.runtime_id,
     )
+
+
+def _jupyter_base_path(project_id: str) -> str:
+    api_prefix = get_settings().api_prefix.strip("/")
+    prefix = f"/{api_prefix}" if api_prefix else ""
+    return f"{prefix}/notebooks/{urllib.parse.quote(project_id, safe='')}/proxy/"
 
 
 def _runtime_dir() -> Path:
@@ -365,7 +385,7 @@ def _prepare_ipython_startup(runtime_id: str) -> Path:
 
 def _wait_until_ready(record: NotebookRuntimeRecord) -> None:
     deadline = time.monotonic() + READY_TIMEOUT_SECONDS
-    url = f"{record.base_url}/api?token={record.token}"
+    url = f"{record.base_url}{record.proxy_base_url}/api?token={record.token}"
     while time.monotonic() < deadline:
         if not _is_pid_running(record.pid):
             raise NotebookRuntimeError("Jupyter Notebook exited before it became ready")
@@ -433,7 +453,7 @@ def _request_jupyter_json(
     body: dict[str, Any] | None = None,
 ) -> Any:
     query = urllib.parse.urlencode({"token": record.token})
-    url = f"{record.base_url}{path}?{query}"
+    url = f"{record.base_url}{record.proxy_base_url}/{path.lstrip('/')}?{query}"
     data = None
     headers = {"Accept": "application/json"}
     if body is not None:

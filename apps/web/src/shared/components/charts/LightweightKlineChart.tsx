@@ -16,7 +16,7 @@ import {
   type SeriesMarker,
   type Time,
 } from "lightweight-charts";
-import { Plus, X } from "lucide-react";
+import { Plus, Square, X } from "lucide-react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -54,11 +54,21 @@ export type LightweightKlinePriceLine = {
   color?: string;
 };
 
+export type LightweightKlinePriceBox = {
+  id: string;
+  top: number;
+  bottom: number;
+  title?: string;
+  color?: string;
+};
+
 type LightweightKlineChartProps = {
   candles: LightweightKlineCandle[];
   markers?: LightweightKlineMarker[];
   priceLines?: LightweightKlinePriceLine[];
   defaultPriceLines?: LightweightKlinePriceLine[];
+  priceBoxes?: LightweightKlinePriceBox[];
+  defaultPriceBoxes?: LightweightKlinePriceBox[];
   height: number;
   ariaLabel: string;
   className?: string;
@@ -67,6 +77,7 @@ type LightweightKlineChartProps = {
   showMovingAverages?: boolean;
   onActiveCandleChange?: (candle: LightweightKlineCandle | null, index: number | null) => void;
   onPriceLinesChange?: (priceLines: LightweightKlinePriceLine[]) => void;
+  onPriceBoxesChange?: (priceBoxes: LightweightKlinePriceBox[]) => void;
 };
 
 const upColor = "#e11d48";
@@ -79,15 +90,30 @@ const lineColors = {
 };
 const emptyMarkers: LightweightKlineMarker[] = [];
 const emptyPriceLines: LightweightKlinePriceLine[] = [];
+const emptyPriceBoxes: LightweightKlinePriceBox[] = [];
 const customLineNameValue = "__custom__";
 const defaultLineName = "价格线";
+const defaultBoxName = "箱体";
 const presetLineNames = ["价格线", "支撑线", "压力线", "止损线", "止盈线", "买入线", "卖出线", "观察线"];
+
+type ChartActionMenu = {
+  x: number;
+  y: number;
+  price: number;
+  lineId?: string;
+  boxId?: string;
+  mode: "choose" | "priceLine" | "box";
+};
+
+type BoxDragMode = "move" | "top" | "bottom";
 
 export function LightweightKlineChart({
   candles,
   markers = emptyMarkers,
   priceLines,
   defaultPriceLines = emptyPriceLines,
+  priceBoxes,
+  defaultPriceBoxes = emptyPriceBoxes,
   height,
   ariaLabel,
   className,
@@ -96,14 +122,16 @@ export function LightweightKlineChart({
   showMovingAverages = true,
   onActiveCandleChange,
   onPriceLinesChange,
+  onPriceBoxesChange,
 }: LightweightKlineChartProps) {
   const chartRef = useRef<HTMLDivElement | null>(null);
   const activePriceRef = useRef<number | null>(null);
   const activeCandleChangeRef = useRef(onActiveCandleChange);
   const activePriceLinesRef = useRef<LightweightKlinePriceLine[]>([]);
+  const activePriceBoxesRef = useRef<LightweightKlinePriceBox[]>([]);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick", Time> | null>(null);
   const priceLineRefs = useRef<IPriceLine[]>([]);
-  const refreshLinePositionsRef = useRef<() => void>(() => undefined);
+  const refreshAnnotationPositionsRef = useRef<() => void>(() => undefined);
   const coordinateToPriceRef = useRef<(coordinate: number) => number | null>(() => null);
   const suppressNextClickRef = useRef(false);
   const linePointerStartRef = useRef<{
@@ -112,21 +140,38 @@ export function LightweightKlineChart({
     clientY: number;
     moved: boolean;
   } | null>(null);
+  const boxPointerStartRef = useRef<{
+    id: string;
+    mode: BoxDragMode;
+    clientX: number;
+    clientY: number;
+    startTopPrice: number;
+    startBottomPrice: number;
+    startTopY: number;
+    startBottomY: number;
+    moved: boolean;
+  } | null>(null);
   const [internalPriceLines, setInternalPriceLines] =
     useState<LightweightKlinePriceLine[]>(defaultPriceLines);
-  const [actionMenu, setActionMenu] = useState<{
-    x: number;
-    y: number;
-    price: number;
-    lineId?: string;
-  } | null>(null);
+  const [internalPriceBoxes, setInternalPriceBoxes] =
+    useState<LightweightKlinePriceBox[]>(defaultPriceBoxes);
+  const [actionMenu, setActionMenu] = useState<ChartActionMenu | null>(null);
   const [lineNameSelection, setLineNameSelection] = useState(defaultLineName);
   const [customLineName, setCustomLineName] = useState("");
+  const [boxTitle, setBoxTitle] = useState(defaultBoxName);
+  const [boxTop, setBoxTop] = useState("");
+  const [boxBottom, setBoxBottom] = useState("");
   const [draggingLineId, setDraggingLineId] = useState<string | null>(null);
+  const [draggingBoxId, setDraggingBoxId] = useState<string | null>(null);
+  const [draggingBoxMode, setDraggingBoxMode] = useState<BoxDragMode | null>(null);
   const [linePositions, setLinePositions] = useState<Array<{ id: string; y: number }>>([]);
+  const [boxPositions, setBoxPositions] = useState<
+    Array<{ id: string; top: number; bottom: number }>
+  >([]);
   const chartData = useMemo(() => toLightweightData(candles), [candles]);
   const chartMarkers = useMemo(() => toLightweightMarkers(markers), [markers]);
   const activePriceLines = priceLines ?? internalPriceLines;
+  const activePriceBoxes = priceBoxes ?? internalPriceBoxes;
   const latestClose = candles.at(-1)?.close;
 
   useEffect(() => {
@@ -138,7 +183,22 @@ export function LightweightKlineChart({
   }, [activePriceLines]);
 
   useEffect(() => {
+    activePriceBoxesRef.current = activePriceBoxes;
+  }, [activePriceBoxes]);
+
+  useEffect(() => {
     if (!actionMenu) {
+      return;
+    }
+    if (actionMenu.mode === "box") {
+      const box = activePriceBoxes.find((item) => item.id === actionMenu.boxId);
+      const defaultHalfHeight = Math.max(Math.abs(actionMenu.price) * 0.03, 0.03);
+      setBoxTitle(box?.title ?? defaultBoxName);
+      setBoxTop(formatEditablePrice(box?.top ?? actionMenu.price + defaultHalfHeight));
+      setBoxBottom(formatEditablePrice(box?.bottom ?? actionMenu.price - defaultHalfHeight));
+      return;
+    }
+    if (actionMenu.mode !== "priceLine") {
       return;
     }
     const lineTitle =
@@ -150,7 +210,7 @@ export function LightweightKlineChart({
       setLineNameSelection(customLineNameValue);
       setCustomLineName(lineTitle);
     }
-  }, [actionMenu, activePriceLines]);
+  }, [actionMenu, activePriceBoxes, activePriceLines]);
 
   const updatePriceLines = useCallback(
     (nextPriceLines: LightweightKlinePriceLine[]) => {
@@ -160,6 +220,16 @@ export function LightweightKlineChart({
       onPriceLinesChange?.(nextPriceLines);
     },
     [onPriceLinesChange, priceLines],
+  );
+
+  const updatePriceBoxes = useCallback(
+    (nextPriceBoxes: LightweightKlinePriceBox[]) => {
+      if (priceBoxes === undefined) {
+        setInternalPriceBoxes(nextPriceBoxes);
+      }
+      onPriceBoxesChange?.(nextPriceBoxes);
+    },
+    [onPriceBoxesChange, priceBoxes],
   );
 
   const handleSavePriceLine = useCallback(() => {
@@ -204,6 +274,45 @@ export function LightweightKlineChart({
     updatePriceLines,
   ]);
 
+  const handleSavePriceBox = useCallback(() => {
+    if (!actionMenu) {
+      return;
+    }
+    const firstPrice = Number.parseFloat(boxTop);
+    const secondPrice = Number.parseFloat(boxBottom);
+    if (!Number.isFinite(firstPrice) || !Number.isFinite(secondPrice)) {
+      return;
+    }
+    const { top, bottom } = normalizeBoxPrices(firstPrice, secondPrice);
+    const title = boxTitle.trim() || defaultBoxName;
+    if (actionMenu.boxId) {
+      updatePriceBoxes(
+        activePriceBoxes.map((box) =>
+          box.id === actionMenu.boxId
+            ? {
+                ...box,
+                bottom,
+                title,
+                top,
+              }
+            : box,
+        ),
+      );
+    } else {
+      updatePriceBoxes([
+        ...activePriceBoxes,
+        {
+          id: `price_box_${Date.now()}_${activePriceBoxes.length}`,
+          bottom,
+          color: "#2563eb",
+          title,
+          top,
+        },
+      ]);
+    }
+    setActionMenu(null);
+  }, [actionMenu, activePriceBoxes, boxBottom, boxTitle, boxTop, updatePriceBoxes]);
+
   const handleRemovePriceLine = useCallback(
     (id: string) => {
       updatePriceLines(activePriceLines.filter((line) => line.id !== id));
@@ -212,10 +321,19 @@ export function LightweightKlineChart({
     [activePriceLines, updatePriceLines],
   );
 
-  const refreshLinePositions = useCallback(() => {
+  const handleRemovePriceBox = useCallback(
+    (id: string) => {
+      updatePriceBoxes(activePriceBoxes.filter((box) => box.id !== id));
+      setActionMenu(null);
+    },
+    [activePriceBoxes, updatePriceBoxes],
+  );
+
+  const refreshAnnotationPositions = useCallback(() => {
     const candleSeries = candleSeriesRef.current;
     if (!candleSeries) {
       setLinePositions([]);
+      setBoxPositions([]);
       return;
     }
     setLinePositions(
@@ -226,12 +344,28 @@ export function LightweightKlineChart({
         })
         .filter((line): line is { id: string; y: number } => line !== null),
     );
-  }, [activePriceLines]);
+    setBoxPositions(
+      activePriceBoxes
+        .map((box) => {
+          const topY = candleSeries.priceToCoordinate(Math.max(box.top, box.bottom));
+          const bottomY = candleSeries.priceToCoordinate(Math.min(box.top, box.bottom));
+          if (topY === null || bottomY === null) {
+            return null;
+          }
+          return {
+            id: box.id,
+            top: Math.min(Number(topY), Number(bottomY)),
+            bottom: Math.max(Number(topY), Number(bottomY)),
+          };
+        })
+        .filter((box): box is { id: string; top: number; bottom: number } => box !== null),
+    );
+  }, [activePriceBoxes, activePriceLines]);
 
   useEffect(() => {
-    refreshLinePositionsRef.current = refreshLinePositions;
-    refreshLinePositions();
-  }, [refreshLinePositions]);
+    refreshAnnotationPositionsRef.current = refreshAnnotationPositions;
+    refreshAnnotationPositions();
+  }, [refreshAnnotationPositions]);
 
   useEffect(() => {
     if (!chartRef.current) {
@@ -350,7 +484,7 @@ export function LightweightKlineChart({
       activePriceRef.current = typeof price === "number" && Number.isFinite(price) ? price : null;
       const index = candleIndexByDate.get(timeToKey(param.time));
       activeCandleChangeRef.current?.(index === undefined ? null : candles[index], index ?? null);
-      refreshLinePositionsRef.current();
+      refreshAnnotationPositionsRef.current();
     };
     const handleChartClick = (param: MouseEventParams<Time>) => {
       if (!enablePriceLineActions) {
@@ -370,17 +504,20 @@ export function LightweightKlineChart({
         return;
       }
       const clickedLine = nearestPriceLine(price, activePriceLinesRef.current);
+      const clickedBox = clickedLine ? null : nearestPriceBox(price, activePriceBoxesRef.current);
       setActionMenu({
+        boxId: clickedBox?.id,
         x: param.point.x,
         y: param.point.y,
-        price: clickedLine?.price ?? roundPrice(price),
+        mode: clickedLine ? "priceLine" : clickedBox ? "box" : "choose",
+        price: clickedLine?.price ?? clickedBox?.top ?? roundPrice(price),
         lineId: clickedLine?.id,
       });
     };
     chart.subscribeCrosshairMove(handleCrosshairMove);
     chart.subscribeClick(handleChartClick);
     chart.timeScale().fitContent();
-    window.setTimeout(() => refreshLinePositionsRef.current(), 0);
+    window.setTimeout(() => refreshAnnotationPositionsRef.current(), 0);
 
     return () => {
       chart.unsubscribeCrosshairMove(handleCrosshairMove);
@@ -418,7 +555,7 @@ export function LightweightKlineChart({
         title: priceLine.title ?? defaultLineName,
       }),
     );
-    refreshLinePositionsRef.current();
+    refreshAnnotationPositionsRef.current();
   }, [activePriceLines]);
 
   useEffect(() => {
@@ -465,10 +602,11 @@ export function LightweightKlineChart({
         const rect = chartRef.current.getBoundingClientRect();
         if (line) {
           setActionMenu({
+            lineId: line.id,
+            mode: "priceLine",
+            price: line.price,
             x: event.clientX - rect.left,
             y: event.clientY - rect.top,
-            price: line.price,
-            lineId: line.id,
           });
         }
       }
@@ -487,6 +625,93 @@ export function LightweightKlineChart({
     };
   }, [draggingLineId, updatePriceLines]);
 
+  useEffect(() => {
+    if (!draggingBoxId) {
+      return undefined;
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!chartRef.current) {
+        return;
+      }
+      const pointerStart = boxPointerStartRef.current;
+      if (!pointerStart) {
+        return;
+      }
+      const distance = Math.hypot(
+        event.clientX - pointerStart.clientX,
+        event.clientY - pointerStart.clientY,
+      );
+      if (distance > 3) {
+        pointerStart.moved = true;
+      }
+      const rect = chartRef.current.getBoundingClientRect();
+      let nextTop: number | null = null;
+      let nextBottom: number | null = null;
+
+      if (pointerStart.mode === "move") {
+        const deltaY = event.clientY - pointerStart.clientY;
+        nextTop = coordinateToPriceRef.current(pointerStart.startTopY + deltaY);
+        nextBottom = coordinateToPriceRef.current(pointerStart.startBottomY + deltaY);
+      } else {
+        const pointerPrice = coordinateToPriceRef.current(event.clientY - rect.top);
+        if (pointerStart.mode === "top") {
+          nextTop = pointerPrice;
+          nextBottom = pointerStart.startBottomPrice;
+        } else {
+          nextTop = pointerStart.startTopPrice;
+          nextBottom = pointerPrice;
+        }
+      }
+
+      if (nextTop === null || nextBottom === null) {
+        return;
+      }
+      const normalized = normalizeBoxPrices(nextTop, nextBottom);
+      updatePriceBoxes(
+        activePriceBoxesRef.current.map((box) =>
+          box.id === draggingBoxId
+            ? {
+                ...box,
+                bottom: normalized.bottom,
+                top: normalized.top,
+              }
+            : box,
+        ),
+      );
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const pointerStart = boxPointerStartRef.current;
+      if (pointerStart && !pointerStart.moved && chartRef.current) {
+        const box = activePriceBoxesRef.current.find((item) => item.id === pointerStart.id);
+        const rect = chartRef.current.getBoundingClientRect();
+        if (box) {
+          setActionMenu({
+            boxId: box.id,
+            mode: "box",
+            price: box.top,
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top,
+          });
+        }
+      }
+      boxPointerStartRef.current = null;
+      setDraggingBoxId(null);
+      setDraggingBoxMode(null);
+      window.setTimeout(() => {
+        suppressNextClickRef.current = false;
+      }, 0);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp, { once: true });
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [draggingBoxId, updatePriceBoxes]);
+
   const handleLinePointerDown = (event: ReactPointerEvent<HTMLButtonElement>, id: string) => {
     event.preventDefault();
     event.stopPropagation();
@@ -501,6 +726,52 @@ export function LightweightKlineChart({
     setDraggingLineId(id);
   };
 
+  const handleBoxPointerDown = (
+    event: ReactPointerEvent<HTMLElement>,
+    id: string,
+    mode: BoxDragMode,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const box = activePriceBoxes.find((item) => item.id === id);
+    const position = boxPositions.find((item) => item.id === id);
+    if (!box || !position) {
+      return;
+    }
+    suppressNextClickRef.current = true;
+    boxPointerStartRef.current = {
+      id,
+      mode,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      startTopPrice: Math.max(box.top, box.bottom),
+      startBottomPrice: Math.min(box.top, box.bottom),
+      startTopY: position.top,
+      startBottomY: position.bottom,
+      moved: false,
+    };
+    setActionMenu(null);
+    setDraggingBoxId(id);
+    setDraggingBoxMode(mode);
+  };
+
+  const openPriceLineForm = () => {
+    if (!actionMenu) {
+      return;
+    }
+    setActionMenu({ ...actionMenu, mode: "priceLine" });
+  };
+
+  const openPriceBoxForm = () => {
+    if (!actionMenu) {
+      return;
+    }
+    setActionMenu({ ...actionMenu, mode: "box" });
+  };
+
+  const actionMenuMaxLeft = Math.max(8, (chartRef.current?.clientWidth ?? 720) - 232);
+  const actionMenuMaxTop = Math.max(8, height - (actionMenu?.mode === "choose" ? 150 : 250));
+
   return (
     <div className={cn("relative min-w-0", className)}>
       <div
@@ -509,6 +780,56 @@ export function LightweightKlineChart({
         role="img"
         style={{ height }}
       />
+      {enablePriceLineActions
+        ? boxPositions.map((position) => {
+            const box = activePriceBoxes.find((item) => item.id === position.id);
+            if (!box) {
+              return null;
+            }
+            return (
+              <div
+                key={box.id}
+                aria-label={`移动箱体 ${box.title ?? defaultBoxName}`}
+                className={cn(
+                  "absolute left-3 right-16 z-[2] cursor-move select-none rounded border border-blue-600/70 bg-blue-500/10 touch-none",
+                  draggingBoxId === box.id ? "border-blue-700 bg-blue-500/20 shadow-sm" : null,
+                )}
+                onPointerDown={(event) => handleBoxPointerDown(event, box.id, "move")}
+                role="button"
+                style={{
+                  height: Math.max(10, position.bottom - position.top),
+                  top: position.top,
+                }}
+                tabIndex={0}
+              >
+                <button
+                  aria-label={`调整${box.title ?? defaultBoxName}上沿`}
+                  className={cn(
+                    "absolute left-0 right-0 top-0 h-3 -translate-y-1/2 cursor-ns-resize rounded-t border-y border-blue-600/40 bg-blue-600/10 opacity-0 transition-opacity hover:opacity-100",
+                    draggingBoxId === box.id && draggingBoxMode === "top" ? "opacity-100" : null,
+                  )}
+                  onPointerDown={(event) => handleBoxPointerDown(event, box.id, "top")}
+                  type="button"
+                />
+                <button
+                  aria-label={`调整${box.title ?? defaultBoxName}下沿`}
+                  className={cn(
+                    "absolute bottom-0 left-0 right-0 h-3 translate-y-1/2 cursor-ns-resize rounded-b border-y border-blue-600/40 bg-blue-600/10 opacity-0 transition-opacity hover:opacity-100",
+                    draggingBoxId === box.id && draggingBoxMode === "bottom"
+                      ? "opacity-100"
+                      : null,
+                  )}
+                  onPointerDown={(event) => handleBoxPointerDown(event, box.id, "bottom")}
+                  type="button"
+                />
+                <div className="pointer-events-none absolute left-2 top-1 rounded border border-blue-600/30 bg-white/80 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 shadow-sm">
+                  {box.title ?? defaultBoxName} {formatPrice(Math.max(box.top, box.bottom))}-
+                  {formatPrice(Math.min(box.top, box.bottom))}
+                </div>
+              </div>
+            );
+          })
+        : null}
       {enablePriceLineActions
         ? linePositions.map((position) => {
             const line = activePriceLines.find((item) => item.id === position.id);
@@ -540,96 +861,224 @@ export function LightweightKlineChart({
         : null}
       {enablePriceLineActions && actionMenu ? (
         <div
-          className="absolute z-20 w-48 rounded-md border border-line bg-white p-2 text-xs shadow-lg"
+          className="absolute z-20 w-56 rounded-md border border-line bg-white p-2 text-xs shadow-lg"
           style={{
-            left: Math.min(Math.max(8, actionMenu.x + 8), 520),
-            top: Math.max(8, actionMenu.y - 12),
+            left: Math.min(Math.max(8, actionMenu.x + 8), actionMenuMaxLeft),
+            top: Math.min(Math.max(8, actionMenu.y - 12), actionMenuMaxTop),
           }}
         >
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="font-semibold text-ink">
-              {actionMenu.lineId ? "价格线" : "添加价格线"}
-            </span>
-            <span className="font-mono text-[11px] text-mutedText">
-              {formatPrice(actionMenu.price)}
-            </span>
-          </div>
-          <div className="space-y-2">
-            <select
-              className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs shadow-sm outline-none focus:ring-2 focus:ring-ring/30"
-              onChange={(event) => setLineNameSelection(event.target.value)}
-              value={lineNameSelection}
-            >
-              {presetLineNames.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-              <option value={customLineNameValue}>自定义</option>
-            </select>
-            {lineNameSelection === customLineNameValue ? (
-              <Input
-                className="h-8 text-xs"
-                onChange={(event) => setCustomLineName(event.target.value)}
-                placeholder="输入名称"
-                value={customLineName}
-              />
-            ) : null}
-          </div>
-          {actionMenu.lineId ? (
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              <Button
-                className="h-8 text-xs"
-                onClick={handleSavePriceLine}
-                size="sm"
-                type="button"
-                variant="default"
-              >
-                保存
-              </Button>
-              <Button
-                className="h-8 text-xs"
-                onClick={() => setActionMenu(null)}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                取消
-              </Button>
-              <Button
-                className="h-8 gap-1 text-xs"
-                onClick={() => handleRemovePriceLine(actionMenu.lineId as string)}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                <X className="h-3.5 w-3.5" />
-                删除
-              </Button>
-            </div>
-          ) : (
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <Button
-                className="h-8 justify-start gap-2 text-xs"
-                onClick={handleSavePriceLine}
-                size="sm"
-                type="button"
-                variant="default"
-              >
-                <Plus className="h-4 w-4" />
-                确定添加
-              </Button>
-              <Button
-                className="h-8 text-xs"
-                onClick={() => setActionMenu(null)}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                取消
-              </Button>
-            </div>
-          )}
+          {actionMenu.mode === "choose" ? (
+            <>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="font-semibold text-ink">添加标注</span>
+                <span className="font-mono text-[11px] text-mutedText">
+                  {formatPrice(actionMenu.price)}
+                </span>
+              </div>
+              <div className="grid gap-2">
+                <Button
+                  className="h-8 justify-start gap-2 text-xs"
+                  onClick={openPriceLineForm}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <Plus className="h-4 w-4" />
+                  价格线
+                </Button>
+                <Button
+                  className="h-8 justify-start gap-2 text-xs"
+                  onClick={openPriceBoxForm}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <Square className="h-4 w-4" />
+                  箱体
+                </Button>
+              </div>
+            </>
+          ) : null}
+
+          {actionMenu.mode === "priceLine" ? (
+            <>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="font-semibold text-ink">
+                  {actionMenu.lineId ? "价格线" : "添加价格线"}
+                </span>
+                <span className="font-mono text-[11px] text-mutedText">
+                  {formatPrice(actionMenu.price)}
+                </span>
+              </div>
+              <div className="space-y-2">
+                <select
+                  className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs shadow-sm outline-none focus:ring-2 focus:ring-ring/30"
+                  onChange={(event) => setLineNameSelection(event.target.value)}
+                  value={lineNameSelection}
+                >
+                  {presetLineNames.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                  <option value={customLineNameValue}>自定义</option>
+                </select>
+                {lineNameSelection === customLineNameValue ? (
+                  <Input
+                    className="h-8 text-xs"
+                    onChange={(event) => setCustomLineName(event.target.value)}
+                    placeholder="输入名称"
+                    value={customLineName}
+                  />
+                ) : null}
+              </div>
+              {actionMenu.lineId ? (
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <Button
+                    className="h-8 text-xs"
+                    onClick={handleSavePriceLine}
+                    size="sm"
+                    type="button"
+                    variant="default"
+                  >
+                    保存
+                  </Button>
+                  <Button
+                    className="h-8 text-xs"
+                    onClick={() => setActionMenu(null)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    取消
+                  </Button>
+                  <Button
+                    className="h-8 gap-1 text-xs"
+                    onClick={() => handleRemovePriceLine(actionMenu.lineId as string)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    删除
+                  </Button>
+                </div>
+              ) : (
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <Button
+                    className="h-8 justify-start gap-2 text-xs"
+                    onClick={handleSavePriceLine}
+                    size="sm"
+                    type="button"
+                    variant="default"
+                  >
+                    <Plus className="h-4 w-4" />
+                    确定添加
+                  </Button>
+                  <Button
+                    className="h-8 text-xs"
+                    onClick={() => setActionMenu(null)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    取消
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : null}
+
+          {actionMenu.mode === "box" ? (
+            <>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="font-semibold text-ink">
+                  {actionMenu.boxId ? "箱体" : "添加箱体"}
+                </span>
+                <span className="font-mono text-[11px] text-mutedText">
+                  {formatPrice(actionMenu.price)}
+                </span>
+              </div>
+              <div className="space-y-2">
+                <Input
+                  className="h-8 text-xs"
+                  onChange={(event) => setBoxTitle(event.target.value)}
+                  placeholder="名称"
+                  value={boxTitle}
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    className="h-8 text-xs"
+                    inputMode="decimal"
+                    onChange={(event) => setBoxTop(event.target.value)}
+                    placeholder="上沿"
+                    value={boxTop}
+                  />
+                  <Input
+                    className="h-8 text-xs"
+                    inputMode="decimal"
+                    onChange={(event) => setBoxBottom(event.target.value)}
+                    placeholder="下沿"
+                    value={boxBottom}
+                  />
+                </div>
+              </div>
+              {actionMenu.boxId ? (
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <Button
+                    className="h-8 text-xs"
+                    onClick={handleSavePriceBox}
+                    size="sm"
+                    type="button"
+                    variant="default"
+                  >
+                    保存
+                  </Button>
+                  <Button
+                    className="h-8 text-xs"
+                    onClick={() => setActionMenu(null)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    取消
+                  </Button>
+                  <Button
+                    className="h-8 gap-1 text-xs"
+                    onClick={() => handleRemovePriceBox(actionMenu.boxId as string)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    删除
+                  </Button>
+                </div>
+              ) : (
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <Button
+                    className="h-8 justify-start gap-2 text-xs"
+                    onClick={handleSavePriceBox}
+                    size="sm"
+                    type="button"
+                    variant="default"
+                  >
+                    <Square className="h-4 w-4" />
+                    确定添加
+                  </Button>
+                  <Button
+                    className="h-8 text-xs"
+                    onClick={() => setActionMenu(null)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    取消
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -717,6 +1166,21 @@ function nearestPriceLine(
   return nearest && nearestDistance <= threshold ? nearest : null;
 }
 
+function nearestPriceBox(
+  price: number,
+  priceBoxes: LightweightKlinePriceBox[],
+): LightweightKlinePriceBox | null {
+  const padding = Math.max(Math.abs(price) * 0.003, 0.02);
+  for (const box of priceBoxes) {
+    const top = Math.max(box.top, box.bottom);
+    const bottom = Math.min(box.top, box.bottom);
+    if (price >= bottom - padding && price <= top + padding) {
+      return box;
+    }
+  }
+  return null;
+}
+
 function resolveLineName(selection: string, customName: string): string {
   if (selection === customLineNameValue) {
     return customName.trim() || defaultLineName;
@@ -747,8 +1211,19 @@ function roundPrice(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+function normalizeBoxPrices(firstPrice: number, secondPrice: number) {
+  return {
+    top: roundPrice(Math.max(firstPrice, secondPrice)),
+    bottom: roundPrice(Math.min(firstPrice, secondPrice)),
+  };
+}
+
 function formatPrice(value: number): string {
   return value.toFixed(2);
+}
+
+function formatEditablePrice(value: number): string {
+  return Number.isFinite(value) ? roundPrice(value).toFixed(2) : "";
 }
 
 type VolumeAxisUnit = {

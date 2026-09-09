@@ -167,7 +167,7 @@ def add_pool_stocks(
     *,
     project_id: str | None = None,
     tags: list[str] | None = None,
-    note: str | None = None,
+    note: dict[str, object] | None = None,
 ) -> dict[str, Any]:
     """Add symbols to a stock pool and fill stock names from a_stock_snapshot_info."""
 
@@ -175,7 +175,7 @@ def add_pool_stocks(
     if not normalized_symbols:
         raise StockPoolPythonApiError("STOCK_POOL_SYMBOLS_EMPTY", "No valid symbols found")
     normalized_tags = normalize_tags(tags or [])
-    normalized_note = _blank_to_none(note)
+    normalized_notes = _normalize_stock_notes(note)
     snapshot_names = _snapshot_info_names(normalized_symbols)
     now = local_now()
 
@@ -201,7 +201,7 @@ def add_pool_stocks(
                     symbol=symbol,
                     name=snapshot_names.get(symbol),
                     tags_json=list(normalized_tags),
-                    note=normalized_note,
+                    note=normalized_notes.get(symbol),
                     created_at=timestamp,
                     updated_at=timestamp,
                 )
@@ -353,6 +353,23 @@ def _normalize_symbols(symbols: str | list[str]) -> list[str]:
         value = normalize_symbol(str(symbol))
         if value and value not in normalized:
             normalized.append(value)
+    return normalized
+
+
+def _normalize_stock_notes(note: dict[str, object] | None) -> dict[str, str | None]:
+    if note is None:
+        return {}
+    if not isinstance(note, dict):
+        raise StockPoolPythonApiError(
+            "STOCK_POOL_NOTE_INVALID",
+            "note must be a dict mapping symbol to stock note",
+            detail={"note_type": type(note).__name__},
+        )
+    normalized: dict[str, str | None] = {}
+    for symbol, value in note.items():
+        normalized_symbol = normalize_symbol(str(symbol))
+        if normalized_symbol:
+            normalized[normalized_symbol] = _blank_to_none(value)
     return normalized
 
 

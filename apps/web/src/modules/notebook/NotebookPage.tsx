@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { InlineAlert, LoadingState } from "@/shared/components";
 import {
+  API_BASE_URL,
   createNotebookFile,
   deleteNotebookFile,
   ensureNotebookServer,
@@ -72,7 +73,10 @@ export function NotebookPage({ project }: NotebookPageProps) {
   const [sessionRefreshKey, setSessionRefreshKey] = useState(0);
   const server = serverFromState(state);
   const selectedFile = fileList?.files.find((file) => file.relative_path === selectedPath) ?? null;
-  const notebookBaseUrl = useMemo(() => (server ? browserNotebookBaseUrl(server.base_url) : ""), [server]);
+  const notebookBaseUrl = useMemo(
+    () => (server ? browserNotebookBaseUrl(server.proxy_base_url ?? server.base_url) : ""),
+    [server],
+  );
   const iframeUrl = useMemo(() => {
     if (
       !server ||
@@ -554,6 +558,11 @@ function encodeNotebookPath(path: string): string {
 }
 
 function browserNotebookBaseUrl(baseUrl: string): string {
+  if (!/^https?:\/\//.test(baseUrl)) {
+    const apiBaseUrl = browserApiBaseUrl();
+    const path = baseUrl.startsWith("/") ? baseUrl : `/${baseUrl}`;
+    return `${apiBaseUrl}${path}`.replace(/\/$/, "");
+  }
   try {
     const url = new URL(baseUrl);
     if (url.hostname === "127.0.0.1" && window.location.hostname === "localhost") {
@@ -562,6 +571,21 @@ function browserNotebookBaseUrl(baseUrl: string): string {
     return url.toString().replace(/\/$/, "");
   } catch {
     return baseUrl.replace(/\/$/, "");
+  }
+}
+
+function browserApiBaseUrl(): string {
+  if (!API_BASE_URL) {
+    return "";
+  }
+  try {
+    const url = new URL(API_BASE_URL);
+    if (url.hostname === "127.0.0.1" && window.location.hostname === "localhost") {
+      url.hostname = "localhost";
+    }
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return API_BASE_URL.replace(/\/$/, "");
   }
 }
 

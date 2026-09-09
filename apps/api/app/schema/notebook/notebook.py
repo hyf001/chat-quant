@@ -47,6 +47,7 @@ class NotebookServerResponse(BaseModel):
     status: Literal["starting", "running", "stopped", "error"]
     url: str
     base_url: str
+    proxy_base_url: str | None = None
     token: str
     root_dir: str
     pid: int
@@ -59,6 +60,7 @@ class NotebookServerStatusResponse(BaseModel):
     status: Literal["running", "stopped"]
     url: str | None = None
     base_url: str | None = None
+    proxy_base_url: str | None = None
     root_dir: str | None = None
     pid: int | None = None
     runtime_id: str | None = None

@@ -9,6 +9,9 @@ from app.service.datasource.mindgo.stock_a_daily_price.adaptor import stock_a_da
 from app.service.datasource.mindgo.stock_a_daily_valuation_metrics.adaptor import (
     stock_a_daily_valuation_metrics_schema,
 )
+from app.service.datasource.mindgo.stock_a_minute_price.adaptor import (
+    stock_a_minute_price_schema,
+)
 from app.service.datasource.mindgo.stock_a_snapshot_info.adaptor import (
     stock_a_snapshot_info_schema,
 )
@@ -25,6 +28,7 @@ def test_mindgo_api_lists_first_source(client: TestClient) -> None:
     assert payload["sources"][2]["id"] == "a_stock_daily_valuation_metrics"
     assert payload["sources"][3]["id"] == "a_index_daily_price"
     assert payload["sources"][4]["id"] == "a_stock_snapshot_info"
+    assert payload["sources"][5]["id"] == "a_stock_minute_price"
     assert payload["sources"][0]["category_path_en"] == [
         "a",
         "stock",
@@ -161,6 +165,73 @@ def test_mindgo_api_returns_stock_snapshot_info_schema(client: TestClient) -> No
     assert payload["storage"]["format"] == "parquet"
     assert payload["storage"]["partitioned_by"] == []
     assert [field["name"] for field in payload["result_schema"]] == ["symbol", "name"]
+
+
+def test_mindgo_api_returns_stock_minute_schema(client: TestClient) -> None:
+    response = client.get("/api/mindgo/sources/a_stock_minute_price/schema")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["name"] == "A股股票分钟行情数据"
+    assert payload["name_en"] == "a_stock_minute_price"
+    assert payload["category_path"] == ["A股", "股票", "分钟", "行情数据"]
+    assert payload["category_path_en"] == ["a", "stock", "minute", "price"]
+    assert payload["mindgo_function"] == "get_price"
+    assert payload["storage"]["path"] == "data/mindgo/parquet/a_stock_minute_price"
+    assert payload["storage"]["partitioned_by"] == ["trade_day"]
+    assert [field["name"] for field in payload["result_schema"][:6]] == [
+        "symbol",
+        "trade_date",
+        "open",
+        "high",
+        "low",
+        "close",
+    ]
+
+
+def test_mindgo_sync_supports_stock_minute_price(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    class FakeAdapter:
+        source_id = "a_stock_minute_price"
+
+        async def get_source_schema(self):
+            return stock_a_minute_price_schema()
+
+        async def query_from_mindgo(self, request):
+            raise AssertionError("query_from_mindgo should not run")
+
+        async def sync(self, request):
+            raise AssertionError("sync should not run")
+
+    monkeypatch.setattr(
+        mindgo_service,
+        "_adapter_for_source",
+        lambda source_id, allow_missing_runner=False: FakeAdapter(),
+    )
+
+    response = client.post(
+        "/api/mindgo/sources/a_stock_minute_price/sync",
+        json={
+            "trigger_start_date": "2023-02-01",
+            "trigger_end_date": "2023-02-01",
+            "trigger_time": "18:00:00",
+            "write_mode": "overwrite",
+            "query_window": {"start_offset_days": -1, "end_offset_days": 0},
+            "params": {"securities": ["000001.SZ"], "fields": ["close"]},
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["instance"]["job_type"] == "mindgo.a_stock_minute_price.sync"
+    assert payload["instance"]["payload"]["start_date"] == "2023-01-31"
+    assert payload["instance"]["payload"]["end_date"] == "2023-02-01"
+    assert payload["instance"]["payload"]["params"] == {
+        "securities": ["000001.SZ"],
+        "fields": ["close"],
+    }
 
 
 def test_mindgo_jupyter_runner_finds_bundled_supermind_mcp() -> None:

@@ -575,6 +575,7 @@ export type NotebookServer = {
   status: "starting" | "running" | "stopped" | "error";
   url: string;
   base_url: string;
+  proxy_base_url?: string | null;
   token: string;
   root_dir: string;
   pid: number;
@@ -587,6 +588,7 @@ export type NotebookServerStatus = {
   status: "running" | "stopped";
   url: string | null;
   base_url: string | null;
+  proxy_base_url?: string | null;
   root_dir: string | null;
   pid: number | null;
   runtime_id: string | null;

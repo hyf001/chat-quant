@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import asyncio
+import urllib.error
+import urllib.parse
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
 import nbformat
-from fastapi import APIRouter, Depends, HTTPException, status
+import websockets
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, WebSocket, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from websockets.exceptions import ConnectionClosed
 
 from app.db.session import get_db
 from app.schema.notebook import (
@@ -26,6 +32,23 @@ from app.service.notebook.runtime import NOTEBOOK_DIR_NAME
 from app.service.project import ProjectNotFoundError
 
 router = APIRouter()
+
+HOP_BY_HOP_HEADERS = {
+    "connection",
+    "keep-alive",
+    "proxy-authenticate",
+    "proxy-authorization",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+}
+WEBSOCKET_HANDSHAKE_HEADERS = {
+    "sec-websocket-extensions",
+    "sec-websocket-key",
+    "sec-websocket-protocol",
+    "sec-websocket-version",
+}
 
 
 @router.get("/{project_id}/files", response_model=NotebookFileListResponse)
@@ -161,6 +184,72 @@ async def stop_notebook_server(project_id: str) -> None:
     await notebook_runtime_manager.stop_server(project_id=project_id)
 
 
+@router.websocket("/{project_id}/proxy/{target_path:path}")
+async def proxy_notebook_websocket(project_id: str, websocket: WebSocket) -> None:
+    try:
+        record = await notebook_runtime_manager.running_record(project_id=project_id)
+    except NotebookRuntimeError:
+        await websocket.close(code=1011)
+        return
+
+    upstream_url = _upstream_url(
+        record.base_url.replace("http://", "ws://", 1),
+        websocket,
+        token=record.token,
+    )
+    headers = [
+        (key.decode("latin-1"), value.decode("latin-1"))
+        for key, value in websocket.headers.raw
+        if key.decode("latin-1").lower()
+        not in HOP_BY_HOP_HEADERS | WEBSOCKET_HANDSHAKE_HEADERS | {"host"}
+    ]
+
+    try:
+        async with websockets.connect(
+            upstream_url,
+            additional_headers=headers,
+            max_size=None,
+            proxy=None,
+        ) as upstream:
+            await websocket.accept()
+            await _relay_websocket(websocket, upstream)
+    except Exception:
+        if websocket.client_state.name != "DISCONNECTED":
+            await websocket.close(code=1011)
+
+
+@router.api_route(
+    "/{project_id}/proxy",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+)
+@router.api_route(
+    "/{project_id}/proxy/{target_path:path}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+)
+async def proxy_notebook_http(project_id: str, request: Request) -> Response:
+    try:
+        record = await notebook_runtime_manager.running_record(project_id=project_id)
+        upstream_url = _upstream_url(record.base_url, request, token=record.token)
+        status_code, headers, body = await asyncio.to_thread(
+            _request_notebook_upstream,
+            upstream_url,
+            request.method,
+            dict(request.headers),
+            await request.body(),
+            record.base_url,
+        )
+    except NotebookRuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    response = Response(content=body, status_code=status_code)
+    for name, value in headers:
+        response.headers.append(name, value)
+    return response
+
+
 async def _require_project(project_id: str, db: AsyncSession):
     try:
         return await project_service.require_project(db, project_id)
@@ -260,3 +349,107 @@ def _notebook_file_entry(root_dir: Path, file: Path) -> NotebookFileEntry:
         size=stat.st_size,
         modified_at=datetime.fromtimestamp(stat.st_mtime).isoformat(),
     )
+
+
+def _upstream_url(base_url: str, request: Request | WebSocket, *, token: str) -> str:
+    raw_path = request.scope.get("raw_path")
+    if isinstance(raw_path, bytes):
+        path = raw_path.decode("ascii")
+    else:
+        path = urllib.parse.quote(request.url.path, safe="/%")
+    query = _query_with_token(
+        request.scope.get("query_string", b"").decode("ascii"),
+        token=token,
+    )
+    return f"{base_url}{path}{f'?{query}' if query else ''}"
+
+
+def _query_with_token(query: str, *, token: str) -> str:
+    if not token:
+        return query
+    pairs = urllib.parse.parse_qsl(query, keep_blank_values=True)
+    if any(name == "token" for name, _ in pairs):
+        return query
+    pairs.append(("token", token))
+    return urllib.parse.urlencode(pairs)
+
+
+def _request_notebook_upstream(
+    url: str,
+    method: str,
+    incoming_headers: dict[str, str],
+    body: bytes,
+    internal_base_url: str,
+) -> tuple[int, list[tuple[str, str]], bytes]:
+    headers = {
+        name: value
+        for name, value in incoming_headers.items()
+        if name.lower() not in HOP_BY_HOP_HEADERS | {"host", "content-length"}
+    }
+    data = body if method.upper() not in {"GET", "HEAD"} else None
+    request = urllib.request.Request(url, data=data, headers=headers, method=method)
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        with opener.open(request, timeout=60) as response:
+            return (
+                response.status,
+                _response_headers(response.headers.items(), internal_base_url),
+                response.read(),
+            )
+    except urllib.error.HTTPError as exc:
+        return (
+            exc.code,
+            _response_headers(exc.headers.items(), internal_base_url),
+            exc.read(),
+        )
+    except OSError as exc:
+        raise NotebookRuntimeError(f"Jupyter Notebook proxy request failed: {exc}") from exc
+
+
+def _response_headers(
+    headers: object,
+    internal_base_url: str,
+) -> list[tuple[str, str]]:
+    safe_headers: list[tuple[str, str]] = []
+    for name, value in headers:
+        lower_name = name.lower()
+        if lower_name in HOP_BY_HOP_HEADERS | {"content-length"}:
+            continue
+        if lower_name == "location" and value.startswith(internal_base_url):
+            value = value[len(internal_base_url) :]
+        safe_headers.append((name, value))
+    return safe_headers
+
+
+async def _relay_websocket(websocket: WebSocket, upstream: object) -> None:
+    async def client_to_upstream() -> None:
+        while True:
+            message = await websocket.receive()
+            message_type = message.get("type")
+            if message_type == "websocket.disconnect":
+                await upstream.close()
+                return
+            if "text" in message:
+                await upstream.send(message["text"])
+            elif "bytes" in message:
+                await upstream.send(message["bytes"])
+
+    async def upstream_to_client() -> None:
+        try:
+            async for message in upstream:
+                if isinstance(message, bytes):
+                    await websocket.send_bytes(message)
+                else:
+                    await websocket.send_text(message)
+        except ConnectionClosed:
+            return
+
+    tasks = [
+        asyncio.create_task(client_to_upstream()),
+        asyncio.create_task(upstream_to_client()),
+    ]
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+    for task in pending:
+        task.cancel()
+    for task in done:
+        task.result()

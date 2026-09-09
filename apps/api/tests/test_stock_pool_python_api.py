@@ -87,7 +87,10 @@ def test_add_pool_stocks_adds_symbols_from_python_api(
         "600519.sh, 300750.SZ, 600519.SH",
         project_id="project_test",
         tags=["核心", "核心", "消费"],
-        note="编码添加",
+        note={
+            "600519.sh": "白酒龙头",
+            "300750.SZ": "电池龙头",
+        },
     )
 
     assert result["created"] == 2
@@ -96,6 +99,10 @@ def test_add_pool_stocks_adds_symbols_from_python_api(
     assert [(item["symbol"], item["name"], item["tags"]) for item in result["items"]] == [
         ("600519.SH", "贵州茅台", ["核心", "消费"]),
         ("300750.SZ", "宁德时代", ["核心", "消费"]),
+    ]
+    assert [(item["symbol"], item["note"]) for item in result["items"]] == [
+        ("600519.SH", "白酒龙头"),
+        ("300750.SZ", "电池龙头"),
     ]
 
     added_again = add_pool_stocks(pool_id, ["300750.sz", "000001.SZ"])

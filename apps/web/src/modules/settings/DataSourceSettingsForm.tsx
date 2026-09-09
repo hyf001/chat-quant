@@ -104,8 +104,8 @@ type DataSourceSettingsFormProps = {
   onToast: (message: string, tone?: "success" | "error" | "info") => void;
 };
 
-type MindgoParamDraft = Record<string, MindgoJsonValue>;
 type MindgoSourceMode = "mindgo" | "sync";
+type MindgoParamDraft = Record<string, MindgoJsonValue>;
 type SyncInstanceStatusFilter = JobInstanceStatus | "all";
 type SchedulerFrequency = "daily" | "workdays" | "weekly" | "monthly" | "custom";
 
@@ -117,15 +117,14 @@ type SchedulerScheduleDraft = {
   customCron: string;
 };
 
-type MindgoSourceUiMeta = {
-  badge: string;
-};
-
 const today = formatLocalDate(new Date());
 const defaultSyncTime = formatLocalTime(new Date());
 const defaultSyncCron = "0 18 * * 1-5";
 const defaultSyncWriteMode: MindgoSourceSyncWriteMode = "overwrite";
 const defaultSyncInstancePageSize = 8;
+type MindgoSourceUiMeta = {
+  badge: string;
+};
 const hiddenMindgoQueryParamNames = new Set(["fields", "fq"]);
 const hiddenMindgoSyncParamNames = new Set([
   ...hiddenMindgoQueryParamNames,
@@ -136,21 +135,12 @@ const hiddenMindgoSyncParamNames = new Set([
   "bar_count",
 ]);
 const mindgoSourceUiMeta: Record<string, MindgoSourceUiMeta> = {
-  a_stock_daily_price: {
-    badge: "1015 日行情",
-  },
-  a_stock_daily_adjust_factor: {
-    badge: "1016 复权因子",
-  },
-  a_stock_daily_valuation_metrics: {
-    badge: "345 估值指标",
-  },
-  a_index_daily_price: {
-    badge: "指数日行情",
-  },
-  a_stock_snapshot_info: {
-    badge: "1018 快照维表",
-  },
+  a_stock_daily_price: { badge: "1015 日行情" },
+  a_stock_daily_adjust_factor: { badge: "1016 复权因子" },
+  a_stock_daily_valuation_metrics: { badge: "345 估值指标" },
+  a_index_daily_price: { badge: "指数日行情" },
+  a_stock_snapshot_info: { badge: "1018 快照维表" },
+  a_stock_minute_price: { badge: "分钟行情" },
 };
 const syncInstanceStatusOptions: Array<{ value: SyncInstanceStatusFilter; label: string }> = [
   { value: "all", label: "全部" },
@@ -194,7 +184,10 @@ export function DataSourceSettingsForm({
   const [sources, setSources] = useState<MindgoSourceSummary[]>([]);
   const [selectedSourceId, setSelectedSourceId] = useState("a_stock_daily_price");
   const [schema, setSchema] = useState<MindgoSourceSchema | null>(null);
-  const [params, setParams] = useState<MindgoParamDraft>({});
+  const [queryParamsBySource, setQueryParamsBySource] = useState<Record<string, MindgoParamDraft>>({});
+  const [syncParamsBySource, setSyncParamsBySource] = useState<Record<string, MindgoParamDraft>>({});
+  const queryParams = queryParamsBySource[selectedSourceId] ?? {};
+  const syncParams = syncParamsBySource[selectedSourceId] ?? {};
   const [queryMode, setQueryMode] = useState<MindgoSourceMode>("sync");
   const [queryResult, setQueryResult] = useState<MindgoSourceQueryResponse | null>(null);
   const [syncStatus, setSyncStatus] = useState<MindgoSourceSyncStatusResponse | null>(null);
@@ -259,11 +252,19 @@ export function DataSourceSettingsForm({
 
   const loadSchema = useCallback(async (sourceId: string) => {
     setIsLoadingSchema(true);
+    setSchema(null);
     setQueryResult(null);
     try {
       const nextSchema = await getMindgoSourceSchema(sourceId);
       setSchema(nextSchema);
-      setParams(defaultParamsFromSchema(nextSchema));
+      setQueryParamsBySource((current) => ({
+        ...current,
+        [sourceId]: current[sourceId] ?? defaultParamsFromSchema(nextSchema),
+      }));
+      setSyncParamsBySource((current) => ({
+        ...current,
+        [sourceId]: current[sourceId] ?? defaultParamsFromSchema(nextSchema),
+      }));
       setPage(1);
     } catch (caught) {
       setSchema(null);
@@ -345,10 +346,20 @@ export function DataSourceSettingsForm({
     }
   }, [loadSchema, loadSyncStatus, selectedSourceId]);
 
-  const updateParam = (name: string, value: MindgoJsonValue) => {
-    setParams((current) => ({ ...current, [name]: value }));
+  const updateQueryParam = (name: string, value: MindgoJsonValue) => {
+    setQueryParamsBySource((current) => ({
+      ...current,
+      [selectedSourceId]: { ...queryParams, [name]: value },
+    }));
     setQueryResult(null);
     setPage(1);
+  };
+
+  const updateSyncParam = (name: string, value: MindgoJsonValue) => {
+    setSyncParamsBySource((current) => ({
+      ...current,
+      [selectedSourceId]: { ...syncParams, [name]: value },
+    }));
   };
 
   const updateMindgoSettings = (patch: Partial<MindgoSettings>) => {
@@ -410,7 +421,7 @@ export function DataSourceSettingsForm({
     setIsQuerying(true);
     try {
       const response = await queryMindgoSource(selectedSourceId, {
-        params: cleanVisibleParams(params),
+        params: cleanVisibleParams(queryParams),
         page: nextPage,
         page_size: pageSize,
       });
@@ -434,7 +445,7 @@ export function DataSourceSettingsForm({
         trigger_time: syncTimeDraft,
         write_mode: manualWriteModeDraft,
         query_window: normalizeQueryWindow(manualQueryWindowDraft, schema?.sync ?? null),
-        params: cleanVisibleSyncParams(params),
+        params: cleanVisibleSyncParams(syncParams),
       });
       const instances = response.instances.length > 0 ? response.instances : [response.instance];
       await loadSyncStatus(selectedSourceId, syncInstanceStatusFilter);
@@ -551,7 +562,7 @@ export function DataSourceSettingsForm({
           start_offset_days: 0,
           end_offset_days: 0,
         },
-        params: cleanVisibleSyncParams(params),
+        params: cleanVisibleSyncParams(syncParams),
       });
       setSyncStatus(response);
       setCronDraft(response.scheduler.cron ?? defaultSyncCron);
@@ -816,14 +827,22 @@ export function DataSourceSettingsForm({
 
                 {queryMode === "mindgo" ? (
                   <div className="grid gap-3 md:grid-cols-2">
-                    {visibleMindgoQueryParams(schema).map((param) => (
-                      <ParamField
-                        key={param.name}
-                        param={param}
-                        value={params[param.name]}
-                        onChange={(value) => updateParam(param.name, value)}
-                      />
+                    {(isMinuteSource(selectedSourceId)
+                      ? visibleMindgoQueryParams(schema).filter((param) => !["start_date", "end_date"].includes(param.name))
+                      : visibleMindgoQueryParams(schema)
+                    ).map((param) => (
+                      <ParamField key={param.name} param={param} value={queryParams[param.name]} onChange={(value) => updateQueryParam(param.name, value)} />
                     ))}
+                    {isMinuteSource(selectedSourceId) ? (["start_date", "end_date"] as const).map((name) => (
+                      <Label className="grid gap-1.5" key={name}>
+                        <span>{name === "start_date" ? "起始时间" : "结束时间"}</span>
+                        <DateTimePicker
+                          mode="datetime"
+                          value={String(queryParams[name] ?? "")}
+                          onChange={(value) => updateQueryParam(name, value)}
+                        />
+                      </Label>
+                    )) : null}
                   </div>
                 ) : (
                   <div className="grid gap-4">
@@ -833,8 +852,8 @@ export function DataSourceSettingsForm({
                           <ParamField
                             key={param.name}
                             param={param}
-                            value={params[param.name]}
-                            onChange={(value) => updateParam(param.name, value)}
+                            value={syncParams[param.name]}
+                            onChange={(value) => updateSyncParam(param.name, value)}
                           />
                         ))}
                       </div>
@@ -960,12 +979,15 @@ export function DataSourceSettingsForm({
 }
 
 function SourceBadge({ sourceId }: { sourceId: string }) {
-  const meta = mindgoSourceUiMeta[sourceId];
   return (
     <Badge className="h-5 shrink-0 rounded border-line bg-soft px-1.5 font-mono text-[10px] text-mutedText" variant="outline">
-      {meta?.badge ?? sourceId}
+      {mindgoSourceUiMeta[sourceId]?.badge ?? sourceId}
     </Badge>
   );
+}
+
+function isMinuteSource(sourceId: string): boolean {
+  return sourceId === "a_stock_minute_price";
 }
 
 function StorageSummary({
@@ -1145,6 +1167,100 @@ function NumberInput({
       />
     </Label>
   );
+}
+
+type DateTimePickerMode = "date" | "time" | "datetime";
+
+function DateTimePicker({
+  mode,
+  value,
+  onChange,
+  min,
+  disabled = false,
+}: {
+  mode: DateTimePickerMode;
+  value: string;
+  onChange: (value: string) => void;
+  min?: string;
+  disabled?: boolean;
+}) {
+  const [date = "", time = ""] = value.split(" ");
+  const [hour = "00", minute = "00"] = time.split(":");
+  const isDateMode = mode === "date" || mode === "datetime";
+  const isTimeMode = mode === "time" || mode === "datetime";
+  const update = (nextDate = date, nextHour = hour, nextMinute = minute) => {
+    if (mode === "date") return onChange(nextDate);
+    if (mode === "time") return onChange(`${nextHour}:${nextMinute}`);
+    onChange(nextDate ? `${nextDate} ${nextHour}:${nextMinute}` : "");
+  };
+
+  if (!isDateMode) {
+    return (
+      <div className="grid grid-cols-2 gap-1.5">
+        <TimePartSelect label="时" value={hour} count={24} disabled={disabled} onChange={(next) => update(date, next, minute)} />
+        <TimePartSelect label="分" value={minute} count={60} disabled={disabled} onChange={(next) => update(date, hour, next)} />
+      </div>
+    );
+  }
+
+  const [open, setOpen] = useState(false);
+  const selected = parseDateValue(value) ?? new Date();
+  const [month, setMonth] = useState(new Date(selected.getFullYear(), selected.getMonth(), 1));
+  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
+  const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const minDate = min ? parseDateValue(min) : null;
+  const dayCells = Array.from({ length: firstDay + daysInMonth }, (_, index) =>
+    index < firstDay ? null : index - firstDay + 1,
+  );
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" disabled={disabled} className="h-10 w-full justify-start text-left text-xs font-normal">
+          <CalendarClock className="mr-2 h-3.5 w-3.5" />
+          {date || "选择日期"}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-3" align="start">
+        <div className="mb-2 flex items-center justify-between">
+          <Button type="button" size="iconSm" variant="ghost" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft className="h-4 w-4" /></Button>
+          <span className="text-xs font-semibold">{month.getFullYear()}年{month.getMonth() + 1}月</span>
+          <Button type="button" size="iconSm" variant="ghost" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight className="h-4 w-4" /></Button>
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-center text-[11px] text-mutedText">
+          {['日', '一', '二', '三', '四', '五', '六'].map((day) => <span key={day}>{day}</span>)}
+          {dayCells.map((day, index) => {
+            if (day === null) return <span key={`empty-${index}`} />;
+            const date = new Date(month.getFullYear(), month.getMonth(), day);
+            const dateValue = formatLocalDate(date);
+            const isDisabled = Boolean(minDate && date < minDate);
+            const isSelected = dateValue === value;
+            return <Button key={dateValue} type="button" size="iconSm" variant={isSelected ? "default" : "ghost"} disabled={isDisabled} onClick={() => { update(dateValue); if (mode === "date") setOpen(false); }}>{day}</Button>;
+          })}
+        </div>
+        {mode === "datetime" ? (
+          <div className="mt-3 grid grid-cols-2 gap-1.5 border-t pt-3">
+            <TimePartSelect label="时" value={hour} count={24} onChange={(next) => update(date, next, minute)} />
+            <TimePartSelect label="分" value={minute} count={60} onChange={(next) => update(date, hour, next)} />
+          </div>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function TimePartSelect({ label, value, count, disabled = false, onChange }: { label: string; value: string; count: number; disabled?: boolean; onChange: (value: string) => void }) {
+  return (
+    <Select value={value || "00"} disabled={disabled} onValueChange={onChange}>
+      <SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger>
+      <SelectContent>{Array.from({ length: count }, (_, index) => { const item = String(index).padStart(2, "0"); return <SelectItem key={item} value={item}>{item}{label}</SelectItem>; })}</SelectContent>
+    </Select>
+  );
+}
+
+function parseDateValue(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 }
 
 function ParamField({
@@ -1386,32 +1502,15 @@ function ManualSyncDialog({
           <div className="grid gap-3 sm:grid-cols-3">
             <Label className="grid gap-1.5">
               <span>开始日期</span>
-              <Input
-                className="h-10 text-xs"
-                type="date"
-                value={startDate}
-                onChange={(event) => onStartDateChange(event.target.value)}
-              />
+              <DateTimePicker mode="date" value={startDate} onChange={onStartDateChange} />
             </Label>
             <Label className="grid gap-1.5">
               <span>结束日期</span>
-              <Input
-                className="h-10 text-xs"
-                min={startDate}
-                type="date"
-                value={endDate}
-                onChange={(event) => onEndDateChange(event.target.value)}
-              />
+              <DateTimePicker mode="date" min={startDate} value={endDate} onChange={onEndDateChange} />
             </Label>
             <Label className="grid gap-1.5">
               <span>触发时间</span>
-              <Input
-                className="h-10 text-xs"
-                step={1}
-                type="time"
-                value={triggerTime}
-                onChange={(event) => onTriggerTimeChange(event.target.value)}
-              />
+              <DateTimePicker mode="time" value={triggerTime} onChange={onTriggerTimeChange} />
             </Label>
           </div>
           {supportsQueryWindow ? (
@@ -1704,13 +1803,11 @@ function SchedulerSyncDialog({
               <div className="grid gap-3 sm:grid-cols-2">
                 <Label className="grid gap-1.5">
                   <span>触发时间</span>
-                  <Input
-                    className="h-10 text-xs font-semibold"
-                    type="time"
-                    step={60}
+                  <DateTimePicker
+                    mode="time"
                     value={schedule.time}
                     disabled={disabled}
-                    onChange={(event) => updateSchedule({ time: event.target.value })}
+                    onChange={(time) => updateSchedule({ time })}
                   />
                 </Label>
                 {schedule.frequency === "weekly" ? (
@@ -2283,17 +2380,11 @@ function formatLocalTime(value: Date): string {
 function defaultParamsFromSchema(schema: MindgoSourceSchema): MindgoParamDraft {
   const draft: MindgoParamDraft = {};
   for (const param of schema.query_params) {
-    if (param.default !== null && param.default !== undefined) {
-      draft[param.name] = param.default;
-    } else if (param.value_type === "date") {
-      draft[param.name] = today;
-    } else if (param.value_type === "string[]") {
-      draft[param.name] = [];
-    } else if (param.value_type === "boolean") {
-      draft[param.name] = false;
-    } else {
-      draft[param.name] = "";
-    }
+    if (param.default !== null && param.default !== undefined) draft[param.name] = param.default;
+    else if (param.value_type === "date") draft[param.name] = today;
+    else if (param.value_type === "string[]") draft[param.name] = [];
+    else if (param.value_type === "boolean") draft[param.name] = false;
+    else draft[param.name] = "";
   }
   return draft;
 }

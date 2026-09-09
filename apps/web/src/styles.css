@@ -61,25 +61,19 @@ details > summary::-webkit-details-marker {
   display: none;
 }
 
-.cq-brand-mark {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
-  border: 1px solid #343941;
-  background: #171a16;
-  padding: 5px;
-}
-
-.cq-brand-mark span {
-  background: #fffdf8;
-}
-
-.cq-brand-mark span:nth-child(2),
-.cq-brand-mark span:nth-child(4),
-.cq-brand-mark span:nth-child(9) {
-  background: #c9851a;
+.cq-brand-wordmark {
+  display: inline-block;
+  background: linear-gradient(112deg, #171a16 0%, #16845f 52%, #c9851a 100%);
+  background-clip: text;
+  color: transparent;
+  font-family: Georgia, "Times New Roman", ui-serif, serif;
+  font-size: 19px;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(255, 253, 248, 0.65);
+  -webkit-background-clip: text;
 }
 
 .workbench-surface {

@@ -45,6 +45,12 @@ from app.service.datasource.mindgo.stock_a_daily_valuation_metrics.constants imp
 from app.service.datasource.mindgo.stock_a_daily_valuation_metrics.job import (
     stock_a_daily_valuation_metrics_sync_job_ref,
 )
+from app.service.datasource.mindgo.stock_a_minute_price.constants import (
+    STOCK_A_MINUTE_PRICE_SOURCE_ID,
+)
+from app.service.datasource.mindgo.stock_a_minute_price.job import (
+    stock_a_minute_price_sync_job_ref,
+)
 from app.service.datasource.mindgo.stock_a_snapshot_info.constants import (
     STOCK_A_SNAPSHOT_INFO_SOURCE_ID,
 )
@@ -224,6 +230,8 @@ def _mindgo_service() -> Any:
 def _sync_job_ref_for_source(source_id: str) -> JobRef:
     if source_id == STOCK_A_DAILY_PRICE_SOURCE_ID:
         return stock_a_daily_price_sync_job_ref()
+    if source_id == STOCK_A_MINUTE_PRICE_SOURCE_ID:
+        return stock_a_minute_price_sync_job_ref()
     if source_id == STOCK_A_ADJUST_FACTOR_SOURCE_ID:
         return stock_a_adjust_factor_sync_job_ref()
     if source_id == STOCK_A_VALUATION_METRICS_SOURCE_ID:
@@ -248,6 +256,8 @@ def _source_supports_query_window(source_id: str) -> bool:
         STOCK_A_SNAPSHOT_INFO_SOURCE_ID,
     }:
         return False
+    if source_id == STOCK_A_MINUTE_PRICE_SOURCE_ID:
+        return True
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail=f"MindGo 数据源暂未配置同步任务：{source_id}",

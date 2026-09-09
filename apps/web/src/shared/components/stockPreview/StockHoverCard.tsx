@@ -1,14 +1,18 @@
 import { Loader2 } from "lucide-react";
 import {
-  useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
@@ -25,8 +29,6 @@ type StockHoverCardProps = {
   className?: string;
 };
 
-const openDelayMs = 300;
-const closeDelayMs = 120;
 const cacheTtlMs = 60_000;
 const periods: Array<{ value: StockPreviewPeriod; label: string }> = [
   { value: "daily", label: "日K" },
@@ -37,43 +39,12 @@ const periods: Array<{ value: StockPreviewPeriod; label: string }> = [
 const previewCache = new Map<string, { data: StockPreview; expiresAt: number }>();
 const previewRequests = new Map<string, Promise<StockPreview>>();
 
-export function StockHoverCard({ symbol, children, className }: StockHoverCardProps) {
+export function StockKlineDialog({ symbol, children, className }: StockHoverCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [period, setPeriod] = useState<StockPreviewPeriod>("daily");
   const [preview, setPreview] = useState<StockPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const openTimer = useRef<number | null>(null);
-  const closeTimer = useRef<number | null>(null);
-
-  const clearTimers = useCallback(() => {
-    if (openTimer.current !== null) {
-      window.clearTimeout(openTimer.current);
-      openTimer.current = null;
-    }
-    if (closeTimer.current !== null) {
-      window.clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-  }, []);
-
-  const scheduleOpen = () => {
-    if (closeTimer.current !== null) {
-      window.clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-    openTimer.current = window.setTimeout(() => setIsOpen(true), openDelayMs);
-  };
-
-  const scheduleClose = () => {
-    if (openTimer.current !== null) {
-      window.clearTimeout(openTimer.current);
-      openTimer.current = null;
-    }
-    closeTimer.current = window.setTimeout(() => setIsOpen(false), closeDelayMs);
-  };
-
-  useEffect(() => clearTimers, [clearTimers]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -91,7 +62,7 @@ export function StockHoverCard({ symbol, children, className }: StockHoverCardPr
     setError(null);
     const request =
       previewRequests.get(cacheKey) ??
-      getStockPreview(symbol, { period, limit: 120 }).finally(() => {
+      getStockPreview(symbol, { period, limit: 180 }).finally(() => {
         previewRequests.delete(cacheKey);
       });
     previewRequests.set(cacheKey, request);
@@ -119,48 +90,46 @@ export function StockHoverCard({ symbol, children, className }: StockHoverCardPr
   }, [isOpen, period, symbol]);
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <span
-          className={cn("inline-flex cursor-default", className)}
-          onPointerEnter={scheduleOpen}
-          onPointerLeave={scheduleClose}
-          onFocus={() => setIsOpen(true)}
-          onBlur={scheduleClose}
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <button
+          className={cn(
+            "inline-flex min-w-0 cursor-pointer items-center text-left focus:outline-none focus:ring-2 focus:ring-signal/20",
+            className,
+          )}
+          type="button"
         >
           {children}
-        </span>
-      </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        className="w-[min(720px,calc(100vw-32px))] overflow-hidden p-0"
-        side="right"
-        sideOffset={10}
-        onPointerEnter={() => {
-          if (closeTimer.current !== null) {
-            window.clearTimeout(closeTimer.current);
-            closeTimer.current = null;
-          }
-        }}
-        onPointerLeave={scheduleClose}
+        </button>
+      </DialogTrigger>
+      <DialogContent
+        className="max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-[1180px] gap-0 overflow-hidden p-0"
       >
+        <DialogTitle className="sr-only">
+          {preview ? `${preview.name} ${preview.symbol} K线` : `${symbol} K线`}
+        </DialogTitle>
+        <DialogDescription className="sr-only">查看股票日K、周K和月K行情。</DialogDescription>
         <StockPreviewPanel
           error={error}
           isLoading={isLoading}
           period={period}
           preview={preview}
+          symbol={symbol}
           onPeriodChange={setPeriod}
         />
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   );
 }
+
+export const StockHoverCard = StockKlineDialog;
 
 type StockPreviewPanelProps = {
   error: string | null;
   isLoading: boolean;
   period: StockPreviewPeriod;
   preview: StockPreview | null;
+  symbol: string;
   onPeriodChange: (period: StockPreviewPeriod) => void;
 };
 
@@ -169,9 +138,11 @@ function StockPreviewPanel({
   isLoading,
   period,
   preview,
+  symbol,
   onPeriodChange,
 }: StockPreviewPanelProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const chartHeight = usePreviewChartHeight();
   const activeCandle = useMemo(() => {
     if (!preview || preview.candles.length === 0) {
       return null;
@@ -201,10 +172,10 @@ function StockPreviewPanel({
 
   return (
     <div className="bg-panel text-ink">
-      <div className="grid gap-3 border-b border-line px-4 py-3 md:grid-cols-[150px_minmax(0,1fr)_auto]">
+      <div className="grid gap-3 border-b border-line px-5 py-4 pr-14 md:grid-cols-[190px_minmax(0,1fr)_auto]">
         <div className="min-w-0 self-start">
           <div className="truncate text-lg font-black">{preview?.name ?? "行情预览"}</div>
-          <div className="font-mono text-sm text-mutedText">{preview?.symbol ?? ""}</div>
+          <div className="font-mono text-sm text-mutedText">{preview?.symbol ?? symbol}</div>
         </div>
         <div className="min-w-0 self-start">
           <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold">
@@ -232,7 +203,10 @@ function StockPreviewPanel({
       </div>
 
       {isLoading ? (
-        <div className="grid h-[360px] place-items-center text-sm text-mutedText">
+        <div
+          className="grid place-items-center text-sm text-mutedText"
+          style={{ height: chartHeight }}
+        >
           <div className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
             加载行情
@@ -241,14 +215,21 @@ function StockPreviewPanel({
       ) : null}
 
       {!isLoading && error ? (
-        <div className="grid h-[360px] place-items-center px-6 text-center text-sm text-destructive">
+        <div
+          className="grid place-items-center px-6 text-center text-sm text-destructive"
+          style={{ height: chartHeight }}
+        >
           {error}
         </div>
       ) : null}
 
       {!isLoading && !error && preview ? (
         <>
-          <StockMiniKlineChart candles={preview.candles} onActiveIndexChange={setActiveIndex} />
+          <StockMiniKlineChart
+            candles={preview.candles}
+            height={chartHeight}
+            onActiveIndexChange={setActiveIndex}
+          />
           <div className="border-t border-line px-4 py-2 text-[11px] text-mutedText">
             数据源：{preview.source_dataset}
           </div>
@@ -260,9 +241,11 @@ function StockPreviewPanel({
 
 function StockMiniKlineChart({
   candles,
+  height,
   onActiveIndexChange,
 }: {
   candles: StockPreviewCandle[];
+  height: number;
   onActiveIndexChange: (index: number | null) => void;
 }) {
   return (
@@ -271,10 +254,25 @@ function StockMiniKlineChart({
       candles={candles}
       className="w-full"
       enablePriceLineActions
-      height={370}
+      height={height}
       onActiveCandleChange={(_, index) => onActiveIndexChange(index)}
     />
   );
+}
+
+function usePreviewChartHeight() {
+  const [height, setHeight] = useState(560);
+
+  useEffect(() => {
+    const syncHeight = () => {
+      setHeight(Math.min(620, Math.max(420, Math.floor(window.innerHeight - 220))));
+    };
+    syncHeight();
+    window.addEventListener("resize", syncHeight);
+    return () => window.removeEventListener("resize", syncHeight);
+  }, []);
+
+  return height;
 }
 
 function formatNumber(value: number | null | undefined, digits = 2): string {
