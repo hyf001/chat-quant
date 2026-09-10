@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 import app.service.datasource.mindgo.stock_a_minute_price.adaptor as minute_adaptor
@@ -13,11 +13,11 @@ from app.service.datasource.mindgo.stock_a_minute_price.adaptor import (
     STOCK_A_MINUTE_PRICE_MARKER_END,
     STOCK_A_MINUTE_PRICE_MARKER_START,
     STOCK_A_MINUTE_PRICE_SOURCE_ID,
+    STOCK_A_MINUTE_PRICE_WINDOW_MINUTES,
     DuckDBParquetMindgoSyncWriter,
     MindgoPartitionedParquetWrite,
     StockAMinutePriceAdapter,
-    mindgo_parquet_partition_path,
-    normalize_stock_a_minute_price,
+    minute_price_frame_from_payload,
     stock_a_minute_price_remote_code,
 )
 from app.service.datasource.mindgo.storage import MindgoSourceStorage
@@ -67,6 +67,18 @@ class FakeMindgoSyncWriter:
             }
         )
         return len(frame)
+
+
+def run_remote_code(params: dict[str, Any], get_price: Any) -> dict[str, Any]:
+    """Execute the generated remote cell locally and return its JSON payload."""
+    stdout = io.StringIO()
+    with contextlib.redirect_stdout(stdout):
+        exec(stock_a_minute_price_remote_code(params), {"get_price": get_price})  # noqa: S102
+
+    text = stdout.getvalue()
+    start = text.index(STOCK_A_MINUTE_PRICE_MARKER_START) + len(STOCK_A_MINUTE_PRICE_MARKER_START)
+    end = text.index(STOCK_A_MINUTE_PRICE_MARKER_END, start)
+    return json.loads(text[start:end].strip())
 
 
 async def test_stock_a_minute_price_schema_contract() -> None:
@@ -128,25 +140,25 @@ def test_stock_a_minute_price_uses_snapshot_info_for_security_options(
     ]
 
 
-async def test_stock_a_minute_price_query_normalizes_dict_result() -> None:
-    runner = FakeMindgoRunner(
+async def test_stock_a_minute_price_query_decodes_parquet_payload() -> None:
+    payload = run_remote_code(
         {
-            "data": [
-                {
-                    "symbol": "000001.SZ",
-                    "trade_date": "2023-02-01 10:58:00",
-                    "open": 14.57,
-                    "high": 14.58,
-                    "low": 14.56,
-                    "close": 14.57,
-                    "volume": 773700.0,
-                    "turnover": 11230980.0,
-                    "turnover_rate": 0.01,
-                    "is_paused": 0.0,
-                }
-            ]
-        }
+            "securities": ["000001.SZ"],
+            "start_date": "2023-02-01 10:58",
+            "end_date": "2023-02-01 10:59",
+            "fields": ["close"],
+            "fq": "none",
+            "skip_paused": False,
+            "bar_count": 0,
+        },
+        lambda *args, **kwargs: {
+            "000001.SZ": pd.DataFrame(
+                {"close": [14.57]},
+                index=pd.to_datetime(["2023-02-01 10:58:00"]),
+            )
+        },
     )
+    runner = FakeMindgoRunner(payload)
     adapter = StockAMinutePriceAdapter(runner)  # type: ignore[arg-type]
 
     frame = await adapter.query_from_mindgo(
@@ -169,18 +181,7 @@ async def test_stock_a_minute_price_query_normalizes_dict_result() -> None:
     assert 'fre_step="1m"' in runner.calls[0]["code"]
 
 
-def test_stock_a_minute_price_remote_code_calls_get_price_with_minute_frequency() -> None:
-    code = stock_a_minute_price_remote_code(
-        {
-            "securities": ["000001.SZ", "600519.SH"],
-            "start_date": "2023-02-01 10:57",
-            "end_date": "2023-02-01 10:59",
-            "fields": ["close", "volume"],
-            "fq": "none",
-            "skip_paused": True,
-            "bar_count": 3,
-        }
-    )
+def test_stock_a_minute_price_remote_code_returns_parquet_payload() -> None:
     calls: list[dict[str, Any]] = []
 
     def fake_get_price(*args, **kwargs):
@@ -192,25 +193,46 @@ def test_stock_a_minute_price_remote_code_calls_get_price_with_minute_frequency(
             )
         }
 
-    stdout = io.StringIO()
-    with contextlib.redirect_stdout(stdout):
-        exec(code, {"get_price": fake_get_price})  # noqa: S102
-
-    text = stdout.getvalue()
-    start = text.index(STOCK_A_MINUTE_PRICE_MARKER_START) + len(STOCK_A_MINUTE_PRICE_MARKER_START)
-    end = text.index(STOCK_A_MINUTE_PRICE_MARKER_END, start)
-    payload = json.loads(text[start:end].strip())
+    payload = run_remote_code(
+        {
+            "securities": ["000001.SZ", "600519.SH"],
+            "start_date": "2023-02-01 10:57",
+            "end_date": "2023-02-01 10:59",
+            "fields": ["close", "volume"],
+            "fq": "none",
+            "skip_paused": True,
+            "bar_count": 3,
+        },
+        fake_get_price,
+    )
 
     assert calls[0]["args"] == (["000001.SZ", "600519.SH"],)
     assert calls[0]["kwargs"]["fre_step"] == "1m"
     assert calls[0]["kwargs"]["fq"] is None
     assert calls[0]["kwargs"]["skip_paused"] is True
     assert calls[0]["kwargs"]["is_panel"] is False
-    assert payload["data"][0]["trade_date"] == "2023-02-01 10:59:00"
-    assert payload["data"][0]["symbol"] == "000001.SZ"
+    assert payload["rows"] == 1
+    assert payload["data_b64"]
+
+    frame = minute_price_frame_from_payload(payload)
+
+    assert list(frame.columns) == [
+        "symbol",
+        "trade_date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+    ]
+    assert frame.iloc[0]["symbol"] == "000001.SZ"
+    assert frame.iloc[0]["trade_date"] == "2023-02-01 10:59:00"
+    assert frame.iloc[0]["close"] == 14.57
+    assert frame.iloc[0]["volume"] == 100.0
+    assert pd.isna(frame.iloc[0]["open"])
 
 
-def test_normalize_stock_a_minute_price_preserves_panel_timestamps() -> None:
+def test_stock_a_minute_price_remote_code_converts_panel_frames() -> None:
     raw = {
         "close": pd.DataFrame(
             {
@@ -228,9 +250,24 @@ def test_normalize_stock_a_minute_price_preserves_panel_timestamps() -> None:
         ),
     }
 
-    frame = normalize_stock_a_minute_price(raw)
+    payload = run_remote_code(
+        {
+            "securities": ["000001.SZ", "600519.SH"],
+            "fields": ["close", "volume"],
+            "fq": "none",
+            "skip_paused": False,
+            "bar_count": 0,
+            "start_date": "2023-02-01 10:58",
+            "end_date": "2023-02-01 10:59",
+        },
+        lambda *args, **kwargs: raw,
+    )
 
-    assert frame[["symbol", "trade_date", "close", "volume"]].to_dict(orient="records") == [
+    frame = minute_price_frame_from_payload(payload)
+    records = frame[["symbol", "trade_date", "close", "volume"]].to_dict(orient="records")
+    records.sort(key=lambda record: (record["trade_date"], record["symbol"]))
+
+    assert records == [
         {
             "symbol": "000001.SZ",
             "trade_date": "2023-02-01 10:58:00",
@@ -258,23 +295,38 @@ def test_normalize_stock_a_minute_price_preserves_panel_timestamps() -> None:
     ]
 
 
-async def test_stock_a_minute_price_sync_writes_trade_day_partitions() -> None:
-    runner = FakeMindgoRunner(
+def test_minute_windows_slice_the_session_into_configured_windows() -> None:
+    windows = minute_adaptor._minute_windows(date(2023, 2, 1))
+
+    assert STOCK_A_MINUTE_PRICE_WINDOW_MINUTES == 20
+    assert len(windows) == 12
+    assert windows[0] == (datetime(2023, 2, 1, 9, 30), datetime(2023, 2, 1, 9, 49, 59))
+    assert windows[5] == (datetime(2023, 2, 1, 11, 10), datetime(2023, 2, 1, 11, 29, 59))
+    assert windows[6] == (datetime(2023, 2, 1, 13, 0), datetime(2023, 2, 1, 13, 19, 59))
+    assert windows[-1] == (datetime(2023, 2, 1, 14, 40), datetime(2023, 2, 1, 14, 59, 59))
+
+
+def _single_symbol_payload(symbol: str = "000001.SZ") -> dict[str, Any]:
+    return run_remote_code(
         {
-            "data": [
-                {
-                    "symbol": "000001.SZ",
-                    "trade_date": "2023-02-01 10:59:00",
-                    "close": 14.57,
-                },
-                {
-                    "symbol": "000001.SZ",
-                    "trade_date": "2023-02-02 09:31:00",
-                    "close": 14.60,
-                },
-            ]
-        }
+            "securities": [symbol],
+            "fields": ["close"],
+            "fq": "none",
+            "skip_paused": False,
+            "bar_count": 0,
+        },
+        lambda *args, **kwargs: {
+            symbol: pd.DataFrame(
+                {"close": [14.57]},
+                index=pd.to_datetime(["2023-02-01 10:59:00"]),
+            )
+        },
     )
+
+
+async def test_stock_a_minute_price_sync_writes_window_files(monkeypatch) -> None:
+    monkeypatch.setattr(minute_adaptor, "_snapshot_info_securities", lambda: ["000001.SZ"])
+    runner = FakeMindgoRunner(_single_symbol_payload())
     writer = FakeMindgoSyncWriter()
     adapter = StockAMinutePriceAdapter(  # type: ignore[arg-type]
         runner,
@@ -291,34 +343,28 @@ async def test_stock_a_minute_price_sync_writes_trade_day_partitions() -> None:
     )
 
     assert result.status == "success"
-    assert result.synced_count == 2
-    assert [call["partition_values"] for call in writer.calls] == [
-        {"trade_day": "20230201"},
-        {"trade_day": "20230202"},
+    assert result.synced_count == 24
+    assert sorted({call["partition_values"]["trade_day"] for call in writer.calls}) == [
+        "20230201",
+        "20230202",
     ]
-    assert (
-        writer.calls[0]["path"]
-        .as_posix()
-        .endswith("/a_stock_minute_price/trade_day=20230201/data.parquet")
-    )
+    assert len({call["path"].name for call in writer.calls}) == 12
+    assert {call["path"].name for call in writer.calls} >= {
+        "093000_094959.parquet",
+        "111000_112959.parquet",
+        "130000_131959.parquet",
+        "144000_145959.parquet",
+    }
     assert writer.calls[0]["order_by"] == ["trade_date", "symbol"]
+    assert '"start_date": "2023-02-01 09:30:00"' in runner.calls[0]["code"]
+    assert '"end_date": "2023-02-01 09:49:59"' in runner.calls[0]["code"]
     assert '"fre_step": "1m"' not in runner.calls[0]["code"]
-    assert '"start_date": "2023-02-01"' in runner.calls[0]["code"]
-    assert '"end_date": "2023-02-02"' in runner.calls[0]["code"]
+    assert '["000001.SZ"]' in runner.calls[0]["code"]
 
 
-async def test_stock_a_minute_price_sync_writes_parquet(tmp_path) -> None:
-    runner = FakeMindgoRunner(
-        {
-            "data": [
-                {
-                    "symbol": "000001.SZ",
-                    "trade_date": "2023-02-01 10:59:00",
-                    "close": 14.57,
-                }
-            ]
-        }
-    )
+async def test_stock_a_minute_price_sync_writes_parquet(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(minute_adaptor, "_snapshot_info_securities", lambda: ["000001.SZ"])
+    runner = FakeMindgoRunner(_single_symbol_payload())
     parquet_root = tmp_path / "mindgo" / "parquet"
     store = DuckDBParquetStore()
     adapter = StockAMinutePriceAdapter(  # type: ignore[arg-type]
@@ -331,25 +377,20 @@ async def test_stock_a_minute_price_sync_writes_parquet(tmp_path) -> None:
         MindgoSourceSyncRequest(
             start_date=date(2023, 2, 1),
             end_date=date(2023, 2, 1),
-            params={"securities": ["000001.SZ"], "fields": ["close"]},
+            params={"fields": ["close"]},
         )
     )
 
-    assert result.synced_count == 1
-    path = mindgo_parquet_partition_path(
-        parquet_root,
-        STOCK_A_MINUTE_PRICE_SOURCE_ID,
-        {"trade_day": "20230201"},
-    )
-    assert path.exists()
+    assert result.synced_count == 12
+    partition_dir = parquet_root / STOCK_A_MINUTE_PRICE_SOURCE_ID / "trade_day=20230201"
+    files = sorted(partition_dir.glob("*.parquet"))
+    assert len(files) == 12
+    assert (partition_dir / "093000_094959.parquet").exists()
+
     frame = store.query(
-        "SELECT symbol, trade_date, close FROM read_parquet($path)",
-        params={"path": str(path)},
+        "SELECT symbol, trade_date, close FROM read_parquet($glob)",
+        params={"glob": str(partition_dir / "*.parquet")},
     )
-    assert frame.to_dict(orient="records") == [
-        {
-            "symbol": "000001.SZ",
-            "trade_date": "2023-02-01 10:59:00",
-            "close": 14.57,
-        }
-    ]
+    assert frame["symbol"].unique().tolist() == ["000001.SZ"]
+    assert set(frame["trade_date"]) == {"2023-02-01 10:59:00"}
+    assert set(frame["close"]) == {14.57}

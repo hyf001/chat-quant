@@ -1,17 +1,23 @@
 from __future__ import annotations
 
+import base64
+import io
 import json
 import math
+import re
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timedelta
+from datetime import time as datetime_time
 from pathlib import Path
 from typing import Any, Protocol
 
 import pandas as pd
+import pyarrow.parquet as pyarrow_parquet
 
 from app.core.config import get_settings
+from app.core.logging import get_logger
 from app.schema.dataset.taxonomy import (
     DatasetAssetClass,
     DatasetFrequency,
@@ -46,8 +52,24 @@ from app.storage import (
     duckdb_dataset_path,
 )
 
+logger = get_logger(__name__)
+
 STOCK_A_MINUTE_PRICE_MARKER_START = "MINDGO_STOCK_A_MINUTE_PRICE_JSON_START"
 STOCK_A_MINUTE_PRICE_MARKER_END = "MINDGO_STOCK_A_MINUTE_PRICE_JSON_END"
+# Keep each MindGo request bounded while avoiding the overhead of one remote
+# Jupyter execution per small group of securities.
+STOCK_A_MINUTE_PRICE_BATCH_SIZE = 20
+# 20-minute windows keep every Parquet payload (~1.8MB once base64 encoded)
+# under the Jupyter IOPub burst budget (iopub_data_rate_limit=1MB/s over a 3s
+# window) while cutting the daily full-universe get_price calls from 120 to 12.
+STOCK_A_MINUTE_PRICE_WINDOW_MINUTES = 20
+STOCK_A_MINUTE_PRICE_TIMEOUT_SECONDS = 300.0
+# Payloads above the burst budget are streamed in paced chunks so that an
+# oversized window degrades into a slower transfer instead of silent data loss.
+STOCK_A_MINUTE_PRICE_SINGLE_PRINT_LIMIT_BYTES = 2_500_000
+STOCK_A_MINUTE_PRICE_PRINT_CHUNK_BYTES = 65_536
+STOCK_A_MINUTE_PRICE_PRINT_CHUNK_SLEEP_SECONDS = 0.11
+STOCK_A_MINUTE_PRICE_INVALID_SECURITIES_FILENAME = "invalid_securities.json"
 STOCK_A_MINUTE_PRICE_FIELDS = [
     ("symbol", "股票代码", "string"),
     ("trade_date", "时间", "date"),
@@ -96,8 +118,6 @@ RAW_TO_STANDARD_FIELD = {
     "is_paused": "is_paused",
     "是否停牌": "is_paused",
 }
-STANDARD_FIELD_NAMES = {name for name, _, _ in STOCK_A_MINUTE_PRICE_FIELDS}
-TIME_FIELD_NAMES = {"trade_date", "datetime", "date", "time", "trade_time", "时间", "日期"}
 
 
 @dataclass(frozen=True)
@@ -163,34 +183,198 @@ class StockAMinutePriceAdapter:
         if self._runner is None:
             raise RuntimeError("MindGo Jupyter runner is not configured")
 
-        payload = await self._runner.run_json(
-            stock_a_minute_price_remote_code(_query_params(request)),
-            marker_start=STOCK_A_MINUTE_PRICE_MARKER_START,
-            marker_end=STOCK_A_MINUTE_PRICE_MARKER_END,
+        params = _query_params(request)
+        securities = params.get("securities")
+        if isinstance(securities, str):
+            security_list = [securities]
+        elif isinstance(securities, (list, tuple)):
+            security_list = list(securities)
+        elif securities is None:
+            security_list = []
+        else:
+            security_list = [securities]
+
+        invalid_securities = self._load_invalid_securities()
+        security_list = [
+            str(symbol) for symbol in security_list if str(symbol) not in invalid_securities
+        ]
+
+        if not security_list:
+            return _stock_a_minute_price_frame([])
+
+        frames: list[pd.DataFrame] = []
+        pending = security_list
+        batch_number = 0
+        while pending:
+            batch = pending[:STOCK_A_MINUTE_PRICE_BATCH_SIZE]
+            offset = len(security_list) - len(pending)
+            batch_number += 1
+            batch_params = {
+                **params,
+                "securities": batch,
+            }
+            try:
+                payload = await self._runner.run_json(
+                    stock_a_minute_price_remote_code(batch_params),
+                    marker_start=STOCK_A_MINUTE_PRICE_MARKER_START,
+                    marker_end=STOCK_A_MINUTE_PRICE_MARKER_END,
+                    timeout_seconds=STOCK_A_MINUTE_PRICE_TIMEOUT_SECONDS,
+                )
+            except Exception as exc:
+                batch_number = offset // STOCK_A_MINUTE_PRICE_BATCH_SIZE + 1
+                raise RuntimeError(
+                    "MindGo minute query failed for batch "
+                    f"{batch_number} ({len(batch)} securities, offset {offset}): {exc}"
+                ) from exc
+            if payload.get("error"):
+                invalid_symbol = _invalid_security_from_error(payload)
+                if invalid_symbol is not None:
+                    invalid_securities.add(invalid_symbol)
+                    self._save_invalid_securities(invalid_securities)
+                    pending = [symbol for symbol in pending if symbol != invalid_symbol]
+                    batch_number -= 1
+                    continue
+                raise RuntimeError(
+                    "Remote MindGo query failed for batch "
+                    f"{batch_number} ({len(batch)} securities): " + _remote_error_detail(payload)
+                )
+            frames.append(minute_price_frame_from_payload(payload))
+            pending = pending[len(batch) :]
+
+        if len(frames) == 1:
+            return frames[0]
+        return pd.concat(frames, ignore_index=True)
+
+    def _invalid_securities_path(self) -> Path:
+        return (
+            self._storage.source_root(self.source_id)
+            / STOCK_A_MINUTE_PRICE_INVALID_SECURITIES_FILENAME
         )
-        if payload.get("error"):
-            raise RuntimeError(
-                "Remote MindGo query failed: " + json.dumps(payload, ensure_ascii=False)
-            )
-        return normalize_stock_a_minute_price(payload.get("data"))
+
+    def _load_invalid_securities(self) -> set[str]:
+        path = self._invalid_securities_path()
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return set()
+        return {str(symbol) for symbol in value} if isinstance(value, list) else set()
+
+    def _save_invalid_securities(self, securities: set[str]) -> None:
+        path = self._invalid_securities_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(sorted(securities), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
     async def sync(self, request: MindgoSourceSyncRequest) -> MindgoSourceSyncResult:
         started_at = time.perf_counter()
-        query_request = MindgoSourceQueryRequest(
-            params={
-                **request.params,
-                "start_date": request.start_date.isoformat(),
-                "end_date": request.end_date.isoformat(),
-                "bar_count": 0,
-            }
-        )
-        frame = await self.query_from_mindgo(query_request)
-        synced_count = await self._write_partitions(request, frame, request.start_date)
+        # Sync always covers the full stock universe from the snapshot table;
+        # an optionally supplied securities parameter must not narrow the sync.
+        sync_params = {key: value for key, value in request.params.items() if key != "securities"}
+        sync_params["securities"] = _snapshot_info_securities()
+        synced_count = 0
+        fetched_windows = 0
+        skipped_windows = 0
+        for trading_day in _date_range(request.start_date, request.end_date):
+            if trading_day.weekday() >= 5:
+                continue
+            for window_start, window_end in _minute_windows(trading_day):
+                path = self._window_path(trading_day, window_start, window_end)
+                # Window files are the checkpoint: a completed window is never
+                # requested again when the same sync instance is retried.
+                if path.exists():
+                    skipped_windows += 1
+                    continue
+                window_started_at = time.perf_counter()
+                logger.info(
+                    "[a_stock_minute_price.sync] fetching window %s-%s (%s)",
+                    window_start.strftime("%H:%M"),
+                    window_end.strftime("%H:%M"),
+                    trading_day.strftime("%Y%m%d"),
+                )
+                query_request = MindgoSourceQueryRequest(
+                    params={
+                        **sync_params,
+                        "start_date": window_start.strftime("%Y-%m-%d %H:%M:%S"),
+                        "end_date": window_end.strftime("%Y-%m-%d %H:%M:%S"),
+                        "bar_count": 0,
+                    }
+                )
+                frame = await self._query_full_stock_window(query_request)
+                write = MindgoPartitionedParquetWrite(
+                    source_id=self.source_id,
+                    partition_values={"trade_day": trading_day.strftime("%Y%m%d")},
+                    path=path,
+                    request=request,
+                    options=ParquetWriteOptions(order_by=["trade_date", "symbol"]),
+                )
+                written_rows = await self._sync_writer.write(write, frame)
+                synced_count += written_rows
+                fetched_windows += 1
+                logger.info(
+                    "[a_stock_minute_price.sync] wrote window %s-%s (%s) rows=%s written=%s "
+                    "elapsed_ms=%s",
+                    window_start.strftime("%H:%M"),
+                    window_end.strftime("%H:%M"),
+                    trading_day.strftime("%Y%m%d"),
+                    len(frame),
+                    written_rows,
+                    int((time.perf_counter() - window_started_at) * 1000),
+                )
         elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+        logger.info(
+            "[a_stock_minute_price.sync] finished windows_fetched=%s windows_skipped=%s "
+            "rows=%s elapsed_ms=%s",
+            fetched_windows,
+            skipped_windows,
+            synced_count,
+            elapsed_ms,
+        )
         return MindgoSourceSyncResult(
             status="success",
             elapsed_ms=elapsed_ms,
             synced_count=synced_count,
+        )
+
+    async def _query_full_stock_window(
+        self,
+        request: MindgoSourceQueryRequest,
+    ) -> pd.DataFrame:
+        """Query one time window with all stocks, removing invalid symbols on error."""
+        if self._runner is None:
+            raise RuntimeError("MindGo Jupyter runner is not configured")
+        params = _query_params(request)
+        securities = [str(symbol) for symbol in params["securities"]]
+        invalid = self._load_invalid_securities()
+        securities = [symbol for symbol in securities if symbol not in invalid]
+        while securities:
+            payload = await self._runner.run_json(
+                stock_a_minute_price_remote_code({**params, "securities": securities}),
+                marker_start=STOCK_A_MINUTE_PRICE_MARKER_START,
+                marker_end=STOCK_A_MINUTE_PRICE_MARKER_END,
+                timeout_seconds=STOCK_A_MINUTE_PRICE_TIMEOUT_SECONDS,
+            )
+            if not payload.get("error"):
+                return minute_price_frame_from_payload(payload)
+            invalid_symbol = _invalid_security_from_error(payload)
+            if invalid_symbol is None:
+                raise RuntimeError("Remote MindGo query failed: " + _remote_error_detail(payload))
+            invalid.add(invalid_symbol)
+            self._save_invalid_securities(invalid)
+            securities = [symbol for symbol in securities if symbol != invalid_symbol]
+        return _stock_a_minute_price_frame([])
+
+    def _window_path(
+        self,
+        trading_day: date,
+        window_start: datetime,
+        window_end: datetime,
+    ) -> Path:
+        return (
+            self._storage.source_root(self.source_id)
+            / f"trade_day={trading_day.strftime('%Y%m%d')}"
+            / f"{window_start.strftime('%H%M%S')}_{window_end.strftime('%H%M%S')}.parquet"
         )
 
     async def _write_partitions(
@@ -332,74 +516,44 @@ def stock_a_minute_price_schema(
 
 
 def stock_a_minute_price_remote_code(params: dict[str, Any]) -> str:
+    """Build the remote kernel cell that returns window data as base64 Parquet.
+
+    The remote kernel serialises the tidy minute frame to Parquet instead of a
+    JSON row array: it is ~8x smaller on the wire, it skips the pure-Python
+    per-row conversion, and it keeps every window inside the Jupyter IOPub rate
+    limit. The marked stdout region stays a JSON object so the existing
+    ``run_json`` extraction path keeps working; the payload itself rides in the
+    ``data_b64`` field.
+    """
     params_json = json.dumps(params, ensure_ascii=False, sort_keys=True)
+    standard_columns_json = json.dumps(
+        [name for name, _, _ in STOCK_A_MINUTE_PRICE_FIELDS], ensure_ascii=False
+    )
+    number_columns_json = json.dumps(
+        [name for name, _, value_type in STOCK_A_MINUTE_PRICE_FIELDS if value_type == "number"],
+        ensure_ascii=False,
+    )
+    raw_to_standard_json = json.dumps(RAW_TO_STANDARD_FIELD, ensure_ascii=False)
     return f"""
+import base64
+import io
 import json
-import math
+import time
 import traceback
 from datetime import datetime
 
 PARAMS_JSON = {params_json!r}
 PARAMS = json.loads(PARAMS_JSON)
 FIELDS = {json.dumps(DEFAULT_QUERY_FIELDS, ensure_ascii=False)}
-KNOWN_FIELDS = set(FIELDS)
+STANDARD_COLUMNS = {standard_columns_json}
+RAW_TO_STANDARD = {raw_to_standard_json}
+NUMBER_COLUMNS = {number_columns_json}
+TIME_COLUMNS = ("trade_date", "datetime", "date", "time", "trade_time")
 MARKER_START = {json.dumps(STOCK_A_MINUTE_PRICE_MARKER_START)}
 MARKER_END = {json.dumps(STOCK_A_MINUTE_PRICE_MARKER_END)}
-
-
-def jsonable(value):
-    if value is None:
-        return None
-    try:
-        import pandas as pd
-        if pd.isna(value):
-            return None
-    except Exception:
-        pass
-    try:
-        value = value.item()
-    except Exception:
-        pass
-    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
-        return None
-    if isinstance(value, (str, int, float, bool)):
-        return value
-    if isinstance(value, dict):
-        return {{str(k): jsonable(v) for k, v in value.items()}}
-    if isinstance(value, (list, tuple)):
-        return [jsonable(v) for v in value]
-    return str(value)
-
-
-def datetime_text(value):
-    if value is None:
-        return None
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
-        text = str(int(value))
-    else:
-        text = str(value).strip()
-    if text.isdigit():
-        formats = {{
-            8: "%Y%m%d",
-            12: "%Y%m%d%H%M",
-            14: "%Y%m%d%H%M%S",
-        }}
-        if len(text) in formats:
-            try:
-                import pandas as pd
-                return pd.to_datetime(text, format=formats[len(text)]).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-            except Exception:
-                pass
-    try:
-        import pandas as pd
-        timestamp = pd.to_datetime(value)
-        if pd.isna(timestamp):
-            return None
-        return timestamp.strftime("%Y-%m-%d %H:%M:%S")
-    except Exception:
-        return text
+PRINT_CHUNK_BYTES = {STOCK_A_MINUTE_PRICE_PRINT_CHUNK_BYTES}
+PRINT_CHUNK_SLEEP_SECONDS = {STOCK_A_MINUTE_PRICE_PRINT_CHUNK_SLEEP_SECONDS}
+SINGLE_PRINT_LIMIT_BYTES = {STOCK_A_MINUTE_PRICE_SINGLE_PRINT_LIMIT_BYTES}
 
 
 def normalize_securities(value):
@@ -430,97 +584,126 @@ def mindgo_datetime(value):
         return datetime.strptime(text[:10], "%Y-%m-%d")
 
 
-def frame_records(frame, symbol=None, field_name=None):
-    working = frame.copy()
-    if not any(
-        name in working.columns
-        for name in ("trade_date", "datetime", "date", "time", "trade_time")
-    ):
+def mindgo_end_datetime(value):
+    result = mindgo_datetime(value)
+    if result is not None and len(str(value).strip()) == 10:
+        return result.replace(hour=23, minute=59, second=59)
+    return result
+
+
+def trade_date_text(series):
+    import pandas as pd
+
+    timestamps = pd.to_datetime(series, errors="coerce")
+    text = timestamps.dt.strftime("%Y-%m-%d %H:%M:%S")
+    if text.isna().all() and len(series):
+        digits = series.astype("string").str.strip()
+        parsed = pd.Series(pd.NaT, index=series.index, dtype="datetime64[ns]")
+        for width, fmt in ((8, "%Y%m%d"), (12, "%Y%m%d%H%M"), (14, "%Y%m%d%H%M%S")):
+            mask = digits.str.len() == width
+            if bool(mask.any()):
+                parsed.loc[mask] = pd.to_datetime(digits.loc[mask], format=fmt, errors="coerce")
+        text = parsed.dt.strftime("%Y-%m-%d %H:%M:%S")
+    return text
+
+
+def frame_with_time_column(frame):
+    working = frame
+    if not any(str(column) in TIME_COLUMNS for column in working.columns):
         working = working.reset_index()
-        working = working.rename(columns={{str(working.columns[0]): "trade_date"}})
-    rows = []
-    for raw_row in working.to_dict(orient="records"):
-        row = {{str(key): jsonable(value) for key, value in raw_row.items()}}
-        for time_key in ("datetime", "date", "time", "trade_time"):
-            if time_key in row and "trade_date" not in row:
-                row["trade_date"] = row.pop(time_key)
-                break
-        if row.get("trade_date") is not None:
-            row["trade_date"] = datetime_text(row["trade_date"])
-        if symbol is not None:
-            row.setdefault("symbol", symbol)
-        if field_name and "value" in row:
-            row[field_name] = row.pop("value")
-        rows.append(row)
-    return rows
+        columns = [str(column) for column in working.columns]
+        columns[0] = "trade_date"
+        working.columns = columns
+    return working
 
 
-def looks_like_panel(value):
-    if not isinstance(value, dict):
-        return False
-    return any(
-        str(key) in KNOWN_FIELDS and hasattr(child, "to_dict")
-        for key, child in value.items()
-    )
+def symbol_frames_to_tidy(value):
+    import pandas as pd
+
+    parts = []
+    for symbol, frame in value.items():
+        if not hasattr(frame, "reset_index"):
+            return None
+        part = frame_with_time_column(frame).copy()
+        part["symbol"] = str(symbol)
+        parts.append(part)
+    if not parts:
+        return pd.DataFrame(columns=STANDARD_COLUMNS)
+    return pd.concat(parts, ignore_index=True)
 
 
-def panel_records(value):
-    by_key = {{}}
+def panel_frames_to_tidy(value):
+    import pandas as pd
+
+    parts = []
     for field_name, frame in value.items():
         field_name = str(field_name)
-        if field_name not in KNOWN_FIELDS or not hasattr(frame, "copy"):
+        if field_name not in STANDARD_COLUMNS or not hasattr(frame, "melt"):
             continue
         working = frame.copy().reset_index()
         time_column = str(working.columns[0])
-        for raw_row in working.to_dict(orient="records"):
-            trade_date = datetime_text(raw_row.get(time_column))
-            for symbol, field_value in raw_row.items():
-                symbol = str(symbol)
-                if symbol == time_column:
-                    continue
-                key = (trade_date, symbol)
-                row = by_key.setdefault(
-                    key, {{"trade_date": trade_date, "symbol": symbol}}
-                )
-                row[field_name] = jsonable(field_value)
-    return list(by_key.values())
+        long = working.melt(id_vars=[time_column], var_name="symbol", value_name=field_name)
+        renames = dict()
+        renames[time_column] = "trade_date"
+        long = long.rename(columns=renames)
+        parts.append(long)
+    if not parts:
+        return None
+    merged = parts[0]
+    for part in parts[1:]:
+        merged = merged.merge(part, on=["trade_date", "symbol"], how="outer")
+    return merged
 
 
-def normalize_result(value, securities):
-    if value is None:
-        return []
-    if hasattr(value, "to_dict"):
-        symbols = securities_symbols(securities)
-        symbol = symbols[0] if len(symbols) == 1 else None
-        return frame_records(value, symbol=symbol)
-    if looks_like_panel(value):
-        return panel_records(value)
+def tidy_frame(value, securities):
+    import pandas as pd
+
     if isinstance(value, dict):
-        rows = []
-        for symbol, item in value.items():
-            if hasattr(item, "to_dict"):
-                rows.extend(frame_records(item, symbol=str(symbol)))
-            elif isinstance(item, list):
-                for row in item:
-                    if isinstance(row, dict):
-                        normalized = {{str(key): jsonable(val) for key, val in row.items()}}
-                        normalized.setdefault("symbol", str(symbol))
-                        rows.append(normalized)
-            elif isinstance(item, dict):
-                normalized = {{str(key): jsonable(val) for key, val in item.items()}}
-                normalized.setdefault("symbol", str(symbol))
-                rows.append(normalized)
-        return rows
+        panel = panel_frames_to_tidy(value)
+        if panel is not None:
+            return panel
+        tidy = symbol_frames_to_tidy(value)
+        if tidy is not None:
+            return tidy
+        return pd.DataFrame(columns=STANDARD_COLUMNS)
+    if hasattr(value, "reset_index") and hasattr(value, "columns"):
+        frame = frame_with_time_column(value).copy()
+        symbols = securities_symbols(securities)
+        if len(symbols) == 1:
+            frame["symbol"] = symbols[0]
+        return frame
     if isinstance(value, list):
-        return [
-            {{str(key): jsonable(val) for key, val in row.items()}}
-            for row in value
-            if isinstance(row, dict)
-        ]
-    return []
+        return pd.DataFrame(value)
+    raise TypeError("Unsupported MindGo stock minute result type: " + str(type(value)))
 
 
-payload = {{"data": None}}
+def finalize_tidy(frame):
+    import pandas as pd
+
+    out = pd.DataFrame(frame)
+    out = out.rename(
+        columns=dict(
+            (str(key), RAW_TO_STANDARD.get(str(key), str(key))) for key in out.columns
+        )
+    )
+    for column in STANDARD_COLUMNS:
+        if column not in out.columns:
+            out[column] = pd.NA
+    out = out.loc[:, STANDARD_COLUMNS].copy()
+    out["symbol"] = out["symbol"].astype("string").astype(object)
+    out["trade_date"] = trade_date_text(out["trade_date"])
+    for column in NUMBER_COLUMNS:
+        out[column] = pd.to_numeric(out[column], errors="coerce")
+    return out
+
+
+def frame_to_parquet_base64(frame):
+    buffer = io.BytesIO()
+    frame.to_parquet(buffer, compression="zstd", index=False)
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+payload = dict(rows=0, data_b64="")
 try:
     call_params = dict(PARAMS)
     securities = normalize_securities(call_params.get("securities"))
@@ -530,7 +713,7 @@ try:
         fq = None
     get_price_params = dict(
         start_date=mindgo_datetime(call_params.get("start_date")),
-        end_date=mindgo_datetime(call_params.get("end_date")),
+        end_date=mindgo_end_datetime(call_params.get("end_date")),
         fre_step="1m",
         fields=fields,
         skip_paused=bool(call_params.get("skip_paused", False)),
@@ -540,40 +723,59 @@ try:
     bar_count = int(call_params.get("bar_count") or 0)
     if bar_count > 0:
         get_price_params["bar_count"] = bar_count
-    # MindGo's minute endpoint can time out when too many securities are
-    # requested in one call. Fetch in bounded batches and merge the rows.
-    security_list = securities if isinstance(securities, (list, tuple)) else [securities]
-    rows = []
-    batch_size = 20
-    for offset in range(0, len(security_list), batch_size):
-        batch = security_list[offset:offset + batch_size]
-        value = get_price(batch, **get_price_params)
-        rows.extend(normalize_result(value, batch))
-    payload["data"] = rows
+    value = get_price(securities, **get_price_params)
+    tidy = finalize_tidy(tidy_frame(value, securities))
+    payload["rows"] = int(len(tidy))
+    payload["data_b64"] = frame_to_parquet_base64(tidy)
 except Exception as exc:
     payload["error"] = str(exc)
     payload["traceback"] = traceback.format_exc(limit=8)
 
+text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
 print(MARKER_START)
-print(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+if len(text) <= SINGLE_PRINT_LIMIT_BYTES:
+    print(text)
+else:
+    for offset in range(0, len(text), PRINT_CHUNK_BYTES):
+        print(text[offset:offset + PRINT_CHUNK_BYTES], end="")
+        time.sleep(PRINT_CHUNK_SLEEP_SECONDS)
+    print()
 print(MARKER_END)
 """
 
 
-def normalize_stock_a_minute_price(value: Any) -> pd.DataFrame:
-    if value is None:
+def minute_price_frame_from_payload(payload: Mapping[str, Any]) -> pd.DataFrame:
+    """Decode the base64 Parquet payload produced by the remote MindGo kernel."""
+    encoded = payload.get("data_b64")
+    if not isinstance(encoded, str) or not encoded:
         return _stock_a_minute_price_frame([])
-    if isinstance(value, pd.DataFrame):
-        return _normalize_frame(value)
-    if isinstance(value, dict):
-        if _looks_like_panel_dict(value):
-            return _normalize_panel_dict(value)
-        return _normalize_dict(value)
-    if isinstance(value, list):
-        return _stock_a_minute_price_frame(
-            [_normalize_row(row) for row in value if isinstance(row, dict)]
+    try:
+        table = pyarrow_parquet.read_table(io.BytesIO(base64.b64decode(encoded)))
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError("MindGo minute price payload is not valid Parquet") from exc
+    frame = table.to_pandas()
+    expected_rows = payload.get("rows")
+    if isinstance(expected_rows, int) and expected_rows >= 0 and expected_rows != len(frame):
+        raise RuntimeError(
+            "MindGo minute price payload is incomplete: "
+            f"header rows={expected_rows} parquet rows={len(frame)}"
         )
-    raise TypeError(f"Unsupported MindGo stock minute result type: {type(value).__name__}")
+    return _coerce_minute_price_frame(frame)
+
+
+def _coerce_minute_price_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    columns = [name for name, _, _ in STOCK_A_MINUTE_PRICE_FIELDS]
+    working = pd.DataFrame(frame)
+    for column in columns:
+        if column not in working.columns:
+            working[column] = pd.NA
+    working = working.loc[:, columns].reset_index(drop=True)
+    working["symbol"] = working["symbol"].map(_json_scalar)
+    working["trade_date"] = working["trade_date"].map(_json_scalar)
+    for name, _, value_type in STOCK_A_MINUTE_PRICE_FIELDS:
+        if value_type == "number":
+            working[name] = pd.to_numeric(working[name], errors="coerce")
+    return working
 
 
 def _query_params(request: MindgoSourceQueryRequest) -> dict[str, Any]:
@@ -585,6 +787,29 @@ def _query_params(request: MindgoSourceQueryRequest) -> dict[str, Any]:
     params.setdefault("skip_paused", False)
     params.setdefault("bar_count", 0)
     return params
+
+
+def _invalid_security_from_error(payload: Mapping[str, Any]) -> str | None:
+    error = str(payload.get("error") or "")
+    if "不存在" not in error:
+        return None
+    match = re.search(r"证券\[([^\]]+)\]不存在", error)
+    return match.group(1).strip().upper() if match else None
+
+
+def _remote_error_detail(payload: Mapping[str, Any]) -> str:
+    """Render a remote failure without echoing the (potentially huge) data field."""
+    detail = {"error": payload.get("error")}
+    if payload.get("traceback"):
+        detail["traceback"] = payload["traceback"]
+    text = json.dumps(detail, ensure_ascii=False)
+    error = str(payload.get("error") or "")
+    if "get_price" in error and "not defined" in error:
+        text += (
+            " (the notebook kernel was restarted without running its setup cells; "
+            "open the notebook, run the MindGo API cells, then retry)"
+        )
+    return text
 
 
 def _daily_partitions(frame: pd.DataFrame, fallback_date: date) -> list[tuple[str, pd.DataFrame]]:
@@ -602,91 +827,38 @@ def _daily_partitions(frame: pd.DataFrame, fallback_date: date) -> list[tuple[st
     ]
 
 
+def _date_range(start_date: date, end_date: date) -> list[date]:
+    return [
+        start_date + timedelta(days=offset) for offset in range((end_date - start_date).days + 1)
+    ]
+
+
+def _minute_windows(trading_day: date) -> list[tuple[datetime, datetime]]:
+    windows: list[tuple[datetime, datetime]] = []
+    for session_start, session_end in (
+        (datetime_time(9, 30), datetime_time(11, 30)),
+        (datetime_time(13, 0), datetime_time(15, 0)),
+    ):
+        start = datetime.combine(trading_day, session_start)
+        end = datetime.combine(trading_day, session_end) - timedelta(seconds=1)
+        while start <= end:
+            window_end = min(
+                start
+                + timedelta(minutes=STOCK_A_MINUTE_PRICE_WINDOW_MINUTES)
+                - timedelta(seconds=1),
+                end,
+            )
+            windows.append((start, window_end))
+            start = window_end + timedelta(seconds=1)
+    return windows
+
+
 def mindgo_parquet_partition_path(
     storage_root: Path | str,
     source_id: str,
     partition_values: Mapping[str, str],
 ) -> Path:
     return mindgo_source_partition_path(storage_root, source_id, partition_values)
-
-
-def _normalize_dict(value: dict[str, Any]) -> pd.DataFrame:
-    rows: list[dict[str, Any]] = []
-    for symbol, item in value.items():
-        if isinstance(item, pd.DataFrame):
-            for row in _frame_to_rows(item):
-                row["symbol"] = str(symbol)
-                rows.append(row)
-        elif isinstance(item, list):
-            for row in item:
-                if isinstance(row, dict):
-                    normalized = _normalize_row(row)
-                    normalized.setdefault("symbol", str(symbol))
-                    rows.append(normalized)
-        elif isinstance(item, dict):
-            normalized = _normalize_row(item)
-            normalized.setdefault("symbol", str(symbol))
-            rows.append(normalized)
-    return _stock_a_minute_price_frame(rows)
-
-
-def _looks_like_panel_dict(value: dict[str, Any]) -> bool:
-    return any(
-        str(key) in STANDARD_FIELD_NAMES and isinstance(item, pd.DataFrame)
-        for key, item in value.items()
-    )
-
-
-def _normalize_panel_dict(value: dict[str, Any]) -> pd.DataFrame:
-    rows_by_key: dict[tuple[str | None, str], dict[str, Any]] = {}
-    for field_name, frame in value.items():
-        field_name = RAW_TO_STANDARD_FIELD.get(str(field_name), str(field_name))
-        if field_name not in STANDARD_FIELD_NAMES or not isinstance(frame, pd.DataFrame):
-            continue
-        working = frame.reset_index()
-        time_column = str(working.columns[0])
-        for raw_row in working.to_dict(orient="records"):
-            trade_date = _datetime_text(raw_row.get(time_column))
-            for symbol, field_value in raw_row.items():
-                symbol = str(symbol)
-                if symbol == time_column:
-                    continue
-                key = (trade_date, symbol)
-                row = rows_by_key.setdefault(
-                    key,
-                    {"trade_date": trade_date, "symbol": symbol},
-                )
-                row[field_name] = _json_scalar(field_value)
-    return _stock_a_minute_price_frame(list(rows_by_key.values()))
-
-
-def _normalize_frame(frame: pd.DataFrame) -> pd.DataFrame:
-    return _stock_a_minute_price_frame(_frame_to_rows(frame))
-
-
-def _frame_to_rows(frame: pd.DataFrame) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    working = frame.copy()
-    if not any(str(column) in TIME_FIELD_NAMES for column in working.columns):
-        working = working.reset_index()
-        index_column = str(working.columns[0])
-        working = working.rename(columns={index_column: "trade_date"})
-    for row in working.to_dict(orient="records"):
-        rows.append(_normalize_row(row))
-    return rows
-
-
-def _normalize_row(row: dict[str, Any]) -> dict[str, Any]:
-    normalized = {
-        RAW_TO_STANDARD_FIELD.get(str(key), str(key)): _json_scalar(value)
-        for key, value in row.items()
-        if str(key) in RAW_TO_STANDARD_FIELD or str(key) in STANDARD_FIELD_NAMES
-    }
-    if "trade_date" in normalized:
-        normalized["trade_date"] = _datetime_text(normalized["trade_date"])
-    if "symbol" in normalized and normalized["symbol"] is not None:
-        normalized["symbol"] = str(normalized["symbol"])
-    return normalized
 
 
 def _stock_a_minute_price_frame(rows: list[dict[str, Any]]) -> pd.DataFrame:

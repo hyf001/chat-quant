@@ -109,7 +109,10 @@ def _collect_source_partitions(
     partitions: list[str],
 ) -> None:
     if len(values) == len(partition_keys):
-        if (base_path / filename).exists():
+        if (base_path / filename).exists() or (
+            filename == DEFAULT_MINDGO_PARTITION_FILENAME
+            and any(child.is_file() and child.suffix == ".parquet" for child in base_path.iterdir())
+        ):
             partitions.append("/".join(values))
         return
     if not base_path.exists():

@@ -445,7 +445,7 @@ export function DataSourceSettingsForm({
         trigger_time: syncTimeDraft,
         write_mode: manualWriteModeDraft,
         query_window: normalizeQueryWindow(manualQueryWindowDraft, schema?.sync ?? null),
-        params: cleanVisibleSyncParams(syncParams),
+        params: cleanVisibleSyncParams(syncParams, selectedSourceId),
       });
       const instances = response.instances.length > 0 ? response.instances : [response.instance];
       await loadSyncStatus(selectedSourceId, syncInstanceStatusFilter);
@@ -562,7 +562,7 @@ export function DataSourceSettingsForm({
           start_offset_days: 0,
           end_offset_days: 0,
         },
-        params: cleanVisibleSyncParams(syncParams),
+        params: cleanVisibleSyncParams(syncParams, selectedSourceId),
       });
       setSyncStatus(response);
       setCronDraft(response.scheduler.cron ?? defaultSyncCron);
@@ -2394,7 +2394,11 @@ function visibleMindgoQueryParams(schema: MindgoSourceSchema): MindgoParameterSp
 }
 
 function visibleMindgoSyncParams(schema: MindgoSourceSchema): MindgoParameterSpec[] {
-  return schema.query_params.filter((param) => !hiddenMindgoSyncParamNames.has(param.name));
+  return schema.query_params.filter(
+    (param) =>
+      !hiddenMindgoSyncParamNames.has(param.name) &&
+      !(schema.name_en === "a_stock_minute_price" && param.name === "securities"),
+  );
 }
 
 function cleanVisibleParams(params: MindgoParamDraft): Record<string, MindgoJsonValue> {
@@ -2405,10 +2409,17 @@ function cleanVisibleParams(params: MindgoParamDraft): Record<string, MindgoJson
   );
 }
 
-function cleanVisibleSyncParams(params: MindgoParamDraft): Record<string, MindgoJsonValue> {
+function cleanVisibleSyncParams(
+  params: MindgoParamDraft,
+  sourceId: string,
+): Record<string, MindgoJsonValue> {
   return cleanParams(
     Object.fromEntries(
-      Object.entries(params).filter(([name]) => !hiddenMindgoSyncParamNames.has(name)),
+      Object.entries(params).filter(
+        ([name]) =>
+          !hiddenMindgoSyncParamNames.has(name) &&
+          !(sourceId === "a_stock_minute_price" && name === "securities"),
+      ),
     ),
   );
 }
