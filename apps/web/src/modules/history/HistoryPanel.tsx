@@ -1,4 +1,5 @@
 import {
+  CandlestickChart,
   Check,
   BarChart3,
   ChevronsUpDown,
@@ -155,6 +156,16 @@ export function HistoryPanel({
           >
             <BarChart3 className="h-4 w-4" />
             <span>数据分析</span>
+          </Button>
+          <Button
+            className="mt-1 w-full justify-start"
+            size="sm"
+            variant={activeRoute === "kline-training" ? "default" : "ghost"}
+            type="button"
+            onClick={() => onNavigateRoute("kline-training")}
+          >
+            <CandlestickChart className="h-4 w-4" />
+            <span>K 线训练</span>
           </Button>
           <Button
             className="mt-1 w-full justify-start"

@@ -37,3 +37,20 @@ class StockPreviewResponse(BaseModel):
     turnover: float | None = None
     candles: list[StockPreviewCandle] = Field(default_factory=list)
     source_dataset: str = "a_stock_daily_price_pre_adjusted"
+
+
+class StockIntradayPoint(BaseModel):
+    """分时点：X 轴只有 ``HH:MM``，交易日由 ``trade_date`` 单独给出。"""
+
+    t: str
+    p: float
+    v: float
+
+
+class StockIntradayResponse(BaseModel):
+    """某只股票某一天的 1 分钟分时（行情预览用）。"""
+
+    symbol: str
+    trade_date: str
+    points: list[StockIntradayPoint] = Field(default_factory=list)
+    source_dataset: str = "a_stock_minute_price"

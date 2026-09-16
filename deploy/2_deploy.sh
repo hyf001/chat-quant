@@ -91,7 +91,7 @@ Group=${APP_USER}
 WorkingDirectory=${APP_DIR}
 ExecStart=${VENV_DIR}/bin/gunicorn app.main:app \\
     --chdir ${APP_DIR}/apps/api \\
-    --workers 2 \\
+    --workers 1 \\
     --worker-class uvicorn.workers.UvicornWorker \\
     --bind ${API_HOST}:${API_PORT} \\
     --log-level info \\

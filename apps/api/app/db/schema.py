@@ -24,6 +24,7 @@ from app.model.job_runtime import job_runtime as job_runtime_model  # noqa: F401
 from app.model.project import project as project_model  # noqa: F401
 from app.model.stock_pool import stock_pool as stock_pool_model  # noqa: F401
 from app.model.strategy import strategy as strategy_model  # noqa: F401
+from app.model.training import training as training_model  # noqa: F401
 
 _SCHEMA_LOCK = Lock()
 _INITIALIZED_DATABASE_URLS: set[str] = set()

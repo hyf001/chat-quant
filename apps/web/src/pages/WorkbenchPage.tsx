@@ -12,6 +12,7 @@ import { HistoryPanel } from "../modules/history";
 import { NotebookPage } from "../modules/notebook";
 import { StockPoolsPage } from "../modules/stockPool";
 import { StrategiesPage, StrategyDeploymentsPage } from "../modules/strategy";
+import { TrainingPage } from "../modules/training";
 import { WorkspaceLayout } from "../modules/workspace";
 import {
   createProject,
@@ -42,6 +43,7 @@ import type { PrimaryRoute } from "../shared/routes";
 
 const routePaths: Record<PrimaryRoute, string> = {
   "new-task": "/tasks/new",
+  "kline-training": "/training",
   notebooks: "/notebooks",
   "stock-pools": "/stock-pools",
   strategies: "/strategies",
@@ -481,6 +483,8 @@ export function WorkbenchPage() {
           />
         ) : activeRoute === "notebooks" ? (
           <NotebookPage project={activeProject} />
+        ) : activeRoute === "kline-training" ? (
+          <TrainingPage project={activeProject} />
         ) : activeRoute === "stock-pools" ? (
           <StockPoolsPage project={activeProject} />
         ) : activeRoute === "strategies" ? (
@@ -508,11 +512,15 @@ export function WorkbenchPage() {
         ) : null
       }
       insight={
-        activeRoute === "notebooks" || activeRoute === "stock-pools" ? null : (
+        activeRoute === "notebooks" ||
+        activeRoute === "kline-training" ||
+        activeRoute === "stock-pools" ? null : (
           <ProjectFilesPanel project={activeProject} />
         )
       }
-      contentClassName={activeRoute === "notebooks" ? "p-0" : undefined}
+      contentClassName={
+        activeRoute === "notebooks" || activeRoute === "kline-training" ? "p-0" : undefined
+      }
     />
   );
 }
@@ -588,6 +596,12 @@ function routeFromPath(pathname: string): PrimaryRoute {
   }
   if (pathname === routePaths.notebooks || pathname.startsWith(`${routePaths.notebooks}/`)) {
     return "notebooks";
+  }
+  if (
+    pathname === routePaths["kline-training"] ||
+    pathname.startsWith(`${routePaths["kline-training"]}/`)
+  ) {
+    return "kline-training";
   }
   if (
     pathname === routePaths["stock-pools"] ||

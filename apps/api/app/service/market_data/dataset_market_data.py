@@ -336,9 +336,7 @@ def _validate_dataset_fields(
 ) -> None:
     columns = _dataset_columns(database_path, dataset_name=dataset_name, dataset_id=dataset_id)
     missing = [
-        {"role": role, "field": field}
-        for role, field in mapping.items()
-        if field not in columns
+        {"role": role, "field": field} for role, field in mapping.items() if field not in columns
     ]
     if missing:
         raise MarketDataError(

@@ -1,0 +1,53 @@
+"""Shared backtrader host used by both the backtest and the training adapters."""
+
+from app.service.chatq_engine.backtrader_host import (
+    ChatQBacktraderStrategyBase,
+    ClosedTradeAnalyzer,
+    DailyPortfolioAnalyzer,
+    EquityCurveAnalyzer,
+    OrderExecutionAnalyzer,
+    extract_current_bars,
+    history_until,
+    is_terminal_order,
+    normalize_open_orders,
+    normalize_order,
+    normalize_order_event,
+    normalize_positions,
+    order_created_price,
+    order_status,
+    order_type,
+    to_backtrader_exectype,
+)
+from app.service.chatq_engine.metrics import (
+    drawdown_analysis,
+    equity_returns,
+    quantize,
+    sharpe_ratio,
+    total_return_pct,
+    win_rate_pct,
+)
+
+__all__ = [
+    "ChatQBacktraderStrategyBase",
+    "ClosedTradeAnalyzer",
+    "DailyPortfolioAnalyzer",
+    "EquityCurveAnalyzer",
+    "OrderExecutionAnalyzer",
+    "drawdown_analysis",
+    "equity_returns",
+    "extract_current_bars",
+    "history_until",
+    "is_terminal_order",
+    "normalize_open_orders",
+    "normalize_order",
+    "normalize_order_event",
+    "normalize_positions",
+    "order_created_price",
+    "order_status",
+    "order_type",
+    "quantize",
+    "sharpe_ratio",
+    "to_backtrader_exectype",
+    "total_return_pct",
+    "win_rate_pct",
+]

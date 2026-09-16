@@ -17,6 +17,7 @@ from app.api.v1 import (
     runtime_api,
     stock_pool_api,
     strategy_api,
+    training_api,
 )
 
 api_router = APIRouter()
@@ -40,3 +41,4 @@ api_router.include_router(project_api.router, prefix="/projects", tags=["project
 api_router.include_router(runtime_api.router, prefix="/runtime", tags=["runtime"])
 api_router.include_router(stock_pool_api.router, prefix="/stock-pools", tags=["stock-pools"])
 api_router.include_router(strategy_api.router, tags=["strategies"])
+api_router.include_router(training_api.router, prefix="/training", tags=["training"])

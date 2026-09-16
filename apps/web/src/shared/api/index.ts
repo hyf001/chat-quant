@@ -2,6 +2,7 @@ export * from "../types/agentRuntime";
 export * from "../types/backtests";
 export * from "./market";
 export * from "./stockPools";
+export * from "./training";
 export * from "./strategies";
 export {
   API_BASE_URL,

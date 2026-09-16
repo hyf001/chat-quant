@@ -19,6 +19,7 @@ Chat-Quant 是一个基于自然语言对话的股票分析与策略验证工作
 - Agent：`claude-agent-sdk`，插件目录位于 `plugin/`。
 - 数据与回测：AKShare、pandas、Backtrader。
 - Web：React 19、Vite、TypeScript、Tailwind CSS、ECharts。
+- 图表：TradingView [Lightweight Charts](https://www.tradingview.com/)（Apache-2.0；图表上的归因角标已关闭，归因以本条为准）。
 - Desktop：Electron、electron-builder，复用 Web 构建产物。
 
 ## 目录结构

@@ -13,6 +13,7 @@ from app.core.config import get_settings
 from app.core.logging import RequestLoggingMiddleware, configure_logging, get_logger
 from app.service.job_runtime import JobRuntimeWorker, register_default_job_runtime_events
 from app.service.notebook import notebook_runtime_manager
+from app.service.training import training_engine_recycler
 
 logger = get_logger(__name__)
 
@@ -30,9 +31,11 @@ async def lifespan(app: FastAPI):
     )
     worker.start()
     app.state.job_runtime_worker = worker
+    training_engine_recycler.start()
     try:
         yield
     finally:
+        await training_engine_recycler.stop()
         await worker.stop()
         await notebook_runtime_manager.stop_all()
 

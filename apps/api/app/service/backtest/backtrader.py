@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import math
 import sys
-from datetime import date, datetime, time
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from uuid import uuid4
 
 import backtrader as bt
@@ -28,6 +26,18 @@ from app.schema.backtest import (
 )
 from app.schema.strategy import StrategyVersionRecord
 from app.service.backtest.execution import StrategyBacktestError
+from app.service.chatq_engine import (
+    ChatQBacktraderStrategyBase,
+    ClosedTradeAnalyzer,
+    DailyPortfolioAnalyzer,
+    EquityCurveAnalyzer,
+    OrderExecutionAnalyzer,
+    drawdown_analysis,
+    equity_returns,
+    quantize,
+    sharpe_ratio,
+    win_rate_pct,
+)
 from app.service.market_data import (
     MarketDataError,
     load_benchmark,
@@ -35,121 +45,14 @@ from app.service.market_data import (
     market_data_source_metadata,
 )
 from app.service.strategy.protocol import (
-    ChatQActionType,
-    ChatQBar,
-    ChatQBarContext,
-    ChatQInitContext,
-    ChatQOpenOrder,
-    ChatQOrderEvent,
-    ChatQPosition,
     ChatQStrategyModule,
     StrategyProtocolError,
     load_strategy_module,
-    normalize_chatq_result,
 )
 from app.service.strategy.runtime import (
     ChatQStrategyRuntime,
     ChatQStrategyRuntimeError,
 )
-
-
-class _ChatQBacktraderAdapter(bt.Strategy):
-    params = (
-        ("strategy_module", None),
-        ("chatq_param_values", None),
-        ("symbols", None),
-        ("history", None),
-        ("services", None),
-    )
-
-    def __init__(self) -> None:
-        self.strategy_module: ChatQStrategyModule = self.p.strategy_module
-        self.strategy_state: dict[str, object] = {}
-        self.open_order_by_ref: dict[str, bt.Order] = {}
-        self.pending_order_events: list[dict[str, object]] = []
-        self.data_by_symbol = {data._name: data for data in self.datas}
-
-        init_context: ChatQInitContext = {
-            "mode": "backtest",
-            "symbols": list(self.p.symbols),
-            "params": dict(self.p.chatq_param_values),
-            "history": self.p.history,
-            "chatq": self.p.services,
-        }
-        raw_state = self.strategy_module.chatq_init(init_context)
-        if not isinstance(raw_state, dict):
-            raise StrategyProtocolError(
-                "STRATEGY_STATE_INVALID",
-                "chatq_init must return an object",
-            )
-        self.strategy_state = raw_state
-
-    def next(self) -> None:
-        current_dt = self.datas[0].datetime.datetime(0)
-        context: ChatQBarContext = {
-            "mode": "backtest",
-            "datetime": current_dt.isoformat(),
-            "symbols": list(self.p.symbols),
-            "current_bars": _extract_current_bars(self.datas),
-            "bars": _history_until(self.p.history, current_dt),
-            "cash": float(self.broker.getcash()),
-            "portfolio_value": float(self.broker.getvalue()),
-            "positions": _normalize_positions(self),
-            "open_orders": _normalize_open_orders(self.broker.get_orders_open()),
-            "order_events": list(self.pending_order_events),
-            "params": dict(self.p.chatq_param_values),
-            "chatq": self.p.services,
-        }
-        self.pending_order_events = []
-
-        raw_result = self.strategy_module.chatq_next(context, self.strategy_state)
-        result = normalize_chatq_result(raw_result, old_state=self.strategy_state)
-        self.strategy_state = result["state"]
-
-        for action in result["actions"]:
-            self._execute_action(action)
-
-    def notify_order(self, order: bt.Order) -> None:
-        self.pending_order_events.append(_normalize_order_event(order))
-        if _is_terminal_order(order):
-            self.open_order_by_ref.pop(str(order.ref), None)
-
-    def _execute_action(self, action: dict[str, object]) -> None:
-        action_name = action["action"]
-        if action_name == ChatQActionType.CANCEL:
-            order = self.open_order_by_ref.get(str(action["ref"]))
-            if order is not None:
-                self.cancel(order)
-            return
-
-        symbol = str(action["symbol"])
-        data = self.data_by_symbol[symbol]
-        size = action.get("size")
-        price = action.get("price")
-        order_type = str(action.get("order_type", "market"))
-
-        if action_name == ChatQActionType.BUY:
-            order = self.buy(
-                data=data,
-                size=size,
-                price=price,
-                exectype=_to_backtrader_exectype(order_type),
-            )
-        elif action_name == ChatQActionType.SELL:
-            order = self.sell(
-                data=data,
-                size=size,
-                price=price,
-                exectype=_to_backtrader_exectype(order_type),
-            )
-        elif action_name == ChatQActionType.CLOSE:
-            order = self.close(data=data, size=size)
-        else:
-            raise StrategyProtocolError(
-                "STRATEGY_ACTION_INVALID",
-                f"unsupported action: {action_name}",
-            )
-        self.open_order_by_ref[str(order.ref)] = order
 
 
 class BacktraderStrategyBacktestEngine:
@@ -189,17 +92,17 @@ class BacktraderStrategyBacktestEngine:
 
             params = _strategy_param_values(version, backtest.config.params)
             cerebro.addstrategy(
-                _ChatQBacktraderAdapter,
+                ChatQBacktraderStrategyBase,
                 strategy_module=strategy_module,
                 chatq_param_values=params,
                 symbols=backtest.config.symbols,
                 history=market_frames,
                 services=ChatQStrategyRuntime(),
             )
-            cerebro.addanalyzer(_EquityCurveAnalyzer, _name="equity_curve")
-            cerebro.addanalyzer(_ClosedTradeAnalyzer, _name="closed_trades")
-            cerebro.addanalyzer(_OrderExecutionAnalyzer, _name="orders")
-            cerebro.addanalyzer(_DailyPortfolioAnalyzer, _name="daily_portfolio")
+            cerebro.addanalyzer(EquityCurveAnalyzer, _name="equity_curve")
+            cerebro.addanalyzer(ClosedTradeAnalyzer, _name="closed_trades")
+            cerebro.addanalyzer(OrderExecutionAnalyzer, _name="orders")
+            cerebro.addanalyzer(DailyPortfolioAnalyzer, _name="daily_portfolio")
             executed = cerebro.run()
         except StrategyBacktestError:
             raise
@@ -236,10 +139,10 @@ class BacktraderStrategyBacktestEngine:
                 side=TradeSide.BUY if item["side"] == "buy" else TradeSide.SELL,
                 status=TradeStatus.OPENED,
                 trade_datetime=item["datetime"],
-                price=_quantize(item["price"]),
-                size=_quantize(abs(item["size"]), "0.000001"),
-                value=_quantize(abs(item["value"])),
-                commission=_quantize(item["commission"]),
+                price=quantize(item["price"]),
+                size=quantize(abs(item["size"]), "0.000001"),
+                value=quantize(abs(item["value"])),
+                commission=quantize(item["commission"]),
                 metadata={"basis": "backtrader_order_execution"},
             )
             for item in order_items
@@ -308,228 +211,6 @@ def _strategy_param_values(
     return params
 
 
-def _extract_current_bars(datas: list[bt.LineSeries]) -> dict[str, ChatQBar]:
-    bars: dict[str, ChatQBar] = {}
-    for data in datas:
-        bars[data._name] = {
-            "symbol": data._name,
-            "datetime": data.datetime.datetime(0).isoformat(),
-            "open": float(data.open[0]),
-            "high": float(data.high[0]),
-            "low": float(data.low[0]),
-            "close": float(data.close[0]),
-            "volume": float(data.volume[0]),
-        }
-    return bars
-
-
-def _history_until(
-    history: dict[str, pd.DataFrame],
-    current_dt: datetime,
-) -> dict[str, pd.DataFrame]:
-    current_ts = pd.Timestamp(current_dt)
-    return {symbol: frame.loc[frame.index <= current_ts] for symbol, frame in history.items()}
-
-
-def _normalize_positions(strategy: bt.Strategy) -> dict[str, ChatQPosition]:
-    positions: dict[str, ChatQPosition] = {}
-    for data in strategy.datas:
-        position = strategy.getposition(data)
-        size = float(position.size)
-        if size == 0:
-            continue
-        positions[data._name] = {
-            "symbol": data._name,
-            "size": size,
-            "price": float(position.price),
-        }
-    return positions
-
-
-def _normalize_open_orders(orders: list[bt.Order]) -> list[ChatQOpenOrder]:
-    return [_normalize_order(order) for order in orders if not _is_terminal_order(order)]
-
-
-def _normalize_order(order: bt.Order) -> ChatQOpenOrder:
-    price = _order_created_price(order)
-    return {
-        "ref": str(order.ref),
-        "symbol": order.data._name,
-        "side": "buy" if order.isbuy() else "sell",
-        "status": _order_status(order),
-        "order_type": _order_type(order),
-        "size": abs(float(order.created.size)),
-        "price": price,
-    }
-
-
-def _normalize_order_event(order: bt.Order) -> ChatQOrderEvent:
-    if order.status == order.Completed:
-        price = float(order.executed.price)
-        size = abs(float(order.executed.size))
-    else:
-        price = _order_created_price(order)
-        size = abs(float(order.created.size))
-    return {
-        "ref": str(order.ref),
-        "symbol": order.data._name,
-        "side": "buy" if order.isbuy() else "sell",
-        "status": _order_status(order),
-        "price": price,
-        "size": size,
-    }
-
-
-def _order_status(order: bt.Order) -> str:
-    if order.status == order.Completed:
-        return "filled"
-    if order.status == order.Canceled:
-        return "cancelled"
-    if order.status in {order.Margin, order.Rejected}:
-        return "rejected"
-    return order.getstatusname().lower()
-
-
-def _order_type(order: bt.Order) -> str:
-    if order.exectype == bt.Order.Limit:
-        return "limit"
-    return "market"
-
-
-def _order_created_price(order: bt.Order) -> float | None:
-    price = getattr(order.created, "price", None)
-    return float(price) if price else None
-
-
-def _is_terminal_order(order: bt.Order) -> bool:
-    return order.status in {
-        order.Completed,
-        order.Canceled,
-        order.Margin,
-        order.Rejected,
-        order.Expired,
-    }
-
-
-def _to_backtrader_exectype(order_type: str) -> int:
-    if order_type == "limit":
-        return bt.Order.Limit
-    return bt.Order.Market
-
-
-class _EquityCurveAnalyzer(bt.Analyzer):
-    def start(self) -> None:
-        self.points: list[dict[str, object]] = []
-
-    def next(self) -> None:
-        point_date = self.strategy.datas[0].datetime.date(0)
-        self.points.append(
-            {
-                "date": point_date,
-                "value": self.strategy.broker.getvalue(),
-                "cash": self.strategy.broker.getcash(),
-            }
-        )
-
-    def get_analysis(self) -> list[dict[str, object]]:
-        return self.points
-
-
-class _ClosedTradeAnalyzer(bt.Analyzer):
-    def start(self) -> None:
-        self.trades: list[dict[str, object]] = []
-
-    def notify_trade(self, trade: bt.Trade) -> None:
-        if not trade.isclosed:
-            return
-        close_date = bt.num2date(trade.dtclose).date()
-        value = abs(float(trade.value))
-        pnl = float(trade.pnlcomm)
-        self.trades.append(
-            {
-                "symbol": trade.data._name,
-                "date": close_date,
-                "size": float(trade.size),
-                "price": float(trade.price),
-                "value": value,
-                "pnl": pnl,
-                "pnl_pct": (pnl / value * 100) if value else None,
-            }
-        )
-
-    def get_analysis(self) -> list[dict[str, object]]:
-        return self.trades
-
-
-class _OrderExecutionAnalyzer(bt.Analyzer):
-    def start(self) -> None:
-        self.orders: list[dict[str, object]] = []
-
-    def notify_order(self, order: bt.Order) -> None:
-        if order.status != order.Completed:
-            return
-        executed_at = (
-            bt.num2date(order.executed.dt)
-            if order.executed.dt
-            else datetime.combine(order.data.datetime.date(0), time(hour=15))
-        )
-        self.orders.append(
-            {
-                "symbol": order.data._name,
-                "side": "buy" if order.isbuy() else "sell",
-                "datetime": executed_at,
-                "price": float(order.executed.price),
-                "size": float(order.executed.size),
-                "value": float(order.executed.value),
-                "commission": float(order.executed.comm),
-            }
-        )
-
-    def get_analysis(self) -> list[dict[str, object]]:
-        return self.orders
-
-
-class _DailyPortfolioAnalyzer(bt.Analyzer):
-    def start(self) -> None:
-        self.snapshots: list[dict[str, object]] = []
-        self.previous_value = float(
-            getattr(self.strategy.broker, "startingcash", self.strategy.broker.getvalue())
-        )
-
-    def next(self) -> None:
-        current_date = self.strategy.datas[0].datetime.date(0)
-        total_value = float(self.strategy.broker.getvalue())
-        positions: list[dict[str, object]] = []
-        for data in self.strategy.datas:
-            position = self.strategy.getposition(data)
-            size = float(position.size)
-            if size == 0:
-                continue
-            close_price = float(data.close[0])
-            positions.append(
-                {
-                    "symbol": data._name,
-                    "size": size,
-                    "close_price": close_price,
-                    "market_value": size * close_price,
-                    "unrealized_pnl": (close_price - float(position.price)) * size,
-                }
-            )
-        self.snapshots.append(
-            {
-                "date": current_date,
-                "cash": float(self.strategy.broker.getcash()),
-                "total_value": total_value,
-                "daily_pnl": total_value - self.previous_value,
-                "positions": positions,
-            }
-        )
-        self.previous_value = total_value
-
-    def get_analysis(self) -> list[dict[str, object]]:
-        return self.snapshots
-
-
 def _load_market_data_feed(
     *,
     symbol: str,
@@ -584,54 +265,22 @@ def _build_metrics(
     days = max(1, (backtest.config.end_date - backtest.config.start_date).days)
     annual_return = Decimal(str((float(final / initial) ** (365 / days) - 1) * 100))
 
-    peak = Decimal(str(equity_points[0]["value"]))
-    peak_date = equity_points[0]["date"]
-    max_drawdown = Decimal("0")
-    max_start: date | None = None
-    max_end: date | None = None
-    drawdown_points: list[dict[str, object]] = []
-    returns: list[Decimal] = []
-    previous = Decimal(str(equity_points[0]["value"]))
-    for point in equity_points:
-        current_date = point["date"]
-        value = Decimal(str(point["value"]))
-        if value > peak:
-            peak = value
-            peak_date = current_date
-        drawdown = (value / peak - Decimal("1")) * Decimal("100")
-        if drawdown < max_drawdown:
-            max_drawdown = drawdown
-            max_start = current_date if not isinstance(peak_date, date) else peak_date
-            max_end = current_date if isinstance(current_date, date) else None
-        drawdown_points.append(
-            {
-                "date": current_date,
-                "value": drawdown,
-                "peak_value": peak,
-                "equity_value": value,
-            }
-        )
-        if value != previous:
-            returns.append(value / previous - Decimal("1"))
-        previous = value
+    max_drawdown, max_start, max_end, drawdown_points = drawdown_analysis(equity_points)
 
-    sharpe = _sharpe_ratio(returns)
-    winning = [item for item in trade_items if float(item["pnl"]) > 0]
-    win_rate = (
-        Decimal(len(winning)) / Decimal(len(trade_items)) * Decimal("100") if trade_items else None
-    )
+    sharpe = sharpe_ratio(equity_returns(equity_points))
+    win_rate = win_rate_pct(trade_items)
     duration = (max_end - max_start).days if max_start is not None and max_end is not None else None
     metrics = StrategyBacktestMetrics(
-        initial_value=_quantize(initial),
-        final_value=_quantize(final),
-        total_return_pct=_quantize(total_return),
-        annual_return_pct=_quantize(annual_return),
-        max_drawdown_pct=_quantize(max_drawdown),
+        initial_value=quantize(initial),
+        final_value=quantize(final),
+        total_return_pct=quantize(total_return),
+        annual_return_pct=quantize(annual_return),
+        max_drawdown_pct=quantize(max_drawdown),
         max_drawdown_start=max_start,
         max_drawdown_end=max_end,
         max_drawdown_duration_days=duration,
-        sharpe_ratio=_quantize(sharpe) if sharpe is not None else None,
-        win_rate_pct=_quantize(win_rate) if win_rate is not None else None,
+        sharpe_ratio=quantize(sharpe) if sharpe is not None else None,
+        win_rate_pct=quantize(win_rate) if win_rate is not None else None,
         total_trades=len(trade_items),
     )
     return metrics, drawdown_points
@@ -647,10 +296,10 @@ def _build_curve(
     curve_points = [
         StrategyCurvePoint(
             date=point["date"],
-            value=_quantize(point["value"]),
+            value=quantize(point["value"]),
             normalized_value=None,
             extra={
-                key: str(_quantize(value))
+                key: str(quantize(value))
                 for key, value in point.items()
                 if key not in {"date", "value"}
             },
@@ -674,11 +323,11 @@ def _build_market_series(*, symbol: str, frame: pd.DataFrame) -> StrategyMarketS
         StrategyMarketCandle(
             symbol=symbol,
             date=index.date(),
-            open=_quantize(row["open"]),
-            high=_quantize(row["high"]),
-            low=_quantize(row["low"]),
-            close=_quantize(row["close"]),
-            volume=_quantize(row["volume"], "0.000001"),
+            open=quantize(row["open"]),
+            high=quantize(row["high"]),
+            low=quantize(row["low"]),
+            close=quantize(row["close"]),
+            volume=quantize(row["volume"], "0.000001"),
         )
         for index, row in frame.iterrows()
     ]
@@ -693,10 +342,10 @@ def _build_daily_positions(
         positions = [
             StrategyDailyPosition(
                 symbol=str(position["symbol"]),
-                size=_quantize(position["size"], "0.000001"),
-                close_price=_quantize(position["close_price"]),
-                market_value=_quantize(position["market_value"]),
-                unrealized_pnl=_quantize(position["unrealized_pnl"]),
+                size=quantize(position["size"], "0.000001"),
+                close_price=quantize(position["close_price"]),
+                market_value=quantize(position["market_value"]),
+                unrealized_pnl=quantize(position["unrealized_pnl"]),
             )
             for position in item["positions"]
             if isinstance(position, dict)
@@ -704,9 +353,9 @@ def _build_daily_positions(
         snapshots.append(
             StrategyDailyPortfolioSnapshot(
                 date=item["date"],
-                cash=_quantize(item["cash"]),
-                total_value=_quantize(item["total_value"]),
-                daily_pnl=_quantize(item["daily_pnl"]),
+                cash=quantize(item["cash"]),
+                total_value=quantize(item["total_value"]),
+                daily_pnl=quantize(item["daily_pnl"]),
                 positions=positions,
             )
         )
@@ -742,8 +391,8 @@ def _build_benchmark_series(
     points = [
         StrategyBenchmarkPoint(
             date=index.date(),
-            value=_quantize(row["close"]),
-            normalized_value=_quantize(
+            value=quantize(row["close"]),
+            normalized_value=quantize(
                 (Decimal(str(row["close"])) / initial_close - Decimal("1")) * Decimal("100")
             ),
         )
@@ -787,21 +436,6 @@ def _backtest_error_code(error_code: str) -> str:
         "MARKET_DATA_LOOKBACK_INVALID": "BACKTEST_DATASET_MAPPING_INVALID",
     }
     return mapping.get(error_code, error_code.replace("MARKET_", "BACKTEST_"))
-
-
-def _sharpe_ratio(returns: list[Decimal]) -> Decimal | None:
-    if len(returns) < 2:
-        return None
-    mean = sum(returns) / Decimal(len(returns))
-    variance = sum((item - mean) ** 2 for item in returns) / Decimal(len(returns) - 1)
-    stddev = Decimal(str(math.sqrt(float(variance))))
-    if stddev == 0:
-        return None
-    return mean / stddev * Decimal(str(math.sqrt(252)))
-
-
-def _quantize(value: Decimal | float | int | str | object, scale: str = "0.0001") -> Decimal:
-    return Decimal(str(value)).quantize(Decimal(scale), rounding=ROUND_HALF_UP)
 
 
 def _new_id(prefix: str) -> str:

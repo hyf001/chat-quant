@@ -1,15 +1,26 @@
 from __future__ import annotations
 
 import math
+from datetime import date
 from typing import Any
 
 import pandas as pd
 
 from app.core.config import get_settings
-from app.schema.market import StockPreviewCandle, StockPreviewPeriod, StockPreviewResponse
+from app.schema.market import (
+    StockIntradayPoint,
+    StockIntradayResponse,
+    StockPreviewCandle,
+    StockPreviewPeriod,
+    StockPreviewResponse,
+)
 from app.schema.stock_pool import normalize_symbol
 from app.service.datasource.mindgo.stock_a_snapshot_info.constants import (
     STOCK_A_SNAPSHOT_INFO_SOURCE_ID,
+)
+from app.service.market_data.minute_price import (
+    MINUTE_PRICE_SOURCE_ID,
+    load_minute_prices,
 )
 from app.storage import DuckDBViewStore, DuckDBViewStoreError, duckdb_dataset_path
 
@@ -80,6 +91,27 @@ class StockPreviewService:
             turnover=latest.turnover,
             candles=candles,
             source_dataset=STOCK_PREVIEW_PRICE_SOURCE_ID,
+        )
+
+    def stock_intraday(self, symbol: str, *, trade_date: date) -> StockIntradayResponse:
+        """某只股票某一天的 1 分钟分时（行情预览的"查看分时"）。
+
+        这里只负责分钟序列（不复权原始价）：标的名与分时基准（前收）由调用方从它已经拿到的
+        日线预览里算，省掉一次"上一根日线"的查询（``trade_date`` 有 8 位 / ISO 两种写法，
+        在 SQL 里归一化会退化成全表表达式、慢一个量级）。当天没有分钟数据时返回空
+        ``points``（分钟数据集只同步了最近若干个交易日），不报错。
+        """
+        normalized_symbol = normalize_symbol(symbol)
+        if not normalized_symbol:
+            raise StockPreviewError("STOCK_SYMBOL_EMPTY", "symbol must not be empty", 422)
+        return StockIntradayResponse(
+            symbol=normalized_symbol,
+            trade_date=trade_date.isoformat(),
+            points=[
+                StockIntradayPoint(t=item.minute, p=item.price, v=item.volume)
+                for item in load_minute_prices(normalized_symbol, trade_date)
+            ],
+            source_dataset=MINUTE_PRICE_SOURCE_ID,
         )
 
     def _stock_name(self, symbol: str) -> str:

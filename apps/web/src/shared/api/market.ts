@@ -34,6 +34,20 @@ export type StockPreview = {
   source_dataset: string;
 };
 
+export type StockIntradayPoint = {
+  /** 分钟标签 ``HH:MM``。 */
+  t: string;
+  p: number;
+  v: number;
+};
+
+export type StockIntraday = {
+  symbol: string;
+  trade_date: string;
+  points: StockIntradayPoint[];
+  source_dataset: string;
+};
+
 export async function getStockPreview(
   symbol: string,
   options: {
@@ -47,6 +61,14 @@ export async function getStockPreview(
   });
   return marketFetch<StockPreview>(
     `/api/market/stocks/${encodeURIComponent(symbol)}/preview?${params.toString()}`,
+  );
+}
+
+/** 某一天的 1 分钟分时（K 线上右键菜单的"查看分时"）。 */
+export async function getStockIntraday(symbol: string, tradeDate: string): Promise<StockIntraday> {
+  const params = new URLSearchParams({ date: tradeDate });
+  return marketFetch<StockIntraday>(
+    `/api/market/stocks/${encodeURIComponent(symbol)}/intraday?${params.toString()}`,
   );
 }
 
