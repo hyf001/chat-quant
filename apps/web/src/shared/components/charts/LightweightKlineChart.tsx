@@ -17,6 +17,7 @@ import {
   type MouseEventParams,
   type SeriesMarker,
   type Time,
+  type UTCTimestamp,
 } from "lightweight-charts";
 import { LineChart, Minus, Square, Type, X } from "lucide-react";
 import type { PointerEvent as ReactPointerEvent } from "react";
@@ -82,6 +83,34 @@ export type LightweightKlineVerticalLine = {
   width?: number;
 };
 
+/**
+ * X 轴的"时间键"抽象。
+ *
+ * 行情图直接用交易日字符串当键（默认实现 ``dateTimeAxis``）；训练图不下发真实日期，
+ * 用 bar 序号当键（``indexTimeAxis``），刻度 / crosshair / 编辑框里的文案都是"第 N 根"。
+ * **传进来的对象要保证引用稳定**（模块级常量），否则图表会跟着重建。
+ */
+export type ChartTimeAxis = {
+  /** 键 → lightweight-charts 的 time。 */
+  toTime: (key: string) => Time;
+  /** time → 键；不是有效的一根时返回 null。 */
+  fromTime: (time: Time) => string | null;
+  /** 轴刻度 / crosshair 上显示的文案。 */
+  formatTime: (time: Time) => string;
+  /** 界面里显示某一根的文案（如编辑框里的日期 / "第 N 根"）。 */
+  formatKey: (key: string) => string;
+  /** 把输入框里的文案解析回键；解析不出来返回 null。 */
+  parseKey: (text: string) => string | null;
+  /** 编辑框里"钉在哪一根"的占位提示（日期轴给日期样例，序号轴给"第 N 根"）。 */
+  keyPlaceholder?: string;
+};
+
+export type LightweightKlineLastPrice = {
+  price: number;
+  title?: string;
+  color?: string;
+};
+
 export type LightweightKlineTextNote = {
   id: string;
   date: string;
@@ -109,8 +138,19 @@ type LightweightKlineChartProps = {
   enablePriceLineActions?: boolean;
   showVolume?: boolean;
   showMovingAverages?: boolean;
-  /** 菜单里的"查看分时"：宿主决定那一天的分时怎么展示；不传就不显示这一项。 */
-  onViewIntraday?: (date: string) => void;
+  /** X 轴用哪套时间键；缺省是按真实交易日（见 ``ChartTimeAxis``）。 */
+  axis?: ChartTimeAxis;
+  /** 最新价虚线（训练图用）；不传就不画。 */
+  lastPriceLine?: LightweightKlineLastPrice;
+  /** crosshair 上的时间标签；日期轴缺省关（轴上有刻度），序号轴一般要开。 */
+  crosshairLabels?: boolean;
+  /**
+   * 数据只追加（训练图一根一根揭示）时别每次重建都 fitContent 回全览，
+   * 保持"贴右边缘"的默认视野；换标的 / 换周期仍然会重新适配。
+   */
+  keepViewportOnUpdate?: boolean;
+  /** 菜单里的"查看分时"：宿主决定那一根的分时怎么展示；不传就不显示这一项。 */
+  onViewIntraday?: (key: string) => void;
   onActiveCandleChange?: (candle: LightweightKlineCandle | null, index: number | null) => void;
   onPriceLinesChange?: (priceLines: LightweightKlinePriceLine[]) => void;
   onPriceBoxesChange?: (priceBoxes: LightweightKlinePriceBox[]) => void;
@@ -148,6 +188,33 @@ const annotationColors = ["#2563eb", "#e11d48", "#16a34a", "#d97706", "#7c3aed",
 const annotationWidths = [1, 2, 3, 4];
 /** 长按超过这个时长才算"要拖动"；短按是选中 + 编辑。 */
 const longPressMs = 240;
+
+/** 默认时间轴：键就是真实交易日字符串。 */
+export const dateTimeAxis: ChartTimeAxis = {
+  fromTime: (time) => timeToKey(time),
+  formatKey: (key) => key,
+  formatTime: (time) => timeToKey(time),
+  keyPlaceholder: "日期，如 2026-09-14",
+  parseKey: (text) => text.trim(),
+  toTime: (key) => key as Time,
+};
+
+/**
+ * 序号轴：图上不出现任何真实日期，键就是 bar 的序号（"0"、"1"…），
+ * 刻度 / crosshair / 编辑框文案都显示成"第 N 根"（训练图用）。
+ */
+export const indexTimeAxis: ChartTimeAxis = {
+  fromTime: (time) => (typeof time === "number" ? String(time) : null),
+  formatKey: (key) => `第 ${Number(key) + 1} 根`,
+  formatTime: (time) => (typeof time === "number" ? `第 ${time + 1} 根` : ""),
+  keyPlaceholder: "第 N 根",
+  // 输入按"第几根"理解（1 起）：输入 "4" 或 "第 4 根" 都落到第 4 根
+  parseKey: (text) => {
+    const digits = text.replace(/\D/g, "");
+    return digits ? String(Number(digits) - 1) : null;
+  },
+  toTime: (key) => Number(key) as UTCTimestamp,
+};
 /** 新建矩形时左右各留几根 K 线（之后拖边可以改）。 */
 const defaultBoxHalfBars = 10;
 /** 预设名只用于"调用方没给颜色"时的兜底配色；新建的线都带显式颜色。 */
@@ -223,6 +290,10 @@ export function LightweightKlineChart({
   enablePriceLineActions = false,
   showVolume = true,
   showMovingAverages = true,
+  axis = dateTimeAxis,
+  lastPriceLine,
+  crosshairLabels = false,
+  keepViewportOnUpdate = false,
   onViewIntraday,
   onActiveCandleChange,
   onPriceLinesChange,
@@ -243,6 +314,8 @@ export function LightweightKlineChart({
   const textPositionsRef = useRef<Array<{ id: string; x: number; y: number }>>([]);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick", Time> | null>(null);
   const priceLineRefs = useRef<IPriceLine[]>([]);
+  const lastPriceLineRef = useRef<IPriceLine | null>(null);
+  const lastPriceLinePropRef = useRef(lastPriceLine);
   const refreshAnnotationPositionsRef = useRef<() => void>(() => undefined);
   const coordinateToPriceRef = useRef<(coordinate: number) => number | null>(() => null);
   const dateAtXRef = useRef<(x: number) => string | null>(() => null);
@@ -287,14 +360,15 @@ export function LightweightKlineChart({
   const [textPositions, setTextPositions] = useState<
     Array<{ id: string; x: number; y: number }>
   >([]);
-  const chartData = useMemo(() => toLightweightData(candles), [candles]);
-  const chartMarkers = useMemo(() => toLightweightMarkers(markers), [markers]);
+  const chartData = useMemo(() => toLightweightData(candles, axis), [axis, candles]);
+  const chartMarkers = useMemo(() => toLightweightMarkers(markers, axis), [axis, markers]);
   const activePriceLines = priceLines ?? internalPriceLines;
   const activePriceBoxes = priceBoxes ?? internalPriceBoxes;
   const activeVerticalLines = verticalLines ?? internalVerticalLines;
   const activeTextNotes = textNotes ?? internalTextNotes;
-  const candleDates = useMemo(() => new Set(candles.map((candle) => candle.date)), [candles]);
-  /** 日期 → 这根 K 线的序号：矩形左右边界、拖动吸附都用它定先后。 */
+  /** 图上出现过的时间键（日期轴的交易日 / 序号轴的 "0"、"1"…）。 */
+  const candleKeys = useMemo(() => new Set(candles.map((candle) => candle.date)), [candles]);
+  /** 时间键 → 这根 K 线的序号：矩形左右边界、拖动吸附都用它定先后。 */
   const candleOrder = useMemo(
     () => new Map(candles.map((candle, index) => [candle.date, index])),
     [candles],
@@ -303,6 +377,10 @@ export function LightweightKlineChart({
   useEffect(() => {
     activeCandleChangeRef.current = onActiveCandleChange;
   }, [onActiveCandleChange]);
+
+  useEffect(() => {
+    lastPriceLinePropRef.current = lastPriceLine;
+  }, [lastPriceLine]);
 
   useEffect(() => {
     viewIntradayRef.current = onViewIntraday;
@@ -330,16 +408,18 @@ export function LightweightKlineChart({
     }
     if (actionMenu.mode === "vline") {
       const line = activeVerticalLines.find((item) => item.id === actionMenu.vlineId);
+      const key = line?.date ?? actionMenu.date;
       setVlineTitle(line?.title ?? defaultVerticalLineName);
-      setVlineDate(line?.date ?? actionMenu.date ?? "");
+      setVlineDate(key === undefined ? "" : axis.formatKey(key));
       setVlineColor(line?.color ?? defaultVerticalLineColor);
       setVlineWidth(line?.width ?? defaultVerticalLineWidth);
       return;
     }
     if (actionMenu.mode === "text") {
       const note = activeTextNotes.find((item) => item.id === actionMenu.textId);
+      const key = note?.date ?? actionMenu.date;
       setTextNoteText(note?.text ?? "");
-      setTextNoteDate(note?.date ?? actionMenu.date ?? "");
+      setTextNoteDate(key === undefined ? "" : axis.formatKey(key));
       setTextColor(note?.color ?? defaultTextNoteColor);
       setTextBold(note?.bold ?? true);
       return;
@@ -362,7 +442,14 @@ export function LightweightKlineChart({
     setLineColor(activeLine?.color ?? priceLineColor(activeLine?.title ?? defaultLineName));
     setLineWidth(activeLine?.width ?? defaultLineWidth);
     setLineTitle(activeLine?.title ?? defaultLineName);
-  }, [actionMenu, activePriceBoxes, activePriceLines, activeTextNotes, activeVerticalLines]);
+  }, [
+    actionMenu,
+    activePriceBoxes,
+    activePriceLines,
+    activeTextNotes,
+    activeVerticalLines,
+    axis,
+  ]);
 
   const updatePriceLines = useCallback(
     (nextPriceLines: LightweightKlinePriceLine[]) => {
@@ -482,8 +569,8 @@ export function LightweightKlineChart({
   );
 
   const handleSaveVerticalLine = useCallback(() => {
-    const date = vlineDate.trim();
-    if (!candleDates.has(date)) {
+    const date = axis.parseKey(vlineDate);
+    if (!date || !candleKeys.has(date)) {
       return;
     }
     if (!actionMenu?.vlineId) {
@@ -501,7 +588,8 @@ export function LightweightKlineChart({
   }, [
     actionMenu,
     activeVerticalLines,
-    candleDates,
+    axis,
+    candleKeys,
     updateVerticalLines,
     vlineColor,
     vlineDate,
@@ -518,8 +606,8 @@ export function LightweightKlineChart({
   );
 
   const handleSaveTextNote = useCallback(() => {
-    const date = textNoteDate.trim();
-    if (!candleDates.has(date) || !actionMenu?.textId) {
+    const date = axis.parseKey(textNoteDate);
+    if (!date || !candleKeys.has(date) || !actionMenu?.textId) {
       return;
     }
     const text = textNoteText.trim() || defaultTextNoteText;
@@ -534,7 +622,8 @@ export function LightweightKlineChart({
   }, [
     actionMenu,
     activeTextNotes,
-    candleDates,
+    axis,
+    candleKeys,
     textBold,
     textColor,
     textNoteDate,
@@ -579,8 +668,10 @@ export function LightweightKlineChart({
           if (topY === null || bottomY === null) {
             return null;
           }
-          const fromX = box.from === undefined ? null : timeScale.timeToCoordinate(box.from);
-          const toX = box.to === undefined ? null : timeScale.timeToCoordinate(box.to);
+          const fromX =
+            box.from === undefined ? null : timeScale.timeToCoordinate(axis.toTime(box.from));
+          const toX =
+            box.to === undefined ? null : timeScale.timeToCoordinate(axis.toTime(box.to));
           return {
             id: box.id,
             top: Math.min(Number(topY), Number(bottomY)),
@@ -603,7 +694,7 @@ export function LightweightKlineChart({
     );
     const nextVlinePositions = activeVerticalLines
       .map((line) => {
-        const x = timeScale.timeToCoordinate(line.date);
+        const x = timeScale.timeToCoordinate(axis.toTime(line.date));
         return x === null ? null : { id: line.id, x: Number(x) };
       })
       .filter((line): line is { id: string; x: number } => line !== null);
@@ -611,7 +702,7 @@ export function LightweightKlineChart({
     setVlinePositions(nextVlinePositions);
     const nextTextPositions = activeTextNotes
       .map((note) => {
-        const x = timeScale.timeToCoordinate(note.date);
+        const x = timeScale.timeToCoordinate(axis.toTime(note.date));
         const y = candleSeries.priceToCoordinate(note.price);
         if (x === null || y === null) {
           return null;
@@ -621,7 +712,7 @@ export function LightweightKlineChart({
       .filter((note): note is { id: string; x: number; y: number } => note !== null);
     textPositionsRef.current = nextTextPositions;
     setTextPositions(nextTextPositions);
-  }, [activePriceBoxes, activePriceLines, activeTextNotes, activeVerticalLines]);
+  }, [activePriceBoxes, activePriceLines, activeTextNotes, activeVerticalLines, axis]);
 
   useEffect(() => {
     refreshAnnotationPositionsRef.current = refreshAnnotationPositions;
@@ -639,6 +730,8 @@ export function LightweightKlineChart({
       autoSize: true,
       height,
       layout: {
+        // 关掉 lightweight-charts 默认的 TradingView 归因角标（归因见 README）
+        attributionLogo: false,
         background: { type: ColorType.Solid, color: "#fffefa" },
         textColor: "#71717a",
         fontFamily:
@@ -662,11 +755,12 @@ export function LightweightKlineChart({
         minBarSpacing: 2,
         fixLeftEdge: false,
         fixRightEdge: false,
+        tickMarkFormatter: (time: Time) => axis.formatTime(time),
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { labelVisible: false, color: "#94a3b8", width: 1 },
-        horzLine: { labelVisible: false, color: "#94a3b8", width: 1 },
+        vertLine: { labelVisible: crosshairLabels, color: "#94a3b8", width: 1 },
+        horzLine: { labelVisible: crosshairLabels, color: "#94a3b8", width: 1 },
       },
       handleScroll: {
         mouseWheel: true,
@@ -681,7 +775,7 @@ export function LightweightKlineChart({
       },
       localization: {
         locale: "zh-CN",
-        timeFormatter: (time: Time) => timeToKey(time),
+        timeFormatter: (time: Time) => axis.formatTime(time),
       },
     });
     chartInstanceRef.current = chart;
@@ -701,6 +795,11 @@ export function LightweightKlineChart({
       return typeof price === "number" && Number.isFinite(price) ? price : null;
     };
     candleSeries.setData(chartData.candles);
+
+    const initialLastPrice = lastPriceLinePropRef.current;
+    if (initialLastPrice) {
+      lastPriceLineRef.current = createLastPriceLine(candleSeries, initialLastPrice);
+    }
 
     if (chartMarkers.length > 0) {
       createSeriesMarkers(candleSeries, chartMarkers);
@@ -753,7 +852,8 @@ export function LightweightKlineChart({
       }
       const price = candleSeries.coordinateToPrice(param.point.y);
       activePriceRef.current = typeof price === "number" && Number.isFinite(price) ? price : null;
-      const index = candleIndexByDate.get(timeToKey(param.time));
+      const key = axis.fromTime(param.time);
+      const index = key === null ? undefined : candleIndexByDate.get(key);
       activeCandleChangeRef.current?.(index === undefined ? null : candles[index], index ?? null);
       refreshAnnotationPositionsRef.current();
     };
@@ -777,9 +877,9 @@ export function LightweightKlineChart({
       const clickedLine = clickedVline || clickedTextNote
         ? null
         : nearestPriceLine(price, activePriceLinesRef.current);
-      const clickedDate = param.time === undefined ? undefined : timeToKey(param.time);
+      const clickedKey = param.time === undefined ? null : axis.fromTime(param.time);
       const date =
-        clickedDate !== undefined && candleIndexByDate.has(clickedDate) ? clickedDate : undefined;
+        clickedKey !== null && candleIndexByDate.has(clickedKey) ? clickedKey : undefined;
       const clickedBox =
         clickedVline || clickedTextNote || clickedLine
           ? null
@@ -815,7 +915,12 @@ export function LightweightKlineChart({
     // 缩放 / 平移会让"按坐标画"的标注（垂直线、文字）错位：跟随可视区间重算
     const handleVisibleRangeChange = () => refreshAnnotationPositionsRef.current();
     chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
-    chart.timeScale().fitContent();
+    // 行情图每次数据变化都拉回全览（改动前的行为）；
+    // 训练图（keepViewportOnUpdate）只追加一根，保持"贴右边缘"的默认视野，
+    // 否则每 reveal 一根都会被 fitContent 拉回全览，缩放着看盘就废了。
+    if (!keepViewportOnUpdate) {
+      chart.timeScale().fitContent();
+    }
     window.setTimeout(() => refreshAnnotationPositionsRef.current(), 0);
 
     return () => {
@@ -827,14 +932,18 @@ export function LightweightKlineChart({
       coordinateToPriceRef.current = () => null;
       dateAtXRef.current = () => null;
       priceLineRefs.current = [];
+      lastPriceLineRef.current = null;
       chart.remove();
     };
   }, [
+    axis,
     candles,
     chartData,
     chartMarkers,
+    crosshairLabels,
     enablePriceLineActions,
     height,
+    keepViewportOnUpdate,
     showMovingAverages,
     showVolume,
   ]);
@@ -860,6 +969,22 @@ export function LightweightKlineChart({
     );
     refreshAnnotationPositionsRef.current();
   }, [activePriceLines]);
+
+  // 最新价虚线（训练图用）：只有宿主显式传 ``lastPriceLine`` 才画。
+  useEffect(() => {
+    const candleSeries = candleSeriesRef.current;
+    if (!candleSeries) {
+      return;
+    }
+    if (lastPriceLineRef.current) {
+      candleSeries.removePriceLine(lastPriceLineRef.current);
+      lastPriceLineRef.current = null;
+    }
+    if (!lastPriceLine) {
+      return;
+    }
+    lastPriceLineRef.current = createLastPriceLine(candleSeries, lastPriceLine);
+  }, [lastPriceLine]);
 
   /**
    * 收尾：清掉长按定时器并结束拖动。
@@ -895,8 +1020,10 @@ export function LightweightKlineChart({
       startBottomPrice: box ? Math.min(box.top, box.bottom) : 0,
       startBottomY: position?.bottom ?? 0,
       startFromDate: fromDate,
-      startLeftX: position?.left ?? Number(timeScale?.timeToCoordinate(fromDate) ?? 0),
-      startRightX: position?.right ?? Number(timeScale?.timeToCoordinate(toDate) ?? 0),
+      startLeftX:
+        position?.left ?? Number(timeScale?.timeToCoordinate(axis.toTime(fromDate)) ?? 0),
+      startRightX:
+        position?.right ?? Number(timeScale?.timeToCoordinate(axis.toTime(toDate)) ?? 0),
       startToDate: toDate,
       startTopPrice: box ? Math.max(box.top, box.bottom) : 0,
       startTopY: position?.top ?? 0,
@@ -977,6 +1104,7 @@ export function LightweightKlineChart({
       }
 
       if (target.kind === "vline") {
+        // 垂直线只左右挪：改它钉在哪一根上，纵向没有可动的位置
         const date = dateAtXRef.current(point.x);
         if (!date) {
           return;
@@ -1152,8 +1280,12 @@ export function LightweightKlineChart({
     }
     const halfHeight = Math.max(Math.abs(price) * 0.03, 0.03);
     const { top, bottom } = normalizeBoxPrices(price + halfHeight, price - halfHeight);
-    // 默认左右各留 defaultBoxHalfBars 根，四条边都能再拖
-    const index = actionMenu.date === undefined ? -1 : (candleOrder.get(actionMenu.date) ?? -1);
+    // 默认左右各留 defaultBoxHalfBars 根，四条边都能再拖；
+    // 点在 K 线右侧空白处（没有对应的那一根）时贴着最后一根落，别落成"整幅图宽"
+    const index =
+      actionMenu.date === undefined
+        ? candles.length - 1
+        : (candleOrder.get(actionMenu.date) ?? candles.length - 1);
     const fromIndex = index < 0 ? -1 : Math.max(0, index - defaultBoxHalfBars);
     const toIndex = index < 0 ? -1 : Math.min(candles.length - 1, index + defaultBoxHalfBars);
     const from = fromIndex < 0 ? undefined : candles[fromIndex]?.date;
@@ -1176,7 +1308,7 @@ export function LightweightKlineChart({
 
   const handleAddVerticalLine = () => {
     const date = actionMenu?.date;
-    if (!date || !candleDates.has(date)) {
+    if (!date || !candleKeys.has(date)) {
       return;
     }
     updateVerticalLines([
@@ -1198,7 +1330,7 @@ export function LightweightKlineChart({
     }
     const date = actionMenu.date;
     const price = actionMenu.price;
-    if (!date || !candleDates.has(date) || price === undefined || !Number.isFinite(price)) {
+    if (!date || !candleKeys.has(date) || price === undefined || !Number.isFinite(price)) {
       return;
     }
     updateTextNotes([
@@ -1227,8 +1359,10 @@ export function LightweightKlineChart({
   const actionMenuMaxLeft = Math.max(8, (chartRef.current?.clientWidth ?? 720) - 232);
   const actionMenuMaxTop = Math.max(8, height - (actionMenu?.mode === "choose" ? 320 : 260));
   const hasDate = actionMenu?.date !== undefined;
-  const vlineDateValid = candleDates.has(vlineDate.trim());
-  const textNoteDateValid = candleDates.has(textNoteDate.trim());
+  const vlineDateKey = axis.parseKey(vlineDate);
+  const textNoteDateKey = axis.parseKey(textNoteDate);
+  const vlineDateValid = vlineDateKey !== null && candleKeys.has(vlineDateKey);
+  const textNoteDateValid = textNoteDateKey !== null && candleKeys.has(textNoteDateKey);
   /** 当前"选中"的标注：拖动中就是被拖的那层，否则是编辑框对应的那层。 */
   const selectedTarget: AnnotationTarget | null = dragging
     ? dragging.target
@@ -1755,7 +1889,8 @@ export function LightweightKlineChart({
               <div className="mb-2 flex items-center justify-between gap-2">
                 <span className="font-semibold text-ink">垂直线</span>
                 <span className="font-mono text-[11px] text-mutedText">
-                  {vlineDate.trim() || actionMenu.date || "--"}
+                  {vlineDate.trim() ||
+                    (actionMenu.date === undefined ? "--" : axis.formatKey(actionMenu.date))}
                 </span>
               </div>
               <div className="space-y-2">
@@ -1763,7 +1898,7 @@ export function LightweightKlineChart({
                 <Input
                   className="h-8 text-xs"
                   onChange={(event) => setVlineDate(event.target.value)}
-                  placeholder="日期，如 2026-09-14"
+                  placeholder={axis.keyPlaceholder ?? "日期"}
                   value={vlineDate}
                 />
               </div>
@@ -1815,7 +1950,8 @@ export function LightweightKlineChart({
               <div className="mb-2 flex items-center justify-between gap-2">
                 <span className="font-semibold text-ink">文字</span>
                 <span className="font-mono text-[11px] text-mutedText">
-                  {textNoteDate.trim() || actionMenu.date || "--"}
+                  {textNoteDate.trim() ||
+                    (actionMenu.date === undefined ? "--" : axis.formatKey(actionMenu.date))}
                 </span>
               </div>
               <div className="space-y-2">
@@ -1828,7 +1964,7 @@ export function LightweightKlineChart({
                 <Input
                   className="h-8 text-xs"
                   onChange={(event) => setTextNoteDate(event.target.value)}
-                  placeholder="日期，如 2026-09-14"
+                  placeholder={axis.keyPlaceholder ?? "日期"}
                   value={textNoteDate}
                 />
               </div>
@@ -1985,37 +2121,53 @@ function TextWeightOptions({
   );
 }
 
-function toLightweightData(candles: LightweightKlineCandle[]) {
+/** 最新价虚线：训练图用来标"当前已经揭示到哪一根"的收盘价。 */
+function createLastPriceLine(
+  candleSeries: ISeriesApi<"Candlestick", Time>,
+  lastPrice: LightweightKlineLastPrice,
+): IPriceLine {
+  return candleSeries.createPriceLine({
+    price: lastPrice.price,
+    color: lastPrice.color ?? defaultLineColor,
+    lineWidth: 1,
+    lineStyle: LineStyle.Dashed,
+    axisLabelVisible: true,
+    title: lastPrice.title ?? "",
+  });
+}
+
+function toLightweightData(candles: LightweightKlineCandle[], axis: ChartTimeAxis) {
   const candleData: CandlestickData<Time>[] = candles.map((candle) => ({
-    time: candle.date,
+    time: axis.toTime(candle.date),
     open: candle.open,
     high: candle.high,
     low: candle.low,
     close: candle.close,
   }));
   const volumeData: HistogramData<Time>[] = candles.map((candle) => ({
-    time: candle.date,
+    time: axis.toTime(candle.date),
     value: candle.volume ?? 0,
     color: candle.close >= candle.open ? "rgba(225, 29, 72, 0.85)" : "rgba(22, 163, 74, 0.85)",
   }));
   return {
     candles: candleData,
     volume: volumeData,
-    ma5: movingAverageData(candles, "ma5"),
-    ma10: movingAverageData(candles, "ma10"),
-    ma20: movingAverageData(candles, "ma20"),
-    ma60: movingAverageData(candles, "ma60"),
+    ma5: movingAverageData(candles, "ma5", axis),
+    ma10: movingAverageData(candles, "ma10", axis),
+    ma20: movingAverageData(candles, "ma20", axis),
+    ma60: movingAverageData(candles, "ma60", axis),
   };
 }
 
 function movingAverageData(
   candles: LightweightKlineCandle[],
   key: "ma5" | "ma10" | "ma20" | "ma60",
+  axis: ChartTimeAxis,
 ): LineData<Time>[] {
   return candles
     .filter((candle) => typeof candle[key] === "number" && Number.isFinite(candle[key]))
     .map((candle) => ({
-      time: candle.date,
+      time: axis.toTime(candle.date),
       value: candle[key] as number,
     }));
 }
@@ -2038,9 +2190,12 @@ function addLineSeries(
   series.setData(data);
 }
 
-function toLightweightMarkers(markers: LightweightKlineMarker[]): SeriesMarker<Time>[] {
+function toLightweightMarkers(
+  markers: LightweightKlineMarker[],
+  axis: ChartTimeAxis,
+): SeriesMarker<Time>[] {
   return markers.map((marker) => ({
-    time: marker.date,
+    time: axis.toTime(marker.date),
     position: marker.side === "buy" ? "belowBar" : "aboveBar",
     shape: marker.side === "buy" ? "arrowUp" : "arrowDown",
     color: marker.side === "buy" ? downColor : upColor,

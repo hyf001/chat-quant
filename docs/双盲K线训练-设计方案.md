@@ -49,7 +49,7 @@
 - 会话与引擎管理：进程内注册表、空闲回收、信号历史 replay 重建。
 - 日线单标的闭环：开局 → 逐根揭示 → 买入 / 卖出 / 观望 → `finish` 揭晓与单局报告。
 - 局列表（增量）：`GET /api/training/sessions?project_id=` 返回项目下的会话摘要（状态 / 进度 / 初始资金 / 用时），列表页「新建训练」弹窗收口开局表单；进度的游标由 `training_events` 行数得出，不重建引擎（见 §5.6）。
-- 当日分时（增量）：双击任意一根**已揭示**的日线，弹出那一根当天的分钟走势（分时线 + 均价线 + 昨收基准 + 分钟成交量），见 §5.7。
+- 当日分时（增量）：点 K 线上任意一根**已揭示**的日线，在菜单里选「查看分时」，弹出那一根当天的分钟走势（分时线 + 均价线 + 昨收基准 + 分钟成交量），见 §5.7。
 - 前端 `modules/training/*`：K 线主图（B/S 标记 + 最新价格线）、下单面板、统计栏、报告弹窗。
 
 ### 2.3 不在本期范围
@@ -172,7 +172,7 @@ broker、在本根 close 成交、`notify_order` 也在本根交付——结算�
 - `deploy/2_deploy.sh`（`--workers 2` → `1`）
 - `apps/web/src/shared/routes.ts`、`apps/web/src/pages/WorkbenchPage.tsx`、`apps/web/src/modules/history/HistoryPanel.tsx`、`apps/web/src/shared/api/index.ts`
 - `apps/api/app/service/market/{stock_preview.py}`、`apps/api/app/api/v1/market_api.py`、`apps/api/app/schema/market/{stock_preview.py,__init__.py}`、`apps/web/src/shared/api/market.ts`（行情预览的"查看分时"，见 §5.7）
-- `apps/web/src/shared/components/charts/LightweightKlineChart.tsx`（标注菜单改为"水平线 / 垂直线 / 矩形 / 文字 / 查看分时 / 取消"，前四项**点完即画**、不再弹二次表单；新增垂直线 / 文字两种标注类型。已画出的标注：短按＝选中 + 弹编辑框，长按 240ms＝光标变手形后可拖动；四种标注都能设颜色，线 / 框设线宽、文字设字重。水平线 / 垂直线 / 矩形都能设**标题**，图上只显示标题不显示价格。矩形带左右日期边界，上/下沿 + 左/右边界 + 整体平移四个方向都能拖）
+- `apps/web/src/shared/components/charts/LightweightKlineChart.tsx`（标注菜单改为"水平线 / 垂直线 / 矩形 / 文字 / 查看分时 / 取消"，前四项**点完即画**、不再弹二次表单；新增垂直线 / 文字两种标注类型。已画出的标注：短按＝选中 + 弹编辑框，长按 240ms＝光标变手形后拖动（松手即停，不会跟手）；水平线 / 矩形 / 文字整体可拖，垂直线只左右挪——改它钉在哪一根上。四种标注都能设颜色，线 / 框设线宽、文字设字重。水平线 / 垂直线 / 矩形都能设**标题**，图上只显示标题不显示价格。矩形带左右日期边界，上/下沿 + 左/右边界 + 整体平移四个方向都能拖）
 
 不动：`stock_preview` 的既有响应字段、数据集同步链路、`job_runtime`、**策略与回测的全部对外契约（见 §4.4）**。
 
@@ -321,7 +321,7 @@ ORDER BY trade_date;
 
 列表用 shadcn `Table` + `Pagination` 呈现：上方是卡片标题（共 N 局）与筛选器（会话 ID 搜索 + 状态），表格里第一列是会话 ID（`trn_xxx`，脱敏口径下可安全展示），下方是上一页 / 下一页与页码。
 
-### 5.7 当日分时：双击一根已揭示的日线
+### 5.7 当日分时：菜单里「查看分时」看一根已揭示的日线
 
 **为什么它能和双盲共存**：分时是**已经揭示过的那一天**的日内展开——这一根的开高低收早在图上，分钟数据不带来任何未来信息，所以它既不泄露标的身份，也不泄露后续走势。真正的红线只有两条，都在服务端收口：
 
@@ -399,7 +399,7 @@ Alembic：`20260915_0006_create_training_tables.py`（`down_revision = "20260903
 | GET | `/sessions/{id}` | 当前状态：掩码元数据、已揭示 bars、账户、持仓（全是 broker 的实时值，见 §5.3） |
 | POST | `/sessions/{id}/reveal` | `{seq, action?, size?}` → 推进一根，返回新增 bar + 成交回报 + 账户；`action` 取值同 `ChatQAction.action`（`buy / sell / close / cancel / hold`），缺省即 `hold`；`size` 是**仓位比例**（0~1，见 §5.3），不传股数；**推完最后一根的这一次就把会话收局**（响应 `session.status = finished`，之后不再接受 reveal） |
 | POST | `/sessions/{id}/finish` | 提前结束（走到最后一根会自动收局，这里是"没走完就想收"和幂等兜底；**不强制平仓**，持仓按最后一根 close 计市值）→ 揭晓 `symbol / name / 真实窗口`（启用 §5.2 加固时才有 `salt`）+ 单局报告 |
-| GET | `/sessions/{id}/intraday?seq=` | 第 `seq` 根日线当天的分时（双击已揭示的日线）→ `{session_id, seq, available, bar, prev_close, points:[{t, p, v}]}`；`seq` 超出已揭示范围返回 `409 TRAINING_INTRADAY_NOT_REVEALED`，这一天没有分钟数据返回 `available: false`（见 §5.7） |
+| GET | `/sessions/{id}/intraday?seq=` | 第 `seq` 根日线当天的分时（菜单「查看分时」选中的已揭示日线）→ `{session_id, seq, available, bar, prev_close, points:[{t, p, v}]}`；`seq` 超出已揭示范围返回 `409 TRAINING_INTRADAY_NOT_REVEALED`，这一天没有分钟数据返回 `available: false`（见 §5.7） |
 | GET | `/sessions/{id}/report` | 复盘报告（逐笔成交 + B/S 标记 + 收益 / 回撤曲线） |
 
 训练期响应的字段（无任何 symbol / date，本期也没有 `ind` 字段；这里只列字段与派生关系，不写示例值，免得和上面的派生关系打架）：
@@ -429,7 +429,7 @@ Alembic：`20260915_0006_create_training_tables.py`（`down_revision = "20260903
 apps/web/src/modules/training/
   TrainingPage.tsx          局列表 + 训练主体（列表为空 / 有一局进行中时都有落点）
   TrainingCreateDialog.tsx  「新建训练」弹窗：初始资金 + 手续费 + 滑点 + 去除 ST
-  TrainingChart.tsx         训练专用图表（lightweight-charts；增量追加 + 遮罩轴 + B/S + 价格线）
+  TrainingChart.tsx         训练图的薄封装（复用 LightweightKlineChart；只换序号轴 + 最新价格线）
   TrainingOrderPanel.tsx    买入 / 卖出 / 观望 / 下一根
   TrainingStatsBar.tsx      初始资金 / 仓位 / 本局收益 / 开仓收益
   TrainingReportDialog.tsx  揭晓（真实标的 / 日期）+ 逐笔复盘
@@ -440,24 +440,23 @@ apps/web/src/shared/api/training.ts
 
 路由：`shared/routes.ts` 增加 `"kline-training"`，`WorkbenchPage` 的 `routePaths` 增加 `/training` 与分支渲染，`HistoryPanel` 增加导航项。
 
-**图表的逻辑和现有行情图一样**：都是"给一个 candles 数组 → 渲染 K 线"。差别只有两点：
+**图表的逻辑和现有行情图一样**：都是"给一个 candles 数组 → 渲染 K 线"。训练图不再另写一套，而是**直接复用 `LightweightKlineChart`**，只把 X 轴换成"序号轴"（`TrainingChart.tsx` 因此只剩几十行）：
 
-| | 现有 `LightweightKlineChart` | 训练 `TrainingChart` |
+| | 行情图 | 训练图 |
 | --- | --- | --- |
-| X 轴 | 真实日期 | **遮住**：只显示序号 `i`（warmup 从 0 起，训练段接着数） |
-| 数据 | 一次性全量 `setData` | 开局送 warmup，之后**每 reveal 多一根** |
-| 其余能力 | MA、成交量、B/S、价格线、标注 | 只保留 K 线 + 成交量 + B/S + 最新价格线 |
+| X 轴 | `dateTimeAxis`：时间键 = 真实交易日 | `indexTimeAxis`：时间键 = 序号 `i`（warmup 从 0 起，训练段接着数），刻度 / crosshair / 标注编辑框都显示"第 N 根" |
+| 数据 | 一次性全量 | 开局送 warmup，之后**每 reveal 多一根**；`keepViewportOnUpdate` 让追加一根时视野不跳回全览 |
+| 其余能力 | MA、成交量、B/S、标注、菜单 | 关掉 MA；K 线 + 成交量 + B/S + 最新价格线 + 同一套点菜单标注（水平线 / 垂直线 / 矩形 / 文字） |
 
-所以可以新做一个 `TrainingChart.tsx`（组件接口沿用现有形状：父组件维护 `candles` 数组），但**必须沿用 `lightweight-charts`**（仓库已依赖 `^5.2.1`，`apps/web/package.json`），不引入第二个图表库。
+**X 轴抽象 `ChartTimeAxis`**：`toTime`（键 → `Time`）/ `fromTime` / `formatTime`（刻度、crosshair）/ `formatKey`（编辑框显示）/ `parseKey`（编辑框回填）/ `keyPlaceholder`。行情图用缺省的 `dateTimeAxis`（键就是交易日，行为与加抽象之前逐字一致），训练图传 `indexTimeAxis`。这样"点菜单画标注 / 拖动 / 编辑"的交互只有一份实现，两条链路不会漂移。
 
 实现要点（lightweight-charts v5）：
 
-- **轴遮罩**：服务端不下发日期，`time` 直接用序号 `i`；再用 `localization.timeFormatter` / `tickMarkFormatter` 把刻度显示成序号。**不要生成伪日期**（比如"2000-01-03 + i 个交易日"），那是给用户制造假信息。
-- **增量追加**：用 `candleSeries.update(bar)` 追加，不要每根都 `setData` 全量——`update` 正是为这种场景提供的（time 递增时性能最好；成交量 series 同理）。
-- **B/S 标记**：`createSeriesMarkers` 的实例 `.setMarkers(...)` 增量更新（现有组件已在用 `createSeriesMarkers`）。
-- **最新价格线**：`createPriceLine` 之后用 `applyOptions({ price })` 滚动更新，不需要重建。
+- **轴遮罩**：服务端不下发日期，`toTime` 直接用序号 `i`，刻度与 crosshair 由 `axis.formatTime` 写成"第 N 根"。**不要生成伪日期**（比如"2000-01-03 + i 个交易日"），那是给用户制造假信息。
+- **B/S 标记**：沿用 `createSeriesMarkers`；标注（线 / 框 / 文字）复用同一套坐标换算，键换成序号即可。
+- **最新价格线**：宿主显式传 `lastPriceLine`（价格 / 标题 / 颜色）才画，组件用 `createPriceLine` 维护，图表重建时会自动补回来。
 
-`LightweightKlineChart` 保持不动（现有行情图零回归）；主题与 series 配置可抽公共常量复用。
+行情图走缺省参数（`axis` 不传、`keepViewportOnUpdate` 不传），回归面收敛在"轴文案 + 视野适配条件"两处。
 
 ### 8.2 图表与交互
 
@@ -471,7 +470,7 @@ apps/web/src/shared/api/training.ts
 | 账户快照 | 面板顶部常显 broker 的实时快照：可用资金、持仓股数 / 市值 / 均价 / 占权益比（成交在本根结算点已落地，所以点完按钮这些数字当场就变）。**卖出按钮的禁用条件 = 没有持仓，买入按钮的禁用条件 = 没有剩余可用资金**（外加训练段走完 / 请求进行中两条通用禁用） |
 | 提前结束 | `finish`：训练段没走完就收局（走完最后一根会自动收局，不需要点它） |
 | 下一根 | `reveal` |
-| 当日分时 | 双击 K 线上任意一根**已揭示**的日线 → `TrainingIntradayDialog`（分时线 / 均价线 / 昨收虚线 / 分钟成交量 + 开高低收与成交量，涨跌颜色以昨收为基准）；图表下方常显一行"双击任意一根已揭示的日线看当日分时"的提示（见 §5.7） |
+| 当日分时 | 点 K 线上任意一根**已揭示**的日线，菜单里选「查看分时」→ `TrainingIntradayDialog`（分时线 / 均价线 / 昨收虚线 / 分钟成交量 + 开高低收与成交量，涨跌颜色以昨收为基准）；图表下方常显一行"点 K 线，菜单里可画线 / 看分时"的提示（见 §5.7） |
 | 用时 / 剩余根数 | `elapsed_seconds`（由 `started_at` 现算）/ `remaining` |
 | 底部 4 项统计 | `TrainingStatsBar` |
 
@@ -510,7 +509,7 @@ apps/web/src/shared/api/training.ts
 
 集成：对照 `test_market_stock_preview_api.py` 的写法，跑通"开局 → reveal → 下单（本根成交）→ finish → report"；并断言 `finish` 不替用户平仓（持仓保持不变，期末权益 = 现金 + 持仓 × 最后一根 close）。
 
-前端：`npm --prefix apps/web run lint`（tsc）+ `build`；手工验收（掩码无泄露、刷新续做、Electron 下计时正确、双击日线弹出分时且只对已揭示的根生效）。
+前端：`npm --prefix apps/web run lint`（tsc）+ `build`；手工验收（掩码无泄露、刷新续做、Electron 下计时正确、点日线后菜单「查看分时」只对已揭示的根生效、菜单画的线 / 框 / 文字能选中并编辑）。
 
 ---
 

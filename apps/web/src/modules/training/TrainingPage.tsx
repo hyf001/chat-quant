@@ -62,7 +62,7 @@ export function TrainingPage({ project }: TrainingPageProps) {
   const [excludeSt, setExcludeSt] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
-  // 双击的那一根日线（分时弹窗）；null 表示没在看分时
+  // 菜单里点了"查看分时"的那一根日线（分时弹窗）；null 表示没在看分时
   const [intradaySeq, setIntradaySeq] = useState<number | null>(null);
   const [sessions, setSessions] = useState<TrainingSessionSummary[]>([]);
   const [listTotal, setListTotal] = useState(0);
@@ -245,10 +245,11 @@ export function TrainingPage({ project }: TrainingPageProps) {
             markers={state.markers}
             height={460}
             ariaLabel={`${session.instrument_alias} 训练 K 线`}
-            onBarDoubleClick={setIntradaySeq}
+            onViewIntraday={setIntradaySeq}
           />
           <p className="text-xs text-mutedText">
-            双击 K 线上任意一根已揭示的日线，可以看那一根的当日分时。
+            点击 K 线任意一根已揭示的日线：菜单里可画水平线 / 垂直线 / 矩形 / 文字，
+            也能查看那一根的当日分时。
           </p>
           {isActive ? (
             <TrainingOrderPanel
