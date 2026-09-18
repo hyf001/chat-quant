@@ -90,6 +90,7 @@ export type StrategyBacktestConfig = {
   initial_cash: string;
   commission: string;
   slippage?: string;
+  execution_mode?: "next_open" | "current_close";
   notes?: string[];
   params?: Record<string, StrategyJsonValue>;
 };

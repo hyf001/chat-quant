@@ -199,6 +199,7 @@ def run_backtrader_training(
         symbols=[symbol],
         history={},
         services=None,
+        execution_mode="current_close",  # 训练即 set_coc(True)，按本根 close 成交
         transport=transport,
         runtime=runtime,
         symbol=symbol,

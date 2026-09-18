@@ -71,6 +71,7 @@ class BacktraderStrategyBacktestEngine:
             cerebro = bt.Cerebro(stdstats=False)
             cerebro.broker.setcash(float(backtest.config.initial_cash))
             cerebro.broker.setcommission(commission=float(backtest.config.commission))
+            cerebro.broker.set_coc(backtest.config.execution_mode == "current_close")
             if backtest.config.slippage > 0:
                 cerebro.broker.set_slippage_perc(float(backtest.config.slippage))
 
@@ -98,6 +99,7 @@ class BacktraderStrategyBacktestEngine:
                 symbols=backtest.config.symbols,
                 history=market_frames,
                 services=ChatQStrategyRuntime(),
+                execution_mode=backtest.config.execution_mode,
             )
             cerebro.addanalyzer(EquityCurveAnalyzer, _name="equity_curve")
             cerebro.addanalyzer(ClosedTradeAnalyzer, _name="closed_trades")

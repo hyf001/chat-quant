@@ -42,6 +42,8 @@ class ChatQBacktraderStrategyBase(bt.Strategy):
         ("symbols", None),
         ("history", None),
         ("services", None),
+        # 市价单撮合时点，透传给策略（策略据此判断 T+1 能否当日/次日卖出）
+        ("execution_mode", "next_open"),
     )
 
     def __init__(self) -> None:
@@ -58,6 +60,7 @@ class ChatQBacktraderStrategyBase(bt.Strategy):
             return
         init_context: ChatQInitContext = {
             "mode": "backtest",
+            "execution_mode": self.execution_mode(),
             "symbols": list(self.p.symbols),
             "params": dict(self.p.chatq_param_values),
             "history": self.p.history,
@@ -135,10 +138,15 @@ class ChatQBacktraderStrategyBase(bt.Strategy):
             self.submit_action(action)
         self.on_bar_settled(context, actions)
 
+    def execution_mode(self) -> str:
+        """本次运行的撮合时点，供 context 与策略读取。"""
+        return str(self.p.execution_mode or "next_open")
+
     def build_context(self) -> ChatQBarContext:
         current_dt = self.datas[0].datetime.datetime(0)
         context: ChatQBarContext = {
             "mode": "backtest",
+            "execution_mode": self.execution_mode(),
             "datetime": current_dt.isoformat(),
             "symbols": list(self.p.symbols),
             "current_bars": extract_current_bars(self.datas),

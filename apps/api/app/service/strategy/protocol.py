@@ -15,6 +15,9 @@ from app.schema.strategy import StrategyCustomParameter, StrategyParamValue
 
 ParamSource = Literal["chatq_params", "none"]
 ChatQMode = Literal["backtest", "signal", "paper", "live"]
+# 市价单撮合时点：next_open = 信号下一根 K 线开盘成交（默认），
+# current_close = 信号当根收盘成交（引擎开启 cheat-on-close）。
+ChatQExecutionMode = Literal["next_open", "current_close"]
 ChatQOrderSide = Literal["buy", "sell"]
 ChatQOrderType = Literal["market", "limit"]
 ChatQState = dict[str, Any]
@@ -68,6 +71,7 @@ class ChatQOrderEvent(TypedDict):
 
 class ChatQInitContext(TypedDict):
     mode: ChatQMode
+    execution_mode: NotRequired[ChatQExecutionMode]  # 回测始终提供，非回测场景可省略
     symbols: list[str]
     params: dict[str, Any]
     history: dict[str, pd.DataFrame]
@@ -76,6 +80,7 @@ class ChatQInitContext(TypedDict):
 
 class ChatQBarContext(TypedDict):
     mode: ChatQMode
+    execution_mode: NotRequired[ChatQExecutionMode]  # 回测始终提供，非回测场景可省略
     datetime: str
     symbols: list[str]
     current_bars: dict[str, ChatQBar]

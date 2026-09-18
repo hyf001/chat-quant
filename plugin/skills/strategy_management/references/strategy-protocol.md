@@ -21,6 +21,7 @@ Chat-Quant 策略源码使用平台无关策略协议。策略文件不继承、
 `chatq_init(context)` 可读取：
 
 - `context["mode"]`：运行模式，回测时为 `backtest`。
+- `context["execution_mode"]`：本次回测的市价单成交方式，`next_open`（默认，下一根 K 线开盘）或 `current_close`（当前 K 线收盘）。
 - `context["symbols"]`：本次策略运行的交易标的列表。
 - `context["timeframe"]`：周期，目前回测只支持 `1d`。
 - `context["params"]`：参数值，包含 `chatq_params()` 注册参数的默认值和回测覆盖值。
@@ -29,6 +30,7 @@ Chat-Quant 策略源码使用平台无关策略协议。策略文件不继承、
 
 `chatq_next(context, state)` 每根 bar 调用一次，可读取：
 
+- `context["execution_mode"]`：与初始化时相同，始终来自本次回测配置。
 - `context["datetime"]`：当前 bar 时间，ISO 字符串。
 - `context["current_bars"][symbol]`：当前 bar，包含 `open/high/low/close/volume`。
 - `context["bars"][symbol]`：截至当前 bar 的历史窗口 DataFrame。
@@ -39,6 +41,10 @@ Chat-Quant 策略源码使用平台无关策略协议。策略文件不继承、
 - `context["order_events"]`：上一根 bar 以来的订单事件。
 - `context["params"]`：参数值。
 - `context["chatq"]`：只读平台服务。
+
+回测在两个入口中始终提供 `execution_mode`；非回测场景可能没有该字段。
+需要兼容旧平台或非回测运行时，可用 `context.get("execution_mode", "next_open")`。
+该字段仅描述市价单撮合时点，不改变限价单条件，也不会自动调整策略自身的信号日期。
 
 ## 动作返回协议
 

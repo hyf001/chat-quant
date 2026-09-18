@@ -67,6 +67,7 @@ class StrategyBacktestConfig(BaseModel):
     initial_cash: Decimal = Field(default=Decimal("100000"), gt=0)
     commission: Decimal = Field(default=Decimal("0.0005"), ge=0)
     slippage: Decimal = Field(default=Decimal("0"), ge=0)
+    execution_mode: Literal["next_open", "current_close"] = "next_open"
     notes: list[str] = Field(default_factory=list)
     params: dict[str, JsonValue] = Field(default_factory=dict)
 
@@ -249,6 +250,11 @@ class StrategyBacktestProtocol(BaseModel):
             (
                 "chatq_init(context) initializes serializable strategy state and must not place "
                 "orders."
+            ),
+            (
+                "In backtests, both chatq_init and chatq_next receive context['execution_mode']: "
+                "'next_open' (default) or 'current_close', matching the run configuration. "
+                "This controls market-order execution only; non-backtest contexts may omit it."
             ),
             (
                 "chatq_next(context, state) returns actions, state, and optional logs. Backtrader "

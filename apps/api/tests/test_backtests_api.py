@@ -141,6 +141,56 @@ def test_strategy_backtest_protocol_is_documented(client: TestClient) -> None:
     assert "chatq_params/chatq_init/chatq_next" in data["source_format"]
 
 
+@pytest.mark.parametrize("execution_mode", [None, "next_open", "current_close"])
+def test_backtest_market_order_execution_mode(
+    client: TestClient, execution_mode: str | None,
+) -> None:
+    strategy_payload = strategy_create_payload()
+    expected_mode = execution_mode or "next_open"
+    strategy_payload["source_code"] = "\n".join([
+        "def chatq_params(): return []",
+        "def chatq_init(context):",
+        f"    assert context['execution_mode'] == {expected_mode!r}",
+        "    return {}",
+        "def chatq_next(context, state):",
+        f"    assert context['execution_mode'] == {expected_mode!r}",
+        "    if state.get('submitted'): return {'actions': [], 'state': state}",
+        "    return {'actions': [{'action': 'buy', 'symbol': context['symbols'][0],",
+        "                         'size': 10}], 'state': {'submitted': True}}",
+    ])
+    created = client.post("/api/strategies", json=strategy_payload)
+    assert created.status_code == 201, created.json()
+    payload = create_backtest_payload()
+    payload["config"].update({"params": {}, "slippage": "0"})
+    if execution_mode is not None:
+        payload["config"]["execution_mode"] = execution_mode
+    response = client.post(
+        f"/api/strategies/{created.json()['strategy_id']}/backtest", json=payload,
+    )
+    assert response.status_code == 200, response.json()
+    data = response.json()
+    assert data["backtest"]["status"] == "succeeded", data
+    trades = data["result"]["trades"]
+    assert len(trades) == 1
+    candles = data["result"]["market_data"][0]["candles"]
+    candle = candles[0 if execution_mode == "current_close" else 1]
+    assert trades[0]["trade_datetime"][:10] == candle["date"]
+    price_field = "close" if execution_mode == "current_close" else "open"
+    assert float(trades[0]["price"]) == pytest.approx(float(candle[price_field]))
+    detail = client.get(f"/api/backtests/{data['backtest']['id']}").json()
+    assert detail["backtest"]["config"]["execution_mode"] == (execution_mode or "next_open")
+
+
+def test_backtest_rejects_unsupported_execution_mode(client: TestClient) -> None:
+    created = create_strategy(client)
+    payload = create_backtest_payload()
+    payload["config"]["execution_mode"] = "invalid"
+    response = client.post(
+        f"/api/strategies/{created['strategy_id']}/backtest", json=payload,
+    )
+    assert response.status_code == 422
+
+
 def test_backtest_strategy_returns_backtest_result(client: TestClient, caplog) -> None:
     created = create_strategy(client)
     caplog.set_level(logging.INFO, logger="app.service.backtest.service")

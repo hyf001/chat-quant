@@ -36,6 +36,31 @@ backtest run --strategy-id str_xxx --symbol 600519.SH --start 2024-01-01 --end 2
 
 工具会自动推断策略模式；不要传 `--mode`。
 
+## 选择成交方式
+
+使用 `--execution-mode` 选择本次回测的市价单成交方式，不传时默认为 `next_open`。
+该参数是通用回测配置，不要使用 `--param execution_mode=...`，也不要与策略模式 `--mode` 混用。
+
+下一根 K 线开盘成交：
+
+```text
+backtest run --strategy-id str_xxx --symbol 600519.SH --start 2024-01-01 --end 2024-04-30 --execution-mode next_open
+```
+
+当前 K 线收盘成交：
+
+```text
+backtest run --strategy-id str_xxx --symbol 600519.SH --start 2024-01-01 --end 2024-04-30 --execution-mode current_close
+```
+
+指定历史版本时同样可以传 `--execution-mode`。该选项只影响市价单，限价单仍按价格条件撮合。
+收盘成交假设信号生成后仍可按本根收盘价成交。它不会自动提前策略自身的信号日期；
+如果策略代码已将买入信号延迟到下一根 K 线，需要在策略逻辑中处理。
+
+平台会将所选值注入 `chatq_init(context)` 和 `chatq_next(context, state)` 的
+`context["execution_mode"]`。可在 `backtest show --backtest-id sbt_xxx` 返回的
+`backtest.config.execution_mode` 中核对本次实际配置。
+
 ## 指定版本回测
 
 需要对比历史版本时传 `--strategy-version-id`：
@@ -74,6 +99,8 @@ backtest run --strategy-id str_xxx --symbol 600519.SH --symbol 000858.SZ --start
 - `--cash`：初始资金。
 - `--commission`：手续费率。
 - `--slippage`：滑点比例。
+- `--execution-mode`：市价单成交方式，可选 `next_open`（默认，下一根 K 线开盘成交）
+  或 `current_close`（当前 K 线收盘成交），示例见上方“选择成交方式”。
 - `--benchmark-symbol`：基准代码；不需要基准时可以省略。
 - `--note`：回测备注。
 

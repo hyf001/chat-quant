@@ -204,6 +204,7 @@ def test_backtest_params_are_runtime_config_overrides() -> None:
         initial_cash="100000",
         commission="0.001",
         slippage=None,
+        execution_mode=None,
         notes=None,
         params=["fast_period=20", "enabled=true", "label=medium"],
     )
@@ -237,6 +238,7 @@ def test_backtest_omits_strategy_version_id_by_default() -> None:
             initial_cash="100000",
             commission="0.001",
             slippage=None,
+            execution_mode=None,
             notes=None,
             params=[],
         ),
@@ -267,6 +269,7 @@ def test_backtest_can_target_specific_strategy_version() -> None:
             initial_cash="100000",
             commission="0.001",
             slippage=None,
+            execution_mode=None,
             notes=None,
             params=[],
         ),

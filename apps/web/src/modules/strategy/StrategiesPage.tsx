@@ -120,6 +120,7 @@ type BacktestForm = {
   initialCash: string;
   commission: string;
   slippage: string;
+  executionMode: NonNullable<StrategyBacktestConfig["execution_mode"]>;
   notes: string;
   customParamValues: Record<string, string>;
 };
@@ -1349,6 +1350,7 @@ function BacktestRunDialog({
                 />
                 <Input label="初始资金" required value={form.initialCash} disabled={disabled} onChange={(value) => setField("initialCash", value)} />
                 <Input label="手续费" required value={form.commission} disabled={disabled} onChange={(value) => setField("commission", value)} />
+                <ExecutionModeField value={form.executionMode} disabled={disabled} onChange={(value) => setField("executionMode", value)} />
               </div>
               <div>
                 <SmallButton
@@ -1709,6 +1711,7 @@ function BacktestParameterEditor({
               />
               <Input label="初始资金" required value={form.initialCash} disabled={disabled} onChange={(value) => setField("initialCash", value)} />
               <Input label="手续费" required value={form.commission} disabled={disabled} onChange={(value) => setField("commission", value)} />
+              <ExecutionModeField value={form.executionMode} disabled={disabled} onChange={(value) => setField("executionMode", value)} />
             </div>
             <div>
               <SmallButton
@@ -2540,6 +2543,32 @@ function DateInput({ label, value, disabled, onChange }: { label: string; value:
   );
 }
 
+function ExecutionModeField({ value, disabled, onChange }: {
+  value: BacktestForm["executionMode"];
+  disabled?: boolean;
+  onChange: (value: BacktestForm["executionMode"]) => void;
+}) {
+  return (
+    <div className="grid content-start gap-1">
+      <Select
+        label="成交方式"
+        required
+        value={value}
+        disabled={disabled}
+        options={[
+          { value: "next_open", label: "下一根 K 线开盘成交" },
+          { value: "current_close", label: "当前 K 线收盘成交" },
+        ]}
+        onChange={(mode) => onChange(mode as BacktestForm["executionMode"])}
+      />
+      <p className="text-[11px] text-zinc-500">
+        仅影响市价单；限价单仍按价格条件撮合。
+        {value === "current_close" ? "收盘成交假设信号生成后可按本根收盘价成交。" : null}
+      </p>
+    </div>
+  );
+}
+
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-1 text-xs">
@@ -2784,6 +2813,7 @@ function newBacktestForm(
     initialCash: "100000",
     commission: "0.0005",
     slippage: "0.0002",
+    executionMode: "next_open",
     notes: "",
     customParamValues: Object.fromEntries(
       params.map((param) => [param.name_en, String(param.default)]),
@@ -2814,6 +2844,7 @@ function backtestFormFromConfig(
     initialCash: config.initial_cash,
     commission: config.commission,
     slippage: config.slippage ?? "0",
+    executionMode: config.execution_mode ?? "next_open",
     notes: (config.notes ?? []).join("\n"),
     customParamValues: Object.fromEntries(
       customParams.map((param) => [
@@ -3206,6 +3237,7 @@ function buildBacktestConfig(
       initial_cash: form.initialCash,
       commission: form.commission,
       slippage: form.slippage.trim() || "0",
+      execution_mode: form.executionMode,
       notes: form.notes.split("\n").map((note) => note.trim()).filter(Boolean),
       params,
     },

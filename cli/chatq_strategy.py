@@ -168,6 +168,11 @@ def add_backtest_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--cash", dest="initial_cash")
     parser.add_argument("--commission")
     parser.add_argument("--slippage")
+    parser.add_argument(
+        "--execution-mode",
+        choices=["next_open", "current_close"],
+        help="Market order execution timing: next_open (default) or current_close.",
+    )
     parser.add_argument("--note", action="append", dest="notes")
     parser.add_argument(
         "--param",
@@ -322,6 +327,7 @@ def build_backtest_config(args: argparse.Namespace) -> dict[str, object]:
         "initial_cash": args.initial_cash,
         "commission": args.commission,
         "slippage": args.slippage,
+        "execution_mode": args.execution_mode,
         "notes": args.notes,
         "params": parse_params(args.params),
     }
