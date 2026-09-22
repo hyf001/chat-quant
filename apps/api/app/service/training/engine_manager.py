@@ -76,6 +76,7 @@ class TrainingEngineManager:
         slippage: float = 0.0,
         idle_ttl_seconds: float,
         actions: list[dict[str, Any] | None],
+        bar_indices: list[int],
     ) -> TrainingEngineHandle:
         """拿到引擎（必要时新建 + replay 到当前游标）。"""
         with self._lock:
@@ -91,6 +92,7 @@ class TrainingEngineManager:
                     commission=commission,
                     slippage=slippage,
                     idle_ttl_seconds=idle_ttl_seconds,
+                    bar_indices=bar_indices,
                 )
                 self._handles[session_id] = handle
                 self._replay(handle, actions)
@@ -127,10 +129,11 @@ class TrainingEngineManager:
         commission: float,
         slippage: float,
         idle_ttl_seconds: float,
+        bar_indices: list[int],
     ) -> TrainingEngineHandle:
         training_slice = slice_factory()
         transport = InMemoryTrainingSignalTransport(idle_ttl_seconds=idle_ttl_seconds)
-        frame = training_slice.training_frame()
+        frame = training_slice.training_frame(bar_indices)
         thread = threading.Thread(
             target=_run_engine,
             name=f"training-engine-{session_id}",
@@ -142,7 +145,8 @@ class TrainingEngineManager:
                 "commission": float(commission),
                 "slippage": float(slippage),
                 "transport": transport,
-                "bar_offset": training_slice.warmup_bars,
+                "bar_offset": training_slice.warmup_bars - 1,
+                "bar_indices": bar_indices,
             },
         )
         thread.start()
@@ -174,6 +178,7 @@ def _run_engine(
     slippage: float,
     transport: InMemoryTrainingSignalTransport,
     bar_offset: int,
+    bar_indices: list[int],
 ) -> None:
     try:
         result = run_backtrader_training(
@@ -184,6 +189,7 @@ def _run_engine(
             slippage=slippage,
             transport=transport,
             bar_offset=bar_offset,
+            bar_indices=bar_indices,
         )
     except BaseException as exc:  # noqa: BLE001 - 引擎线程必须把失败交给服务线程
         transport.publish_failure(

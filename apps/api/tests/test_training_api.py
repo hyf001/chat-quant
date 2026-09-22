@@ -1,4 +1,4 @@
-"""训练闭环集成：开局 → reveal → 下单 → 下一根成交 → finish → report（设计方案 §9）。"""
+"""训练闭环集成：开局 → 当前 K 线尾盘下单 → reveal 下一根 → finish → report。"""
 
 from __future__ import annotations
 
@@ -56,8 +56,8 @@ def test_training_session_full_loop(client: TestClient) -> None:
     assert session["account"]["total_return"] == "0.0000"
     assert [bar["i"] for bar in start["bars"]] == list(range(WARMUP_BARS))
 
-    # 开局看完 warmup 立刻买入（半仓）：市价单按**本根 close**成交，同一响应里就能
-    # 看到成交与成交后的账户，没有"等下一根"的挂单。
+    # 开局看完 warmup 立刻买入（半仓）：市价单按当前可见 K 线的 close 成交，
+    # 同一响应再揭示下一根；成交标记不能跑到新 K 线上。
     first = _reveal(client, session_id, seq=0, action="buy", size=0.5)
     assert first.status_code == 200, first.json()
     first_payload = first.json()
@@ -66,10 +66,12 @@ def test_training_session_full_loop(client: TestClient) -> None:
     assert first_payload["session"]["cursor_index"] == 1
     assert len(first_payload["fills"]) == 1
     fill = first_payload["fills"][0]
-    # 成交价 == 这一根的 close（滑点关掉时）
-    assert fill["i"] == WARMUP_BARS
-    assert float(fill["price"]) == pytest.approx(first_payload["bar"]["c"], rel=1e-9)
-    assert first_payload["markers"] == [{"i": WARMUP_BARS, "side": "buy", "text": "B"}]
+    # 成交价 == 点击前最后一根的 close（滑点关掉时），response.bar 是随后揭示的新 K 线
+    assert fill["i"] == WARMUP_BARS - 1
+    assert float(fill["price"]) == pytest.approx(start["bars"][-1]["c"], rel=1e-9)
+    assert first_payload["markers"] == [
+        {"i": WARMUP_BARS - 1, "side": "buy", "text": "B"}
+    ]
     # 账户就是 broker 成交后的值：持仓与成交股数一致，现金扣掉了这笔
     assert float(first_payload["session"]["account"]["position_size"]) == fill["size"]
     assert Decimal(first_payload["session"]["account"]["cash"]) < Decimal("100000")
@@ -252,6 +254,24 @@ def test_buy_is_rejected_when_cash_is_insufficient(client: TestClient) -> None:
     assert _event_count(session_id) == 0
     current = client.get(f"/api/training/sessions/{session_id}").json()
     assert current["session"]["cursor_index"] == 0
+    assert len(current["bars"]) == WARMUP_BARS
+
+
+def test_full_position_buy_with_costs_is_not_rejected_on_gap_up(client: TestClient) -> None:
+    """默认成本 + 明显高开时仍按当前 close 尾盘成交，不能被 open 价误判资金不足。"""
+    session_id = _create_session(client, slippage="0.001")
+
+    response = _reveal(client, session_id, seq=0, action="buy", size=1.0)
+
+    assert response.status_code == 200, response.json()
+    payload = response.json()
+    assert payload["rejected"] == []
+    assert len(payload["fills"]) == 1
+    assert payload["fills"][0]["i"] == WARMUP_BARS - 1
+    assert payload["session"]["cursor_index"] == 1
+    assert Decimal(payload["session"]["account"]["cash"]) >= Decimal("0")
+
+    _stop_engine(session_id)
 
 
 def test_full_position_buy_settles_at_the_close_without_leftover_cash(
@@ -267,7 +287,8 @@ def test_full_position_buy_settles_at_the_close_without_leftover_cash(
     assert payload["rejected"] == []
     assert len(payload["fills"]) == 1
     fill = payload["fills"][0]
-    assert float(fill["price"]) == pytest.approx(payload["bar"]["c"], rel=1e-9)
+    current = client.get(f"/api/training/sessions/{session_id}").json()
+    assert float(fill["price"]) == pytest.approx(current["bars"][-2]["c"], rel=1e-9)
     account = payload["session"]["account"]
     assert float(account["position_size"]) == fill["size"]
     # 剩下的钱不够按成交价再买一手（含手续费），但也不能是负数
@@ -296,7 +317,9 @@ def test_session_resumes_from_event_history(client: TestClient) -> None:
     assert_masked(payload)
     assert payload["session"]["cursor_index"] == 2
     assert len(payload["bars"]) == WARMUP_BARS + 2
-    assert payload["markers"] == [{"i": WARMUP_BARS, "side": "buy", "text": "B"}]
+    assert payload["markers"] == [
+        {"i": WARMUP_BARS - 1, "side": "buy", "text": "B"}
+    ]
     # replay 出来的账户与当时逐字段一致（事件是唯一真相）
     assert payload["session"]["account"] == before_account
 
@@ -304,6 +327,34 @@ def test_session_resumes_from_event_history(client: TestClient) -> None:
     third = _reveal(client, session_id, seq=2, action="hold")
     assert third.status_code == 200, third.json()
     assert third.json()["bar"]["i"] == WARMUP_BARS + 2
+
+
+def test_legacy_session_replays_old_fill_then_switches_to_current_close(
+    client: TestClient,
+) -> None:
+    """旧事件按原 K 线重放；下一次新动作在当前可见 K 线尾盘成交。"""
+    session_id = _create_session(client)
+    opened = _reveal(client, session_id, seq=0, action="buy", size=0.5)
+    assert opened.status_code == 200, opened.json()
+
+    # 去掉新版记录的成交索引，模拟修复前已经存在的事件。
+    _strip_event_fill_index(session_id, 0)
+    from app.service.training.engine_manager import training_engine_manager
+
+    training_engine_manager.discard(session_id)
+
+    resumed = client.get(f"/api/training/sessions/{session_id}")
+    assert resumed.status_code == 200, resumed.json()
+    # 旧版第 0 笔原本就在第一根 training bar（180）成交，重放不能偷偷挪到 179。
+    assert resumed.json()["markers"] == [{"i": WARMUP_BARS, "side": "buy", "text": "B"}]
+
+    # 当前可见的最后一根也是 180；切换后的新动作应在它的尾盘成交，再揭示 181。
+    closed = _reveal(client, session_id, seq=1, action="sell", size=1.0)
+    assert closed.status_code == 200, closed.json()
+    assert closed.json()["fills"][0]["i"] == WARMUP_BARS
+    assert closed.json()["bar"]["i"] == WARMUP_BARS + 1
+
+    _stop_engine(session_id)
 
 
 def test_list_sessions_reports_progress_without_leaks(client: TestClient) -> None:
@@ -614,11 +665,12 @@ def test_slippage_moves_fill_price_against_the_close(client: TestClient) -> None
 
     assert response.status_code == 200, response.json()
     payload = response.json()
-    bar = payload["bar"]
     fill = payload["fills"][0]
-    assert float(fill["price"]) == pytest.approx(bar["c"] * 1.01, abs=0.0001)
-    assert float(fill["price"]) > float(bar["c"])
-    assert float(fill["price"]) <= float(bar["h"])
+    current = client.get(f"/api/training/sessions/{session_id}").json()
+    fill_bar = current["bars"][-2]
+    assert float(fill["price"]) == pytest.approx(fill_bar["c"] * 1.01, abs=0.0001)
+    assert float(fill["price"]) > float(fill_bar["c"])
+    assert float(fill["price"]) <= float(fill_bar["h"])
 
     _stop_engine(session_id)
 
@@ -719,7 +771,7 @@ def test_session_defaults_when_config_is_omitted(client: TestClient) -> None:
 
 
 def _config(*, initial_cash: str = "100000", slippage: str = "0") -> dict[str, object]:
-    # 滑点默认关掉：这一层断言的是"第 t+1 根 open 成交"的下标对齐，滑点在下面单测。
+    # 大多数用例关闭滑点，专门的滑点用例再验证当前 K 线尾盘的不利成交价。
     return {
         "warmup_bars": WARMUP_BARS,
         "training_bars_min": TRAINING_BARS,
@@ -809,6 +861,34 @@ def _event_count(session_id: str) -> int:
         engine.dispose()
 
 
+def _strip_event_fill_index(session_id: str, seq: int) -> None:
+    """测试辅助：把一条新事件降级成修复前没有成交索引的旧事件。"""
+    from app.core.config import get_settings
+
+    engine = create_engine(f"sqlite:///{get_settings().database_path}")
+    try:
+        with engine.begin() as connection:
+            row = connection.execute(
+                text(
+                    "SELECT payload_json FROM training_events "
+                    "WHERE session_id = :id AND seq = :seq"
+                ),
+                {"id": session_id, "seq": seq},
+            ).fetchone()
+            assert row is not None
+            payload = json.loads(row[0])
+            payload.pop("_training_fill_index", None)
+            connection.execute(
+                text(
+                    "UPDATE training_events SET payload_json = :payload "
+                    "WHERE session_id = :id AND seq = :seq"
+                ),
+                {"id": session_id, "seq": seq, "payload": json.dumps(payload)},
+            )
+    finally:
+        engine.dispose()
+
+
 def _insert_legacy_session(session_id: str) -> None:
     """模拟改动前落库的会话行：config_json 里只有参数，没有切出来的训练段长度。"""
     from app.core.config import get_settings
@@ -879,10 +959,15 @@ def _price_rows(count: int = 400) -> str:
     for index, current in enumerate(_dates(count)):
         open_price = previous_close
         close = 10.0 + (index + 1) * 0.05
+        # 切片第一笔决策对应的当前可见 K 线故意做成明显高开低收。若 broker_coo
+        # 被误开启，Backtrader 会按这个 open 预检并把按 close 计算的全仓买单拒掉。
+        if index == count - TRAINING_BARS - 1:
+            open_price = close * 1.2
+        high = max(close * 1.01, open_price * 1.01)
         previous_close = close
         rows.append(
             f"('{SYMBOL}', '{current.isoformat()}', '{SYMBOL_NAME}', "
-            f"{open_price:.6f}, {close * 1.01:.6f}, {close * 0.99:.6f}, {close:.6f}, "
+            f"{open_price:.6f}, {high:.6f}, {close * 0.99:.6f}, {close:.6f}, "
             f"{100000 + index})"
         )
     return ", ".join(rows)

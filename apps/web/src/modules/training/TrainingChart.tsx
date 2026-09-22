@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import {
   indexTimeAxis,
@@ -32,6 +32,7 @@ export function TrainingChart({
   ariaLabel = "训练 K 线",
   onViewIntraday,
 }: TrainingChartProps) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const candles = useMemo<LightweightKlineCandle[]>(
     () =>
       bars.map((bar) => ({
@@ -54,27 +55,57 @@ export function TrainingChart({
     [markers],
   );
 
-  const last = bars[bars.length - 1];
-  const lastPriceLine = useMemo(
-    () => (last ? { color: "#2563eb", price: last.c, title: "最新" } : undefined),
-    [last],
-  );
+  const activeBar = activeIndex === null ? null : bars[activeIndex];
+  const previousBar = activeIndex === null || activeIndex < 1 ? null : bars[activeIndex - 1];
+  const changePct =
+    activeBar && previousBar && previousBar.c !== 0
+      ? ((activeBar.c - previousBar.c) / previousBar.c) * 100
+      : null;
 
   return (
-    <LightweightKlineChart
-      ariaLabel={ariaLabel}
-      axis={indexTimeAxis}
-      candles={candles}
-      className="w-full rounded-md border border-line bg-[#fffefa]"
-      crosshairLabels
-      enablePriceLineActions
-      height={height}
-      keepViewportOnUpdate
-      lastPriceLine={lastPriceLine}
-      markers={chartMarkers}
-      onViewIntraday={onViewIntraday ? (key) => onViewIntraday(Number(key)) : undefined}
-      showMovingAverages={false}
-      showVolume
-    />
+    <div className="relative">
+      <LightweightKlineChart
+        ariaLabel={ariaLabel}
+        axis={indexTimeAxis}
+        candles={candles}
+        className="w-full rounded-md border border-line bg-[#fffefa]"
+        crosshairLabels
+        enablePriceLineActions
+        height={height}
+        keepViewportOnUpdate
+        markers={chartMarkers}
+        onActiveCandleChange={(_candle, index) => setActiveIndex(index)}
+        onViewIntraday={onViewIntraday ? (key) => onViewIntraday(Number(key)) : undefined}
+        showMovingAverages={false}
+        showVolume
+      />
+      {activeBar ? (
+        <div className="pointer-events-none absolute left-3 top-2 z-10 flex flex-wrap items-center gap-x-3 gap-y-1 rounded border border-line bg-white/90 px-2 py-1 font-mono text-[11px] shadow-sm backdrop-blur-sm">
+          <span className="font-sans font-medium text-ink">第 {activeBar.i + 1} 根</span>
+          <span>开 {formatChartPrice(activeBar.o)}</span>
+          <span>高 {formatChartPrice(activeBar.h)}</span>
+          <span>低 {formatChartPrice(activeBar.l)}</span>
+          <span>收 {formatChartPrice(activeBar.c)}</span>
+          <span
+            className={
+              changePct === null || changePct === 0
+                ? "text-mutedText"
+                : changePct > 0
+                  ? "text-rose-600"
+                  : "text-green-600"
+            }
+          >
+            涨幅{" "}
+            {changePct === null
+              ? "--"
+              : `${changePct >= 0 ? "+" : ""}${changePct.toFixed(2)}%`}
+          </span>
+        </div>
+      ) : null}
+    </div>
   );
+}
+
+function formatChartPrice(value: number): string {
+  return value.toFixed(2);
 }

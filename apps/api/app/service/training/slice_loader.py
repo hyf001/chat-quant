@@ -81,8 +81,17 @@ class TrainingSlice:
     def bar(self, index: int) -> SliceBar:
         return self.bars[index]
 
-    def training_frame(self) -> pd.DataFrame:
-        """喂给 backtrader 的数据：只有训练段，索引是交易日。"""
+    def training_frame(self, bar_indices: list[int] | None = None) -> pd.DataFrame:
+        """喂给 backtrader 的结算段：从最后一根已展示 K 线开始。
+
+        每次点击先在当前可见 K 线的尾盘成交，再由 service 揭示下一根。因此引擎处理
+        的第 0 根是 ``warmup[-1]``，最后一根是最终训练 K 线的前一根；最后一根训练
+        K 线只负责在最后一次点击后揭示并做期末市值计价。
+        """
+        indices = bar_indices or list(
+            range(self.warmup_bars - 1, self.warmup_bars + self.training_bars - 1)
+        )
+        settlement_bars = [self.bars[index] for index in indices]
         rows = [
             {
                 "datetime": pd.Timestamp(bar.trade_date),
@@ -93,7 +102,7 @@ class TrainingSlice:
                 "volume": bar.volume,
                 "openinterest": 0.0,
             }
-            for bar in self.training
+            for bar in settlement_bars
         ]
         frame = pd.DataFrame(rows)
         return frame.set_index("datetime")

@@ -245,24 +245,34 @@ class TrainingService:
             )
 
         snapshot = handle.latest_snapshot() or _initial_snapshot(training_slice, row)
-        # 成交价 = 本次揭示这一根的 close（引擎 set_coc(True)），所以这一笔的股数也
-        # 按这个价换算：决策依据仍是上一根，当根 close 只用来算"能不能买满"。
-        fill_bar = training_slice.bar(training_slice.warmup_bars + cursor)
+        # 点击作用于当前已经展示的最后一根 K 线，并在其尾盘成交；撮合完成后，响应
+        # 再揭示下一根。这样用户看到哪根就交易哪根，不会把成交标到未来 K 线上。
+        fill_index = training_slice.warmup_bars - 1 + cursor
+        fill_bar = training_slice.bar(fill_index)
         action = _build_action(
             payload=payload,
             symbol=row.symbol,
             fill_close=fill_bar.close,
+            fill_high=fill_bar.high,
             snapshot=snapshot,
             config=config,
         )
 
+        event_payload = (
+            {**action, "_training_fill_index": fill_index}
+            if action is not None
+            else {
+                "action": TrainingEventType.HOLD.value,
+                "reason": payload.reason,
+                "_training_fill_index": fill_index,
+            }
+        )
         event = TrainingEventRow(
             id=_new_id("tre"),
             session_id=session_id,
             seq=cursor,
             event_type=payload.action,
-            payload_json=action
-            or {"action": TrainingEventType.HOLD.value, "reason": payload.reason},
+            payload_json=event_payload,
             created_at=datetime.now(),
         )
         self._db.add(event)
@@ -300,7 +310,7 @@ class TrainingService:
             fills=[_fill_payload(item) for item in settled.get("fills", [])],
             rejected=[
                 TrainingOrderRejection(
-                    i=int(item.get("i", bar_index)),
+                    i=int(item.get("i", fill_index)),
                     side="buy" if item.get("side") == "buy" else "sell",
                     size=round(float(item.get("size") or 0.0), 6),
                     reason=str(item.get("status") or "rejected"),
@@ -392,23 +402,29 @@ class TrainingService:
         snapshots = [snapshot for snapshot in handle.snapshots() if snapshot]
         initial_cash = Decimal(str(row.initial_cash))
 
-        equity_points = [
-            {
-                "i": int(snapshot["i"]),
-                "date": training_slice.bar(int(snapshot["i"])).trade_date,
-                "value": quantize(
-                    Decimal(str(snapshot["cash"]))
-                    + Decimal(str(snapshot["position_size"]))
-                    * Decimal(str(training_slice.bar(int(snapshot["i"])).close))
-                ),
-            }
-            for snapshot in snapshots
-        ]
+        equity_points = []
+        for snapshot in snapshots:
+            # 快照产生在当前可见 K 线的尾盘；同一响应随后揭示下一根，所以账户和复盘
+            # 曲线都按新揭示 K 线的 close 做市值计价，与页面统计栏保持一致。
+            valuation_index = min(int(snapshot["i"]) + 1, len(training_slice.bars) - 1)
+            valuation_bar = training_slice.bar(valuation_index)
+            equity_points.append(
+                {
+                    "i": valuation_index,
+                    "date": valuation_bar.trade_date,
+                    "value": quantize(
+                        Decimal(str(snapshot["cash"]))
+                        + Decimal(str(snapshot["position_size"]))
+                        * Decimal(str(valuation_bar.close))
+                    ),
+                }
+            )
         if not equity_points:
+            initial_index = max(0, training_slice.warmup_bars - 1)
             equity_points = [
                 {
-                    "i": training_slice.warmup_bars,
-                    "date": training_slice.slice_start,
+                    "i": initial_index,
+                    "date": training_slice.bar(initial_index).trade_date,
                     "value": initial_cash,
                 }
             ]
@@ -416,7 +432,7 @@ class TrainingService:
         final_point = equity_points[-1]
         final_value = Decimal(str(final_point["value"]))
         last_index = min(
-            training_slice.warmup_bars + max(cursor, 1) - 1,
+            training_slice.warmup_bars + cursor - 1,
             len(training_slice.bars) - 1,
         )
         last_bar = training_slice.bar(last_index)
@@ -555,6 +571,14 @@ class TrainingService:
     ) -> TrainingEngineHandle:
         config = _config_from_row(row)
         actions = [_event_action(event) for event in events]
+        # 新事件会明确记录实际成交 K 线。没有该字段的是旧版事件，仍按旧的“下一根”
+        # 索引重放；重放完以后追加当前可见 K 线（可能与上一根重复），让旧会话也能
+        # 从下一次点击起平滑切换到当前尾盘成交，而不会改写历史账户状态。
+        bar_indices = [_event_fill_index(event, row.warmup_bars) for event in events]
+        bar_indices.extend(
+            row.warmup_bars - 1 + seq
+            for seq in range(len(events), int(_resolved_training_bars(row) or 0))
+        )
         try:
             return await asyncio.to_thread(
                 training_engine_manager.acquire,
@@ -573,6 +597,7 @@ class TrainingService:
                 slippage=float(config.slippage),
                 idle_ttl_seconds=float(config.idle_ttl_seconds),
                 actions=actions,
+                bar_indices=bar_indices,
             )
         except TrainingSliceError as error:
             raise _slice_error(error) from error
@@ -613,7 +638,7 @@ class TrainingService:
         if latest is None:
             latest = _initial_snapshot(training_slice, row)
         close_index = min(
-            training_slice.warmup_bars + max(index, 1) - 1,
+            training_slice.warmup_bars + index - 1,
             len(training_slice.bars) - 1,
         )
         return TrainingSessionView(
@@ -749,7 +774,19 @@ def _event_action(event: TrainingEventRow) -> dict[str, Any] | None:
         return None
     if not payload:
         return None
-    return dict(payload)
+    return {key: value for key, value in payload.items() if key != "_training_fill_index"}
+
+
+def _event_fill_index(event: TrainingEventRow, warmup_bars: int) -> int:
+    payload = event.payload_json if isinstance(event.payload_json, dict) else {}
+    stored = payload.get("_training_fill_index")
+    if stored is not None:
+        try:
+            return int(stored)
+        except (TypeError, ValueError):
+            pass
+    # 兼容修复前已经落库的会话：旧动作撮合在 warmup + seq。
+    return warmup_bars + int(event.seq)
 
 
 def _build_action(
@@ -757,23 +794,29 @@ def _build_action(
     payload: TrainingRevealRequest,
     symbol: str,
     fill_close: float,
+    fill_high: float,
     snapshot: dict[str, Any],
     config: TrainingSessionConfig,
 ) -> dict[str, Any] | None:
     """仓位比例 → 股数（向下取整），只有市价单。
 
     ``snapshot`` 是引擎在上一根结算点给出的 broker 快照（现金 / 持仓都是 backtrader
-    的原值）。市价单按本根 close 成交（``set_coc(True)``），所以买入用这个价换算
-    股数、卖出按持仓取比例——两者都只依赖 broker 的值，没有"挂单"要扣。
+    的原值）。市价单按当前可见 K 线的 close 成交（``set_coc(True)``）；买入时把
+    Backtrader 的不利滑点和手续费完整算入每股成本，保证服务层验资与 broker 一致。
     """
     if payload.action in {TrainingEventType.HOLD.value, TrainingEventType.CANCEL.value}:
         return None
     if payload.action == TrainingEventType.BUY.value:
         ratio = float(payload.size if payload.size is not None else 1.0)
         cash = float(snapshot.get("cash") or 0.0)
-        # 预留佣金 + 滑点缓冲，避免"全仓"被自己的成本挤掉。
-        cost_rate = 1.0 + float(config.commission) + float(config.slippage)
-        shares = _floor_shares(cash * ratio / (fill_close * cost_rate))
+        # Backtrader 的买入滑点为 close × (1 + slip)，并受当根 high 封顶；股票佣金
+        # 再按实际成交金额计算。这里使用同一公式，不能把滑点和佣金简单相加近似。
+        execution_price = min(
+            float(fill_high),
+            float(fill_close) * (1.0 + float(config.slippage)),
+        )
+        per_share_cost = execution_price * (1.0 + float(config.commission))
+        shares = _floor_shares(cash * ratio / per_share_cost)
         if shares < 1:
             raise TrainingError(
                 "TRAINING_BROKER_REJECTED",
@@ -782,7 +825,7 @@ def _build_action(
                 detail={
                     "reason": "insufficient_cash",
                     "available_cash": cash,
-                    "reference_price": fill_close,
+                    "reference_price": execution_price,
                     "ratio": ratio,
                 },
             )

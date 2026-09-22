@@ -39,6 +39,7 @@ class TrainingStrategyAdapter(ChatQBacktraderStrategyBase):
         ("runtime", None),
         ("symbol", None),
         ("bar_offset", 0),
+        ("bar_indices", None),
     )
 
     def __init__(self) -> None:
@@ -134,7 +135,12 @@ class TrainingStrategyAdapter(ChatQBacktraderStrategyBase):
 
     def build_snapshot(self) -> dict[str, Any]:
         # 成交 / 拒单都发生在本根开盘，序号统一在这里落成切片坐标。
-        index = self.p.bar_offset + self.bar_index
+        indices = self.p.bar_indices
+        index = (
+            int(indices[self.bar_index])
+            if isinstance(indices, list) and self.bar_index < len(indices)
+            else self.p.bar_offset + self.bar_index
+        )
         position = self.getposition(self.datas[0])
         fills = [{**item, "i": index} for item in self.pending_fills]
         rejections = [{**item, "i": index} for item in self.pending_rejections]
@@ -167,6 +173,7 @@ def run_backtrader_training(
     slippage: float = 0.0,
     transport: InMemoryTrainingSignalTransport,
     bar_offset: int,
+    bar_indices: list[int] | None = None,
 ) -> dict[str, Any]:
     """在调用线程里跑完训练段的 bar 循环（阻塞等人工信号）。
 
@@ -174,7 +181,10 @@ def run_backtrader_training(
     ``set_coc(True)``，市价单按**本根的 close**（当天尾盘价）成交，且撮合与
     ``notify_order`` 都发生在同一根里——所以不存在"等下一根成交"的挂单。
     """
-    cerebro = bt.Cerebro(stdstats=False, cheat_on_open=True)
+    # 仍在 next_open 中接收人工动作，以便订单赶在本根 broker 撮合前提交；但禁止
+    # Cerebro 顺手开启 broker 的 cheat-on-open 资金预检。否则市价单会先按 open
+    # 验资、再按 close 成交，和训练的尾盘口径不一致，高开 K 线会被误判 Margin。
+    cerebro = bt.Cerebro(stdstats=False, cheat_on_open=True, broker_coo=False)
     cerebro.broker.setcash(float(initial_cash))
     cerebro.broker.setcommission(commission=float(commission))
     if slippage > 0:
@@ -187,8 +197,8 @@ def run_backtrader_training(
             slip_limit=True,
             slip_out=False,
         )
-    # Cheat-On-Close：点击提交的市价单按本根 close 成交（当天尾盘价）。
-    # 决策依据仍然是"已揭示的上一根"，当根 close 只在成交时使用，不构成未来函数。
+    # Cheat-On-Close：点击提交的市价单按当前已揭示 K 线的 close 成交（当天尾盘价）。
+    # 用户已经看到这一根完整 OHLC，尾盘成交是训练产品的显式口径。
     cerebro.broker.set_coc(True)
     cerebro.adddata(bt.feeds.PandasData(dataname=frame), name=symbol)
     runtime: dict[str, Any] = {}
@@ -204,6 +214,7 @@ def run_backtrader_training(
         runtime=runtime,
         symbol=symbol,
         bar_offset=bar_offset,
+        bar_indices=bar_indices,
     )
     cerebro.addanalyzer(ClosedTradeAnalyzer, _name="closed_trades")
     cerebro.addanalyzer(OrderExecutionAnalyzer, _name="orders")

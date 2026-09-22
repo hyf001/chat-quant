@@ -12,6 +12,7 @@ import {
   type IChartApi,
   type IPriceLine,
   type ISeriesApi,
+  type ISeriesMarkersPluginApi,
   type LineData,
   type LineWidth,
   type MouseEventParams,
@@ -313,6 +314,11 @@ export function LightweightKlineChart({
   const vlinePositionsRef = useRef<Array<{ id: string; x: number }>>([]);
   const textPositionsRef = useRef<Array<{ id: string; x: number; y: number }>>([]);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick", Time> | null>(null);
+  const volumeSeriesRef = useRef<ISeriesApi<"Histogram", Time> | null>(null);
+  const movingAverageSeriesRef = useRef<
+    Partial<Record<"ma5" | "ma10" | "ma20" | "ma60", ISeriesApi<"Line", Time>>>
+  >({});
+  const seriesMarkersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   const priceLineRefs = useRef<IPriceLine[]>([]);
   const lastPriceLineRef = useRef<IPriceLine | null>(null);
   const lastPriceLinePropRef = useRef(lastPriceLine);
@@ -362,6 +368,9 @@ export function LightweightKlineChart({
   >([]);
   const chartData = useMemo(() => toLightweightData(candles, axis), [axis, candles]);
   const chartMarkers = useMemo(() => toLightweightMarkers(markers, axis), [axis, markers]);
+  const candlesRef = useRef(candles);
+  const chartDataRef = useRef(chartData);
+  const chartMarkersRef = useRef(chartMarkers);
   const activePriceLines = priceLines ?? internalPriceLines;
   const activePriceBoxes = priceBoxes ?? internalPriceBoxes;
   const activeVerticalLines = verticalLines ?? internalVerticalLines;
@@ -373,6 +382,11 @@ export function LightweightKlineChart({
     () => new Map(candles.map((candle, index) => [candle.date, index])),
     [candles],
   );
+
+  // 图表实例不随行情追加重建；事件处理器通过 ref 读取最新数据，避免捕获首屏快照。
+  candlesRef.current = candles;
+  chartDataRef.current = chartData;
+  chartMarkersRef.current = chartMarkers;
 
   useEffect(() => {
     activeCandleChangeRef.current = onActiveCandleChange;
@@ -725,7 +739,8 @@ export function LightweightKlineChart({
     }
 
     const container = chartRef.current;
-    const volumeUnit = volumeAxisUnit(chartData.volume.map((item) => item.value));
+    const initialChartData = chartDataRef.current;
+    const volumeUnit = volumeAxisUnit(initialChartData.volume.map((item) => item.value));
     const chart = createChart(container, {
       autoSize: true,
       height,
@@ -794,22 +809,22 @@ export function LightweightKlineChart({
       const price = candleSeries.coordinateToPrice(coordinate);
       return typeof price === "number" && Number.isFinite(price) ? price : null;
     };
-    candleSeries.setData(chartData.candles);
+    candleSeries.setData(initialChartData.candles);
 
     const initialLastPrice = lastPriceLinePropRef.current;
     if (initialLastPrice) {
       lastPriceLineRef.current = createLastPriceLine(candleSeries, initialLastPrice);
     }
 
-    if (chartMarkers.length > 0) {
-      createSeriesMarkers(candleSeries, chartMarkers);
-    }
+    seriesMarkersRef.current = createSeriesMarkers(candleSeries, chartMarkersRef.current);
 
     if (showMovingAverages) {
-      addLineSeries(chart, chartData.ma5, lineColors.ma5);
-      addLineSeries(chart, chartData.ma10, lineColors.ma10);
-      addLineSeries(chart, chartData.ma20, lineColors.ma20);
-      addLineSeries(chart, chartData.ma60, lineColors.ma60);
+      movingAverageSeriesRef.current = {
+        ma5: addLineSeries(chart, initialChartData.ma5, lineColors.ma5),
+        ma10: addLineSeries(chart, initialChartData.ma10, lineColors.ma10),
+        ma20: addLineSeries(chart, initialChartData.ma20, lineColors.ma20),
+        ma60: addLineSeries(chart, initialChartData.ma60, lineColors.ma60),
+      };
     }
 
     if (showVolume) {
@@ -828,21 +843,25 @@ export function LightweightKlineChart({
         },
         1,
       );
-      volumeSeries.setData(chartData.volume);
+      volumeSeriesRef.current = volumeSeries;
+      volumeSeries.setData(initialChartData.volume);
       const panes = chart.panes();
       panes[0]?.setStretchFactor(4);
       panes[1]?.setStretchFactor(1.1);
     }
 
-    const candleIndexByDate = new Map(candles.map((candle, index) => [candle.date, index]));
     // 拖动垂直线 / 文字时用得上：横向坐标 → 最近一根 K 线的日期
     dateAtXRef.current = (x: number) => {
       const logical = chart.timeScale().coordinateToLogical(x);
       if (logical === null) {
         return null;
       }
-      const index = Math.max(0, Math.min(candles.length - 1, Math.round(Number(logical))));
-      return candles[index]?.date ?? null;
+      const currentCandles = candlesRef.current;
+      const index = Math.max(
+        0,
+        Math.min(currentCandles.length - 1, Math.round(Number(logical))),
+      );
+      return currentCandles[index]?.date ?? null;
     };
     const handleCrosshairMove = (param: MouseEventParams<Time>) => {
       if (!param.point || param.time === undefined) {
@@ -853,8 +872,15 @@ export function LightweightKlineChart({
       const price = candleSeries.coordinateToPrice(param.point.y);
       activePriceRef.current = typeof price === "number" && Number.isFinite(price) ? price : null;
       const key = axis.fromTime(param.time);
+      const currentCandles = candlesRef.current;
+      const candleIndexByDate = new Map(
+        currentCandles.map((candle, index) => [candle.date, index]),
+      );
       const index = key === null ? undefined : candleIndexByDate.get(key);
-      activeCandleChangeRef.current?.(index === undefined ? null : candles[index], index ?? null);
+      activeCandleChangeRef.current?.(
+        index === undefined ? null : currentCandles[index],
+        index ?? null,
+      );
       refreshAnnotationPositionsRef.current();
     };
     const handleChartClick = (param: MouseEventParams<Time>) => {
@@ -877,6 +903,9 @@ export function LightweightKlineChart({
       const clickedLine = clickedVline || clickedTextNote
         ? null
         : nearestPriceLine(price, activePriceLinesRef.current);
+      const candleIndexByDate = new Map(
+        candlesRef.current.map((candle, index) => [candle.date, index]),
+      );
       const clickedKey = param.time === undefined ? null : axis.fromTime(param.time);
       const date =
         clickedKey !== null && candleIndexByDate.has(clickedKey) ? clickedKey : undefined;
@@ -928,6 +957,9 @@ export function LightweightKlineChart({
       chart.unsubscribeClick(handleChartClick);
       chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
       candleSeriesRef.current = null;
+      volumeSeriesRef.current = null;
+      movingAverageSeriesRef.current = {};
+      seriesMarkersRef.current = null;
       chartInstanceRef.current = null;
       coordinateToPriceRef.current = () => null;
       dateAtXRef.current = () => null;
@@ -937,9 +969,6 @@ export function LightweightKlineChart({
     };
   }, [
     axis,
-    candles,
-    chartData,
-    chartMarkers,
     crosshairLabels,
     enablePriceLineActions,
     height,
@@ -947,6 +976,23 @@ export function LightweightKlineChart({
     showMovingAverages,
     showVolume,
   ]);
+
+  // 行情推进只更新现有 series，绝不销毁图表。这样缩放位置、十字线和用户标注都会
+  // 留在原实例上；训练每次追加一根 K 线时，水平线也不会因 series 换绑而消失。
+  useEffect(() => {
+    const candleSeries = candleSeriesRef.current;
+    if (!candleSeries) {
+      return;
+    }
+    candleSeries.setData(chartData.candles);
+    volumeSeriesRef.current?.setData(chartData.volume);
+    movingAverageSeriesRef.current.ma5?.setData(chartData.ma5);
+    movingAverageSeriesRef.current.ma10?.setData(chartData.ma10);
+    movingAverageSeriesRef.current.ma20?.setData(chartData.ma20);
+    movingAverageSeriesRef.current.ma60?.setData(chartData.ma60);
+    seriesMarkersRef.current?.setMarkers(chartMarkers);
+    refreshAnnotationPositionsRef.current();
+  }, [chartData, chartMarkers]);
 
   useEffect(() => {
     const candleSeries = candleSeriesRef.current;
@@ -1558,7 +1604,7 @@ export function LightweightKlineChart({
                     <button
                       aria-label={ariaLabel}
                       className={cn(
-                        "absolute right-14 z-10 h-5 max-w-[120px] -translate-y-1/2 truncate rounded border bg-white/80 px-1.5 text-[10px] font-semibold shadow-sm backdrop-blur-sm",
+                        "absolute left-3 z-10 h-5 max-w-[120px] -translate-y-1/2 truncate rounded border bg-white/80 px-1.5 text-[10px] font-semibold shadow-sm backdrop-blur-sm",
                         active ? "cursor-grabbing" : "cursor-grab",
                       )}
                       onPointerCancel={endAnnotationPress}
@@ -2177,9 +2223,6 @@ function addLineSeries(
   data: LineData<Time>[],
   color: string,
 ) {
-  if (data.length === 0) {
-    return;
-  }
   const series = chart.addSeries(LineSeries, {
     color,
     lineWidth: 1,
@@ -2188,6 +2231,7 @@ function addLineSeries(
     crosshairMarkerVisible: false,
   });
   series.setData(data);
+  return series;
 }
 
 function toLightweightMarkers(
