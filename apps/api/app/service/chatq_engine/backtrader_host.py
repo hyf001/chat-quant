@@ -14,6 +14,7 @@ broker snapshots through its own transport.
 
 from __future__ import annotations
 
+import math
 from datetime import datetime, time
 
 import backtrader as bt
@@ -171,13 +172,18 @@ class ChatQBacktraderStrategyBase(bt.Strategy):
 def extract_current_bars(datas: list[bt.LineSeries]) -> dict[str, ChatQBar]:
     bars: dict[str, ChatQBar] = {}
     for data in datas:
+        close = float(data.close[0])
+        # 对齐到公共索引时补齐的 NaN bar（标的尚未上市）对策略不可见，
+        # 否则策略会拿到 NaN 价格并据此下单。
+        if not math.isfinite(close):
+            continue
         bars[data._name] = {
             "symbol": data._name,
             "datetime": data.datetime.datetime(0).isoformat(),
             "open": float(data.open[0]),
             "high": float(data.high[0]),
             "low": float(data.low[0]),
-            "close": float(data.close[0]),
+            "close": close,
             "volume": float(data.volume[0]),
         }
     return bars

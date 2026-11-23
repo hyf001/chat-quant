@@ -7,6 +7,7 @@ from uuid import uuid4
 import backtrader as bt
 import pandas as pd
 
+from app.core.logging import get_logger
 from app.schema.backtest import (
     CurveType,
     StrategyBacktestMetrics,
@@ -54,6 +55,8 @@ from app.service.strategy.runtime import (
     ChatQStrategyRuntimeError,
 )
 
+logger = get_logger(__name__)
+
 
 class BacktraderStrategyBacktestEngine:
     name = "backtrader"
@@ -84,12 +87,35 @@ class BacktraderStrategyBacktestEngine:
 
             market_frames: dict[str, pd.DataFrame] = {}
             for symbol in backtest.config.symbols:
-                data, frame = _load_market_data_feed(
+                market_frames[symbol] = _load_market_frame(
                     symbol=symbol,
                     backtest=backtest,
                 )
-                market_frames[symbol] = frame
-                cerebro.adddata(data, name=symbol)
+
+            # 所有标的先对齐回测起点再建 feed。backtrader 的
+            # ``Strategy._getminperstatus`` 要求每个 data feed 都至少有 1 根
+            # bar 才会调用 ``next()``，池子里只要有一只晚上市的标的（次新股），
+            # 整个回测的时钟就会被卡到它上市之后，其余标的的行情全部空转。
+            # 这里只给晚上市的标的补齐头部空 bar，见 ``_pad_leading_bars``。
+            common_index = _common_market_index(market_frames)
+            late_symbols = [
+                symbol
+                for symbol in backtest.config.symbols
+                if not market_frames[symbol].empty
+                and market_frames[symbol].index[0] > common_index[0]
+            ]
+            if late_symbols:
+                logger.warning(
+                    "Backtest %s: %d symbol(s) start after %s and were "
+                    "front-padded to keep the clock spanning the full range: %s",
+                    backtest.id,
+                    len(late_symbols),
+                    common_index[0].date().isoformat(),
+                    ", ".join(late_symbols[:20]),
+                )
+            for symbol in backtest.config.symbols:
+                feed_frame = _pad_leading_bars(market_frames[symbol], common_index)
+                cerebro.adddata(bt.feeds.PandasData(dataname=feed_frame), name=symbol)
 
             params = _strategy_param_values(version, backtest.config.params)
             cerebro.addstrategy(
@@ -213,11 +239,51 @@ def _strategy_param_values(
     return params
 
 
-def _load_market_data_feed(
+def _common_market_index(
+    market_frames: dict[str, pd.DataFrame],
+) -> pd.DatetimeIndex:
+    """所有标的行情日期索引的并集，用作对齐后的公共索引。
+
+    正常情况下 A 股标的共享同一交易日历，并集就是该日历；有停牌或晚上市的
+    标的时并集仍然覆盖整个回测区间。
+    """
+    common: pd.DatetimeIndex | None = None
+    for frame in market_frames.values():
+        common = frame.index if common is None else common.union(frame.index)
+    if common is None:
+        raise StrategyBacktestError(
+            "STRATEGY_DATA_UNAVAILABLE",
+            "Backtest execution requires at least one market dataset",
+            detail={},
+        )
+    return common
+
+
+def _pad_leading_bars(
+    frame: pd.DataFrame,
+    common_index: pd.DatetimeIndex,
+) -> pd.DataFrame:
+    """把晚上市标的的行情补齐到公共索引的起点之前。
+
+    只补**头部**空 bar，不动中间停牌缺口：backtrader 自己会把没有 bar 的
+    feed 原地 hold 住并靠其他 feed 推进时钟，中间缺口不需要补；补了反而会让
+    持仓在停牌日按 NaN 估值，污染 ``portfolio_value``。补出来的头部 bar 由
+    ``extract_current_bars`` 按 NaN 过滤，策略看不到尚未上市的标的。
+    """
+    if frame.empty:
+        return frame
+    preamble = common_index[common_index < frame.index[0]]
+    if len(preamble) == 0:
+        return frame
+    # reindex 到这批日期会得到列类型一致的空行，拼到原始行情前面
+    return pd.concat([frame.reindex(preamble), frame])
+
+
+def _load_market_frame(
     *,
     symbol: str,
     backtest: StrategyBacktestRecord,
-) -> tuple[bt.feeds.PandasData, pd.DataFrame]:
+) -> pd.DataFrame:
     try:
         result = load_market(
             symbol=symbol,
@@ -247,7 +313,7 @@ def _load_market_data_feed(
                 "end_date": backtest.config.end_date.isoformat(),
             },
         )
-    return bt.feeds.PandasData(dataname=frame), frame
+    return frame
 
 
 def _build_metrics(
